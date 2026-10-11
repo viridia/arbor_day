@@ -6,7 +6,10 @@ use bevy::{
     feathers::{
         FeathersPlugins,
         containers::{subpane, subpane_body, subpane_header},
-        controls::{FeathersPane, FeathersSlider, FeathersSplitPane, FeathersSplitPaneHandle},
+        controls::{
+            FeathersButton, FeathersPane, FeathersSlider, FeathersSplitPane,
+            FeathersSplitPaneHandle,
+        },
         dark_theme::create_dark_theme,
         theme::{ThemeBackgroundColor, ThemedText, UiTheme},
         tokens,
@@ -19,12 +22,18 @@ use bevy::{
 use bevy_immediate::{
     Imm,
     attach::{BevyImmediateAttachPlugin, ImmediateAttach},
-    ui::{CapsUiFeathers, slider_value::ImmUiSliderValue},
+    ui::{CapsUiFeathers, activated::ImmUiActivated, slider_value::ImmUiSliderValue},
 };
 use bevy_remote_driver::RemoteDriverPlugin;
 use settings::{AppSettingsPlugin, MIN_PANE_WIDTH, save_panel_width};
+use turntable::{TurntableCamera, TurntablePlugin, TurntableSubject, orbit_on_drag, zoom_on_scroll};
 
 mod settings;
+mod turntable;
+
+/// The game camera's vertical field of view (Panoply's `DEFAULT_FOV`, 40°), so plants are seen as
+/// players will see them.
+const GAME_FOV: f32 = 0.69;
 
 fn main() {
     App::new()
@@ -42,8 +51,10 @@ fn main() {
             FeathersPlugins,
             BevyImmediateAttachPlugin::<CapsUiFeathers, ParamPanel>::new(),
             RemoteDriverPlugin,
+            TurntablePlugin,
         ))
         .insert_resource(UiTheme(create_dark_theme()))
+        .add_observer(use_game_fov)
         .add_systems(Startup, (scene.spawn(), shell_ui.spawn()))
         .add_systems(Update, apply_test_shape)
         .add_systems(PostUpdate, follow_viewport_slot.after(UiSystems::Layout))
@@ -84,7 +95,7 @@ fn scene() -> impl SceneList {
         Name("SceneCamera")
         SceneCamera
         Camera3d
-        Transform::from_xyz(0.0, 2.0, 3.5).looking_at(Vec3::new(0.0, 0.25, 0.0), Vec3::Y)
+        TurntableCamera
         --
         // Draws the UI over the whole window, on top of the scene camera.
         Name("UiCamera")
@@ -108,9 +119,20 @@ fn scene() -> impl SceneList {
         --
         Name("TestObject")
         TestShape
+        TurntableSubject
         Mesh3d(asset_value(Torus::default()))
         MeshMaterial3d::<StandardMaterial>(asset_value(Color::srgb(0.3, 0.55, 0.3)))
-        Transform::default()
+        // Standing on edge, so a spin shows.
+        Transform::from_rotation(Quat::from_rotation_x(std::f32::consts::FRAC_PI_2))
+    }
+}
+
+fn use_game_fov(add: On<Add<SceneCamera>>, mut projections: Query<&mut Projection>) {
+    if let Ok(mut projection) = projections.get_mut(add.event_target()) {
+        *projection = Projection::Perspective(PerspectiveProjection {
+            fov: GAME_FOV,
+            ..default()
+        });
     }
 }
 
@@ -149,8 +171,9 @@ fn shell_ui() -> impl Scene {
                 @FeathersPane { @size: 3.0, @min_size: MIN_PANE_WIDTH }
                 Name("View")
                 ViewportSlot
-                // Lets the pointer through to the 3D scene.
-                Pickable::IGNORE
+                // Drags and scrolls over the view move the camera; the panel's stay in the panel.
+                on(orbit_on_drag)
+                on(zoom_on_scroll)
             ]
         ]
     }
@@ -159,6 +182,7 @@ fn shell_ui() -> impl Scene {
 #[derive(SystemParam)]
 struct PanelParams<'w, 's> {
     shapes: Query<'w, 's, &'static mut TestShape>,
+    cameras: Query<'w, 's, &'static mut TurntableCamera>,
 }
 
 impl ImmediateAttach<CapsUiFeathers> for ParamPanel {
@@ -193,14 +217,36 @@ impl ImmediateAttach<CapsUiFeathers> for ParamPanel {
         if shape.scale != scale {
             shape.scale = scale;
         }
+
+        ui.ch().on_spawn_apply_scene(subpane).add(|ui| {
+            ui.ch().on_spawn_apply_scene(subpane_header).add(|ui| {
+                ui.ch()
+                    .on_spawn_apply_scene(|| bsn! { Text("View") ThemedText });
+            });
+            ui.ch().on_spawn_apply_scene(subpane_body).add(|ui| {
+                let framed = ui
+                    .ch()
+                    .on_spawn_apply_scene(|| {
+                        bsn! {
+                            @FeathersButton { @caption: bsn! { Text("Frame") ThemedText } }
+                            Name("Frame")
+                        }
+                    })
+                    .activated();
+                if framed && let Ok(mut camera) = params.cameras.single_mut() {
+                    camera.frame();
+                }
+            });
+        });
     }
 }
 
-/// Scales the test object, keeping it on the ground.
+/// Scales the test object, keeping it standing on the ground.
 fn apply_test_shape(mut shapes: Query<(&TestShape, &mut Transform), Changed<TestShape>>) {
+    let torus = Torus::default();
     for (shape, mut transform) in &mut shapes {
         transform.scale = Vec3::splat(shape.scale);
-        transform.translation.y = Torus::default().minor_radius * shape.scale;
+        transform.translation.y = (torus.major_radius + torus.minor_radius) * shape.scale;
     }
 }
 

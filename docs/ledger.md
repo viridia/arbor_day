@@ -12,18 +12,16 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | --------- | --------------------------------------------------------------------------------------- |
 | `0947b01` | Repo started: `AGENTS.md`, `CLAUDE.md`, this ledger; requirements moved from Panoply's `docs/arbor-day.md`. |
 | `0947b01` | C1 Minimal shell (D5): a feathers split pane, a `bevy_immediate` panel with one slider scaling a torus, the 3D camera's viewport following the view pane; `plans/smoke.py`. Bevy at `c9c21c2b`; clippy clean; the plan passes (5 steps). |
-| (pending) | C2 Settings (D6): window position, size and fullscreen (after Panoply's `window_settings.rs`), and the panel's width, in `src/settings.rs`; saved on any exit, including the driver's. `plans/smoke.py` checks the panel starts at its default width; the run saved to its own `settings/`, and the developer's file was untouched. |
+| `d1ae223` | C2 Settings (D6): window position, size and fullscreen (after Panoply's `window_settings.rs`), and the panel's width, in `src/settings.rs`; saved on any exit, including the driver's. `plans/smoke.py` checks the panel starts at its default width; the run saved to its own `settings/`, and the developer's file was untouched. |
+| (pending) | C4 Turntable camera (D7), `src/turntable.rs`: spin by horizontal drag or scroll, tilt by vertical drag, zoom by vertical scroll toward the height under the pointer, a Frame button that also resets the tilt; the home elevation and field of view are the game's. Speeds tuned by hand. The test torus stands on edge so a spin shows. `plans/smoke.py` checks the camera starts framed from the front and clicks Frame (9 steps). Spin and zoom are checked by hand: the driver cannot drag or scroll. |
 
 ## Next
 
-The order of C3 and C4 is undecided. Settings for the view and the open file come with the chunks
-that add them (C4, and file handling).
+A setting for the open file comes with file handling.
 
-- **C3 Keys** (`bevy_action_map`): save, open, quit, view toggles. Unmodified letter keys would
-  fire while typing in a number input; that crate's D23 answers this with a context, active
-  while `InputFocus` is on an `EditableText`, that claims character keys.
-- **C4 Orbit camera**: Bevy's pan-orbit camera (`pan_orbit_camera` feature, the upstreamed
-  `bevy_editor_cam`), which works through picking, so drags over the panel stay there.
+- **C3 Keys** (`bevy_action_map`): save, open, quit, Frame (C4's button), view toggles.
+  Unmodified letter keys would fire while typing in a number input; that crate's D23 answers this
+  with a context, active while `InputFocus` is on an `EditableText`, that claims character keys.
 - **C5 Parameter editing by reflection.** The generator configuration is reflectable Rust
   structs; field attributes hint which widget edits each field (slider, integer input, center
   and spread, ...); the panel walks the reflected struct. Propose the design before code.
@@ -64,7 +62,9 @@ that add them (C4, and file handling).
   pixels, so no scale factor is applied. The UI needs its own camera: UI lays out within its
   camera's viewport, so on the 3D camera it would shrink into the view pane. A `Camera2d` with
   `IsDefaultUiCamera`, `order: 1` and `ClearColorConfig::None` draws the UI over the whole
-  window. Panoply's X3 viewport takes this form.
+  window. Panoply's X3 viewport takes this form. The view's node is pickable: the turntable's
+  drag and scroll observers sit on it (D7), so the panel's own drags and scrolls never reach the
+  camera.
 - **D6** App state is saved with `bevy_settings` as `org.viridia.arbor_day`; under the driver,
   `BEVY_SETTINGS_DIR` gives each run a fresh directory, so the app has no driver-specific name.
   The panel keeps a fixed width in pixels: `Pane::size` is a flex weight, so the two panes get
@@ -72,6 +72,21 @@ that add them (C4, and file handling).
   finished drag's first proposed size is the panel's new width. Settings save on any `AppExit`
   (`SaveSettingsSync` in `Last`), since the driver ends a plan with one and a deferred save may
   not have run.
+- **D7** The 3D view uses a turntable camera of our own (`src/turntable.rs`), not Bevy's
+  pan-orbit camera, which rotates and pans freely: every control is one more thing to reset, so
+  there is no roll or pan, and Frame resets the rest. It circles a vertical axis through the
+  subject with the game's field of view (40°, Panoply's `DEFAULT_FOV`), and frames from the
+  game's elevation (45°, Panoply's `elevation: PI * 0.25`), so plants are seen as players will
+  see them. Spin: horizontal drag or scroll. Tilt: vertical drag (dragging down looks from above),
+  5° to 85°, because the hand expects it; Frame returns it to the game's elevation, which is what
+  makes the extra control acceptable. Zoom: vertical scroll, moving the focus toward the height
+  under the pointer (where the pointer's ray crosses the vertical plane through the axis), clamped
+  to the subject's heights, so zooming in on the crown frames the crown. While `keep_framed` is
+  set the camera keeps the subject's bounding sphere in view, through resizes and changes to the
+  subject; spinning and tilting keep it, zooming clears it, Frame sets it again. Frame leaves the
+  spin alone. The view is not saved: every start frames the subject.
+  The module is shaped like `bevy_camera_controller`'s (a component, a plugin, input from picking
+  events) so it can be offered upstream (X7).
 
 ## Deferred
 
@@ -88,6 +103,17 @@ that add them (C4, and file handling).
   there is). *Gate:* spread inputs prove slow to drag.
 - **X5** A dual-thumb range slider (requirements, Authoring app, a **C** item). *Gate:* the
   center-and-spread row proves clumsy.
+- **X6** A view gizmo, and a home elevation and field of view set per project, for games whose
+  camera differs from Panoply's. C4 has tilt by dragging, but its home view is Panoply's.
+  *Gate:* another game using the tool.
+- **X7** Propose a turntable camera for `bevy_camera_controller`, with C4 as the prototype. Bevy
+  has free, pan and pan-orbit controllers; the issue tracker has nothing on a turntable (searched
+  2026-10-11). Pan-orbit can turn off pan and fix the up direction, but cannot lock pitch, and it
+  orbits about the point under the pointer rather than a fixed vertical axis through the subject.
+  *Gate:* C4 landed and used long enough to settle its controls.
+- **X8** Pinch to zoom on a trackpad. C4 zooms on vertical scroll only; a pinch arrives as
+  `PinchGesture`, not as a pointer event, so it needs its own path to the view. *Gate:* scroll
+  zoom proves awkward on a trackpad.
 
 ## Notes
 
