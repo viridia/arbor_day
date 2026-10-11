@@ -1,0 +1,39 @@
+# Agent instructions
+
+`arbor_day` makes low-poly plants for Panoply (`../panoply`): a generator, and a Bevy app for
+authoring species with it. It is a Rust port of `../seedling` (TypeScript, three.js), with a new
+growth model.
+
+## Orient
+
+1. Read `docs/ledger.md`: what has landed, what is next, decisions, deferrals.
+2. Check `git log --oneline -5`.
+3. `docs/requirements.md` says what the tool must do.
+
+## Rules
+
+- Never commit, push, or stage. The author reviews and commits; draft the commit message: a
+  short subject line (`feat:` / `fix:` / `refactor:` / `chore:` / `docs:` prefix, under about 72
+  characters), a blank line, then a body of bullets, one per change, wrapped at 72 columns.
+- One chunk per session: one focused change. Update the ledger in the same chunk (Landed row,
+  Next, new decisions or deferrals).
+- Every open item goes in the ledger: in Next, or in Deferred with a gate.
+- Propose structural changes (new dependencies, a new crate, replacing a subsystem) with a
+  recommendation before writing code.
+- Bevy is main, named by branch (ledger D1). Read APIs at the commit `Cargo.lock` holds, in
+  Cargo's git checkout of it (ledger, Notes), and its `_release-content/migration-guides/`,
+  rather than guessing. Prefer Bevy's built-in replacements over third-party crates.
+- `../seedling` is a reference for what the old tool did, not how to do it; the requirements say
+  where it went wrong.
+- Patterns here are meant for Panoply's editor (ledger D3). When one settles, say so in the
+  ledger, so Panoply can take it.
+- Prose follows the "House style" section of `../bevy_action_map/CLAUDE.md`.
+
+## Verify
+
+- `cargo clippy --all-targets`: no errors, no new warnings. `cargo test`.
+- Runtime: shader and pipeline errors only appear at runtime. Run a plan with the remote driver,
+  `python3 ../bevy_remote_driver/client/run.py plans/smoke.py`, which builds and launches the
+  app, runs the steps, saves screenshots under `target/remote-driver/`, and quits. Write a new
+  plan in `plans/` for behaviour a chunk adds, following
+  `../bevy_remote_driver/docs/writing-plans.md`. Screenshots bring the app window to the front.

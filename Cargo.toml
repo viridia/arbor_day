@@ -1,0 +1,30 @@
+[package]
+name = "arbor_day"
+version = "0.1.0"
+edition = "2024"
+# Bevy main is a git dependency, which crates.io does not accept (ledger X3).
+publish = false
+
+# Bevy is named by branch, exactly as every repo in the family names it: Cargo treats a branch and
+# a rev as different sources even at the same commit, which would build two Bevys. `Cargo.lock`
+# holds the commit.
+[dependencies]
+bevy = { git = "https://github.com/bevyengine/bevy.git", branch = "main", features = [
+  "bevy_feathers",
+  # Registers `Image`'s serialization, which the remote driver's screenshots need.
+  "bevy_remote",
+  "dynamic_linking",
+] }
+bevy_immediate = { git = "https://github.com/viridia/bevy_immediate", branch = "bevy-main" }
+# Inert unless BEVY_REMOTE_DRIVER_PORT is set.
+bevy_remote_driver = { git = "https://github.com/viridia/bevy_remote_driver" }
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[lints.clippy]
+type_complexity = "allow"
+too_many_arguments = "allow"
