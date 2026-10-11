@@ -14,7 +14,7 @@ use bevy::{
     prelude::*,
     ui::{IsDefaultUiCamera, UiGlobalTransform, UiSystems},
     ui_widgets::{SliderPrecision, SliderStep, split_pane_self_update},
-    window::PrimaryWindow,
+    window::{ExitCondition, PrimaryWindow},
 };
 use bevy_immediate::{
     Imm,
@@ -22,6 +22,9 @@ use bevy_immediate::{
     ui::{CapsUiFeathers, slider_value::ImmUiSliderValue},
 };
 use bevy_remote_driver::RemoteDriverPlugin;
+use settings::{AppSettingsPlugin, MIN_PANE_WIDTH, save_panel_width};
+
+mod settings;
 
 fn main() {
     App::new()
@@ -31,8 +34,11 @@ fn main() {
                     title: "arbor_day".into(),
                     ..default()
                 }),
+                // Closing the window exits through `AppSettingsPlugin`, which saves first.
+                exit_condition: ExitCondition::DontExit,
                 ..default()
             }),
+            AppSettingsPlugin,
             FeathersPlugins,
             BevyImmediateAttachPlugin::<CapsUiFeathers, ParamPanel>::new(),
             RemoteDriverPlugin,
@@ -51,6 +57,10 @@ struct SceneCamera;
 /// The UI node whose rectangle the [`SceneCamera`]'s viewport follows.
 #[derive(Component, Default, Clone)]
 struct ViewportSlot;
+
+/// The split pane's pane holding the parameter panel.
+#[derive(Component, Default, Clone)]
+struct PanelPane;
 
 /// The root of the immediate-mode parameter panel.
 #[derive(Component, Default, Clone)]
@@ -119,9 +129,11 @@ fn shell_ui() -> impl Scene {
                 height: percent(100),
             }
             on(split_pane_self_update)
+            on(save_panel_width)
             Children [
-                @FeathersPane { @size: 1.0, @min_size: 200.0 }
+                @FeathersPane { @size: 1.0, @min_size: MIN_PANE_WIDTH }
                 Name("Panel")
+                PanelPane
                 ThemeBackgroundColor(tokens::WINDOW_BG)
                 Children [
                     ParamPanel
@@ -134,7 +146,7 @@ fn shell_ui() -> impl Scene {
                 --
                 @FeathersSplitPaneHandle
                 --
-                @FeathersPane { @size: 3.0, @min_size: 200.0 }
+                @FeathersPane { @size: 3.0, @min_size: MIN_PANE_WIDTH }
                 Name("View")
                 ViewportSlot
                 // Lets the pointer through to the 3D scene.

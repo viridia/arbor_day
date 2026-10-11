@@ -1,46 +1,47 @@
 # arbor_day ledger
 
 What has landed, what is next, the decisions that stand, and what is deferred and why. What the
-tool must do is in [requirements.md](requirements.md). Decisions here are `D<n>`, deferrals
-`X<n>`. Panoply's ledger (`../panoply/docs/migration.md`) is cited as "Panoply's".
+tool must do is in [requirements.md](requirements.md). Chunks are `C<n>`, decisions `D<n>`,
+deferrals `X<n>`. An id is assigned once and never reused or renumbered; Next lists chunks in the
+order they are meant to land, which their ids need not follow. Panoply's ledger
+(`../panoply/docs/migration.md`) is cited as "Panoply's".
 
 ## Landed
 
 | Commit    | Change                                                                                  |
 | --------- | --------------------------------------------------------------------------------------- |
-| (pending) | Repo started: `AGENTS.md`, `CLAUDE.md`, this ledger; requirements moved from Panoply's `docs/arbor-day.md`. |
-| (pending) | Minimal shell (D5): a feathers split pane, a `bevy_immediate` panel with one slider scaling a torus, the 3D camera's viewport following the view pane; `plans/smoke.py`. Bevy at `c9c21c2b`; clippy clean; the plan passes (5 steps). |
+| `0947b01` | Repo started: `AGENTS.md`, `CLAUDE.md`, this ledger; requirements moved from Panoply's `docs/arbor-day.md`. |
+| `0947b01` | C1 Minimal shell (D5): a feathers split pane, a `bevy_immediate` panel with one slider scaling a torus, the 3D camera's viewport following the view pane; `plans/smoke.py`. Bevy at `c9c21c2b`; clippy clean; the plan passes (5 steps). |
+| (pending) | C2 Settings (D6): window position, size and fullscreen (after Panoply's `window_settings.rs`), and the panel's width, in `src/settings.rs`; saved on any exit, including the driver's. `plans/smoke.py` checks the panel starts at its default width; the run saved to its own `settings/`, and the developer's file was untouched. |
 
 ## Next
 
-1. **Shell, continued**, a chunk each, order to be decided:
-   - Settings (`bevy_settings`): window, panel width, view, open file. Plans must start from
-     defaults; the driver's own Next item 4 (`run.py` sets `BEVY_SETTINGS_DIR` per run) gives
-     that. `Pane::size` is a flex weight, so keeping the panel's pixel width across window
-     resizes means setting the weights from pixel widths.
-   - Keys (`bevy_action_map`): save, open, quit, view toggles. Unmodified letter keys would fire
-     while typing in a number input; that crate's D23 answers this with a context, active while
-     `InputFocus` is on an `EditableText`, that claims character keys.
-   - Orbit camera: Bevy's pan-orbit camera (`pan_orbit_camera` feature, the upstreamed
-     `bevy_editor_cam`), which works through picking, so drags over the panel stay there.
-2. **Parameter editing by reflection.** The generator configuration is reflectable Rust structs;
-   field attributes hint which widget edits each field (slider, integer input, center and
-   spread, ...); the panel walks the reflected struct. Propose the design before code.
-   Groups are feathers subpanes, not rows butted together, and seedling's look is not a target.
-   Field kinds seedling had, which the widget hints should cover: integer (seed), enum (growth
-   pattern), float, range, bool, color. Branch levels were a repeating group with add and remove
-   buttons, which in Rust is a `Vec` of a level struct. Notes for the center-and-spread row
-   (requirements, Authoring app):
-   - The feathers slider has no thumb entity: its fill is a four-stop gradient on the slider
-     node, and the fill's edge marks the value. The band can be an absolutely positioned child
-     spanning center ± spread as percentages of the node (`SliderRange::thumb_position`), with
-     `ZIndex(-1)` under the value text and `Pickable::IGNORE`. The headless slider maps the
-     pointer across the node's full width, so band, fill and pointer agree.
-   - The feathers number input scrubs with Shift for slow and has no fast modifier (X4).
-   - The slider takes no typed value; a soft-limited number input does, but its fill is on an
-     inner entity the band cannot attach to.
-3. **Growth-model survey** (requirements, Research): a short write-up with a recommendation.
-   The gate for the generator.
+The order of C3 and C4 is undecided. Settings for the view and the open file come with the chunks
+that add them (C4, and file handling).
+
+- **C3 Keys** (`bevy_action_map`): save, open, quit, view toggles. Unmodified letter keys would
+  fire while typing in a number input; that crate's D23 answers this with a context, active
+  while `InputFocus` is on an `EditableText`, that claims character keys.
+- **C4 Orbit camera**: Bevy's pan-orbit camera (`pan_orbit_camera` feature, the upstreamed
+  `bevy_editor_cam`), which works through picking, so drags over the panel stay there.
+- **C5 Parameter editing by reflection.** The generator configuration is reflectable Rust
+  structs; field attributes hint which widget edits each field (slider, integer input, center
+  and spread, ...); the panel walks the reflected struct. Propose the design before code.
+  Groups are feathers subpanes, not rows butted together, and seedling's look is not a target.
+  Field kinds seedling had, which the widget hints should cover: integer (seed), enum (growth
+  pattern), float, range, bool, color. Branch levels were a repeating group with add and remove
+  buttons, which in Rust is a `Vec` of a level struct. Notes for the center-and-spread row
+  (requirements, Authoring app):
+  - The feathers slider has no thumb entity: its fill is a four-stop gradient on the slider
+    node, and the fill's edge marks the value. The band can be an absolutely positioned child
+    spanning center ± spread as percentages of the node (`SliderRange::thumb_position`), with
+    `ZIndex(-1)` under the value text and `Pickable::IGNORE`. The headless slider maps the
+    pointer across the node's full width, so band, fill and pointer agree.
+  - The feathers number input scrubs with Shift for slow and has no fast modifier (X4).
+  - The slider takes no typed value; a soft-limited number input does, but its fill is on an
+    inner entity the band cannot attach to.
+- **C6 Growth-model survey** (requirements, Research): a short write-up with a recommendation.
+  The gate for the generator.
 
 ## Decisions
 
@@ -64,6 +65,13 @@ tool must do is in [requirements.md](requirements.md). Decisions here are `D<n>`
   camera's viewport, so on the 3D camera it would shrink into the view pane. A `Camera2d` with
   `IsDefaultUiCamera`, `order: 1` and `ClearColorConfig::None` draws the UI over the whole
   window. Panoply's X3 viewport takes this form.
+- **D6** App state is saved with `bevy_settings` as `org.viridia.arbor_day`; under the driver,
+  `BEVY_SETTINGS_DIR` gives each run a fresh directory, so the app has no driver-specific name.
+  The panel keeps a fixed width in pixels: `Pane::size` is a flex weight, so the two panes get
+  weights in pixels summing to the space they share, reset when the window resizes, and a
+  finished drag's first proposed size is the panel's new width. Settings save on any `AppExit`
+  (`SaveSettingsSync` in `Last`), since the driver ends a plan with one and a deferred save may
+  not have run.
 
 ## Deferred
 

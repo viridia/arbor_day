@@ -11,6 +11,7 @@ publish = false
 [dependencies]
 bevy = { git = "https://github.com/bevyengine/bevy.git", branch = "main", features = [
   "bevy_feathers",
+  "bevy_settings",
   # Registers `Image`'s serialization, which the remote driver's screenshots need.
   "bevy_remote",
   "dynamic_linking",
