@@ -39,17 +39,18 @@ fn on_key(
     if event.state != ButtonState::Pressed {
         return;
     }
-    let command = keys.pressed(if cfg!(target_os = "macos") {
-        Key::Super
-    } else {
-        Key::Control
-    });
     let Key::Character(character) = &event.logical_key else {
         return;
     };
 
-    if command {
-        if character.eq_ignore_ascii_case("q") && !event.repeat {
+    // Cmd+Q on macOS never arrives: the OS quits the app first, so settings rely on their
+    // deferred save there.
+    if keys.pressed(Key::Super) || keys.pressed(Key::Control) {
+        if cfg!(not(target_os = "macos"))
+            && keys.pressed(Key::Control)
+            && character.eq_ignore_ascii_case("q")
+            && !event.repeat
+        {
             commands.write_message(AppExit::Success);
         }
         return;

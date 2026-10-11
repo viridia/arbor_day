@@ -14,7 +14,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `0947b01` | C1 Minimal shell (D5): a feathers split pane, a `bevy_immediate` panel with one slider scaling a torus, the 3D camera's viewport following the view pane; `plans/smoke.py`. Bevy at `c9c21c2b`; clippy clean; the plan passes (5 steps). |
 | `d1ae223` | C2 Settings (D6): window position, size and fullscreen (after Panoply's `window_settings.rs`), and the panel's width, in `src/settings.rs`; saved on any exit, including the driver's. `plans/smoke.py` checks the panel starts at its default width; the run saved to its own `settings/`, and the developer's file was untouched. |
 | `eafef5a` | C4 Turntable camera (D7), `src/turntable.rs`: spin by horizontal drag or scroll, tilt by vertical drag, zoom by vertical scroll toward the height under the pointer, a Frame button that also resets the tilt; the home elevation and field of view are the game's. Speeds tuned by hand. The test torus stands on edge so a spin shows. `plans/smoke.py` checks the camera starts framed from the front and clicks Frame (9 steps). Spin and zoom are checked by hand: the driver cannot drag or scroll. |
-| (pending) | C3 Keys (D8), `src/keys.rs`: one observer on the window; F frames, + and − zoom about the focus (`=` and `_` too, for the unshifted and shifted keys), Cmd+Q (Ctrl+Q elsewhere) quits through the saving exit path. `plans/smoke.py` presses − twice and F, checking framing is let go and taken back (15 steps). By hand: typing F into a number input does not frame; clicking the view gives letter keys back. |
+| `0d1aee5` | C3 Keys (D8), `src/keys.rs`: one observer on the window; F frames, + and − zoom about the focus (`=` and `_` too, for the unshifted and shifted keys), Ctrl+Q quits through the saving exit path, except on macOS, where the OS takes Cmd+Q before the app sees it. `plans/smoke.py` presses − twice and F, checking framing is let go and taken back (15 steps). By hand: typing F into a number input does not frame; clicking the view gives letter keys back. |
 
 ## Next
 
@@ -69,7 +69,8 @@ File handling brings a setting for the open file, and Save and Open keys (D8).
   weights in pixels summing to the space they share, reset when the window resizes, and a
   finished drag's first proposed size is the panel's new width. Settings save on any `AppExit`
   (`SaveSettingsSync` in `Last`), since the driver ends a plan with one and a deferred save may
-  not have run.
+  not have run. On macOS, Cmd+Q quits the app before any of it runs, so there only the deferred
+  save (half a second after each change) protects settings.
 - **D7** The 3D view uses a turntable camera of our own (`src/turntable.rs`), not Bevy's
   pan-orbit camera, which rotates and pans freely: every control is one more thing to reset, so
   there is no roll or pan, and Frame resets the rest. It circles a vertical axis through the
