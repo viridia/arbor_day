@@ -13,15 +13,13 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `0947b01` | Repo started: `AGENTS.md`, `CLAUDE.md`, this ledger; requirements moved from Panoply's `docs/arbor-day.md`. |
 | `0947b01` | C1 Minimal shell (D5): a feathers split pane, a `bevy_immediate` panel with one slider scaling a torus, the 3D camera's viewport following the view pane; `plans/smoke.py`. Bevy at `c9c21c2b`; clippy clean; the plan passes (5 steps). |
 | `d1ae223` | C2 Settings (D6): window position, size and fullscreen (after Panoply's `window_settings.rs`), and the panel's width, in `src/settings.rs`; saved on any exit, including the driver's. `plans/smoke.py` checks the panel starts at its default width; the run saved to its own `settings/`, and the developer's file was untouched. |
-| (pending) | C4 Turntable camera (D7), `src/turntable.rs`: spin by horizontal drag or scroll, tilt by vertical drag, zoom by vertical scroll toward the height under the pointer, a Frame button that also resets the tilt; the home elevation and field of view are the game's. Speeds tuned by hand. The test torus stands on edge so a spin shows. `plans/smoke.py` checks the camera starts framed from the front and clicks Frame (9 steps). Spin and zoom are checked by hand: the driver cannot drag or scroll. |
+| `eafef5a` | C4 Turntable camera (D7), `src/turntable.rs`: spin by horizontal drag or scroll, tilt by vertical drag, zoom by vertical scroll toward the height under the pointer, a Frame button that also resets the tilt; the home elevation and field of view are the game's. Speeds tuned by hand. The test torus stands on edge so a spin shows. `plans/smoke.py` checks the camera starts framed from the front and clicks Frame (9 steps). Spin and zoom are checked by hand: the driver cannot drag or scroll. |
+| (pending) | C3 Keys (D8), `src/keys.rs`: one observer on the window; F frames, + and − zoom about the focus (`=` and `_` too, for the unshifted and shifted keys), Cmd+Q (Ctrl+Q elsewhere) quits through the saving exit path. `plans/smoke.py` presses − twice and F, checking framing is let go and taken back (15 steps). By hand: typing F into a number input does not frame; clicking the view gives letter keys back. |
 
 ## Next
 
-A setting for the open file comes with file handling.
+File handling brings a setting for the open file, and Save and Open keys (D8).
 
-- **C3 Keys** (`bevy_action_map`): save, open, quit, Frame (C4's button), view toggles.
-  Unmodified letter keys would fire while typing in a number input; that crate's D23 answers this
-  with a context, active while `InputFocus` is on an `EditableText`, that claims character keys.
 - **C5 Parameter editing by reflection.** The generator configuration is reflectable Rust
   structs; field attributes hint which widget edits each field (slider, integer input, center
   and spread, ...); the panel walks the reflected struct. Propose the design before code.
@@ -49,8 +47,8 @@ A setting for the open file comes with file handling.
   second Bevy beside the dependencies'. Bump with the family (Panoply, the `bevy_immediate`
   fork, `bevy_action_map`, `bevy_remote_driver`), one chunk per bump (Panoply's Next item 0).
 - **D2** UI: `bevy_immediate` from the fork `viridia/bevy_immediate`, branch `bevy-main`, with
-  `bevy_feathers` widgets. `bevy_action_map` from its `main`. `bevy_remote_driver` by git from
-  `viridia/bevy_remote_driver`; plans follow its `docs/writing-plans.md`.
+  `bevy_feathers` widgets. `bevy_remote_driver` by git from `viridia/bevy_remote_driver`; plans
+  follow its `docs/writing-plans.md`. Keys do not use `bevy_action_map` (D8).
 - **D3** The shell comes first, with a stub in place of the generator, before the growth-model
   survey. It is the `bevy_immediate` spike for Panoply's editor (Panoply's X3), so its patterns
   (panel layout, viewport, settings, plans) are meant to be reused there.
@@ -87,6 +85,13 @@ A setting for the open file comes with file handling.
   spin alone. The view is not saved: every start frames the subject.
   The module is shaped like `bevy_camera_controller`'s (a component, a plugin, input from picking
   events) so it can be offered upstream (X7).
+- **D8** Keys are handled by an observer of `FocusedInput<KeyboardInput>` on the primary window,
+  not `bevy_action_map`: the keys are fixed, with no rebinding or saved bindings. Focused input
+  reaches the window either way, directly when nothing has focus or bubbling up from the focused
+  widget. A feathers text input stops what it consumes (plain and shifted characters, Space,
+  editing keys, its own Cmd shortcuts) and passes the rest on (Escape after blurring, Enter,
+  Tab, other Cmd shortcuts), so letter keys never fire while typing and Cmd+S works while a
+  field has focus. Checked in `bevy_ui_widgets`' `text_input.rs` and `bevy_input_focus`.
 
 ## Deferred
 

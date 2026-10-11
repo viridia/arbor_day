@@ -209,8 +209,9 @@ conventions, and lessons:
   filling the rest through a camera viewport that follows a UI node.
 - **M** App state (open file, panel width, view, selected group) saved with `bevy_settings`,
   so a restart returns to where work stopped.
-- **S** Keys through `bevy_action_map`, and a remote-driver plan (as in Panoply) that loads a
-  species, screenshots it, and quits, for checking changes without clicking.
+- **S** Keys for common actions that do not fire while typing into a field, and a remote-driver
+  plan (as in Panoply) that loads a species, screenshots it, and quits, for checking changes
+  without clicking.
 
 - **M** A varied parameter is one row: a feathers slider for the center, with the spread drawn
   as a band behind the thumb (a decorative child, which the headless slider allows), and a

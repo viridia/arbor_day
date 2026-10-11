@@ -25,9 +25,11 @@ use bevy_immediate::{
     ui::{CapsUiFeathers, activated::ImmUiActivated, slider_value::ImmUiSliderValue},
 };
 use bevy_remote_driver::RemoteDriverPlugin;
+use keys::KeysPlugin;
 use settings::{AppSettingsPlugin, MIN_PANE_WIDTH, save_panel_width};
 use turntable::{TurntableCamera, TurntablePlugin, TurntableSubject, orbit_on_drag, zoom_on_scroll};
 
+mod keys;
 mod settings;
 mod turntable;
 
@@ -52,6 +54,7 @@ fn main() {
             BevyImmediateAttachPlugin::<CapsUiFeathers, ParamPanel>::new(),
             RemoteDriverPlugin,
             TurntablePlugin,
+            KeysPlugin,
         ))
         .insert_resource(UiTheme(create_dark_theme()))
         .add_observer(use_game_fov)

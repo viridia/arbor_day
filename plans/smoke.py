@@ -1,5 +1,6 @@
 """The shell starts from default settings: the panel's slider shows the test object's scale, the
-panel has its default width, and the turntable camera frames the object."""
+panel has its default width, the turntable camera frames the object, and the zoom and frame keys
+work."""
 
 BIN = "arbor_day"
 SHAPE = "arbor_day::TestShape"
@@ -20,4 +21,11 @@ def run(driver):
     driver.click("Shell/Panel/Frame")
     driver.expect("SceneCamera", TURNTABLE, {"keep_framed": True})
     driver.screenshot("shell")
+    # Zooming by key lets go of the framing; F takes it back.
+    driver.key("Minus")
+    driver.key("Minus")
+    driver.expect("SceneCamera", TURNTABLE, {"keep_framed": False})
+    driver.screenshot("zoomed_out")
+    driver.key("KeyF")
+    driver.expect("SceneCamera", TURNTABLE, {"keep_framed": True})
     driver.exit()
