@@ -46,8 +46,33 @@ Seedling's look is not a target. `bevy_inspector`'s `details_panel` also walks r
 but reads no attributes, has no per-type hook, and is retained-mode. The generator sets the order
 (`docs/growth-model.md`), each step bringing the widget kind it needs:
 
+- **C31 Bend in proportion**: each metre closes a fixed fraction of the angle left to the bend
+  target, in place of a fixed turn per metre. With a fixed rate a limb turns at most rate ×
+  length, so a target beyond that does nothing, and where that starts moves with every field
+  that changes limb length. In proportion, every target moves the tip, and longer limbs still
+  bend more. Measured per crown size rather than per metre, so a shrub and a tree with the same
+  settings bend alike.
 - **Review of the varied fields**, by the author from the panel: which other level fields
-  (bend, wander, radius, nodes) should vary, and the defaults' spreads.
+  (bend, wander, radius, nodes) should vary, and the defaults' spreads. Whether the span varies
+  at all: a varied span is not visible in the tree, and two `Fuzzy` ends stand in the way of
+  one range row (X5), which would also stop the end being set below the start.
+- **C32 Log scale** for sizes, with no change upstream: an `@LogScale` attribute. The species
+  keeps metres; the panel's binding gives the number input ln(value) and a log range, and
+  writes e^value back; a registered unit (`length_log_meters`) formats e^value in metres, to
+  three significant figures, and parses metres to the log. The widget has no
+  `NumberInputPrecision`, which would round in log units; the binding rounds to the field's
+  `Precision` in metres as it writes. Feathers computes a drag from where it started, so the
+  rounding should not fight it; check by hand that a drag snaps cleanly. First for the
+  envelope's height (0.5 to 30 m, where a herb lives in the first pixels) and radius.
+- **C34 Fractions as percentages**: a registered unit, `ratio_percent`, through feathers'
+  `StandardUnitKind` (one unit, "%", at a scale of 0.01), for every field stored as a fraction:
+  crown base, taper, span, reach, limb radius, and C24's leader extent. The species keeps 0 to
+  1; "0.4" reads less directly than "40%". A drag rounds in stored units, so `Precision(2)` is
+  whole percents, as now. Feathers has length, time and angle units but no percentage, so
+  offer it upstream once it has settled here.
+- **C33 Sections within a level**, so the panel is not a wall of like sliders: arrangement
+  (nodes, per node, divergence, span), direction (angle, bend toward, bend), growth (reach,
+  wander), bark (radius, sides).
 - **C29 Pipe-model radii**, and limbs below a radius left to the foliage rather than meshed.
   Until then limbs taper as the trunk does, and three default levels are heavy (wandering limbs
   add rings, 2 × sides triangles each); revisit the third level's defaults then.
@@ -59,7 +84,10 @@ but reads no attributes, has no per-type hook, and is retained-mode. The generat
   the Y's plane lies, from level to upright. *After* C29, so each copy's radius follows the
   pipe model (the limb's over √2 for two); C24's leader fork uses the same mechanism.
 - **C24 Stems**: the trunk's height becomes the envelope's height times the leader extent; until
-  then the trunk keeps its own height.
+  then the trunk keeps its own height. A fraction is as fine for a herb as for a tree, and the
+  envelope becomes the one size. Stems: count and splay (`docs/growth-model.md`, Stems and
+  leader), so a shrub or herb is two or three stems spread wide under a crown starting near the
+  ground, as seedling's short trunk splitting just above the root was.
 - **C25 A HUD over the view**, to free the panel: every control that changes the preview rather
   than the species moves onto the view. Buttons the size and shape of feathers' but translucent:
   Frame, zoom, orbit and tilt, and
@@ -283,7 +311,8 @@ but reads no attributes, has no per-type hook, and is retained-mode. The generat
 - **X4** A fast modifier for scrubbing feathers number inputs, upstream (Shift for slow is all
   there is). *Gate:* spread inputs prove slow to drag.
 - **X5** A dual-thumb range slider (requirements, Authoring app, a **C** item). *Gate:* the
-  center-and-spread row proves clumsy.
+  center-and-spread row proves clumsy, or the span becomes one row (the review of varied
+  fields): span start and end as two rows let the end go below the start.
 - **X6** A view gizmo, and a home elevation and field of view set per project, for games whose
   camera differs from Panoply's. C4 has tilt by dragging, but its home view is Panoply's.
   *Gate:* another game using the tool.
@@ -343,6 +372,14 @@ but reads no attributes, has no per-type hook, and is retained-mode. The generat
   field's default are different things. What remains (fixes, reordered draws) is re-exported
   deliberately, the earlier export being the record. *Gate:* the first species used in
   Panoply.
+- **X16** Captions inside feathers' number input, upstream, by the author, for seedling's
+  density: caption left and value right while idle; while editing, the caption hidden and the
+  text right-aligned. The input's `label_text` would make slider widths ragged. *Gate:* the
+  change in the Bevy we build against; then rows drop their caption line, halving their height.
+- **X17** Angles as dials, for variety that means something: a dial points the actual way, and
+  for a `Fuzzy` angle can draw the spread as a wedge. Mixed control kinds confuse when the
+  choice looks arbitrary; "every angle is a dial" is a rule a user can see. *Gate:* the panel
+  still reads as a wall after C33's sections.
 
 ## Notes
 
