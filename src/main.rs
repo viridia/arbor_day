@@ -41,6 +41,11 @@ mod generator;
 mod keys;
 mod plant;
 mod properties;
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "nothing in the species varies yet")
+)]
+mod random;
 mod settings;
 mod species;
 mod spread_strip;

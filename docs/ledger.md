@@ -30,6 +30,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `a9399e7` | C22 Literal names in `bsn!` as `#name`.                                                 |
 | `0a3924b` | C18 One level of limbs (D14), reaching toward the envelope; `plans/limbs.py`.           |
 | `1e7bd38` | C19 Up to three limb levels (D15), each at an angle from its parent; `plans/levels.py`. |
+|           | C26 Random streams and `Fuzzy::sample` (D16), `src/random.rs`.                          |
 
 ## Next
 
@@ -41,25 +42,30 @@ Seedling's look is not a target. `bevy_inspector`'s `details_panel` also walks r
 but reads no attributes, has no per-type hook, and is retained-mode. The generator sets the order
 (`docs/growth-model.md`), each step bringing the widget kind it needs:
 
-- **C26 Sampling a `Fuzzy`**, and the species' seed that drives it. The bell is the mean of
-  three uniforms, bounded by center ± spread, so spread means the same in both shapes; every
-  varied parameter draws three numbers whatever its shape, so toggling one does not shift the
-  rest of the random stream; a wrapping angle is sampled modulo a turn. In the generator, with
-  unit tests; nothing in the species is varied until C23.
 - **C23 Limb growth**: tropism toward an angle from world up and wander per metre (seedling's
   `flex`, and the winding seedling lacked), so a limb is a curve of rings spaced by its turn,
   as the trunk is; `limb_frame` then follows the curve. Bounded jitter on each angle within
-  per-level limits (sampled as C26 does): the level's fields that seedling varied become
-  `Fuzzy` (span, reach, angle, divergence). Pipe-model radii, and limbs below a radius left to
-  the foliage rather than meshed. Until then limbs are straight and taper as the trunk does,
+  per-level limits: the level's fields that seedling varied become `Fuzzy` (span, reach, angle,
+  divergence), drawn from a `branching` stream (D16). The seed arrives with them, as no row
+  should change nothing; whether it belongs to the species or to a variant (requirements, a
+  species file plus a seed list) is open, decided here. Where each value is used, the
+  generator takes a wrapping angle modulo a turn and clamps the rest to the field's limits,
+  since the limits are editor attributes it does not read; then drop the `dead_code`
+  expectations on `random` and `Fuzzy::sample`. Pipe-model radii, and limbs below a radius left
+  to the foliage rather than meshed. Until then limbs are straight and taper as the trunk does,
   and three default levels make 5,154 triangles; revisit the third level's defaults then.
 - **C24 Stems**: the trunk's height becomes the envelope's height times the leader extent; until
   then the trunk keeps its own height.
 - **C25 A HUD over the view**, to free the panel: every control that changes the preview rather
   than the species moves onto the view. Buttons the size and shape of feathers' but translucent:
-  Frame (icon a locate crosshair, as Google Maps' "my location"), zoom, orbit and tilt in steps,
-  and toggles for the envelope and the ground. The triangle count in the opposite corner, lower
-  left. Stepped orbit and tilt also let plans drive the camera, which the driver cannot drag.
+  Frame, zoom, orbit and tilt, and
+  toggles for the envelope and the ground. Icons from Material Symbols, chosen by the author,
+  are in `assets/icons/` (48px white PNGs, under their Material names): `center_focus_strong`
+  for Frame (corner brackets: fit the subject to the view), `zoom_in` and `zoom_out`, `360` for orbit (`ImageNode::flip_x` for the other way, and
+  turned 90° for tilt), `language` for the envelope, `landscape` for the ground.
+  Zoom, orbit and tilt move smoothly for as long as the button is held, and a click moves a
+  fixed step, which lets plans drive the camera (the driver cannot drag, and its click is a
+  press and an immediate release). The triangle count in the opposite corner, lower left.
   Feathers resolves colors per surface (`SurfaceLevel`, set on a container by `ThemeContext`), so
   a HUD is one more surface: a `SurfaceLevel::Hud` with translucent fills would make plain
   feathers buttons in it translucent. Recommended: propose that upstream (any editor viewport
@@ -104,7 +110,9 @@ but reads no attributes, has no per-type hook, and is retained-mode. The generat
   Reflectable types with `Default` for initial values and attributes for the editor, after the
   fields settle (C23, C24), so saved files are not broken by every change. Serialized by
   reflection only, no serde derives: TOML in settings (C8) and JSON as the glTF
-  extra, one representation that cannot drift. Seedling's groups for reference: `trunk`;
+  extra, one representation that cannot drift. A golden test: a species serialized and compared
+  with a JSON file in the repo, brought in with `include_str!` rather than quoted inline.
+  Seedling's groups for reference: `trunk`;
   `branch[]`, one per level; the leaf as `leafGroup` (arrangement), `leafShape` and `leafColor`.
 
 ## Decisions
@@ -224,6 +232,13 @@ but reads no attributes, has no per-type hook, and is retained-mode. The generat
   − and + on the last shown level's header hide it or show the next. The property editor does
   this for any array marked `ShownCount`, naming the count field; each shown item is a subpane
   beside the struct's other rows, as seedling's were.
+
+- **D16** Random numbers come from our own SplitMix64 (`src/random.rs`), not the `rand` crate:
+  `rand` reserves the right to change the values its conversions give between versions, and it
+  is shared with Bevy's tree, so a Bevy bump could change every plant. Each subsystem draws from
+  a stream of its own, `Rng::stream(seed, name)`, so changing one leaves the others' numbers
+  alone (requirements, Parameters, determinism, variants). `Fuzzy::sample` always draws three
+  numbers: the bell is their mean, uniform uses the first.
 
 ## Deferred
 

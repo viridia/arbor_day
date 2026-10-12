@@ -4,6 +4,8 @@
 
 use bevy::prelude::*;
 
+use crate::random::Rng;
+
 /// A designed value and the most a plant may stray from it, either way.
 #[derive(Reflect, Clone, Copy, PartialEq, Debug)]
 pub struct Fuzzy {
@@ -19,6 +21,22 @@ impl Fuzzy {
             spread,
             shape,
         }
+    }
+
+    /// A value within center ± spread. Always draws three numbers, whatever the shape, so
+    /// toggling one parameter's shape leaves every later draw from `rng` as it was. A caller
+    /// with a wrapping angle reduces it modulo a turn; one with limits clamps it.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "nothing in the species varies yet")
+    )]
+    pub fn sample(&self, rng: &mut Rng) -> f32 {
+        let draws = [rng.unit(), rng.unit(), rng.unit()];
+        let t = match self.shape {
+            Distribution::Uniform => draws[0],
+            Distribution::Bell => (draws[0] + draws[1] + draws[2]) / 3.0,
+        };
+        self.center + self.spread * (2.0 * t - 1.0)
     }
 }
 
@@ -68,5 +86,43 @@ mod tests {
         let joint = Distribution::Bell.density(1.0 / 3.0);
         assert!((joint - 2.0 / 3.0).abs() < 1e-6);
         assert!((Distribution::Bell.density(1.0 / 3.0 - 1e-4) - joint).abs() < 1e-3);
+    }
+
+    #[test]
+    fn samples_stay_within_the_spread() {
+        let mut rng = Rng::stream(3, "test");
+        for shape in [Distribution::Uniform, Distribution::Bell] {
+            let fuzzy = Fuzzy::new(2.0, 0.5, shape);
+            let samples: Vec<f32> = (0..10_000).map(|_| fuzzy.sample(&mut rng)).collect();
+            assert!(samples.iter().all(|s| (1.5..=2.5).contains(s)), "{shape:?}");
+            let mean = samples.iter().sum::<f32>() / samples.len() as f32;
+            assert!((mean - 2.0).abs() < 0.01, "{shape:?}: {mean}");
+        }
+    }
+
+    #[test]
+    fn bell_samples_crowd_the_center() {
+        let mut rng = Rng::stream(4, "test");
+        let mut near = |shape| {
+            let fuzzy = Fuzzy::new(0.0, 1.0, shape);
+            (0..10_000)
+                .filter(|_| fuzzy.sample(&mut rng).abs() < 0.5)
+                .count()
+        };
+        // Half of uniform samples lie in the middle half of the spread, and 1 − 2 × 0.75³/6, about
+        // 86%, of bell samples do.
+        let (uniform, bell) = (near(Distribution::Uniform), near(Distribution::Bell));
+        assert!((4_800..5_200).contains(&uniform), "{uniform}");
+        assert!((8_400..8_800).contains(&bell), "{bell}");
+    }
+
+    #[test]
+    fn the_shape_does_not_shift_later_draws() {
+        let next_after = |shape| {
+            let mut rng = Rng::stream(5, "test");
+            Fuzzy::new(1.0, 0.2, shape).sample(&mut rng);
+            rng.next_u64()
+        };
+        assert_eq!(next_after(Distribution::Uniform), next_after(Distribution::Bell));
     }
 }
