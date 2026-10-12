@@ -13,6 +13,7 @@ VISIBILITY = "bevy_camera::visibility::Visibility"
 def run(driver):
     driver.present("Shell", ready=True)  # wait for the UI scene to finish spawning
     driver.present("Shell/Panel/scale/input")  # the immediate-mode panel has built its rows
+    driver.present("Shell/Panel/Scrollbar")
     driver.expect("TestObject", SHAPE, {"scale": 1.0})
     # The default width, whatever the developer last dragged it to: a run gets fresh settings.
     driver.expect("Shell/Panel", PANE, {"size": 320.0})

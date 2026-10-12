@@ -7,8 +7,8 @@ use bevy::{
         FeathersPlugins,
         containers::{subpane, subpane_body, subpane_header},
         controls::{
-            FeathersButton, FeathersPane, FeathersSplitPane, FeathersSplitPaneHandle,
-            NumberInputUnits,
+            FeathersButton, FeathersPane, FeathersScrollbar, FeathersSplitPane,
+            FeathersSplitPaneHandle, NumberInputUnits, ScrollbarGutter,
         },
         dark_theme::create_dark_theme,
         theme::{ThemeBackgroundColor, ThemedText, UiTheme},
@@ -16,7 +16,7 @@ use bevy::{
     },
     prelude::*,
     ui::{IsDefaultUiCamera, UiGlobalTransform, UiSystems},
-    ui_widgets::split_pane_self_update,
+    ui_widgets::{ControlOrientation, ScrollArea, split_pane_self_update},
     window::{ExitCondition, PrimaryWindow},
 };
 use bevy_immediate::{
@@ -205,9 +205,13 @@ fn use_game_fov(add: On<Add<SceneCamera>>, mut projections: Query<&mut Projectio
 fn shell_ui() -> impl Scene {
     bsn! {
         Name("Shell")
+        // `min_height: 0` down the whole chain: a flex item's minimum height is otherwise its
+        // content's, so a tall panel would stretch every ancestor past the window, and nothing
+        // would scroll.
         Node {
             width: percent(100),
             height: percent(100),
+            min_height: px(0),
         }
         Pickable::IGNORE
         Children [
@@ -215,6 +219,7 @@ fn shell_ui() -> impl Scene {
             Node {
                 width: percent(100),
                 height: percent(100),
+                min_height: px(0),
             }
             on(split_pane_self_update)
             on(save_panel_width)
@@ -224,12 +229,50 @@ fn shell_ui() -> impl Scene {
                 PanelPane
                 ThemeBackgroundColor(tokens::WINDOW_BG)
                 Children [
-                    ParamPanel
+                    // Scrolls as feathers' list view does: a frame with a gutter for the
+                    // scrollbar, around a node that scrolls.
                     Node {
                         flex_direction: FlexDirection::Column,
-                        padding: px(8),
-                        row_gap: px(8),
+                        flex_grow: 1.0,
+                        min_height: px(0),
+                        padding: UiRect { right: px(10) },
                     }
+                    // Exactly the scrollbar (6 wide, 4 from the edge); the content's own margin
+                    // is the gap before it.
+                    ScrollbarGutter(px(10))
+                    Children [
+                        #scrolled
+                        Node {
+                            flex_direction: FlexDirection::Column,
+                            flex_grow: 1.0,
+                            min_height: px(0),
+                            overflow: Overflow::scroll_y(),
+                        }
+                        ScrollArea
+                        Children [
+                            ParamPanel
+                            Node {
+                                flex_direction: FlexDirection::Column,
+                                // The gutter is reserved only while the scrollbar shows, so the
+                                // content keeps its own margin on the right.
+                                padding: px(8),
+                                row_gap: px(8),
+                            }
+                        ]
+                        --
+                        @FeathersScrollbar {
+                            @target: #scrolled,
+                            @orientation: {ControlOrientation::Vertical}
+                        }
+                        Name("Scrollbar")
+                        Node {
+                            position_type: PositionType::Absolute,
+                            right: px(4),
+                            top: px(0),
+                            bottom: px(0),
+                            width: px(6),
+                        }
+                    ]
                 ]
                 --
                 @FeathersSplitPaneHandle
