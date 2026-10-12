@@ -36,6 +36,20 @@ File handling brings a setting for the open file, and Save and Open keys (D8).
   - The feathers number input scrubs with Shift for slow and has no fast modifier (X4).
   - The slider takes no typed value; a soft-limited number input does, but its fill is on an
     inner entity the band cannot attach to.
+- **C7 Undo and redo** (requirements, Authoring app), after C5, since what an undo record holds
+  follows the reflection design. Take the `bevy_undo_redo` crate from the author's Bevy PR
+  #23373 (never merged; local branch `bevy_undo` in `../bevy`) as a module, `src/undo.rs`, with
+  its API unchanged and its origin noted: an `UndoAction` trait (`apply` returns the inverse;
+  `coalesce`, `label`, `as_any`) and an `UndoStack` resource of undo and redo stacks per
+  `ContextId`. Move it to its own repo when Panoply's editor needs it too. An action is likely a
+  reflection path and the field's old value, regenerating from the species; no record holds an
+  `Entity`, so the review's objection (a despawn undone respawns under a new id, breaking stored
+  references) does not arise here. Open:
+  - When coalescing stops: merging by path alone joins two separate drags of one slider. Close a
+    step on the widgets' `is_final`, or add the grouping the review found missing.
+  - Cmd+Z in a focused text field: the text input passes it on, so the window would undo a
+    document edit mid-typing. The PR's per-field contexts are for this case.
+  - Keys: Cmd+Z and Cmd+Shift+Z (Ctrl+Z and Ctrl+Y elsewhere), in `src/keys.rs` (D8).
 - **C6 Growth-model survey** (requirements, Research): a short write-up with a recommendation.
   The gate for the generator.
 
