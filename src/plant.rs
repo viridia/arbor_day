@@ -39,6 +39,7 @@ pub struct Plant;
 #[reflect(Component)]
 pub struct PlantStats {
     pub triangles: u32,
+    pub limbs: u32,
     /// The bark's vertex color, as sRGB hex.
     pub bark_color: String,
 }
@@ -53,10 +54,11 @@ fn build_plant(
         if current.is_some() && !species.is_changed() {
             continue;
         }
-        let geometry = generator::trunk(&species.trunk);
+        let (geometry, limbs) = generator::plant(&species);
         let color = species.bark.color;
         let stats = PlantStats {
             triangles: geometry.triangles() as u32,
+            limbs: limbs as u32,
             bark_color: color.to_srgba().to_hex(),
         };
         let mesh = to_mesh(geometry, color);

@@ -28,6 +28,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `b757d16` | C21 Turntable feel (D7): one-shot framing, one axis per gesture.                        |
 | `e05893b` | C20 Bark color, and feathers' color input for `Color` fields; `plans/bark.py`.          |
 | `a9399e7` | C22 Literal names in `bsn!` as `#name`.                                                 |
+|           | C18 One level of limbs (D14), reaching toward the envelope; `plans/limbs.py`.           |
 
 ## Next
 
@@ -39,11 +40,21 @@ Seedling's look is not a target. `bevy_inspector`'s `details_panel` also walks r
 but reads no attributes, has no per-type hook, and is retained-mode. The generator sets the order
 (`docs/growth-model.md`), each step bringing the widget kind it needs:
 
-- **C18 One level of limbs**: phyllotaxis, elevation from world up, reach to the envelope, which
-  needs the envelope's radius at a height (`profile_width` scaled between crown base and top).
-  The trunk keeps its own height until the Stems group, when it becomes the envelope's height
-  times the leader extent.
-- **C19 Limb levels as a list**: the `Vec` widget, with add and remove.
+- **C19 Limb levels as a list**: the `Vec` widget, with add and remove. A deeper level measures
+  azimuth about its parent's tangent (`docs/growth-model.md`, Limbs); C18's level, on the trunk,
+  measures it about world up. Open: removing a level and adding one back loses its parameters,
+  as in seedling. Undo (C7) recovers a mistaken removal; to switch a level off and on, give each
+  level an `enabled` flag that the generator skips, so the parameters stay in the document
+  rather than in a hidden stash. Recommended: the flag, with remove kept for levels not wanted.
+- **C23 Limb growth**: tropism and wander per metre, bounded jitter on each angle within
+  per-level limits (needs `Fuzzy` sampling, C10), and pipe-model radii. Until then limbs are
+  straight and taper as the trunk does.
+- **C24 Stems**: the trunk's height becomes the envelope's height times the leader extent; until
+  then the trunk keeps its own height.
+- **C25 A HUD over the view**, to free the panel. Frame becomes a small translucent square button
+  in a corner of the view, its icon a locate symbol (a crosshair, as Google Maps' "my location").
+  Later controls in the same style: zoom in and out, perhaps a view gizmo (X6). Feathers'
+  buttons are opaque, so likely a style of our own; propose before code.
 - **Computed values are rounded where written**, from the first writer (Reset, Randomize, values
   derived from the generator): the number input never rounds what it shows, so round to the
   field's `Precision` in the units shown, as feathers' color input does
@@ -185,6 +196,10 @@ but reads no attributes, has no per-type hook, and is retained-mode. The generat
   `src/properties.rs`: `CapsUiFeathers`' list plus `CapabilityEnumSelect`. Keep the list in step
   with `CapsUiFeathers` when the fork changes it. A select rather than radio buttons: one row
   however many variants.
+
+- **D14** Phyllotaxis is two numbers per level, limbs per node and the divergence between nodes,
+  in place of a rule enum: they cover spiral, alternate, opposite and whorled
+  (`docs/growth-model.md`, Limbs), and each changes one visible thing.
 
 ## Deferred
 

@@ -2,7 +2,7 @@
 
 use bevy::{feathers::controls::NumberInputUnits, prelude::*};
 
-use crate::properties::{Caption, Precision, Spinbox, ValueRange};
+use crate::properties::{Caption, Precision, Spinbox, ValueRange, Wrap};
 
 /// The species being edited. One resource, so any edit rebuilds the whole plant: most parameters
 /// change much of the tree anyway.
@@ -13,6 +13,8 @@ pub struct Species {
     pub envelope: Envelope,
     #[reflect(@Caption("Trunk"))]
     pub trunk: Trunk,
+    #[reflect(@Caption("Limbs"))]
+    pub limbs: Limbs,
     #[reflect(@Caption("Bark"))]
     pub bark: Bark,
 }
@@ -80,6 +82,65 @@ pub struct Trunk {
         @NumberInputUnits::new_static("angle_degrees"),
     )]
     pub bend: f32,
+}
+
+/// The limbs on the trunk, in nodes spaced evenly along a span of it. Each limb leaves at an angle
+/// from world up and runs straight toward the envelope.
+#[derive(Reflect, Clone, PartialEq)]
+pub struct Limbs {
+    /// Places along the trunk where limbs start.
+    #[reflect(@ValueRange::<i32>(0..=20), @Spinbox)]
+    pub nodes: i32,
+    /// Limbs at each node, evenly spaced around it: 1 for alternate or spiral, 2 for opposite,
+    /// more for a whorl.
+    #[reflect(@ValueRange::<i32>(1..=6), @Spinbox, @Caption("Per node"))]
+    pub per_node: i32,
+    /// The turn about the trunk from one node to the next: 137.5° for a spiral, 180° for
+    /// alternate, 90° for opposite pairs crossing.
+    #[reflect(
+        @ValueRange::<f32>(0.0..=std::f32::consts::TAU),
+        @Wrap,
+        @NumberInputUnits::new_static("angle_degrees"),
+    )]
+    pub divergence: f32,
+    /// Where the lowest node sits, as a fraction of the trunk's length.
+    #[reflect(@ValueRange::<f32>(0.0..=1.0), @Precision(2), @Caption("Span start"))]
+    pub start: f32,
+    /// Where the highest node sits, as a fraction of the trunk's length.
+    #[reflect(@ValueRange::<f32>(0.0..=1.0), @Precision(2), @Caption("Span end"))]
+    pub end: f32,
+    /// The angle from world up: 0 points straight up, 90° level, 180° straight down.
+    #[reflect(
+        @ValueRange::<f32>(0.0..=std::f32::consts::PI),
+        @NumberInputUnits::new_static("angle_degrees"),
+    )]
+    pub elevation: f32,
+    /// Length as a fraction of the distance from the limb's start to the envelope along it.
+    #[reflect(@ValueRange::<f32>(0.0..=1.0), @Precision(2))]
+    pub reach: f32,
+    /// Radius at the base, as a fraction of the trunk's radius where the limb starts. Limbs taper
+    /// as the trunk does.
+    #[reflect(@ValueRange::<f32>(0.05..=1.0), @Precision(2))]
+    pub radius: f32,
+    /// Sides of each ring.
+    #[reflect(@ValueRange::<i32>(3..=8), @Spinbox)]
+    pub sides: i32,
+}
+
+impl Default for Limbs {
+    fn default() -> Self {
+        Self {
+            nodes: 8,
+            per_node: 1,
+            divergence: 137.5_f32.to_radians(),
+            start: 0.4,
+            end: 0.9,
+            elevation: 60.0_f32.to_radians(),
+            reach: 0.9,
+            radius: 0.5,
+            sides: 4,
+        }
+    }
 }
 
 /// The bark's look, the same on every stem.

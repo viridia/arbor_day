@@ -140,9 +140,11 @@ dichotomous modes; the fork parameters apply whenever the leader stops short.
 
 ### Limbs
 
-One to three levels. Each level places children on its parent by a phyllotaxis rule (alternate,
-opposite, whorled with a count, or spiral with a divergence angle, default 137.5°), spaced along
-a span of the parent, with bounded jitter on each angle. A child's direction is set by:
+One to three levels. Each level places children in nodes spaced along a span of the parent, with
+bounded jitter on each angle. Phyllotaxis is two numbers: limbs per node, spaced evenly around
+it, and the divergence, the turn from one node to the next. One per node at 137.5° is a spiral,
+at 180° alternate; two at 90° are opposite pairs crossing; more are a whorl. A child's direction
+is set by:
 
 - **Elevation**, its angle from world up, a fuzzy value per level, clamped to per-level limits.
 - **Azimuth**, from the phyllotaxis rule, measured about the parent's tangent in a frame whose
@@ -195,7 +197,7 @@ For the species data model (C10), the groups follow the layers:
 
 - **Envelope:** profile, height, crown base, radius, lean, squash.
 - **Stems:** count, splay, leader extent, fork count and angle.
-- **Limb levels**, a list: phyllotaxis rule and divergence, span and spacing on the parent,
+- **Limb levels**, a list: nodes, limbs per node and divergence, span on the parent,
   elevation and its limits, azimuth jitter, reach, tropism, wander, radius ratio.
 - **Bark:** base radius, pipe exponent, flare, color.
 - **Foliage:** spacing, shell depth, card shapes and weights, size, facing (up-to-outward blend,

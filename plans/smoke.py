@@ -12,10 +12,11 @@ VISIBILITY = "bevy_camera::visibility::Visibility"
 
 def run(driver):
     driver.present("Shell", ready=True)  # wait for the UI scene to finish spawning
-    driver.present("Shell/Panel/sides/input")  # the immediate-mode panel has built its rows
+    driver.present("Shell/Panel/trunk/sides/input")  # the immediate-mode panel has built its rows
     driver.present("Shell/Panel/Scrollbar")
-    # The default trunk: 6 sides, bent 15°, so one segment of 6 quads and a 6-triangle cap.
-    driver.expect("Plant", STATS, {"triangles": 18})
+    # The default trunk: 6 sides, bent 15°, so one segment of 6 quads and a 6-triangle cap, 18
+    # triangles. Eight limbs of 4 sides add 12 each.
+    driver.expect("Plant", STATS, {"triangles": 18 + 8 * 12})
     # The default width, whatever the developer last dragged it to: a run gets fresh settings.
     driver.expect("Shell/Panel", PANE, {"size": 320.0})
     # The view is never saved: every start frames the subject, from the front.
@@ -53,13 +54,14 @@ def run(driver):
     driver.key("Enter")
     driver.expect("Placeholder", PLACEHOLDER, {"count": 10})
     driver.screenshot("numbers")
-    # Editing the species rebuilds the plant: 4 sides is 8 quad triangles and a 4-triangle cap.
-    driver.click("Shell/Panel/sides/input")
+    # Editing the species rebuilds the plant: a trunk of 4 sides is 8 quad triangles and a
+    # 4-triangle cap.
+    driver.click("Shell/Panel/trunk/sides/input")
     driver.key("End")
     driver.key("Backspace")
     driver.type("4")
     driver.key("Enter")
-    driver.expect("Plant", STATS, {"triangles": 12})
+    driver.expect("Plant", STATS, {"triangles": 12 + 8 * 12})
     driver.screenshot("four_sides")
     # The camera does not follow the subject: a taller crown grows out of the frame (compare the
     # screenshots), until Frame fits it again.
