@@ -17,7 +17,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `0d1aee5` | C3 Keys (D8), `src/keys.rs`: one observer on the window; F frames, + and − zoom about the focus (`=` and `_` too, for the unshifted and shifted keys), Ctrl+Q quits through the saving exit path, except on macOS, where the OS takes Cmd+Q before the app sees it. `plans/smoke.py` presses − twice and F, checking framing is let go and taken back (15 steps). By hand: typing F into a number input does not frame; clicking the view gives letter keys back. |
 | `65d6413` | C5 Property editor, booleans: `src/properties.rs` walks a reflected struct's fields, a row per field named after it; `bool` gets a feathers checkbox bound through reflection, every other field a label with its name and type. A `Placeholder` resource (two `bool`s, `i32`, `f32`, an enum, a nested struct) stands in for the species; `show_ground` hides the ground. The panel edits a copy and writes back with `set_if_neq`. `plans/smoke.py` checks the labels and toggles the ground (22 steps). |
 | `65d6413` | C9 Property editor, numbers (D9): `f32`, `f64`, `i32`, `i64` fields get a feathers number input beside a feathers `label`; attributes set limits, slider or spinbox look, precision, step, units and wrap; `Caption` renames a row. The test object's scale is a reflected field edited the same way, replacing C1's slider. `Placeholder` is now a component on a named entity, so plans can read it; it gained an angle (degrees, wrapping). `plans/smoke.py` types 42 into `count` (0 to 10) and reads 10 (28 steps). Worked around a duplicated first text (X9). |
-| (pending) | C11 The panel scrolls, as feathers' list view does: a frame with a `ScrollbarGutter` around a node with `Overflow::scroll_y()` and `ScrollArea`, and a `FeathersScrollbar` targeting it. The gutter is reserved only while the scrollbar shows, so the panel keeps its own right margin, and the gutter is exactly the scrollbar's 10 px (6 wide, 4 from the edge), the margin being the gap before it. It first did not scroll: the shell's root and the split pane had `height: 100%` but the default minimum height, a flex item's content height, so tall content stretched every node past the window (measured: 2750 px in a 1440 px window); `min_height: 0` on both fixed it. `plans/smoke.py` checks the scrollbar exists (29 steps); scrolling checked with a temporary tall node, since the placeholder fits the default window. |
+| `a19ec61` | C11 The panel scrolls, as feathers' list view does: a frame with a `ScrollbarGutter` around a node with `Overflow::scroll_y()` and `ScrollArea`, and a `FeathersScrollbar` targeting it. The gutter is reserved only while the scrollbar shows, so the panel keeps its own right margin, and the gutter is exactly the scrollbar's 10 px (6 wide, 4 from the edge), the margin being the gap before it. It first did not scroll: the shell's root and the split pane had `height: 100%` but the default minimum height, a flex item's content height, so tall content stretched every node past the window (measured: 2750 px in a 1440 px window); `min_height: 0` on both fixed it. `plans/smoke.py` checks the scrollbar exists (29 steps); scrolling checked with a temporary tall node, since the placeholder fits the default window. |
 
 ## Next
 
@@ -162,8 +162,9 @@ subpanes; `Vec`s with add and remove; colors. Notes for those chunks:
   `bevy_math` (its `libm` feature gives the same float results on every platform), with the
   export command as a binary of that crate, so the asset pipeline and the determinism tests
   build without the renderer. *Gate:* generator code starts.
-- **X2** A file browser, for open and save-as. The crate is the author's choice. *Gate:* files
-  beyond one remembered path.
+- **X2** A file browser, for Open and Save As: the `rfd` crate (native file dialogs), the
+  author's choice. *Gate:* file handling, after C8 (the working document and its path in
+  settings).
 - **X3** Publishing, or reserving the name on crates.io. A crate with git dependencies cannot be
   published. *Gate:* a Bevy release with what the app uses (0.21), or the author choosing to
   reserve the name with a placeholder.
@@ -186,15 +187,16 @@ subpanes; `Vec`s with add and remove; colors. Notes for those chunks:
   spawn frame, where the scene's default `NumericValue` writes "0" and `bevy_immediate`'s
   `number_input` always inserts the value again. `src/properties.rs` works around it: the value,
   limits and units are inserted before the scene, so the first write is right, and the binding
-  starts the frame after (`will_be_spawned`). *Gate:* the author decides where to report it
-  (feathers or `bevy_text`), or Panoply's editor hits it.
+  starts the frame after (`will_be_spawned`). Filed upstream as bevy#26123.
+  *Gate:* a fix in the Bevy we build against; then drop the workaround.
 - **X10** Feathers number input gaps, upstream. (1) Its step chevrons show on hover but nothing
   handles a click (no observer on `NumberInputDecrement` or `NumberInputIncrement`, at our commit
   and on newer main), so a press falls through to the scrubber and drags. (2) A drag clamps to
   the `SoftLimit` before applying `NumberInputWrap`, so a wrapping input with the slider look
   never wraps when dragged (typing does); skip the soft clamp when wrapping. (3) A caption of its
-  own: `label_text` is the short sigil label (X, Y, Z), not a field caption. *Gate:* the author's
-  call, as the number input's author.
+  own: `label_text` is the short sigil label (X, Y, Z), not a field caption. Filed upstream as
+  bevy#26124 (chevrons), bevy#26125 (wrap under a soft limit) and bevy#26126 (field captions). *Gate:* fixes in the Bevy we build against; then wrapping inputs may keep
+  the slider look, and rows may use the input's own caption.
 - **X8** Pinch to zoom on a trackpad. C4 zooms on vertical scroll only; a pinch arrives as
   `PinchGesture`, not as a pointer event, so it needs its own path to the view. *Gate:* scroll
   zoom proves awkward on a trackpad.
