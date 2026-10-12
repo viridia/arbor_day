@@ -18,7 +18,8 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `65d6413` | C5 Property editor, booleans: `src/properties.rs` walks a reflected struct's fields, a row per field named after it; `bool` gets a feathers checkbox bound through reflection, every other field a label with its name and type. A `Placeholder` resource (two `bool`s, `i32`, `f32`, an enum, a nested struct) stands in for the species; `show_ground` hides the ground. The panel edits a copy and writes back with `set_if_neq`. `plans/smoke.py` checks the labels and toggles the ground (22 steps). |
 | `65d6413` | C9 Property editor, numbers (D9): `f32`, `f64`, `i32`, `i64` fields get a feathers number input beside a feathers `label`; attributes set limits, slider or spinbox look, precision, step, units and wrap; `Caption` renames a row. The test object's scale is a reflected field edited the same way, replacing C1's slider. `Placeholder` is now a component on a named entity, so plans can read it; it gained an angle (degrees, wrapping). `plans/smoke.py` types 42 into `count` (0 to 10) and reads 10 (28 steps). Worked around a duplicated first text (X9). |
 | `a19ec61` | C11 The panel scrolls, as feathers' list view does: a frame with a `ScrollbarGutter` around a node with `Overflow::scroll_y()` and `ScrollArea`, and a `FeathersScrollbar` targeting it. The gutter is reserved only while the scrollbar shows, so the panel keeps its own right margin, and the gutter is exactly the scrollbar's 10 px (6 wide, 4 from the edge), the margin being the gap before it. It first did not scroll: the shell's root and the split pane had `height: 100%` but the default minimum height, a flex item's content height, so tall content stretched every node past the window (measured: 2750 px in a 1440 px window); `min_height: 0` on both fixed it. `plans/smoke.py` checks the scrollbar exists (29 steps); scrolling checked with a temporary tall node, since the placeholder fits the default window. |
-| (pending) | C12 Fuzzy numbers (D10), `src/fuzzy.rs`: `Fuzzy { center, spread, shape }`, `shape` a `Distribution`, uniform or bell. Its row: the center as a slider bounded by the field's `ValueRange`, the spread as a 56 px spinbox from 0 to half that range, and a plain tool button (`ButtonVariant::Plain`) whose icon shows the shape and toggles it, the icons the author's (`artwork/distributions.svg`, exported to `assets/icons/`, shown 18 px tall). Number inputs share `NumberLook` (the attributes) and `number_input` (the X9 workaround). A row's gap between widgets is 4 px, as between rows. `plans/fuzzy.py` toggles both shapes (10 steps). |
+| `df0b83c` | C12 Fuzzy numbers (D10), `src/fuzzy.rs`: `Fuzzy { center, spread, shape }`, `shape` a `Distribution`, uniform or bell. Its row: the center as a slider bounded by the field's `ValueRange`, the spread as a 56 px spinbox from 0 to half that range, and a plain tool button (`ButtonVariant::Plain`) whose icon shows the shape and toggles it, the icons the author's (`artwork/distributions.svg`, exported to `assets/icons/`, shown 18 px tall). Number inputs share `NumberLook` (the attributes) and `number_input` (the X9 workaround). A row's gap between widgets is 4 px, as between rows. `plans/fuzzy.py` toggles both shapes (10 steps). |
+| (pending) | C13 Captions above fields: a row is a column, the caption in feathers' `label_small` (its field-caption label) 2 px above the inputs, half the 4 px between rows. A number input spans the row; a fuzzy row's center, spread and shape button share a line beneath, so the center gets about 310 px of a 320 px panel rather than 53. Checkboxes keep their caption beside them. Both plans pass unchanged (29 and 10 steps). |
 
 ## Next
 
@@ -35,12 +36,9 @@ subpanes; seedling's look is not a target. `bevy_inspector`'s `details_panel` is
 walking reflected fields (`field_entries`, `FieldEdit`) but not a base: it reads no attributes,
 has no per-type hook, and is retained-mode.
 
-C5 did booleans, C9 numbers and C12 fuzzy numbers (`src/properties.rs`, attributes per D9).
-Then, in order:
+C5 did booleans, C9 numbers and C12 fuzzy numbers (`src/properties.rs`, attributes per D9);
+C13 put captions above fields. Then, in order:
 
-- **C13 Labels above fields.** Stack each caption above its input, as in the Bevy editor's Figma
-  mocks, instead of beside it. The fuzzy row needs it most: beside a caption, the center slider
-  gets about 53 px of a 320 px panel.
 - **C14 Spread strip.** A strip 2 px tall inside the bottom edge of the center input, spanning
   center ± spread against the input's range: an absolutely placed child that the panel adds to the
   number input's root, its `left` and `width` in percent, clamped to 0 to 100 (clamping in place

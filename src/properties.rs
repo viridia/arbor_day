@@ -1,7 +1,8 @@
 //! The property editor: panel rows for the fields of a reflected struct, one row per field, each
 //! named after its field. Booleans get a checkbox, numbers a number input, fuzzy numbers a center,
-//! a spread and a shape toggle, and every other field a label giving its name and type. Field attributes (below) set a row's caption and a number's
-//! limits, precision, step, units and wrapping.
+//! a spread and a shape toggle, and every other field a label giving its name and type. A row's
+//! caption sits above its inputs, so they get the panel's full width. Field attributes (below) set
+//! a row's caption and a number's limits, precision, step, units and wrapping.
 
 use std::ops::RangeInclusive;
 
@@ -11,7 +12,7 @@ use bevy::{
             ButtonVariant, FeathersCheckbox, FeathersNumberInput, FeathersToolButton, HardLimit,
             NumberInputPrecision, NumberInputStep, NumberInputUnits, NumberInputWrap, SoftLimit,
         },
-        display::{icon, label},
+        display::{icon, label, label_small},
         theme::ThemedText,
     },
     prelude::*,
@@ -174,27 +175,36 @@ impl NumberLook {
     }
 }
 
-/// A row node laid out left to right, named after its field.
+/// A row node named after its field, its caption stacked above its widgets.
 fn row_node(name: &'static str) -> (Name, Node) {
     (
         Name::new(name),
         Node {
-            flex_direction: FlexDirection::Row,
-            align_items: AlignItems::Center,
-            // As wide as the gap between rows.
-            column_gap: px(4),
+            flex_direction: FlexDirection::Column,
+            // Half the gap between rows, so a caption reads as its own field's.
+            row_gap: px(2),
             ..default()
         },
     )
 }
 
-/// The caption at the start of a row.
+/// The caption at the top of a row, in feathers' small label for field captions.
 fn row_caption(ui: &mut Imm<CapsUiFeathers>, caption: &'static str) {
-    ui.ch()
-        .on_spawn_apply_scene(move || bsn! { @label(caption) Node { flex_basis: percent(40) } });
+    ui.ch().on_spawn_apply_scene(move || label_small(caption));
 }
 
-/// A label and a number input, the input named `input` so plans can read its value.
+/// Widgets laid out left to right under a row's caption.
+fn widget_line() -> Node {
+    Node {
+        flex_direction: FlexDirection::Row,
+        align_items: AlignItems::Center,
+        // As wide as the gap between rows.
+        column_gap: px(4),
+        ..default()
+    }
+}
+
+/// A caption and a number input, the input named `input` so plans can read its value.
 fn number_row<T: NumberField>(
     row: ImmEntity<CapsUiFeathers>,
     name: &'static str,
@@ -205,11 +215,12 @@ fn number_row<T: NumberField>(
     let look = NumberLook::from_attributes::<T>(attrs);
     row.on_spawn_insert(move || row_node(name)).add(|ui| {
         row_caption(ui, caption);
-        number_input(ui.ch(), "input", look, Val::Auto, value);
+        number_input(ui.ch(), "input", look, percent(100), value);
     });
 }
 
-/// A number input named `name`, `width` wide, or taking the row's spare width if `Val::Auto`.
+/// A number input named `name`, `width` wide, or taking a widget line's spare width if
+/// `Val::Auto`.
 fn number_input<T: NumberField>(
     input: ImmEntity<CapsUiFeathers>,
     name: &'static str,
@@ -276,29 +287,31 @@ fn fuzzy_row(
     };
     row.on_spawn_insert(move || row_node(name)).add(|ui| {
         row_caption(ui, caption);
-        number_input(ui.ch(), "center", center_look, Val::Auto, &mut fuzzy.center);
-        number_input(ui.ch(), "spread", spread_look, px(56), &mut fuzzy.spread);
-        let mut button = ui.ch().on_spawn_apply_scene(|| {
-            bsn! {
-                @FeathersToolButton { @variant: {ButtonVariant::Plain} }
-                Name("shape")
-            }
-        });
-        if button.activated() {
-            fuzzy.shape = match fuzzy.shape {
-                Distribution::Uniform => Distribution::Bell,
-                Distribution::Bell => Distribution::Uniform,
-            };
-        }
-        let shape = fuzzy.shape;
-        button.add(|ui| {
-            // Keyed by shape, so a toggle replaces the icon.
-            ui.ch_id(shape).on_spawn_apply_scene(move || {
-                let image = match shape {
-                    Distribution::Uniform => "icons/uniform.png",
-                    Distribution::Bell => "icons/bell.png",
+        ui.ch().on_spawn_insert(widget_line).add(|ui| {
+            number_input(ui.ch(), "center", center_look, Val::Auto, &mut fuzzy.center);
+            number_input(ui.ch(), "spread", spread_look, px(56), &mut fuzzy.spread);
+            let mut button = ui.ch().on_spawn_apply_scene(|| {
+                bsn! {
+                    @FeathersToolButton { @variant: {ButtonVariant::Plain} }
+                    Name("shape")
+                }
+            });
+            if button.activated() {
+                fuzzy.shape = match fuzzy.shape {
+                    Distribution::Uniform => Distribution::Bell,
+                    Distribution::Bell => Distribution::Uniform,
                 };
-                bsn! { @icon(image) Node { height: px(18) } }
+            }
+            let shape = fuzzy.shape;
+            button.add(|ui| {
+                // Keyed by shape, so a toggle replaces the icon.
+                ui.ch_id(shape).on_spawn_apply_scene(move || {
+                    let image = match shape {
+                        Distribution::Uniform => "icons/uniform.png",
+                        Distribution::Bell => "icons/bell.png",
+                    };
+                    bsn! { @icon(image) Node { height: px(18) } }
+                });
             });
         });
     });
