@@ -18,24 +18,41 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 
 ## Next
 
-File handling brings a setting for the open file, and Save and Open keys (D8).
+File handling brings Save and Open keys (D8).
 
-- **C5 Parameter editing by reflection.** The generator configuration is reflectable Rust
-  structs; field attributes hint which widget edits each field (slider, integer input, center
-  and spread, ...); the panel walks the reflected struct. Propose the design before code.
-  Groups are feathers subpanes, not rows butted together, and seedling's look is not a target.
-  Field kinds seedling had, which the widget hints should cover: integer (seed), enum (growth
-  pattern), float, range, bool, color. Branch levels were a repeating group with add and remove
-  buttons, which in Rust is a `Vec` of a level struct. Notes for the center-and-spread row
-  (requirements, Authoring app):
-  - The feathers slider has no thumb entity: its fill is a four-stop gradient on the slider
-    node, and the fill's edge marks the value. The band can be an absolutely positioned child
-    spanning center ± spread as percentages of the node (`SliderRange::thumb_position`), with
-    `ZIndex(-1)` under the value text and `Pickable::IGNORE`. The headless slider maps the
-    pointer across the node's full width, so band, fill and pointer agree.
-  - The feathers number input scrubs with Shift for slow and has no fast modifier (X4).
-  - The slider takes no typed value; a soft-limited number input does, but its fill is on an
-    inner entity the band cannot attach to.
+The property editor is built against a placeholder struct of a few field types, a widget kind per
+chunk; the species types come later (C10). Its shape so far: the panel walks the reflected value
+in its immediate-mode `construct`, rows keyed by field path (`GetPath` syntax, which C7's undo
+records also use); a table from `TypeId` to widget for types with their own row (`Varied`,
+later colors); field attributes (`#[reflect(@…)]`, read with `get_attribute`) for limits, step,
+precision, units and wrap. Every number is a feathers number input: with a `SoftLimit` it looks
+and drags like a slider and still takes typing, so the slider is not used. Groups are feathers
+subpanes; seedling's look is not a target. `bevy_inspector`'s `details_panel` is a reference for
+walking reflected fields (`field_entries`, `FieldEdit`) but not a base: it reads no attributes,
+has no per-type hook, and is retained-mode.
+
+- **C5 Property editor: booleans.** A placeholder resource of a few field types (a `bool` or two,
+  an `i32`, an `f32`, an enum, a nested struct). The panel walks it by reflection: `bool` fields
+  get a feathers checkbox, every other field a static label with its name and type. An edited
+  checkbox writes through reflection. Then a chunk each, ids assigned when planned: numbers (limits,
+  step, precision, units, angles that wrap); center and spread, as two number inputs; enums;
+  nested structs as subpanes; `Vec`s with add and remove; colors. The C1 scale slider becomes a
+  number input with the numbers chunk. Notes:
+  - Angles: `NumberInputUnits` (`angle_degrees`) shows radians as degrees; an angle that is a
+    full turn gets a `HardLimit` of one turn and `NumberInputWrap::Wrap` (seedling's `axis`); one
+    that is not (seedling's `angle`, away from the parent branch) clamps. A wrapping center's
+    spread can cross the seam, so the generator samples such angles modulo a turn.
+  - The spread input's `SoftLimit` fill shows the spread against its maximum. A band on the
+    center's input would need the number input to expose its inner fill entity (upstream).
+  - Distribution shape: a plain (borderless) icon button beside the spread toggles uniform and
+    bell, its icon showing the current shape; the author draws both icons (PNG, since feathers
+    icons are images).
+  - The number input scrubs with Shift for slow and has no fast modifier (X4).
+- **C8 Working document in settings.** A settings group holding the working species and, once
+  set, the file path, so a restart returns to unsaved edits and Save writes to the right file.
+  Seedling did the same (`localStorage` key `sapling-doc`, written on unload: the parameter JSON,
+  `name`, `filePath`); here the name comes from the file name. Serialized by reflection, as
+  `bevy_settings` does, so the TOML follows the reflected types. Can start with the placeholder.
 - **C7 Undo and redo** (requirements, Authoring app), after C5, since what an undo record holds
   follows the reflection design. Take the `bevy_undo_redo` crate from the author's Bevy PR
   #23373 (never merged; local branch `bevy_undo` in `../bevy`) as a module, `src/undo.rs`, with
@@ -52,6 +69,19 @@ File handling brings a setting for the open file, and Save and Open keys (D8).
   - Keys: Cmd+Z and Cmd+Shift+Z (Ctrl+Z and Ctrl+Y elsewhere), in `src/keys.rs` (D8).
 - **C6 Growth-model survey** (requirements, Research): a short write-up with a recommendation.
   The gate for the generator.
+- **C10 Species data model**, after C6, since the model follows the growth model, and seedling's
+  is wrong where the requirements say (roll compounding through levels, card facing tied to the
+  tip, growth modes that disable half the parameters, ranges as low and high). Reflectable types
+  with `Default` for initial values and attributes for the editor; a
+  `Varied { center, spread, shape }` type for varied parameters, `shape` uniform or bell. The bell
+  is the mean of three uniform samples: cheap, bell-shaped, and bounded, never past
+  center ± spread, so spread means the farthest a value goes in both shapes (a true gaussian's
+  tails would break the requirement that every variation is bounded). Every varied parameter
+  draws three numbers whatever its shape, so toggling one shape does not shift the rest of its
+  random stream. Serialized by reflection only, no serde derives: TOML in settings
+  (C8), JSON as the glTF extra, one representation that cannot drift. Seedling's groups for
+  reference: `trunk`; `branch[]`, one per level; and the leaf as `leafGroup` (arrangement),
+  `leafShape` and `leafColor`.
 
 ## Decisions
 

@@ -195,9 +195,9 @@ Requirements:
   sensible as the center moves. In seedling's saved plants most ranges are zero-width or the
   default 0.1 wide; only a few (the pines' branch axis, e.g. `[0.43, 1.85]`) use a real
   spread.
-- **S** The shape of the distribution is selectable: uniform, or weighted toward the center,
-  which gives "mostly ordered, now and then irregular" (Order and variation). Per parameter
-  or one global choice, to be decided.
+- **S** The shape of the distribution is selectable per parameter: uniform, or a bell weighted
+  toward the center, which gives "mostly ordered, now and then irregular" (Order and variation).
+  Both stay within center ± spread.
 
 ### Authoring app
 
