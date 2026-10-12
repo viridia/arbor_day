@@ -15,6 +15,7 @@ use bevy::{
         display::label,
         tokens,
     },
+    light::{NotShadowCaster, NotShadowReceiver},
     prelude::*,
     ui::{IsDefaultUiCamera, UiGlobalTransform, UiSystems},
     ui_widgets::{ControlOrientation, ScrollArea, split_pane_self_update},
@@ -23,13 +24,13 @@ use bevy::{
 use bevy_immediate::{
     Imm,
     attach::{BevyImmediateAttachPlugin, ImmediateAttach},
-    ui::{CapsUiFeathers, activated::ImmUiActivated, text::ImmUiText},
+    ui::{activated::ImmUiActivated, text::ImmUiText},
 };
 use bevy_remote_driver::RemoteDriverPlugin;
 use fuzzy::{Distribution, Fuzzy};
 use keys::KeysPlugin;
-use plant::{Plant, PlantPlugin, PlantStats};
-use properties::{Caption, Precision, Spinbox, ValueRange, Wrap};
+use plant::{Plant, PlantEnvelope, PlantPlugin, PlantStats};
+use properties::{Caption, CapsPanel, Precision, Spinbox, ValueRange, Wrap};
 use settings::{AppSettingsPlugin, MIN_PANE_WIDTH, save_panel_width};
 use species::Species;
 use turntable::{
@@ -64,7 +65,7 @@ fn main() {
             }),
             AppSettingsPlugin,
             FeathersPlugins,
-            BevyImmediateAttachPlugin::<CapsUiFeathers, ParamPanel>::new(),
+            BevyImmediateAttachPlugin::<CapsPanel, ParamPanel>::new(),
             RemoteDriverPlugin,
             TurntablePlugin,
             KeysPlugin,
@@ -171,6 +172,13 @@ struct PlaceholderNested {
 struct Ground;
 
 fn scene() -> impl SceneList {
+    // Lines take no light, so the envelope reads the same from every side.
+    let envelope_material = StandardMaterial {
+        base_color: Color::srgba(0.6, 0.85, 0.6, 0.6),
+        alpha_mode: AlphaMode::Blend,
+        unlit: true,
+        ..default()
+    };
     bsn_list! {
         Name("SceneCamera")
         SceneCamera
@@ -205,6 +213,14 @@ fn scene() -> impl SceneList {
         Plant
         TurntableSubject
         MeshMaterial3d::<StandardMaterial>(asset_value(Color::srgb(0.42, 0.33, 0.25)))
+        --
+        Name("Envelope")
+        PlantEnvelope
+        // Framed with the plant, so Frame fits the whole crown.
+        TurntableSubject
+        NotShadowCaster
+        NotShadowReceiver
+        MeshMaterial3d::<StandardMaterial>(asset_value(envelope_material))
     }
 }
 
@@ -311,13 +327,22 @@ struct PanelParams<'w, 's> {
     placeholders: Query<'w, 's, &'static mut Placeholder>,
 }
 
-impl ImmediateAttach<CapsUiFeathers> for ParamPanel {
+impl ImmediateAttach<CapsPanel> for ParamPanel {
     type Params = PanelParams<'static, 'static>;
 
-    fn construct(ui: &mut Imm<CapsUiFeathers>, params: &mut PanelParams) {
+    fn construct(ui: &mut Imm<CapsPanel>, params: &mut PanelParams) {
         // Edit a copy: writing through `ResMut` every frame would mark the species changed every
         // frame, and the plant would rebuild every frame.
         let mut edited = params.species.clone();
+        ui.ch().on_spawn_apply_scene(subpane).add(|ui| {
+            ui.ch().on_spawn_apply_scene(subpane_header).add(|ui| {
+                ui.ch()
+                    .on_spawn_apply_scene(|| bsn! { Text("Envelope") ThemedText });
+            });
+            ui.ch()
+                .on_spawn_apply_scene(subpane_body)
+                .add(|ui| properties::edit_fields(ui, &mut edited.envelope));
+        });
         ui.ch().on_spawn_apply_scene(subpane).add(|ui| {
             ui.ch().on_spawn_apply_scene(subpane_header).add(|ui| {
                 ui.ch()

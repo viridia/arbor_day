@@ -24,6 +24,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 
 | `0e9fdef` | C6 Growth-model survey, `docs/growth-model.md`, with a screenshot of seedling's trees in Panoply; the choice is D11. Requirements: outlines become a per-species switch, shown in the preview on the bark shell and the leaf texture; leaf textures are flat colors. |
 | (pending) | C15 A generated trunk (D12): `Species` (`src/species.rs`), a resource holding a `Trunk` group (height, radius, taper, sides, bend); `src/generator.rs` builds a tube of rings along an arc, a ring per 15° of turn, normals shared and leaning with the taper, closed by a fan at the top; `src/plant.rs` rebuilds the `Plant` entity's mesh in place when the species changes, so its bounds and the turntable's framing follow, and records `PlantStats`. The panel edits the trunk and shows the triangle count. The trunk replaces the test torus and `TestShape`. Unit tests for ring count, shared vertices, the base, the height and the winding; `plans/smoke.py` sets 4 sides and checks the count follows (36 steps). |
+| (pending) | C16 Envelope, with enums (D13). `Species` gained `Envelope { profile, height, crown_base, radius }`, the crown base a fraction of the height; `Profile` is cone, ellipsoid, hemisphere, column or flame (Weber and Penn's, widest 70% up). `generator::envelope_outline` draws it as 8 meridians of 16 steps closed across both ends and a ring every second step, skipping what has no width; `src/plant.rs` rebuilds it on an `Envelope` entity, a line-list mesh, unlit, a `TurntableSubject` so Frame fits the crown, and records `EnvelopeStats`. Any field whose type is an enum of unit variants gets a feathers select, a row per variant named after it, which needed a capability set of the panel's own (`CapsPanel`). A hand-written Envelope subpane above Trunk. The panel now outgrows the window, so clicks scroll their node into view: the driver bumped to `ad194b2`, which does (its ledger). `plans/envelope.py` picks Cone and Column and checks the segment counts, then picks the placeholder's `mode` below the fold (17 steps); unit tests for the profiles' ends and the outline's counts. `smoke.py` (36 steps) and `fuzzy.py` (24) pass. |
 
 ## Next
 
@@ -41,8 +42,18 @@ walking reflected fields (`field_entries`, `FieldEdit`) but not a base: it reads
 has no per-type hook, and is retained-mode.
 
 C5 did booleans, C9 numbers and C12 fuzzy numbers (`src/properties.rs`, attributes per D9);
-C13 put captions above fields, C14 drew the spread strip. Then a chunk each, ids assigned when planned: enums; nested structs as subpanes; `Vec`s with add
-and remove; colors. Notes:
+C13 put captions above fields, C14 drew the spread strip. From here the generator sets the
+order (`docs/growth-model.md`), each step bringing the widget kind it needs:
+
+- **C17 Nested structs as subpanes.** The panel walks `Species`, a subpane per group, replacing
+  the hand-written Envelope and Trunk subpanes.
+- **C18 One level of limbs**: phyllotaxis, elevation from world up, reach to the envelope, which
+  needs the envelope's radius at a height (`profile_width` scaled between crown base and top).
+  The trunk keeps its own height until the Stems group, when it becomes the envelope's height
+  times the leader extent.
+- **C19 Limb levels as a list**: the `Vec` widget, with add and remove.
+
+Colors when a group needs one. Notes:
 
   - The number input scrubs with Shift for slow and has no fast modifier (X4).
   - Digits: the number input never rounds what it shows ("don't lie to the user"), so a value
@@ -179,6 +190,15 @@ and remove; colors. Notes:
   The leaf texture is the likely exception, being far costlier to make; it can become a second
   resource if dragging stutters. Plans read the result (`PlantStats` on the plant), since the
   driver reads components, not resources.
+
+- **D13** An enum field is a feathers select, `bevy_immediate` having no binding for one. Each
+  option row carries `OptionIndex`; an observer on the select records the picked index in a
+  `PickedVariant` component, which the panel reads on its next pass and applies through reflection
+  (`DynamicEnum`). A variant changed elsewhere is shown by triggering `SetSelected`. The panel may
+  read only components its capability set requests, so it has its own, `CapsPanel` in
+  `src/properties.rs`: `CapsUiFeathers`' list plus `CapabilityEnumSelect`. Keep the list in step
+  with `CapsUiFeathers` when the fork changes it. A select rather than radio buttons: one row
+  however many variants.
 
 ## Deferred
 

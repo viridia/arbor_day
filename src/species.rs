@@ -2,14 +2,57 @@
 
 use bevy::{feathers::controls::NumberInputUnits, prelude::*};
 
-use crate::properties::{Precision, Spinbox, ValueRange};
+use crate::properties::{Caption, Precision, Spinbox, ValueRange};
 
 /// The species being edited. One resource, so any edit rebuilds the whole plant: most parameters
 /// change much of the tree anyway.
 #[derive(Resource, Reflect, Clone, PartialEq, Default)]
 #[reflect(Resource)]
 pub struct Species {
+    pub envelope: Envelope,
     pub trunk: Trunk,
+}
+
+/// The crown's outline: a surface of revolution about the vertical axis, between the crown base
+/// and the top. Limbs reach to it and foliage fills it.
+#[derive(Reflect, Clone, PartialEq)]
+pub struct Envelope {
+    pub profile: Profile,
+    /// The top of the crown above the ground, in meters.
+    #[reflect(@ValueRange::<f32>(0.5..=30.0), @Precision(1))]
+    pub height: f32,
+    /// Where the crown starts, as a fraction of its height.
+    #[reflect(@ValueRange::<f32>(0.0..=0.95), @Precision(2), @Caption("Crown base"))]
+    pub crown_base: f32,
+    /// The crown's radius where it is widest, in meters.
+    #[reflect(@ValueRange::<f32>(0.1..=15.0), @Precision(1))]
+    pub radius: f32,
+}
+
+impl Default for Envelope {
+    fn default() -> Self {
+        Self {
+            profile: Profile::Ellipsoid,
+            height: 6.0,
+            crown_base: 0.3,
+            radius: 2.5,
+        }
+    }
+}
+
+/// The shape of the crown's outline, from the crown base to the top.
+#[derive(Reflect, Clone, Copy, PartialEq, Debug)]
+pub enum Profile {
+    /// Widest at the base, narrowing to a point.
+    Cone,
+    /// Widest halfway up, round at both ends.
+    Ellipsoid,
+    /// Widest at the base, round at the top.
+    Hemisphere,
+    /// The same width all the way up.
+    Column,
+    /// Widest 70% of the way up, then narrowing to a point.
+    Flame,
 }
 
 /// The main stem, from the ground to the top of the plant.

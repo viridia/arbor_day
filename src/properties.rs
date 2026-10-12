@@ -1,6 +1,7 @@
 //! The property editor: panel rows for the fields of a reflected struct, one row per field, each
 //! named after its field. Booleans get a checkbox, numbers a number input, fuzzy numbers a center,
-//! a spread and a shape toggle, and every other field a label giving its name and type. A row's
+//! a spread and a shape toggle, enums of unit variants a select, and every other field a label
+//! giving its name and type. A row's
 //! caption sits above its inputs, so they get the panel's full width. Field attributes (below) set
 //! a row's caption and a number's limits, precision, step, units and wrapping.
 
@@ -9,25 +10,32 @@ use std::ops::RangeInclusive;
 use bevy::{
     feathers::{
         controls::{
-            ButtonVariant, FeathersCheckbox, FeathersNumberInput, FeathersToolButton, HardLimit,
-            NumberInputPrecision, NumberInputStep, NumberInputUnits, NumberInputWrap, SoftLimit,
+            ButtonVariant, FeathersCheckbox, FeathersListRow, FeathersNumberInput, FeathersSelect,
+            FeathersToolButton, HardLimit, NumberInputPrecision, NumberInputStep, NumberInputUnits,
+            NumberInputWrap, OptionIndex, SoftLimit,
         },
-        display::{icon, label, label_small},
+        display::{caption as option_caption, icon, label, label_small},
         theme::ThemedText,
     },
     prelude::*,
     reflect::{
-        FromReflect, GetTypeRegistration, ReflectMut, TypeInfo, Typed, attributes::CustomAttributes,
+        FromReflect, GetTypeRegistration, ReflectMut, ReflectRef, TypeInfo, Typed,
+        attributes::CustomAttributes,
+        enums::{DynamicEnum, DynamicVariant, VariantInfo},
     },
-    ui_widgets::NumericRange,
+    ui::Selected,
+    ui_widgets::{NumericRange, SetSelected, ValueChange},
 };
 use bevy_immediate::{
-    Imm, ImmEntity,
+    CapSet, Imm, ImmCapAccessRequests, ImmCapability, ImmEntity, impl_capability_set,
     ui::{
-        CapsUiFeathers,
-        activated::ImmUiActivated,
-        checked::ImmUiChecked,
-        number_input::{ImmUiNumberInput, ImmUiNumericValue},
+        ImplCapsUiFeathers,
+        activated::{self, ImmUiActivated},
+        anchored, base, button_variant,
+        checked::{self, ImmUiChecked},
+        clicked, color_plane, color_swatch, disabled, interaction, layout_order, look,
+        number_input::{self, ImmUiNumberInput, ImmUiNumericValue},
+        selected, slider_base_color, slider_value, text, text_input,
     },
 };
 
@@ -35,6 +43,52 @@ use crate::{
     fuzzy::{Distribution, Fuzzy},
     spread_strip::{StripRange, spread_strip},
 };
+
+/// The panel's capabilities: `bevy_immediate`'s for feathers, and reading back an enum's select.
+pub struct CapsPanel;
+
+impl_capability_set!(
+    CapsPanel,
+    ImplCapsPanel > ImplCapsUiFeathers,
+    (
+        base::CapabilityUiBase,
+        layout_order::CapabilityUiLayoutOrder,
+        look::CapabilityUiLook,
+        disabled::CapabilityUiDisabled,
+        interaction::CapabilityUiInteraction,
+        text::CapabilityUiText,
+        text_input::CapabilityUiTextInput,
+        selected::CapabilityUiSelectable,
+        checked::CapabilityUiChecked,
+        clicked::CapabilityUiClicked,
+        activated::CapabilityUiActivated,
+        anchored::CapabilityUiAnchored,
+        slider_value::CapabilityUiSliderValue,
+        number_input::CapabilityUiNumberInput,
+        slider_base_color::CapabilityUiSliderBaseColor,
+        button_variant::CapabilityUiFeathersButtonVariant,
+        color_swatch::CapabilityUiColorSwatch,
+        color_plane::CapabilityUiColorPlane,
+        CapabilityEnumSelect,
+    )
+);
+
+/// Lets the panel read and clear an enum select's [`PickedVariant`].
+pub struct CapabilityEnumSelect;
+
+impl ImmCapability for CapabilityEnumSelect {
+    fn build<Caps: CapSet>(app: &mut App, cap_req: &mut ImmCapAccessRequests<Caps>) {
+        cap_req.request_component_write::<PickedVariant>(app.world_mut());
+    }
+}
+
+/// On an enum's select: the variant the user last picked, until the panel applies it, and the
+/// variant the select shows.
+#[derive(Component)]
+struct PickedVariant {
+    picked: Option<usize>,
+    shown: usize,
+}
 
 /// The inclusive range a number may take. Dragging spans the same range, so the input looks and
 /// drags like a slider, unless the field is also marked [`Spinbox`].
@@ -105,7 +159,7 @@ impl NumberField for i64 {
 }
 
 /// Adds a row for each field of `value`, which must be a struct, editing the fields in place.
-pub fn edit_fields(ui: &mut Imm<CapsUiFeathers>, value: &mut dyn PartialReflect) {
+pub fn edit_fields(ui: &mut Imm<CapsPanel>, value: &mut dyn PartialReflect) {
     // Attributes belong to the type, so read them from its info, not the value.
     let Some(TypeInfo::Struct(info)) = value.get_represented_type_info() else {
         return;
@@ -140,6 +194,8 @@ pub fn edit_fields(ui: &mut Imm<CapsUiFeathers>, value: &mut dyn PartialReflect)
             number_row(row, name, caption, attrs, number);
         } else if let Some(number) = field.try_downcast_mut::<i64>() {
             number_row(row, name, caption, attrs, number);
+        } else if let Some(variants) = unit_variants(field) {
+            enum_row(row, name, caption, variants, field);
         } else {
             let text = format!("{caption}: {}", field.reflect_short_type_path());
             row.on_spawn_apply_scene(move || label(text))
@@ -192,7 +248,7 @@ fn row_node(name: &'static str) -> (Name, Node) {
 }
 
 /// The caption at the top of a row, in feathers' small label for field captions.
-fn row_caption(ui: &mut Imm<CapsUiFeathers>, caption: &'static str) {
+fn row_caption(ui: &mut Imm<CapsPanel>, caption: &'static str) {
     ui.ch().on_spawn_apply_scene(move || label_small(caption));
 }
 
@@ -209,7 +265,7 @@ fn widget_line() -> Node {
 
 /// A caption and a number input, the input named `input` so plans can read its value.
 fn number_row<T: NumberField>(
-    row: ImmEntity<CapsUiFeathers>,
+    row: ImmEntity<CapsPanel>,
     name: &'static str,
     caption: &'static str,
     attrs: &CustomAttributes,
@@ -225,12 +281,12 @@ fn number_row<T: NumberField>(
 /// A number input named `name`, `width` wide, or taking a widget line's spare width if
 /// `Val::Auto`. Returns the input, for adding children of its own.
 fn number_input<'r, 'w, 's, T: NumberField>(
-    input: ImmEntity<'r, 'w, 's, CapsUiFeathers>,
+    input: ImmEntity<'r, 'w, 's, CapsPanel>,
     name: &'static str,
     look: NumberLook,
     width: Val,
     value: &mut T,
-) -> ImmEntity<'r, 'w, 's, CapsUiFeathers> {
+) -> ImmEntity<'r, 'w, 's, CapsPanel> {
     let grow: f32 = if width == Val::Auto { 1.0 } else { 0.0 };
     let initial = value.to_number_input_value();
     // The input writes its text from the components present when its text field spawns, so the
@@ -274,7 +330,7 @@ fn number_input<'r, 'w, 's, T: NumberField>(
 /// the center; the spread goes up to half of it, so a spread can reach across the whole range.
 /// With a range, the center input also shows the spread strip.
 fn fuzzy_row(
-    row: ImmEntity<CapsUiFeathers>,
+    row: ImmEntity<CapsPanel>,
     name: &'static str,
     caption: &'static str,
     attrs: &CustomAttributes,
@@ -332,4 +388,110 @@ fn fuzzy_row(
             });
         });
     });
+}
+
+/// The variant names of `value`'s type, if it is an enum whose variants are all units.
+fn unit_variants(value: &dyn PartialReflect) -> Option<Vec<&'static str>> {
+    let Some(TypeInfo::Enum(info)) = value.get_represented_type_info() else {
+        return None;
+    };
+    info.iter()
+        .map(|variant| match variant {
+            VariantInfo::Unit(unit) => Some(unit.name()),
+            _ => None,
+        })
+        .collect()
+}
+
+/// A caption and a select of the enum's variants, the select named `select` and each option
+/// after its variant, so plans can pick one.
+fn enum_row(
+    row: ImmEntity<CapsPanel>,
+    name: &'static str,
+    caption: &'static str,
+    variants: Vec<&'static str>,
+    value: &mut dyn PartialReflect,
+) {
+    let ReflectRef::Enum(current) = value.reflect_ref() else {
+        return;
+    };
+    let index = current.variant_index();
+    row.on_spawn_insert(move || row_node(name)).add(|ui| {
+        row_caption(ui, caption);
+        let options = variants.clone();
+        let mut select = ui
+            .ch()
+            .on_spawn_insert(move || PickedVariant {
+                picked: None,
+                shown: index,
+            })
+            .on_spawn_observe(pick_variant)
+            .on_spawn_apply_scene(move || {
+                let rows: Vec<Box<dyn SceneList>> = options
+                    .iter()
+                    .enumerate()
+                    .map(|(i, &variant)| -> Box<dyn SceneList> {
+                        if i == index {
+                            bsn! { @FeathersListRow Selected OptionIndex(i) Name({variant}) Children [ @option_caption(variant) ] }.into()
+                        } else {
+                            bsn! { @FeathersListRow OptionIndex(i) Name({variant}) Children [ @option_caption(variant) ] }.into()
+                        }
+                    })
+                    .collect();
+                let rows: Box<dyn SceneList> = Box::new(rows);
+                bsn! { @FeathersSelect { @options: {rows} } Name("select") }
+            });
+        let Ok(Some(mut state)) = select.cap_get_component_mut::<PickedVariant>() else {
+            return;
+        };
+        if let Some(picked) = state.picked.take() {
+            if picked != index {
+                value.apply(&DynamicEnum::new(variants[picked], DynamicVariant::Unit));
+            }
+        } else if state.shown != index {
+            // Changed elsewhere: select the matching option.
+            let entity = select.entity();
+            select
+                .commands()
+                .queue(move |world: &mut World| show_variant(world, entity, index));
+        }
+    });
+}
+
+/// Records the variant picked in an enum's select, for the panel to apply on its next pass.
+fn pick_variant(
+    change: On<ValueChange<Entity>>,
+    options: Query<&OptionIndex>,
+    mut selects: Query<&mut PickedVariant>,
+) {
+    let (Ok(option), Ok(mut state)) = (
+        options.get(change.value),
+        selects.get_mut(change.event_target()),
+    ) else {
+        return;
+    };
+    state.picked = Some(option.0);
+    state.shown = option.0;
+}
+
+/// Selects the option for variant `index` in the enum select `select`.
+fn show_variant(world: &mut World, select: Entity, index: usize) {
+    let mut options = world.query::<(Entity, &OptionIndex)>();
+    let mut parents = world.query::<&ChildOf>();
+    let row = options.iter(world).find_map(|(row, option)| {
+        let mut ancestor = row;
+        while let Ok(parent) = parents.get(world, ancestor) {
+            ancestor = parent.parent();
+            if ancestor == select {
+                return (option.0 == index).then_some(row);
+            }
+        }
+        None
+    });
+    if let Some(row) = row {
+        world.trigger(SetSelected {
+            entity: select,
+            row,
+        });
+    }
 }

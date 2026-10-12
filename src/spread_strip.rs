@@ -9,9 +9,12 @@ use bevy::{
     prelude::*,
     ui::{BackgroundGradient, ColorStop, Gradient, InterpolationColorSpace, LinearGradient},
 };
-use bevy_immediate::{Imm, ui::CapsUiFeathers};
+use bevy_immediate::Imm;
 
-use crate::fuzzy::{Distribution, Fuzzy};
+use crate::{
+    fuzzy::{Distribution, Fuzzy},
+    properties::CapsPanel,
+};
 
 /// Light enough to show over both the input's fill bar and its background.
 const STRIP_COLOR: Color = Color::srgba(1.0, 1.0, 1.0, 0.8);
@@ -47,7 +50,7 @@ struct Segment {
 }
 
 /// Adds the strip to the number input being built. Its nodes are updated only when it changes.
-pub fn spread_strip(ui: &mut Imm<CapsUiFeathers>, fuzzy: Fuzzy, range: StripRange) {
+pub fn spread_strip(ui: &mut Imm<CapsPanel>, fuzzy: Fuzzy, range: StripRange) {
     ui.ch_id("spread_strip")
         .on_spawn_insert(|| {
             (
