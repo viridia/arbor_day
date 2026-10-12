@@ -430,15 +430,20 @@ fn fuzzy_row(
     });
 }
 
-/// A feathers color input, a swatch that opens a picker, with its caption beside it, as a
-/// checkbox has. The input is named `input`.
+/// A caption with a feathers color input, a swatch that opens a picker, at the row's right end.
+/// The input is named `input`.
 fn color_row(
     row: ImmEntity<CapsPanel>,
     name: &'static str,
     caption: &'static str,
     color: &mut Color,
 ) {
-    row.on_spawn_insert(move || (Name::new(name), widget_line())).add(|ui| {
+    let line = move || Node {
+        justify_content: JustifyContent::SpaceBetween,
+        ..widget_line()
+    };
+    row.on_spawn_insert(move || (Name::new(name), line())).add(|ui| {
+        ui.ch().on_spawn_apply_scene(move || label(caption));
         let initial = *color;
         let mut input = ui
             .ch()
@@ -462,7 +467,6 @@ fn color_row(
                 input.entity_commands().insert(ColorInputValue(*color));
             }
         }
-        ui.ch().on_spawn_apply_scene(move || label(caption));
     });
 }
 
