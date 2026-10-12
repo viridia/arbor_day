@@ -10,76 +10,57 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 
 | Commit    | Change                                                                                  |
 | --------- | --------------------------------------------------------------------------------------- |
-| `0947b01` | Repo started: `AGENTS.md`, `CLAUDE.md`, this ledger; requirements moved from Panoply's `docs/arbor-day.md`. |
-| `0947b01` | C1 Minimal shell (D5): a feathers split pane, a `bevy_immediate` panel with one slider scaling a torus, the 3D camera's viewport following the view pane; `plans/smoke.py`. Bevy at `c9c21c2b`; clippy clean; the plan passes (5 steps). |
-| `d1ae223` | C2 Settings (D6): window position, size and fullscreen (after Panoply's `window_settings.rs`), and the panel's width, in `src/settings.rs`; saved on any exit, including the driver's. `plans/smoke.py` checks the panel starts at its default width; the run saved to its own `settings/`, and the developer's file was untouched. |
-| `eafef5a` | C4 Turntable camera (D7), `src/turntable.rs`: spin by horizontal drag or scroll, tilt by vertical drag, zoom by vertical scroll toward the height under the pointer, a Frame button that also resets the tilt; the home elevation and field of view are the game's. Speeds tuned by hand. The test torus stands on edge so a spin shows. `plans/smoke.py` checks the camera starts framed from the front and clicks Frame (9 steps). Spin and zoom are checked by hand: the driver cannot drag or scroll. |
-| `0d1aee5` | C3 Keys (D8), `src/keys.rs`: one observer on the window; F frames, + and − zoom about the focus (`=` and `_` too, for the unshifted and shifted keys), Ctrl+Q quits through the saving exit path, except on macOS, where the OS takes Cmd+Q before the app sees it. `plans/smoke.py` presses − twice and F, checking framing is let go and taken back (15 steps). By hand: typing F into a number input does not frame; clicking the view gives letter keys back. |
-| `65d6413` | C5 Property editor, booleans: `src/properties.rs` walks a reflected struct's fields, a row per field named after it; `bool` gets a feathers checkbox bound through reflection, every other field a label with its name and type. A `Placeholder` resource (two `bool`s, `i32`, `f32`, an enum, a nested struct) stands in for the species; `show_ground` hides the ground. The panel edits a copy and writes back with `set_if_neq`. `plans/smoke.py` checks the labels and toggles the ground (22 steps). |
-| `65d6413` | C9 Property editor, numbers (D9): `f32`, `f64`, `i32`, `i64` fields get a feathers number input beside a feathers `label`; attributes set limits, slider or spinbox look, precision, step, units and wrap; `Caption` renames a row. The test object's scale is a reflected field edited the same way, replacing C1's slider. `Placeholder` is now a component on a named entity, so plans can read it; it gained an angle (degrees, wrapping). `plans/smoke.py` types 42 into `count` (0 to 10) and reads 10 (28 steps). Worked around a duplicated first text (X9). |
-| `a19ec61` | C11 The panel scrolls, as feathers' list view does: a frame with a `ScrollbarGutter` around a node with `Overflow::scroll_y()` and `ScrollArea`, and a `FeathersScrollbar` targeting it. The gutter is reserved only while the scrollbar shows, so the panel keeps its own right margin, and the gutter is exactly the scrollbar's 10 px (6 wide, 4 from the edge), the margin being the gap before it. It first did not scroll: the shell's root and the split pane had `height: 100%` but the default minimum height, a flex item's content height, so tall content stretched every node past the window (measured: 2750 px in a 1440 px window); `min_height: 0` on both fixed it. `plans/smoke.py` checks the scrollbar exists (29 steps); scrolling checked with a temporary tall node, since the placeholder fits the default window. |
-| `df0b83c` | C12 Fuzzy numbers (D10), `src/fuzzy.rs`: `Fuzzy { center, spread, shape }`, `shape` a `Distribution`, uniform or bell. Its row: the center as a slider bounded by the field's `ValueRange`, the spread as a 56 px spinbox from 0 to half that range, and a plain tool button (`ButtonVariant::Plain`) whose icon shows the shape and toggles it, the icons the author's (`artwork/distributions.svg`, exported to `assets/icons/`, shown 18 px tall). Number inputs share `NumberLook` (the attributes) and `number_input` (the X9 workaround). A row's gap between widgets is 4 px, as between rows. `plans/fuzzy.py` toggles both shapes (10 steps). |
-| `93b3dbb` | C13 Captions above fields: a row is a column, the caption in feathers' `label_small` (its field-caption label) 2 px above the inputs, half the 4 px between rows. A number input spans the row; a fuzzy row's center, spread and shape button share a line beneath, so the center gets about 310 px of a 320 px panel rather than 53. Checkboxes keep their caption beside them. Both plans pass unchanged (29 and 10 steps). |
-| (pending) | C14 Spread strip, `src/spread_strip.rs`: a 2 px track across the full width of a fuzzy center input, a child the panel adds to the input's root (`ZIndex(1)`, `Pickable::IGNORE`), so the range maps as the fill bar's does and the strip centres on the fill edge. Lifted 2 px off the bottom edge to clear the rounded corners: a first cut insetting it 4 px each end instead sat visibly off the fill edge when the spread was small and the panel wide. A segment per piece of center ± spread within the range, clamped, or for a wrapping range brought round from the other end (two segments across the seam). Its opacity follows `Distribution::density`: flat for uniform; for bell, the mean of three uniforms, in stops every twelfth of the spread. Nodes are reinserted only when a segment changes; a spread or shape edit shows a frame late, since the strip is built inside the center input before the spread input. The colour is a fixed white at 80% (not a theme token). `Placeholder` gained `axis`, a wrapping fuzzy angle across the seam. A segment is at least 2 px wide, so a tiny spread still shows; with no spread the strip is a solid 2 px tick centred on the value, rather than vanishing. `plans/fuzzy.py` checks one segment for `length` and two for `axis`, then types a spread of 0 and checks the tick (24 steps); unit tests for the segments and the density. |
-
-| `0e9fdef` | C6 Growth-model survey, `docs/growth-model.md`, with a screenshot of seedling's trees in Panoply; the choice is D11. Requirements: outlines become a per-species switch, shown in the preview on the bark shell and the leaf texture; leaf textures are flat colors. |
-| (pending) | C15 A generated trunk (D12): `Species` (`src/species.rs`), a resource holding a `Trunk` group (height, radius, taper, sides, bend); `src/generator.rs` builds a tube of rings along an arc, a ring per 15° of turn, normals shared and leaning with the taper, closed by a fan at the top; `src/plant.rs` rebuilds the `Plant` entity's mesh in place when the species changes, so its bounds and the turntable's framing follow, and records `PlantStats`. The panel edits the trunk and shows the triangle count. The trunk replaces the test torus and `TestShape`. Unit tests for ring count, shared vertices, the base, the height and the winding; `plans/smoke.py` sets 4 sides and checks the count follows (36 steps). |
-| (pending) | C16 Envelope, with enums (D13). `Species` gained `Envelope { profile, height, crown_base, radius }`, the crown base a fraction of the height; `Profile` is cone, ellipsoid, hemisphere, column or flame (Weber and Penn's, widest 70% up). `generator::envelope_outline` draws it as 8 meridians of 16 steps closed across both ends and a ring every second step, skipping what has no width; `src/plant.rs` rebuilds it on an `Envelope` entity, a line-list mesh, unlit, a `TurntableSubject` so Frame fits the crown, and records `EnvelopeStats`. Any field whose type is an enum of unit variants gets a feathers select, a row per variant named after it, which needed a capability set of the panel's own (`CapsPanel`). A hand-written Envelope subpane above Trunk. The panel now outgrows the window, so clicks scroll their node into view: the driver bumped to `ad194b2`, which does (its ledger). `plans/envelope.py` picks Cone and Column and checks the segment counts, then picks the placeholder's `mode` below the fold (17 steps); unit tests for the profiles' ends and the outline's counts. `smoke.py` (36 steps) and `fuzzy.py` (24) pass. |
-| (pending) | C17 Nested structs as subpanes: a field whose type is a struct (other than `Fuzzy`, which has its own row) is a feathers subpane named after the field, headed by its caption, its fields rows of their own, recursively. `properties::group` builds a subpane; the panel walks `Species` itself, its fields captioned Envelope and Trunk, and the View and Placeholder subpanes use `group` too. The placeholder's `nested` is now a subpane within the Placeholder subpane. `plans/smoke.py` finds `trunk/sides` and `nested/size`, and toggles `nested/flag` (40 steps); `envelope.py` (17) and `fuzzy.py` (24) pass unchanged. |
-| (pending) | C21 Turntable feel (D7 amended): framing is one-shot, `frame_pending` set by Frame and at start, so editing no longer moves the camera; `keep_framed` now only refits the framed sphere to the viewport. Framing runs after `CalculateBounds` and waits for every subject's `Aabb`. Drags and scrolls move along one axis at a time (`DominantAxis` in `src/turntable.rs`, on a `TurntableGesture` component the camera requires). `plans/smoke.py` checks the framing flags, raises the envelope to 12 and screenshots it outgrowing the frame, then frames it (50 steps); unit tests for the axis choice. The axis choice is checked by hand on a trackpad: the driver cannot drag or scroll. |
-| (pending) | C20 Bark color: `Species` gained `Bark { color }`, written into the trunk mesh as a vertex color (linear) under a white material, and recorded on `PlantStats` as sRGB hex (`bark_color`) for plans. A `Color` field's row is feathers' `FeathersColorInput`, its caption on the left and the swatch at the row's right end. `CapabilityColorInput` in `src/properties.rs` binds it: `bevy_immediate`'s `NewValueChange<Color>` takes the picked color, and the panel writes `ColorInputValue` when the shown color differs, since the input does not update itself. The picker's parts are named by feathers' `#name`s (`wheel`, `mode_rgb`, `hex_input`), so `plans/bark.py` opens the picker, types `336699` into the hex field in RGB mode, checks the bark color, and closes it with Escape (25 steps). `smoke.py` (50), `envelope.py` (17) and `fuzzy.py` (24) pass. The picker's mode and recent colors are not saved (X14). |
-| (pending) | C22 Names as `#name`: the literal `Name("…")`s in `bsn!` (`src/main.rs`, and `#shape` and `#select` in `src/properties.rs`) are `#name`s, which insert the same `Name` and make the entity referable in the scene. Names computed at run time (`Name({variant})`, `Name::new`) are unchanged. `smoke.py` (50), `envelope.py` (17), `fuzzy.py` (24) and `bark.py` (25) pass unchanged. |
+| `0947b01` | Repo started: `AGENTS.md`, `CLAUDE.md`, this ledger; requirements moved from Panoply.  |
+| `0947b01` | C1 Minimal shell (D5): split pane, `bevy_immediate` panel, viewport following the view pane; `plans/smoke.py`. |
+| `d1ae223` | C2 Settings (D6), `src/settings.rs`: window state and panel width.                      |
+| `eafef5a` | C4 Turntable camera (D7), `src/turntable.rs`.                                           |
+| `0d1aee5` | C3 Keys (D8), `src/keys.rs`: frame, zoom, quit.                                         |
+| `65d6413` | C5 Property editor by reflection, `src/properties.rs`: booleans; `Placeholder` stands in for the species. |
+| `65d6413` | C9 Numbers (D9): feathers number inputs shaped by field attributes.                     |
+| `a19ec61` | C11 The panel scrolls, as feathers' list view does.                                     |
+| `df0b83c` | C12 Fuzzy numbers (D10), `src/fuzzy.rs`: center, spread and a shape toggle; `plans/fuzzy.py`. |
+| `93b3dbb` | C13 Captions above fields, so a fuzzy row's center input gets the panel's width.        |
+| `8d39dc3` | C14 Spread strip, `src/spread_strip.rs`: center ± spread drawn along the center input.  |
+| `0e9fdef` | C6 Growth-model survey, `docs/growth-model.md` (D11).                                   |
+| `3dcfc10` | C15 A trunk generated from the species (D12): `src/species.rs`, `generator.rs`, `plant.rs`. |
+| `0950771` | C16 Crown envelope and enum selects (D13); `plans/envelope.py`.                         |
+| `806fed9` | C17 Nested structs as subpanes (`properties::group`).                                   |
+| `b757d16` | C21 Turntable feel (D7): one-shot framing, one axis per gesture.                        |
+| `e05893b` | C20 Bark color, and feathers' color input for `Color` fields; `plans/bark.py`.          |
+| `a9399e7` | C22 Literal names in `bsn!` as `#name`.                                                 |
 
 ## Next
 
 File handling brings Save and Open keys (D8).
 
-The property editor is built against a placeholder struct of a few field types, a widget kind per
-chunk; the species types come later (C10). Its shape so far: the panel walks the reflected value
-in its immediate-mode `construct`, rows keyed by field path (`GetPath` syntax, which C7's undo
-records also use); a table from `TypeId` to widget for types with their own row (`Fuzzy`,
-later colors); field attributes (`#[reflect(@…)]`, read with `get_attribute`) for limits, step,
-precision, units and wrap. Every number is a feathers number input: with a `SoftLimit` it looks
-and drags like a slider and still takes typing, so the slider is not used. Groups are feathers
-subpanes; seedling's look is not a target. `bevy_inspector`'s `details_panel` is a reference for
-walking reflected fields (`field_entries`, `FieldEdit`) but not a base: it reads no attributes,
-has no per-type hook, and is retained-mode.
-
-C5 did booleans, C9 numbers and C12 fuzzy numbers (`src/properties.rs`, attributes per D9);
-C13 put captions above fields, C14 drew the spread strip, C17 made nested structs subpanes, C20
-added colors. From here the generator sets the order (`docs/growth-model.md`), each step bringing
-the widget kind it needs:
+The property editor gains a widget kind per chunk, built against `Placeholder` until the species
+types (C10). Rows are keyed by field path, in `GetPath` syntax, which C7's undo records also use.
+Seedling's look is not a target. `bevy_inspector`'s `details_panel` also walks reflected fields,
+but reads no attributes, has no per-type hook, and is retained-mode. The generator sets the order
+(`docs/growth-model.md`), each step bringing the widget kind it needs:
 
 - **C18 One level of limbs**: phyllotaxis, elevation from world up, reach to the envelope, which
   needs the envelope's radius at a height (`profile_width` scaled between crown base and top).
   The trunk keeps its own height until the Stems group, when it becomes the envelope's height
   times the leader extent.
 - **C19 Limb levels as a list**: the `Vec` widget, with add and remove.
-
-A varied color (`Fuzzy<Color>`, D10) waits for the leaf color, with its hue and lightness shifts.
-Notes:
-
-  - The number input scrubs with Shift for slow and has no fast modifier (X4).
-  - Digits: the number input never rounds what it shows ("don't lie to the user"), so a value
-    the app computes is rounded where it is written, to the field's `Precision` in the units
-    shown, as feathers' color input rounds its channels to a tenth before inserting them
-    (`scaled_number_input_value`). Defaults are written in the units shown
-    (`15.0_f32.to_radians()`, not `0.3`). Applies when the first such writer lands (Reset,
-    Randomize, values derived from the generator).
+- **Computed values are rounded where written**, from the first writer (Reset, Randomize, values
+  derived from the generator): the number input never rounds what it shows, so round to the
+  field's `Precision` in the units shown, as feathers' color input does
+  (`scaled_number_input_value`). Defaults are written in the units shown
+  (`15.0_f32.to_radians()`, not `0.3`).
+- **A varied color** (`Fuzzy<Color>`, D10) with the leaf color, for its hue and lightness shifts.
 - **C8 Working document in settings.** A settings group holding the working species and, once
-  set, the file path, so a restart returns to unsaved edits and Save writes to the right file.
-  Seedling did the same (`localStorage` key `sapling-doc`, written on unload: the parameter JSON,
-  `name`, `filePath`); here the name comes from the file name. Serialized by reflection, as
-  `bevy_settings` does, so the TOML follows the reflected types. Can start with the placeholder.
-- **C7 Undo and redo** (requirements, Authoring app), after C5, since what an undo record holds
-  follows the reflection design. Take the `bevy_undo_redo` crate from the author's Bevy PR
-  #23373 (never merged; local branch `bevy_undo` in `../bevy`) as a module, `src/undo.rs`, with
-  its API unchanged and its origin noted: an `UndoAction` trait (`apply` returns the inverse;
-  `coalesce`, `label`, `as_any`) and an `UndoStack` resource of undo and redo stacks per
-  `ContextId`. Move it to its own repo when Panoply's editor needs it too. An action is likely a
-  reflection path and the field's old value, regenerating from the species; no record holds an
-  `Entity`, so the review's objection (a despawn undone respawns under a new id, breaking stored
-  references) does not arise here. Open:
+  set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
+  as seedling did. The document's name comes from the file name. Serialized by reflection, as
+  `bevy_settings` does. Can start with the placeholder.
+- **C7 Undo and redo** (requirements, Authoring app). Take the `bevy_undo_redo` crate from the
+  author's Bevy PR #23373 (never merged; branch `bevy_undo` in `../bevy`) as `src/undo.rs`, its
+  API unchanged and its origin noted: an `UndoAction` trait (`apply` returns the inverse;
+  `coalesce`, `label`, `as_any`) and an `UndoStack` resource of stacks per `ContextId`. Move it
+  to its own repo when Panoply's editor needs it. An action is likely a reflection path and the
+  field's old value, regenerating from the species; no record holds an `Entity`, so the PR
+  review's objection (an undone despawn respawns under a new id) does not apply. Open:
   - When coalescing stops: merging by path alone joins two separate drags of one slider. Close a
     step on the widgets' `is_final`, or add the grouping the review found missing.
   - Cmd+Z in a focused text field: the text input passes it on, so the window would undo a
@@ -91,20 +72,15 @@ Notes:
   fill, affine transforms, line width, join and cap, global alpha, solid colors and linear
   gradients, `clearRect` and `strokeRect`. The candidate must cover that set; propose it before
   code.
-- **C10 Species data model**, its groups the layers of the growth model (D11; sketched in
-  `docs/growth-model.md`, Consequences), and seedling's is wrong where the requirements say (roll compounding through levels, card facing tied to the
-  tip, growth modes that disable half the parameters, ranges as low and high). Reflectable types
-  with `Default` for initial values and attributes for the editor; a
-  `Fuzzy { center, spread, shape }` type for varied parameters, `shape` uniform or bell. The bell
-  is the mean of three uniform samples: cheap, bell-shaped, and bounded, never past
-  center ± spread, so spread means the farthest a value goes in both shapes (a true gaussian's
-  tails would break the requirement that every variation is bounded). Every varied parameter
-  draws three numbers whatever its shape, so toggling one shape does not shift the rest of its
-  random stream. A wrapping parameter's spread can cross the seam (the spread strip draws it in
-  two segments), so the generator samples such angles modulo a turn. Serialized by reflection only, no serde derives: TOML in settings
-  (C8), JSON as the glTF extra, one representation that cannot drift. Seedling's groups for
-  reference: `trunk`; `branch[]`, one per level; and the leaf as `leafGroup` (arrangement),
-  `leafShape` and `leafColor`.
+- **C10 Species data model**, its groups the layers of the growth model (D11;
+  `docs/growth-model.md`, Consequences), correcting seedling where the requirements say.
+  Reflectable types with `Default` for initial values and attributes for the editor. Sampling a
+  `Fuzzy`: the bell is the mean of three uniforms, bounded by center ± spread, so spread means the
+  same in both shapes; every varied parameter draws three numbers whatever its shape, so toggling
+  one does not shift the rest of the random stream; a wrapping angle is sampled modulo a turn.
+  Serialized by reflection only, no serde derives: TOML in settings (C8) and JSON as the glTF
+  extra, one representation that cannot drift. Seedling's groups for reference: `trunk`;
+  `branch[]`, one per level; the leaf as `leafGroup` (arrangement), `leafShape` and `leafColor`.
 
 ## Decisions
 
@@ -282,5 +258,7 @@ Notes:
 
 - Bevy source at the locked commit is in Cargo's git checkout,
   `~/.cargo/git/checkouts/bevy-*/c9c21c2`; the local `../bevy` is at a newer commit.
+- The driver cannot drag or scroll, so the turntable's gestures (spin, tilt, zoom, the axis
+  choice) are checked by hand, on a trackpad.
 - The first `Cargo.lock` was seeded from `bevy_remote_driver`'s, so Bevy resolved to the
   family's commit rather than today's main. Seed a new repo in the family the same way.
