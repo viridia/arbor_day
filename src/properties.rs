@@ -48,6 +48,7 @@ use bevy_immediate::{
 
 use crate::{
     fuzzy::{Distribution, Fuzzy},
+    random::Seed,
     spread_strip::{StripRange, spread_strip},
 };
 
@@ -244,6 +245,8 @@ pub fn edit_fields(ui: &mut Imm<CapsPanel>, value: &mut dyn PartialReflect) {
             .checked(flag);
         } else if let Some(fuzzy) = field.try_downcast_mut::<Fuzzy>() {
             fuzzy_row(row, name, caption, attrs, fuzzy);
+        } else if let Some(seed) = field.try_downcast_mut::<Seed>() {
+            seed_row(row, name, caption, seed);
         } else if let Some(number) = field.try_downcast_mut::<f32>() {
             number_row(row, name, caption, attrs, number);
         } else if let Some(number) = field.try_downcast_mut::<f64>() {
@@ -475,6 +478,38 @@ fn number_input<'r, 'w, 's, T: NumberField>(
     } else {
         input.number_input(value)
     }
+}
+
+/// A seed's row: a number input named `input`, without the slider's fill, since nearby seeds are
+/// no more alike than distant ones, and a button named `randomize` that picks a seed at random.
+fn seed_row(row: ImmEntity<CapsPanel>, name: &'static str, caption: &'static str, seed: &mut Seed) {
+    let look = NumberLook {
+        range: Some(NumericRange::I32(0..=Seed::MAX)),
+        slider: false,
+        wrap: false,
+        precision: None,
+        step: None,
+        units: None,
+    };
+    row.on_spawn_insert(move || row_node(name)).add(|ui| {
+        row_caption(ui, caption);
+        ui.ch().on_spawn_insert(widget_line).add(|ui| {
+            number_input(ui.ch(), "input", look, Val::Auto, &mut seed.0);
+            let mut button = ui.ch().on_spawn_apply_scene(|| {
+                bsn! {
+                    @FeathersToolButton { @variant: {ButtonVariant::Plain} }
+                    #randomize
+                }
+            });
+            if button.activated() {
+                *seed = Seed::random();
+            }
+            button.add(|ui| {
+                ui.ch()
+                    .on_spawn_apply_scene(|| bsn! { @icon("icons/ifl.png") Node { height: px(18) } });
+            });
+        });
+    });
 }
 
 /// A fuzzy number's row: its center as a slider, its spread as a spinbox, and a button that

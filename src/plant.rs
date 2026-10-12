@@ -40,6 +40,8 @@ pub struct Plant;
 pub struct PlantStats {
     pub triangles: u32,
     pub limbs: u32,
+    /// The seed the plant was grown from.
+    pub seed: i32,
     /// The bark's vertex color, as sRGB hex.
     pub bark_color: String,
 }
@@ -59,6 +61,7 @@ fn build_plant(
         let stats = PlantStats {
             triangles: geometry.triangles() as u32,
             limbs: limbs as u32,
+            seed: species.seed.0,
             bark_color: color.to_srgba().to_hex(),
         };
         let mesh = to_mesh(geometry, color);

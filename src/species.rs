@@ -2,7 +2,10 @@
 
 use bevy::{feathers::controls::NumberInputUnits, prelude::*};
 
-use crate::properties::{Caption, Precision, ShownCount, Spinbox, ValueRange, Wrap};
+use crate::{
+    properties::{Caption, Precision, ShownCount, Spinbox, ValueRange, Wrap},
+    random::Seed,
+};
 
 /// Most levels of limbs a species can have.
 pub const MAX_LIMB_LEVELS: usize = 3;
@@ -12,6 +15,9 @@ pub const MAX_LIMB_LEVELS: usize = 3;
 #[derive(Resource, Reflect, Clone, PartialEq)]
 #[reflect(Resource)]
 pub struct Species {
+    /// Where the plant's random numbers start: the same seed makes the same plant.
+    #[reflect(@Caption("Seed"))]
+    pub seed: Seed,
     #[reflect(@Caption("Envelope"))]
     pub envelope: Envelope,
     #[reflect(@Caption("Trunk"))]
@@ -38,6 +44,7 @@ impl Species {
 impl Default for Species {
     fn default() -> Self {
         Self {
+            seed: Seed(1),
             envelope: Envelope::default(),
             trunk: Trunk::default(),
             limb_levels: 1,
@@ -50,9 +57,12 @@ impl Default for Species {
                     start: 0.3,
                     end: 0.9,
                     angle: 45.0_f32.to_radians(),
+                    bend_rate: 20.0_f32.to_radians(),
+                    wander: 30.0_f32.to_radians(),
                     reach: 0.6,
                     radius: 0.5,
                     sides: 3,
+                    ..LimbLevel::default()
                 },
                 LimbLevel {
                     nodes: 3,
@@ -61,9 +71,12 @@ impl Default for Species {
                     start: 0.4,
                     end: 0.9,
                     angle: 40.0_f32.to_radians(),
+                    bend_rate: 20.0_f32.to_radians(),
+                    wander: 40.0_f32.to_radians(),
                     reach: 0.5,
                     radius: 0.5,
                     sides: 3,
+                    ..LimbLevel::default()
                 },
             ],
             bark: Bark::default(),
@@ -137,8 +150,8 @@ pub struct Trunk {
 }
 
 /// One level of limbs on a parent, the trunk or a limb of the level before, in nodes spaced
-/// evenly along a span of the parent. Each limb leaves at an angle from its parent and runs
-/// straight toward the envelope.
+/// evenly along a span of the parent. Each limb leaves at an angle from its parent and grows
+/// toward the envelope, bending toward an angle from world up and wandering as it goes.
 #[derive(Reflect, Clone, PartialEq)]
 pub struct LimbLevel {
     /// Places along the parent where limbs start.
@@ -169,7 +182,30 @@ pub struct LimbLevel {
         @NumberInputUnits::new_static("angle_degrees"),
     )]
     pub angle: f32,
-    /// Length as a fraction of the distance from the limb's start to the envelope along it.
+    /// The angle from world up the limb bends toward, keeping its compass heading: 0 up, as a
+    /// poplar's, 90° level, as an oak's, 180° down, as a weeping tree's.
+    #[reflect(
+        @ValueRange::<f32>(0.0..=std::f32::consts::PI),
+        @NumberInputUnits::new_static("angle_degrees"),
+        @Caption("Bend toward"),
+    )]
+    pub bend_toward: f32,
+    /// How fast the limb turns toward its bend, per metre: 0 keeps it straight.
+    #[reflect(
+        @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_2),
+        @NumberInputUnits::new_static("angle_degrees"),
+        @Caption("Bend per metre"),
+    )]
+    pub bend_rate: f32,
+    /// The most the limb turns at random, per metre, so it winds rather than running straight.
+    #[reflect(
+        @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_2),
+        @NumberInputUnits::new_static("angle_degrees"),
+        @Caption("Wander per metre"),
+    )]
+    pub wander: f32,
+    /// Length as a fraction of the distance from the limb's start to the envelope along its
+    /// starting direction. A limb also stops where it leaves the envelope.
     #[reflect(@ValueRange::<f32>(0.0..=1.0), @Precision(2))]
     pub reach: f32,
     /// Radius at the base, as a fraction of the parent's radius where the limb starts. Limbs taper
@@ -190,6 +226,9 @@ impl Default for LimbLevel {
             start: 0.4,
             end: 0.9,
             angle: 60.0_f32.to_radians(),
+            bend_toward: 90.0_f32.to_radians(),
+            bend_rate: 15.0_f32.to_radians(),
+            wander: 20.0_f32.to_radians(),
             reach: 0.9,
             radius: 0.5,
             sides: 4,

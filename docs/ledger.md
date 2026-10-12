@@ -30,11 +30,14 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `a9399e7` | C22 Literal names in `bsn!` as `#name`.                                                 |
 | `0a3924b` | C18 One level of limbs (D14), reaching toward the envelope; `plans/limbs.py`.           |
 | `1e7bd38` | C19 Up to three limb levels (D15), each at an angle from its parent; `plans/levels.py`. |
-|           | C26 Random streams and `Fuzzy::sample` (D16), `src/random.rs`.                          |
+| `5621ce7` | C26 Random streams and `Fuzzy::sample` (D16), `src/random.rs`.                          |
+|           | C23 Curved limbs (D17): bend and wander per metre, and the seed; `plans/growth.py`.     |
 
 ## Next
 
-File handling brings Save and Open keys (D8).
+File handling brings Save and Open keys (D8), and Save and Open buttons at the top of the panel.
+The seed row moves in with them, in a feathers `group` (`containers/group.rs`, no header), so it
+lines up with the subpanes' rows rather than standing at the panel's edge.
 
 The property editor gains a widget kind per chunk, built against `Placeholder` until a species
 field needs it (C27). Rows are keyed by field path, in `GetPath` syntax, which C7's undo records also use.
@@ -42,18 +45,14 @@ Seedling's look is not a target. `bevy_inspector`'s `details_panel` also walks r
 but reads no attributes, has no per-type hook, and is retained-mode. The generator sets the order
 (`docs/growth-model.md`), each step bringing the widget kind it needs:
 
-- **C23 Limb growth**: tropism toward an angle from world up and wander per metre (seedling's
-  `flex`, and the winding seedling lacked), so a limb is a curve of rings spaced by its turn,
-  as the trunk is; `limb_frame` then follows the curve. Bounded jitter on each angle within
-  per-level limits: the level's fields that seedling varied become `Fuzzy` (span, reach, angle,
-  divergence), drawn from a `branching` stream (D16). The seed arrives with them, as no row
-  should change nothing; whether it belongs to the species or to a variant (requirements, a
-  species file plus a seed list) is open, decided here. Where each value is used, the
-  generator takes a wrapping angle modulo a turn and clamps the rest to the field's limits,
-  since the limits are editor attributes it does not read; then drop the `dead_code`
-  expectations on `random` and `Fuzzy::sample`. Pipe-model radii, and limbs below a radius left
-  to the foliage rather than meshed. Until then limbs are straight and taper as the trunk does,
-  and three default levels make 5,154 triangles; revisit the third level's defaults then.
+- **C28 Varied level fields**: bounded jitter within per-level limits; the level's fields that
+  seedling varied become `Fuzzy` (span, reach, angle, divergence), drawn from each limb's
+  stream (D16, D17). Where each value is used, the generator takes a wrapping angle modulo a
+  turn and clamps the rest to the field's limits, since the limits are editor attributes it
+  does not read. Then drop the `dead_code` expectation on `Fuzzy::sample`.
+- **C29 Pipe-model radii**, and limbs below a radius left to the foliage rather than meshed.
+  Until then limbs taper as the trunk does, and three default levels are heavy (wandering limbs
+  add rings, 2 × sides triangles each); revisit the third level's defaults then.
 - **C24 Stems**: the trunk's height becomes the envelope's height times the leader extent; until
   then the trunk keeps its own height.
 - **C25 A HUD over the view**, to free the panel: every control that changes the preview rather
@@ -74,9 +73,9 @@ but reads no attributes, has no per-type hook, and is retained-mode. The generat
   buttons once the surface lands. Propose the layout before code.
 - **C27 Remove `Placeholder`** (`src/main.rs`) once every widget kind it stands in for has a
   real customer. Numbers, spinboxes, wrapped angles, selects and subpanes have theirs in the
-  species. Left: `Fuzzy` (C23; move `plans/fuzzy.py` onto a species field), and the checkbox,
+  species. Left: `Fuzzy` (C28; move `plans/fuzzy.py` onto a species field), and the checkbox,
   whose only use is `show_ground`, which C25 moves to the HUD; a species bool, or a test of
-  the checkbox row of its own, keeps it covered. *After* C23 and C25.
+  the checkbox row of its own, keeps it covered. *After* C28 and C25.
 - **Computed values are rounded where written**, from the first writer (Reset, Randomize, values
   derived from the generator): the number input never rounds what it shows, so round to the
   field's `Precision` in the units shown, as feathers' color input does
@@ -108,7 +107,7 @@ but reads no attributes, has no per-type hook, and is retained-mode. The generat
 - **C10 Species data model**, its groups the layers of the growth model (D11;
   `docs/growth-model.md`, Consequences), correcting seedling where the requirements say.
   Reflectable types with `Default` for initial values and attributes for the editor, after the
-  fields settle (C23, C24), so saved files are not broken by every change. Serialized by
+  fields settle (C28, C29, C24), so saved files are not broken by every change. Serialized by
   reflection only, no serde derives: TOML in settings (C8) and JSON as the glTF
   extra, one representation that cannot drift. A golden test: a species serialized and compared
   with a JSON file in the repo, brought in with `include_str!` rather than quoted inline.
@@ -239,6 +238,17 @@ but reads no attributes, has no per-type hook, and is retained-mode. The generat
   a stream of its own, `Rng::stream(seed, name)`, so changing one leaves the others' numbers
   alone (requirements, Parameters, determinism, variants). `Fuzzy::sample` always draws three
   numbers: the bell is their mean, uniform uses the first.
+
+- **D17** A limb is traced in 2 cm steps, turning toward its level's bend (an angle from world
+  up, keeping its compass heading) at a rate per metre, and wandering by turns drawn a metre
+  apart and blended smoothly, so its shape does not depend on the step. It stops at its reach
+  or where it would leave the envelope. Rings go wherever it has turned 15° since the last, and
+  each carries a side transported along the limb without twisting, which sets the ring's roll
+  and its children's azimuth zero. Each limb's stream forks from its parent's by its index
+  (the trunk's is the seed's `branching` stream), so a limb's draws depend on where it sits,
+  not on how many came before. The seed is a `Seed` in the species, saved with it; the panel
+  gives it a number input without a fill and a Random button. The seed list for variants
+  (requirements, a species file plus a seed list) can grow from it.
 
 ## Deferred
 

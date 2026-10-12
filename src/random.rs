@@ -1,9 +1,37 @@
 //! Random numbers for the generator, specified here rather than taken from a crate, so the same
 //! seed makes the same plant on every platform and through every dependency update.
 
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use bevy::prelude::*;
+
+/// The number a plant's random streams start from. A type of its own, so the panel shows it as a
+/// seed: a plain number, and a button that picks one at random.
+#[derive(Reflect, Clone, Copy, PartialEq, Eq, Debug)]
+pub struct Seed(pub i32);
+
+impl Seed {
+    /// The largest seed, so a seed is short enough to type.
+    pub const MAX: i32 = 999_999;
+
+    /// A seed picked from the clock.
+    pub fn random() -> Self {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_or(0, |since| since.as_nanos() as u64);
+        let pick = Rng::stream(nanos, "seed").next_u64() % (Self::MAX as u64 + 1);
+        Self(pick as i32)
+    }
+
+    /// The stream named `name` for this seed.
+    pub fn stream(self, name: &str) -> Rng {
+        Rng::stream(self.0 as u64, name)
+    }
+}
+
 /// A SplitMix64 generator (Steele, Lea and Flood, 2014): a 64-bit counter, each output a mix of
 /// the next count.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Rng {
     state: u64,
 }
@@ -14,6 +42,15 @@ impl Rng {
     pub fn stream(seed: u64, name: &str) -> Self {
         Self {
             state: mix(seed ^ fnv1a(name)),
+        }
+    }
+
+    /// A stream of its own for the child numbered `index`, from this stream's current state,
+    /// which it leaves as it was. Streams branch as the plant does, so what one limb draws depends
+    /// on where it sits in the plant, not on how many numbers were drawn before it.
+    pub fn fork(&self, index: u64) -> Self {
+        Self {
+            state: mix(self.state ^ mix(index.wrapping_add(0x9e37_79b9_7f4a_7c15))),
         }
     }
 
@@ -65,6 +102,15 @@ mod tests {
         assert_eq!(draws(7, "branching"), draws(7, "branching"));
         assert_ne!(draws(7, "branching"), draws(7, "foliage"));
         assert_ne!(draws(7, "branching"), draws(8, "branching"));
+    }
+
+    #[test]
+    fn forks_are_repeatable_and_distinct() {
+        let parent = Rng::stream(7, "branching");
+        let first = |rng: Rng| rng.clone().next_u64();
+        assert_eq!(first(parent.fork(3)), first(parent.fork(3)));
+        assert_ne!(first(parent.fork(3)), first(parent.fork(4)));
+        assert_ne!(first(parent.fork(3)), first(parent.clone()));
     }
 
     #[test]
