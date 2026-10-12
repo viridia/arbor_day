@@ -26,6 +26,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | (pending) | C15 A generated trunk (D12): `Species` (`src/species.rs`), a resource holding a `Trunk` group (height, radius, taper, sides, bend); `src/generator.rs` builds a tube of rings along an arc, a ring per 15° of turn, normals shared and leaning with the taper, closed by a fan at the top; `src/plant.rs` rebuilds the `Plant` entity's mesh in place when the species changes, so its bounds and the turntable's framing follow, and records `PlantStats`. The panel edits the trunk and shows the triangle count. The trunk replaces the test torus and `TestShape`. Unit tests for ring count, shared vertices, the base, the height and the winding; `plans/smoke.py` sets 4 sides and checks the count follows (36 steps). |
 | (pending) | C16 Envelope, with enums (D13). `Species` gained `Envelope { profile, height, crown_base, radius }`, the crown base a fraction of the height; `Profile` is cone, ellipsoid, hemisphere, column or flame (Weber and Penn's, widest 70% up). `generator::envelope_outline` draws it as 8 meridians of 16 steps closed across both ends and a ring every second step, skipping what has no width; `src/plant.rs` rebuilds it on an `Envelope` entity, a line-list mesh, unlit, a `TurntableSubject` so Frame fits the crown, and records `EnvelopeStats`. Any field whose type is an enum of unit variants gets a feathers select, a row per variant named after it, which needed a capability set of the panel's own (`CapsPanel`). A hand-written Envelope subpane above Trunk. The panel now outgrows the window, so clicks scroll their node into view: the driver bumped to `ad194b2`, which does (its ledger). `plans/envelope.py` picks Cone and Column and checks the segment counts, then picks the placeholder's `mode` below the fold (17 steps); unit tests for the profiles' ends and the outline's counts. `smoke.py` (36 steps) and `fuzzy.py` (24) pass. |
 | (pending) | C17 Nested structs as subpanes: a field whose type is a struct (other than `Fuzzy`, which has its own row) is a feathers subpane named after the field, headed by its caption, its fields rows of their own, recursively. `properties::group` builds a subpane; the panel walks `Species` itself, its fields captioned Envelope and Trunk, and the View and Placeholder subpanes use `group` too. The placeholder's `nested` is now a subpane within the Placeholder subpane. `plans/smoke.py` finds `trunk/sides` and `nested/size`, and toggles `nested/flag` (40 steps); `envelope.py` (17) and `fuzzy.py` (24) pass unchanged. |
+| (pending) | C21 Turntable feel (D7 amended): framing is one-shot, `frame_pending` set by Frame and at start, so editing no longer moves the camera; `keep_framed` now only refits the framed sphere to the viewport. Framing runs after `CalculateBounds` and waits for every subject's `Aabb`. Drags and scrolls move along one axis at a time (`DominantAxis` in `src/turntable.rs`, on a `TurntableGesture` component the camera requires). `plans/smoke.py` checks the framing flags, raises the envelope to 12 and screenshots it outgrowing the frame, then frames it (50 steps); unit tests for the axis choice. The axis choice is checked by hand on a trackpad: the driver cannot drag or scroll. |
 
 ## Next
 
@@ -151,10 +152,16 @@ Notes:
   5° to 85°, because the hand expects it; Frame returns it to the game's elevation, which is what
   makes the extra control acceptable. Zoom: vertical scroll, moving the focus toward the height
   under the pointer (where the pointer's ray crosses the vertical plane through the axis), clamped
-  to the subject's heights, so zooming in on the crown frames the crown. While `keep_framed` is
-  set the camera keeps the subject's bounding sphere in view, through resizes and changes to the
-  subject; spinning and tilting keep it, zooming clears it, Frame sets it again. Frame leaves the
-  spin alone. The view is not saved: every start frames the subject.
+  to the subject's heights, so zooming in on the crown frames the crown. Frame fits the subject's
+  bounding sphere once (at start and on Frame), waiting until every subject has bounds; the camera
+  does not follow the subject as it changes, so an edit shows at its true size (following it made
+  a taller tree look smaller). While `keep_framed` is set the distance follows the viewport so
+  the sphere last framed still fits; spinning and tilting keep it, zooming clears it. Frame
+  leaves the spin alone. The view is not saved: every start frames the subject.
+  A drag or scroll moves along one axis at a time: each axis's movement is summed, decayed with a
+  0.15 s time constant, and each event applies along the larger sum. It starts at once and
+  changes axis when the other persists. A lock chosen per gesture was tried first and felt stuck:
+  scroll events carry no gesture phase, and momentum scrolling kept the gesture from ending.
   The module is shaped like `bevy_camera_controller`'s (a component, a plugin, input from picking
   events) so it can be offered upstream (X7). Framing reads the subject's world transform, so it
   runs after transform propagation (before frustum update) and sets the camera's

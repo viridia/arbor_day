@@ -19,9 +19,10 @@ def run(driver):
     # The default width, whatever the developer last dragged it to: a run gets fresh settings.
     driver.expect("Shell/Panel", PANE, {"size": 320.0})
     # The view is never saved: every start frames the subject, from the front.
-    driver.expect("SceneCamera", TURNTABLE, {"keep_framed": True, "azimuth": 0.0})
+    framed = {"frame_pending": False, "keep_framed": True}
+    driver.expect("SceneCamera", TURNTABLE, {**framed, "azimuth": 0.0})
     driver.click("Shell/Panel/Frame")
-    driver.expect("SceneCamera", TURNTABLE, {"keep_framed": True})
+    driver.expect("SceneCamera", TURNTABLE, framed)
     driver.screenshot("shell")
     # Zooming by key lets go of the framing; F takes it back.
     driver.key("Minus")
@@ -29,7 +30,7 @@ def run(driver):
     driver.expect("SceneCamera", TURNTABLE, {"keep_framed": False})
     driver.screenshot("zoomed_out")
     driver.key("KeyF")
-    driver.expect("SceneCamera", TURNTABLE, {"keep_framed": True})
+    driver.expect("SceneCamera", TURNTABLE, framed)
     # The property editor: a checkbox per boolean field, a number input per number, a subpane of
     # rows per nested struct.
     driver.present("Shell/Panel/trunk/sides/input")
@@ -60,4 +61,16 @@ def run(driver):
     driver.key("Enter")
     driver.expect("Plant", STATS, {"triangles": 12})
     driver.screenshot("four_sides")
+    # The camera does not follow the subject: a taller crown grows out of the frame (compare the
+    # screenshots), until Frame fits it again.
+    driver.click("Shell/Panel/envelope/height/input")
+    driver.key("End")
+    driver.key("Backspace")
+    driver.type("12")
+    driver.key("Enter")
+    driver.frames(2)
+    driver.screenshot("taller")
+    driver.click("Shell/Panel/Frame")
+    driver.expect("SceneCamera", TURNTABLE, framed)
+    driver.screenshot("taller_framed")
     driver.exit()
