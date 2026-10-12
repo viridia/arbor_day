@@ -28,7 +28,8 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `b757d16` | C21 Turntable feel (D7): one-shot framing, one axis per gesture.                        |
 | `e05893b` | C20 Bark color, and feathers' color input for `Color` fields; `plans/bark.py`.          |
 | `a9399e7` | C22 Literal names in `bsn!` as `#name`.                                                 |
-|           | C18 One level of limbs (D14), reaching toward the envelope; `plans/limbs.py`.           |
+| `0a3924b` | C18 One level of limbs (D14), reaching toward the envelope; `plans/limbs.py`.           |
+|           | C19 Up to three limb levels (D15), each at an angle from its parent; `plans/levels.py`. |
 
 ## Next
 
@@ -40,21 +41,26 @@ Seedling's look is not a target. `bevy_inspector`'s `details_panel` also walks r
 but reads no attributes, has no per-type hook, and is retained-mode. The generator sets the order
 (`docs/growth-model.md`), each step bringing the widget kind it needs:
 
-- **C19 Limb levels as a list**: the `Vec` widget, with add and remove. A deeper level measures
-  azimuth about its parent's tangent (`docs/growth-model.md`, Limbs); C18's level, on the trunk,
-  measures it about world up. Open: removing a level and adding one back loses its parameters,
-  as in seedling. Undo (C7) recovers a mistaken removal; to switch a level off and on, give each
-  level an `enabled` flag that the generator skips, so the parameters stay in the document
-  rather than in a hidden stash. Recommended: the flag, with remove kept for levels not wanted.
-- **C23 Limb growth**: tropism and wander per metre, bounded jitter on each angle within
-  per-level limits (needs `Fuzzy` sampling, C10), and pipe-model radii. Until then limbs are
-  straight and taper as the trunk does.
+- **C23 Limb growth**: tropism toward an angle from world up and wander per metre (seedling's
+  `flex`, and the winding seedling lacked), so a limb is a curve of rings spaced by its turn,
+  as the trunk is; `limb_frame` then follows the curve. Bounded jitter on each angle within
+  per-level limits (needs `Fuzzy` sampling, C10): the level's fields that seedling varied become
+  `Fuzzy` (span, reach, angle, divergence). Pipe-model radii, and limbs below a radius left to
+  the foliage rather than meshed. Until then limbs are straight and taper as the trunk does,
+  and three default levels make 5,154 triangles; revisit the third level's defaults then.
 - **C24 Stems**: the trunk's height becomes the envelope's height times the leader extent; until
   then the trunk keeps its own height.
-- **C25 A HUD over the view**, to free the panel. Frame becomes a small translucent square button
-  in a corner of the view, its icon a locate symbol (a crosshair, as Google Maps' "my location").
-  Later controls in the same style: zoom in and out, perhaps a view gizmo (X6). Feathers'
-  buttons are opaque, so likely a style of our own; propose before code.
+- **C25 A HUD over the view**, to free the panel: every control that changes the preview rather
+  than the species moves onto the view. Buttons the size and shape of feathers' but translucent:
+  Frame (icon a locate crosshair, as Google Maps' "my location"), zoom, orbit and tilt in steps,
+  and toggles for the envelope and the ground. The triangle count in the opposite corner, lower
+  left. Stepped orbit and tilt also let plans drive the camera, which the driver cannot drag.
+  Feathers resolves colors per surface (`SurfaceLevel`, set on a container by `ThemeContext`), so
+  a HUD is one more surface: a `SurfaceLevel::Hud` with translucent fills would make plain
+  feathers buttons in it translucent. Recommended: propose that upstream (any editor viewport
+  has such overlays: Blender, Godot, Unity, Bevy's editor, Panoply's X3), and meanwhile register
+  HUD tokens of our own in `UiTheme` with a thin button reading them, replaced by feathers
+  buttons once the surface lands. Propose the layout before code.
 - **Computed values are rounded where written**, from the first writer (Reset, Randomize, values
   derived from the generator): the number input never rounds what it shows, so round to the
   field's `Precision` in the units shown, as feathers' color input does
@@ -178,8 +184,10 @@ but reads no attributes, has no per-type hook, and is retained-mode. The generat
   probability, but nobody reading `length: Fuzzy` takes it for anything but a bounded variation.
 
 - **D11** The growth model is parametric per level, with a crown envelope that sets limb reach
-  and foliage placement, every direction measured against world up, and cards oriented apart
-  from the branch tangent. The design and the survey behind it are in `docs/growth-model.md`.
+  and foliage placement, limbs bending toward directions measured against world up, and cards
+  oriented apart from the branch tangent. A limb leaves its parent at an angle from the parent
+  (revised in C19 from an angle from world up). The design and the survey behind it are in
+  `docs/growth-model.md`.
 
 - **D12** The species is one resource, and any change to it rebuilds the whole plant: most
   parameters change much of the tree, so finer change detection would save little. The panel
@@ -200,6 +208,14 @@ but reads no attributes, has no per-type hook, and is retained-mode. The generat
 - **D14** Phyllotaxis is two numbers per level, limbs per node and the divergence between nodes,
   in place of a rule enum: they cover spiral, alternate, opposite and whorled
   (`docs/growth-model.md`, Limbs), and each changes one visible thing.
+
+- **D15** Limb levels are a fixed array of three and a count of those shown, 1 to 3, not a list
+  that grows and shrinks: a hidden level keeps its parameters, so hiding one and showing it again
+  loses nothing, with no `enabled` flag per level. A fourth level would be twigs too thin to
+  mesh. A level's parameters mean something only at its depth, so there is no reordering, and
+  − and + on the last shown level's header hide it or show the next. The property editor does
+  this for any array marked `ShownCount`, naming the count field; each shown item is a subpane
+  beside the struct's other rows, as seedling's were.
 
 ## Deferred
 

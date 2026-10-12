@@ -59,9 +59,11 @@ Sapling and Arbaro implement it, and seedling is close to it.
 - Parameters: predictable, since each one names a visible quantity.
 - Coverage: all the shapes in the game, as Sapling's presets show.
 
-The model's structure is right; its frames are wrong. Measuring angles against world up, placing
-children by phyllotaxis in a world-referenced frame, and applying tropism per unit length fixes
-the orientation faults without changing what any parameter means.
+The model's structure is right; its frames are wrong. Setting each frame's roll against world up,
+placing children by phyllotaxis in that frame, and applying tropism toward an angle from world up
+per unit length fixes the orientation faults without changing what any parameter means. The fork
+angle stays relative to the parent, so a limb's starting direction compounds through the levels,
+and tropism is what bounds where it ends up.
 
 ### Space colonization (Runions, Lane and Prusinkiewicz, 2007)
 
@@ -120,8 +122,8 @@ cards whose shading comes from the crown rather than from the card.
 ## Recommendation
 
 A parametric per-level model, after Weber and Penn and SpeedTree, with three changes: a crown
-envelope that sets limb lengths and foliage placement, every direction measured against world
-up, and cards placed and oriented independently of the branch tangent.
+envelope that sets limb lengths and foliage placement, limbs bending toward directions measured
+against world up, and cards placed and oriented independently of the branch tangent.
 
 ### Envelope
 
@@ -146,10 +148,14 @@ it, and the divergence, the turn from one node to the next. One per node at 137.
 at 180° alternate; two at 90° are opposite pairs crossing; more are a whorl. A child's direction
 is set by:
 
-- **Elevation**, its angle from world up, a fuzzy value per level, clamped to per-level limits.
-- **Azimuth**, from the phyllotaxis rule, measured about the parent's tangent in a frame whose
-  roll is set against world up (a rotation-minimizing frame along the parent), so azimuth means
-  the same thing at every level.
+- **Angle**, from the parent's direction where the child starts, a fuzzy value per level,
+  clamped to per-level limits: the angle seen at the fork, as in Weber and Penn. Measured from
+  world up instead, a change to a parent's angle could make its children jump, or leave them
+  pinned where no direction on their side meets their angle. World up enters through tropism.
+- **Azimuth**, from the phyllotaxis rule, measured about the parent's tangent. Zero is the
+  parent's upper side (world up made square to the tangent), so azimuth means the same thing at
+  every level; on the trunk, which has no upper side, zero is square to it in the plane of its
+  bend.
 - **Reach**, its length as a fraction of the distance from its origin to the envelope along its
   initial direction. Children reach the outline whatever their height, and the outline is the
   silhouette.
@@ -157,8 +163,8 @@ is set by:
 Phyllotaxis and reach spread limbs evenly, so seedling's unused `collision.ts` is not ported.
 
 Each limb then grows as a curve integrated by arc length: its direction blends toward a per-level
-tropism (up for poplars, level for oaks, down for weeping and drooping forms) at a rate per
-metre, plus a bounded wander per metre for irregularity, and it stops at its reach or the
+tropism, an angle from world up (up for poplars, level for oaks, down for weeping and drooping
+forms), at a rate per metre, plus a bounded wander per metre for irregularity, and it stops at its reach or the
 envelope, whichever comes first. Neither depends on ring spacing.
 
 Radii follow the pipe model: a parent's radius raised to an exponent equals the sum of its
@@ -198,7 +204,7 @@ For the species data model (C10), the groups follow the layers:
 - **Envelope:** profile, height, crown base, radius, lean, squash.
 - **Stems:** count, splay, leader extent, fork count and angle.
 - **Limb levels**, a list: nodes, limbs per node and divergence, span on the parent,
-  elevation and its limits, azimuth jitter, reach, tropism, wander, radius ratio.
+  angle and its limits, azimuth jitter, reach, tropism, wander, radius ratio.
 - **Bark:** base radius, pipe exponent, flare, color.
 - **Foliage:** spacing, shell depth, card shapes and weights, size, facing (up-to-outward blend,
   spread), crown softness.

@@ -1,10 +1,10 @@
 //! The property editor: panel rows for the fields of a reflected struct, one row per field, each
 //! named after its field. Booleans get a checkbox, numbers a number input, fuzzy numbers a center,
 //! a spread and a shape toggle, colors a swatch that opens a picker, enums of unit variants a
-//! select, nested structs a subpane of rows
-//! of their own, and every other field a label giving its name and type. A row's caption sits
-//! above its inputs, so they get the panel's full width. Field attributes (below) set
-//! a row's caption and a number's limits, precision, step, units and wrapping.
+//! select, nested structs a subpane of rows of their own, an array with a [`ShownCount`] a subpane
+//! per shown item, and every other field a label giving its name and type. A row's caption sits
+//! above its inputs, so they get the panel's full width. Field attributes (below) set a row's
+//! caption and a number's limits, precision, step, units and wrapping.
 
 use std::ops::RangeInclusive;
 
@@ -23,6 +23,7 @@ use bevy::{
     prelude::*,
     reflect::{
         FromReflect, GetTypeRegistration, ReflectMut, ReflectRef, TypeInfo, Typed,
+        array::Array,
         attributes::CustomAttributes,
         enums::{DynamicEnum, DynamicVariant, VariantInfo},
     },
@@ -36,7 +37,9 @@ use bevy_immediate::{
         activated::{self, ImmUiActivated},
         anchored, base, button_variant,
         checked::{self, ImmUiChecked},
-        clicked, color_plane, color_swatch, disabled, interaction, layout_order, look,
+        clicked, color_plane, color_swatch,
+        disabled::{self, ImmUiInteractionsDisabled},
+        interaction, layout_order, look,
         number_input::{self, ImmUiNumberInput, ImmUiNumericValue},
         selected, slider_base_color, slider_value, text, text_input,
         track_value_change_plugin::{NewValueChange, TrackValueChangePlugin},
@@ -135,6 +138,14 @@ pub struct Spinbox;
 #[derive(Debug, Clone, Reflect)]
 pub struct Wrap;
 
+/// On an array of structs: the sibling `i32` field holding how many of its items are shown, from
+/// the first. Each shown item is a subpane, captioned with the array's caption and its number,
+/// beside the struct's other rows. The last one's header has − and + buttons that change the
+/// count, within the count field's [`ValueRange`] and the array's length, and never below 1. The
+/// count field gets no row of its own.
+#[derive(Debug, Clone, Reflect)]
+pub struct ShownCount(pub &'static str);
+
 /// A number type the editor shows in a number input.
 trait NumberField: ImmUiNumericValue + FromReflect + Typed + GetTypeRegistration + TypePath {
     fn range(range: RangeInclusive<Self>) -> NumericRange;
@@ -186,6 +197,21 @@ pub fn edit_fields(ui: &mut Imm<CapsPanel>, value: &mut dyn PartialReflect) {
     let ReflectMut::Struct(fields) = value.reflect_mut() else {
         return;
     };
+    // The count fields named by `ShownCount`, with their values and ranges.
+    let counts: Vec<(&'static str, i32, RangeInclusive<i32>)> = info
+        .iter()
+        .filter_map(|field| field.custom_attributes().get::<ShownCount>())
+        .filter_map(|shown| {
+            let value = fields.field(shown.0)?.try_downcast_ref::<i32>()?;
+            let range = info
+                .field(shown.0)?
+                .custom_attributes()
+                .get::<ValueRange<i32>>()
+                .map_or(1..=i32::MAX, |range| range.0.clone());
+            Some((shown.0, *value, range))
+        })
+        .collect();
+    let mut new_counts = Vec::new();
     for index in 0..fields.field_len() {
         let (Some(field_info), Some(field)) = (info.field_at(index), fields.field_at_mut(index))
         else {
@@ -194,6 +220,19 @@ pub fn edit_fields(ui: &mut Imm<CapsPanel>, value: &mut dyn PartialReflect) {
         let name = field_info.name();
         let attrs = field_info.custom_attributes();
         let caption = attrs.get::<Caption>().map_or(name, |caption| caption.0);
+        if counts.iter().any(|(count, ..)| *count == name) {
+            continue;
+        }
+        if let Some(shown) = attrs.get::<ShownCount>()
+            && let Some((_, count, range)) = counts.iter().find(|(count, ..)| *count == shown.0)
+            && let ReflectMut::Array(items) = field.reflect_mut()
+        {
+            let new_count = shown_items(ui, name, caption, items, *count, range.clone());
+            if new_count != *count {
+                new_counts.push((shown.0, new_count));
+            }
+            continue;
+        }
         // Rows are keyed by field name, so they keep their entities from frame to frame.
         let row = ui.ch_id(name);
 
@@ -227,6 +266,67 @@ pub fn edit_fields(ui: &mut Imm<CapsPanel>, value: &mut dyn PartialReflect) {
                 .on_spawn_insert(move || Name::new(name));
         }
     }
+    for (count, value) in new_counts {
+        if let Some(field) = fields.field_mut(count)
+            && let Some(field) = field.try_downcast_mut::<i32>()
+        {
+            *field = value;
+        }
+    }
+}
+
+/// The first `count` of `items`, a subpane each named `name[index]`, the last with − and +
+/// buttons, named `remove` and `add`. Returns the count as the buttons leave it.
+fn shown_items(
+    ui: &mut Imm<CapsPanel>,
+    name: &'static str,
+    caption: &'static str,
+    items: &mut dyn Array,
+    count: i32,
+    range: RangeInclusive<i32>,
+) -> i32 {
+    // Never none: with no subpane there would be no + to bring one back.
+    let min = (*range.start()).max(1);
+    let max = (*range.end()).min(items.len() as i32).max(min);
+    let count = count.clamp(min, max);
+    let mut new_count = count;
+    for index in 0..count as usize {
+        let Some(item) = items.get_mut(index) else {
+            continue;
+        };
+        let item_name = format!("{name}[{index}]");
+        let pane = ui
+            .ch_id((name, index))
+            .on_spawn_insert(move || Name::new(item_name.clone()));
+        let last = index + 1 == count as usize;
+        let tools = |ui: &mut Imm<CapsPanel>| {
+            if last {
+                let removed = ui
+                    .ch()
+                    .on_spawn_apply_scene(|| tool_button("−", "remove"))
+                    .interactions_disabled(count <= min)
+                    .activated();
+                let added = ui
+                    .ch()
+                    .on_spawn_apply_scene(|| tool_button("+", "add"))
+                    .interactions_disabled(count >= max)
+                    .activated();
+                new_count = (count - removed as i32 + added as i32).clamp(min, max);
+            }
+        };
+        group_with_tools(pane, format!("{caption} {}", index + 1), tools, |ui| {
+            edit_fields(ui, item);
+        });
+    }
+    new_count
+}
+
+/// A feathers tool button showing `caption`, named `name`.
+fn tool_button(caption: &'static str, name: &'static str) -> impl Scene {
+    bsn! {
+        @FeathersToolButton { @caption: bsn! { Text(caption) ThemedText } }
+        Name({name})
+    }
 }
 
 /// A feathers subpane headed `caption`, its body built by `body`.
@@ -235,10 +335,22 @@ pub fn group<'w, 's>(
     caption: &'static str,
     body: impl FnOnce(&mut Imm<'w, 's, CapsPanel>),
 ) {
+    group_with_tools(pane, caption.to_string(), |_| {}, body);
+}
+
+/// A feathers subpane headed `caption`, with buttons built by `tools` at the header's right end,
+/// its body built by `body`.
+fn group_with_tools<'w, 's>(
+    pane: ImmEntity<'_, 'w, 's, CapsPanel>,
+    caption: String,
+    tools: impl FnOnce(&mut Imm<'w, 's, CapsPanel>),
+    body: impl FnOnce(&mut Imm<'w, 's, CapsPanel>),
+) {
     pane.on_spawn_apply_scene(subpane).add(|ui| {
         ui.ch().on_spawn_apply_scene(subpane_header).add(|ui| {
             ui.ch()
-                .on_spawn_apply_scene(move || bsn! { Text(caption) ThemedText });
+                .on_spawn_apply_scene(move || bsn! { Text({caption.clone()}) ThemedText });
+            ui.ch().on_spawn_insert(widget_line).add(tools);
         });
         ui.ch().on_spawn_apply_scene(subpane_body).add(body);
     });

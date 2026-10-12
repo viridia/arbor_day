@@ -2,21 +2,73 @@
 
 use bevy::{feathers::controls::NumberInputUnits, prelude::*};
 
-use crate::properties::{Caption, Precision, Spinbox, ValueRange, Wrap};
+use crate::properties::{Caption, Precision, ShownCount, Spinbox, ValueRange, Wrap};
+
+/// Most levels of limbs a species can have.
+pub const MAX_LIMB_LEVELS: usize = 3;
 
 /// The species being edited. One resource, so any edit rebuilds the whole plant: most parameters
 /// change much of the tree anyway.
-#[derive(Resource, Reflect, Clone, PartialEq, Default)]
+#[derive(Resource, Reflect, Clone, PartialEq)]
 #[reflect(Resource)]
 pub struct Species {
     #[reflect(@Caption("Envelope"))]
     pub envelope: Envelope,
     #[reflect(@Caption("Trunk"))]
     pub trunk: Trunk,
-    #[reflect(@Caption("Limbs"))]
-    pub limbs: Limbs,
+    /// How many of the limb levels grow, from the first. The rest keep their parameters, so a
+    /// level hidden and shown again comes back as it was.
+    #[reflect(@ValueRange::<i32>(1..=MAX_LIMB_LEVELS as i32))]
+    pub limb_levels: i32,
+    /// Each level grows on the limbs of the one before it, the first on the trunk.
+    #[reflect(@Caption("Limbs"), @ShownCount("limb_levels"))]
+    pub limbs: [LimbLevel; MAX_LIMB_LEVELS],
     #[reflect(@Caption("Bark"))]
     pub bark: Bark,
+}
+
+impl Species {
+    /// The levels that grow.
+    pub fn grown_levels(&self) -> &[LimbLevel] {
+        let count = (self.limb_levels.max(1) as usize).min(MAX_LIMB_LEVELS);
+        &self.limbs[..count]
+    }
+}
+
+impl Default for Species {
+    fn default() -> Self {
+        Self {
+            envelope: Envelope::default(),
+            trunk: Trunk::default(),
+            limb_levels: 1,
+            limbs: [
+                LimbLevel::default(),
+                LimbLevel {
+                    nodes: 5,
+                    per_node: 2,
+                    divergence: 90.0_f32.to_radians(),
+                    start: 0.3,
+                    end: 0.9,
+                    angle: 45.0_f32.to_radians(),
+                    reach: 0.6,
+                    radius: 0.5,
+                    sides: 3,
+                },
+                LimbLevel {
+                    nodes: 3,
+                    per_node: 2,
+                    divergence: 90.0_f32.to_radians(),
+                    start: 0.4,
+                    end: 0.9,
+                    angle: 40.0_f32.to_radians(),
+                    reach: 0.5,
+                    radius: 0.5,
+                    sides: 3,
+                },
+            ],
+            bark: Bark::default(),
+        }
+    }
 }
 
 /// The crown's outline: a surface of revolution about the vertical axis, between the crown base
@@ -84,18 +136,19 @@ pub struct Trunk {
     pub bend: f32,
 }
 
-/// The limbs on the trunk, in nodes spaced evenly along a span of it. Each limb leaves at an angle
-/// from world up and runs straight toward the envelope.
+/// One level of limbs on a parent, the trunk or a limb of the level before, in nodes spaced
+/// evenly along a span of the parent. Each limb leaves at an angle from its parent and runs
+/// straight toward the envelope.
 #[derive(Reflect, Clone, PartialEq)]
-pub struct Limbs {
-    /// Places along the trunk where limbs start.
+pub struct LimbLevel {
+    /// Places along the parent where limbs start.
     #[reflect(@ValueRange::<i32>(0..=20), @Spinbox)]
     pub nodes: i32,
     /// Limbs at each node, evenly spaced around it: 1 for alternate or spiral, 2 for opposite,
     /// more for a whorl.
     #[reflect(@ValueRange::<i32>(1..=6), @Spinbox, @Caption("Per node"))]
     pub per_node: i32,
-    /// The turn about the trunk from one node to the next: 137.5° for a spiral, 180° for
+    /// The turn about the parent from one node to the next: 137.5° for a spiral, 180° for
     /// alternate, 90° for opposite pairs crossing.
     #[reflect(
         @ValueRange::<f32>(0.0..=std::f32::consts::TAU),
@@ -103,22 +156,23 @@ pub struct Limbs {
         @NumberInputUnits::new_static("angle_degrees"),
     )]
     pub divergence: f32,
-    /// Where the lowest node sits, as a fraction of the trunk's length.
+    /// Where the lowest node sits, as a fraction of the parent's length.
     #[reflect(@ValueRange::<f32>(0.0..=1.0), @Precision(2), @Caption("Span start"))]
     pub start: f32,
-    /// Where the highest node sits, as a fraction of the trunk's length.
+    /// Where the highest node sits, as a fraction of the parent's length.
     #[reflect(@ValueRange::<f32>(0.0..=1.0), @Precision(2), @Caption("Span end"))]
     pub end: f32,
-    /// The angle from world up: 0 points straight up, 90° level, 180° straight down.
+    /// The angle from the parent's direction where the limb starts: 0 runs along it, 90° square
+    /// to it.
     #[reflect(
         @ValueRange::<f32>(0.0..=std::f32::consts::PI),
         @NumberInputUnits::new_static("angle_degrees"),
     )]
-    pub elevation: f32,
+    pub angle: f32,
     /// Length as a fraction of the distance from the limb's start to the envelope along it.
     #[reflect(@ValueRange::<f32>(0.0..=1.0), @Precision(2))]
     pub reach: f32,
-    /// Radius at the base, as a fraction of the trunk's radius where the limb starts. Limbs taper
+    /// Radius at the base, as a fraction of the parent's radius where the limb starts. Limbs taper
     /// as the trunk does.
     #[reflect(@ValueRange::<f32>(0.05..=1.0), @Precision(2))]
     pub radius: f32,
@@ -127,7 +181,7 @@ pub struct Limbs {
     pub sides: i32,
 }
 
-impl Default for Limbs {
+impl Default for LimbLevel {
     fn default() -> Self {
         Self {
             nodes: 8,
@@ -135,7 +189,7 @@ impl Default for Limbs {
             divergence: 137.5_f32.to_radians(),
             start: 0.4,
             end: 0.9,
-            elevation: 60.0_f32.to_radians(),
+            angle: 60.0_f32.to_radians(),
             reach: 0.9,
             radius: 0.5,
             sides: 4,
