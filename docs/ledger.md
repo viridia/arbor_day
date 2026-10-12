@@ -29,22 +29,27 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `e05893b` | C20 Bark color, and feathers' color input for `Color` fields; `plans/bark.py`.          |
 | `a9399e7` | C22 Literal names in `bsn!` as `#name`.                                                 |
 | `0a3924b` | C18 One level of limbs (D14), reaching toward the envelope; `plans/limbs.py`.           |
-|           | C19 Up to three limb levels (D15), each at an angle from its parent; `plans/levels.py`. |
+| `1e7bd38` | C19 Up to three limb levels (D15), each at an angle from its parent; `plans/levels.py`. |
 
 ## Next
 
 File handling brings Save and Open keys (D8).
 
-The property editor gains a widget kind per chunk, built against `Placeholder` until the species
-types (C10). Rows are keyed by field path, in `GetPath` syntax, which C7's undo records also use.
+The property editor gains a widget kind per chunk, built against `Placeholder` until a species
+field needs it (C27). Rows are keyed by field path, in `GetPath` syntax, which C7's undo records also use.
 Seedling's look is not a target. `bevy_inspector`'s `details_panel` also walks reflected fields,
 but reads no attributes, has no per-type hook, and is retained-mode. The generator sets the order
 (`docs/growth-model.md`), each step bringing the widget kind it needs:
 
+- **C26 Sampling a `Fuzzy`**, and the species' seed that drives it. The bell is the mean of
+  three uniforms, bounded by center ± spread, so spread means the same in both shapes; every
+  varied parameter draws three numbers whatever its shape, so toggling one does not shift the
+  rest of the random stream; a wrapping angle is sampled modulo a turn. In the generator, with
+  unit tests; nothing in the species is varied until C23.
 - **C23 Limb growth**: tropism toward an angle from world up and wander per metre (seedling's
   `flex`, and the winding seedling lacked), so a limb is a curve of rings spaced by its turn,
   as the trunk is; `limb_frame` then follows the curve. Bounded jitter on each angle within
-  per-level limits (needs `Fuzzy` sampling, C10): the level's fields that seedling varied become
+  per-level limits (sampled as C26 does): the level's fields that seedling varied become
   `Fuzzy` (span, reach, angle, divergence). Pipe-model radii, and limbs below a radius left to
   the foliage rather than meshed. Until then limbs are straight and taper as the trunk does,
   and three default levels make 5,154 triangles; revisit the third level's defaults then.
@@ -61,6 +66,11 @@ but reads no attributes, has no per-type hook, and is retained-mode. The generat
   has such overlays: Blender, Godot, Unity, Bevy's editor, Panoply's X3), and meanwhile register
   HUD tokens of our own in `UiTheme` with a thin button reading them, replaced by feathers
   buttons once the surface lands. Propose the layout before code.
+- **C27 Remove `Placeholder`** (`src/main.rs`) once every widget kind it stands in for has a
+  real customer. Numbers, spinboxes, wrapped angles, selects and subpanes have theirs in the
+  species. Left: `Fuzzy` (C23; move `plans/fuzzy.py` onto a species field), and the checkbox,
+  whose only use is `show_ground`, which C25 moves to the HUD; a species bool, or a test of
+  the checkbox row of its own, keeps it covered. *After* C23 and C25.
 - **Computed values are rounded where written**, from the first writer (Reset, Randomize, values
   derived from the generator): the number input never rounds what it shows, so round to the
   field's `Precision` in the units shown, as feathers' color input does
@@ -91,11 +101,9 @@ but reads no attributes, has no per-type hook, and is retained-mode. The generat
   code.
 - **C10 Species data model**, its groups the layers of the growth model (D11;
   `docs/growth-model.md`, Consequences), correcting seedling where the requirements say.
-  Reflectable types with `Default` for initial values and attributes for the editor. Sampling a
-  `Fuzzy`: the bell is the mean of three uniforms, bounded by center ± spread, so spread means the
-  same in both shapes; every varied parameter draws three numbers whatever its shape, so toggling
-  one does not shift the rest of the random stream; a wrapping angle is sampled modulo a turn.
-  Serialized by reflection only, no serde derives: TOML in settings (C8) and JSON as the glTF
+  Reflectable types with `Default` for initial values and attributes for the editor, after the
+  fields settle (C23, C24), so saved files are not broken by every change. Serialized by
+  reflection only, no serde derives: TOML in settings (C8) and JSON as the glTF
   extra, one representation that cannot drift. Seedling's groups for reference: `trunk`;
   `branch[]`, one per level; the leaf as `leafGroup` (arrangement), `leafShape` and `leafColor`.
 
