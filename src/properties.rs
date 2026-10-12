@@ -1,14 +1,15 @@
 //! The property editor: panel rows for the fields of a reflected struct, one row per field, each
 //! named after its field. Booleans get a checkbox, numbers a number input, fuzzy numbers a center,
-//! a spread and a shape toggle, enums of unit variants a select, and every other field a label
-//! giving its name and type. A row's
-//! caption sits above its inputs, so they get the panel's full width. Field attributes (below) set
+//! a spread and a shape toggle, enums of unit variants a select, nested structs a subpane of rows
+//! of their own, and every other field a label giving its name and type. A row's caption sits
+//! above its inputs, so they get the panel's full width. Field attributes (below) set
 //! a row's caption and a number's limits, precision, step, units and wrapping.
 
 use std::ops::RangeInclusive;
 
 use bevy::{
     feathers::{
+        containers::{subpane, subpane_body, subpane_header},
         controls::{
             ButtonVariant, FeathersCheckbox, FeathersListRow, FeathersNumberInput, FeathersSelect,
             FeathersToolButton, HardLimit, NumberInputPrecision, NumberInputStep, NumberInputUnits,
@@ -196,12 +197,31 @@ pub fn edit_fields(ui: &mut Imm<CapsPanel>, value: &mut dyn PartialReflect) {
             number_row(row, name, caption, attrs, number);
         } else if let Some(variants) = unit_variants(field) {
             enum_row(row, name, caption, variants, field);
+        } else if let Some(TypeInfo::Struct(_)) = field.get_represented_type_info() {
+            group(row.on_spawn_insert(move || Name::new(name)), caption, |ui| {
+                edit_fields(ui, field);
+            });
         } else {
             let text = format!("{caption}: {}", field.reflect_short_type_path());
             row.on_spawn_apply_scene(move || label(text))
                 .on_spawn_insert(move || Name::new(name));
         }
     }
+}
+
+/// A feathers subpane headed `caption`, its body built by `body`.
+pub fn group<'w, 's>(
+    pane: ImmEntity<'_, 'w, 's, CapsPanel>,
+    caption: &'static str,
+    body: impl FnOnce(&mut Imm<'w, 's, CapsPanel>),
+) {
+    pane.on_spawn_apply_scene(subpane).add(|ui| {
+        ui.ch().on_spawn_apply_scene(subpane_header).add(|ui| {
+            ui.ch()
+                .on_spawn_apply_scene(move || bsn! { Text(caption) ThemedText });
+        });
+        ui.ch().on_spawn_apply_scene(subpane_body).add(body);
+    });
 }
 
 /// How a number input limits and shows its number, read from a field's attributes.

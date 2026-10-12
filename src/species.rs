@@ -9,7 +9,9 @@ use crate::properties::{Caption, Precision, Spinbox, ValueRange};
 #[derive(Resource, Reflect, Clone, PartialEq, Default)]
 #[reflect(Resource)]
 pub struct Species {
+    #[reflect(@Caption("Envelope"))]
     pub envelope: Envelope,
+    #[reflect(@Caption("Trunk"))]
     pub trunk: Trunk,
 }
 

@@ -30,9 +30,13 @@ def run(driver):
     driver.screenshot("zoomed_out")
     driver.key("KeyF")
     driver.expect("SceneCamera", TURNTABLE, {"keep_framed": True})
-    # The property editor: a checkbox per boolean field, a number input per number, a label for
-    # the rest.
-    driver.present("Shell/Panel/nested")
+    # The property editor: a checkbox per boolean field, a number input per number, a subpane of
+    # rows per nested struct.
+    driver.present("Shell/Panel/trunk/sides/input")
+    driver.present("Shell/Panel/nested/size/input")
+    driver.click("Shell/Panel/nested/flag")
+    driver.expect("Placeholder", PLACEHOLDER, {"nested": {"flag": True}})
+    driver.screenshot("nested")
     driver.click("Shell/Panel/show_ground")
     driver.expect("Ground", VISIBILITY, "Hidden")
     driver.screenshot("no_ground")

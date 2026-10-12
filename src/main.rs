@@ -5,7 +5,6 @@ use bevy::{
     ecs::system::SystemParam,
     feathers::{
         FeathersPlugins,
-        containers::{subpane, subpane_body, subpane_header},
         controls::{
             FeathersButton, FeathersPane, FeathersScrollbar, FeathersSplitPane,
             FeathersSplitPaneHandle, NumberInputUnits, ScrollbarGutter,
@@ -334,24 +333,7 @@ impl ImmediateAttach<CapsPanel> for ParamPanel {
         // Edit a copy: writing through `ResMut` every frame would mark the species changed every
         // frame, and the plant would rebuild every frame.
         let mut edited = params.species.clone();
-        ui.ch().on_spawn_apply_scene(subpane).add(|ui| {
-            ui.ch().on_spawn_apply_scene(subpane_header).add(|ui| {
-                ui.ch()
-                    .on_spawn_apply_scene(|| bsn! { Text("Envelope") ThemedText });
-            });
-            ui.ch()
-                .on_spawn_apply_scene(subpane_body)
-                .add(|ui| properties::edit_fields(ui, &mut edited.envelope));
-        });
-        ui.ch().on_spawn_apply_scene(subpane).add(|ui| {
-            ui.ch().on_spawn_apply_scene(subpane_header).add(|ui| {
-                ui.ch()
-                    .on_spawn_apply_scene(|| bsn! { Text("Trunk") ThemedText });
-            });
-            ui.ch()
-                .on_spawn_apply_scene(subpane_body)
-                .add(|ui| properties::edit_fields(ui, &mut edited.trunk));
-        });
+        properties::edit_fields(ui, &mut edited);
         params.species.set_if_neq(edited);
 
         let triangles = params.stats.single().map_or(0, |stats| stats.triangles);
@@ -360,39 +342,27 @@ impl ImmediateAttach<CapsPanel> for ParamPanel {
             .on_spawn_insert(|| Name::new("Triangles"))
             .text(format!("{triangles} triangles"));
 
-        ui.ch().on_spawn_apply_scene(subpane).add(|ui| {
-            ui.ch().on_spawn_apply_scene(subpane_header).add(|ui| {
-                ui.ch()
-                    .on_spawn_apply_scene(|| bsn! { Text("View") ThemedText });
-            });
-            ui.ch().on_spawn_apply_scene(subpane_body).add(|ui| {
-                let framed = ui
-                    .ch()
-                    .on_spawn_apply_scene(|| {
-                        bsn! {
-                            @FeathersButton { @caption: bsn! { Text("Frame") ThemedText } }
-                            Name("Frame")
-                        }
-                    })
-                    .activated();
-                if framed && let Ok(mut camera) = params.cameras.single_mut() {
-                    camera.frame();
-                }
-            });
+        properties::group(ui.ch(), "View", |ui| {
+            let framed = ui
+                .ch()
+                .on_spawn_apply_scene(|| {
+                    bsn! {
+                        @FeathersButton { @caption: bsn! { Text("Frame") ThemedText } }
+                        Name("Frame")
+                    }
+                })
+                .activated();
+            if framed && let Ok(mut camera) = params.cameras.single_mut() {
+                camera.frame();
+            }
         });
 
         let Ok(mut placeholder) = params.placeholders.single_mut() else {
             return;
         };
         let mut edited = placeholder.clone();
-        ui.ch().on_spawn_apply_scene(subpane).add(|ui| {
-            ui.ch().on_spawn_apply_scene(subpane_header).add(|ui| {
-                ui.ch()
-                    .on_spawn_apply_scene(|| bsn! { Text("Placeholder") ThemedText });
-            });
-            ui.ch()
-                .on_spawn_apply_scene(subpane_body)
-                .add(|ui| properties::edit_fields(ui, &mut edited));
+        properties::group(ui.ch(), "Placeholder", |ui| {
+            properties::edit_fields(ui, &mut edited);
         });
         placeholder.set_if_neq(edited);
     }
