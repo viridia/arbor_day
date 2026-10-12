@@ -27,6 +27,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | (pending) | C16 Envelope, with enums (D13). `Species` gained `Envelope { profile, height, crown_base, radius }`, the crown base a fraction of the height; `Profile` is cone, ellipsoid, hemisphere, column or flame (Weber and Penn's, widest 70% up). `generator::envelope_outline` draws it as 8 meridians of 16 steps closed across both ends and a ring every second step, skipping what has no width; `src/plant.rs` rebuilds it on an `Envelope` entity, a line-list mesh, unlit, a `TurntableSubject` so Frame fits the crown, and records `EnvelopeStats`. Any field whose type is an enum of unit variants gets a feathers select, a row per variant named after it, which needed a capability set of the panel's own (`CapsPanel`). A hand-written Envelope subpane above Trunk. The panel now outgrows the window, so clicks scroll their node into view: the driver bumped to `ad194b2`, which does (its ledger). `plans/envelope.py` picks Cone and Column and checks the segment counts, then picks the placeholder's `mode` below the fold (17 steps); unit tests for the profiles' ends and the outline's counts. `smoke.py` (36 steps) and `fuzzy.py` (24) pass. |
 | (pending) | C17 Nested structs as subpanes: a field whose type is a struct (other than `Fuzzy`, which has its own row) is a feathers subpane named after the field, headed by its caption, its fields rows of their own, recursively. `properties::group` builds a subpane; the panel walks `Species` itself, its fields captioned Envelope and Trunk, and the View and Placeholder subpanes use `group` too. The placeholder's `nested` is now a subpane within the Placeholder subpane. `plans/smoke.py` finds `trunk/sides` and `nested/size`, and toggles `nested/flag` (40 steps); `envelope.py` (17) and `fuzzy.py` (24) pass unchanged. |
 | (pending) | C21 Turntable feel (D7 amended): framing is one-shot, `frame_pending` set by Frame and at start, so editing no longer moves the camera; `keep_framed` now only refits the framed sphere to the viewport. Framing runs after `CalculateBounds` and waits for every subject's `Aabb`. Drags and scrolls move along one axis at a time (`DominantAxis` in `src/turntable.rs`, on a `TurntableGesture` component the camera requires). `plans/smoke.py` checks the framing flags, raises the envelope to 12 and screenshots it outgrowing the frame, then frames it (50 steps); unit tests for the axis choice. The axis choice is checked by hand on a trackpad: the driver cannot drag or scroll. |
+| (pending) | C20 Bark color: `Species` gained `Bark { color }`, written into the trunk mesh as a vertex color (linear) under a white material, and recorded on `PlantStats` as sRGB hex (`bark_color`) for plans. A `Color` field's row is feathers' `FeathersColorInput` with its caption beside it, as a checkbox has. `CapabilityColorInput` in `src/properties.rs` binds it: `bevy_immediate`'s `NewValueChange<Color>` takes the picked color, and the panel writes `ColorInputValue` when the shown color differs, since the input does not update itself. The picker's parts are named by feathers' `#name`s (`wheel`, `mode_rgb`, `hex_input`), so `plans/bark.py` opens the picker, types `336699` into the hex field in RGB mode, checks the bark color, and closes it with Escape (25 steps). `smoke.py` (50), `envelope.py` (17) and `fuzzy.py` (24) pass. The picker's mode and recent colors are not saved (X14). |
 
 ## Next
 
@@ -44,17 +45,14 @@ walking reflected fields (`field_entries`, `FieldEdit`) but not a base: it reads
 has no per-type hook, and is retained-mode.
 
 C5 did booleans, C9 numbers and C12 fuzzy numbers (`src/properties.rs`, attributes per D9);
-C13 put captions above fields, C14 drew the spread strip, C17 made nested structs subpanes. From
-here the generator sets the order (`docs/growth-model.md`), each step bringing the widget kind it
-needs:
+C13 put captions above fields, C14 drew the spread strip, C17 made nested structs subpanes, C20
+added colors. From here the generator sets the order (`docs/growth-model.md`), each step bringing
+the widget kind it needs:
 
-- **C20 Bark color.** A `Bark` group (`docs/growth-model.md`, Consequences) holding a `Color`, the
-  trunk mesh tinted with it as a vertex color (requirements, Generator, an **S** item). A `Color`
-  field's row is feathers' `FeathersColorInput`: a swatch about the size of an icon button, with a
-  chevron, opening a picker with a color wheel. `bevy_immediate` has no binding for it, so it gets
-  one through `CapsPanel` (D13): the input emits `ValueChange<Color>` and holds
-  `ColorInputValue`. The picker's mode and recent colors are not saved yet (X14). The plan picks a color and checks it on a component plans can
-  read (D12), since the driver cannot read mesh data.
+- **C22 Names as `#name`.** Scenes name entities with `Name("…")`; `#name` in `bsn!` inserts the
+  same `Name` and also makes the entity referable in the scene, as feathers' own widgets do.
+  Convert the literal ones in `bsn!` (`src/main.rs`, `src/properties.rs`); names computed at run
+  time stay `Name::new`. Plans should pass unchanged.
 - **C18 One level of limbs**: phyllotaxis, elevation from world up, reach to the envelope, which
   needs the envelope's radius at a height (`profile_width` scaled between crown base and top).
   The trunk keeps its own height until the Stems group, when it becomes the envelope's height

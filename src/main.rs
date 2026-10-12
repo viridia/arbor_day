@@ -211,7 +211,8 @@ fn scene() -> impl SceneList {
         Name("Plant")
         Plant
         TurntableSubject
-        MeshMaterial3d::<StandardMaterial>(asset_value(Color::srgb(0.42, 0.33, 0.25)))
+        // White, so the mesh's vertex colors show as they are.
+        MeshMaterial3d::<StandardMaterial>(asset_value(Color::WHITE))
         --
         Name("Envelope")
         PlantEnvelope

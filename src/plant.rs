@@ -39,6 +39,8 @@ pub struct Plant;
 #[reflect(Component)]
 pub struct PlantStats {
     pub triangles: u32,
+    /// The bark's vertex color, as sRGB hex.
+    pub bark_color: String,
 }
 
 fn build_plant(
@@ -52,10 +54,13 @@ fn build_plant(
             continue;
         }
         let geometry = generator::trunk(&species.trunk);
+        let color = species.bark.color;
         let stats = PlantStats {
             triangles: geometry.triangles() as u32,
+            bark_color: color.to_srgba().to_hex(),
         };
-        set_mesh(&mut commands, &mut meshes, entity, current, to_mesh(geometry));
+        let mesh = to_mesh(geometry, color);
+        set_mesh(&mut commands, &mut meshes, entity, current, mesh);
         commands.entity(entity).insert(stats);
     }
 }
@@ -101,11 +106,15 @@ fn set_mesh(
     }
 }
 
-fn to_mesh(geometry: Geometry) -> Mesh {
+/// A triangle mesh of `geometry`, every vertex colored `color`.
+fn to_mesh(geometry: Geometry, color: Color) -> Mesh {
     let positions: Vec<[f32; 3]> = geometry.positions.iter().map(|p| p.to_array()).collect();
     let normals: Vec<[f32; 3]> = geometry.normals.iter().map(|n| n.to_array()).collect();
+    // Vertex colors are linear.
+    let colors = vec![color.to_linear().to_f32_array(); positions.len()];
     Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default())
         .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
         .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, colors)
         .with_inserted_indices(Indices::U32(geometry.indices))
 }

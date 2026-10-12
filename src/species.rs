@@ -13,6 +13,8 @@ pub struct Species {
     pub envelope: Envelope,
     #[reflect(@Caption("Trunk"))]
     pub trunk: Trunk,
+    #[reflect(@Caption("Bark"))]
+    pub bark: Bark,
 }
 
 /// The crown's outline: a surface of revolution about the vertical axis, between the crown base
@@ -78,6 +80,22 @@ pub struct Trunk {
         @NumberInputUnits::new_static("angle_degrees"),
     )]
     pub bend: f32,
+}
+
+/// The bark's look, the same on every stem.
+#[derive(Reflect, Clone, PartialEq)]
+pub struct Bark {
+    /// The bark's color, written into the mesh as a vertex color, so trunks of different species
+    /// can merge into one mesh in the game.
+    pub color: Color,
+}
+
+impl Default for Bark {
+    fn default() -> Self {
+        Self {
+            color: Color::srgb(0.42, 0.33, 0.25),
+        }
+    }
 }
 
 impl Default for Trunk {

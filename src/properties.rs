@@ -1,6 +1,7 @@
 //! The property editor: panel rows for the fields of a reflected struct, one row per field, each
 //! named after its field. Booleans get a checkbox, numbers a number input, fuzzy numbers a center,
-//! a spread and a shape toggle, enums of unit variants a select, nested structs a subpane of rows
+//! a spread and a shape toggle, colors a swatch that opens a picker, enums of unit variants a
+//! select, nested structs a subpane of rows
 //! of their own, and every other field a label giving its name and type. A row's caption sits
 //! above its inputs, so they get the panel's full width. Field attributes (below) set
 //! a row's caption and a number's limits, precision, step, units and wrapping.
@@ -11,9 +12,10 @@ use bevy::{
     feathers::{
         containers::{subpane, subpane_body, subpane_header},
         controls::{
-            ButtonVariant, FeathersCheckbox, FeathersListRow, FeathersNumberInput, FeathersSelect,
-            FeathersToolButton, HardLimit, NumberInputPrecision, NumberInputStep, NumberInputUnits,
-            NumberInputWrap, OptionIndex, SoftLimit,
+            ButtonVariant, ColorInputValue, FeathersCheckbox, FeathersColorInput, FeathersListRow,
+            FeathersNumberInput, FeathersSelect, FeathersToolButton, HardLimit,
+            NumberInputPrecision, NumberInputStep, NumberInputUnits, NumberInputWrap, OptionIndex,
+            SoftLimit,
         },
         display::{caption as option_caption, icon, label, label_small},
         theme::ThemedText,
@@ -37,6 +39,7 @@ use bevy_immediate::{
         clicked, color_plane, color_swatch, disabled, interaction, layout_order, look,
         number_input::{self, ImmUiNumberInput, ImmUiNumericValue},
         selected, slider_base_color, slider_value, text, text_input,
+        track_value_change_plugin::{NewValueChange, TrackValueChangePlugin},
     },
 };
 
@@ -71,8 +74,23 @@ impl_capability_set!(
         color_swatch::CapabilityUiColorSwatch,
         color_plane::CapabilityUiColorPlane,
         CapabilityEnumSelect,
+        CapabilityColorInput,
     )
 );
+
+/// Lets the panel bind a feathers color input: read the color it shows, and take the color the
+/// user last picked.
+pub struct CapabilityColorInput;
+
+impl ImmCapability for CapabilityColorInput {
+    fn build<Caps: CapSet>(app: &mut App, cap_req: &mut ImmCapAccessRequests<Caps>) {
+        cap_req.request_component_read::<ColorInputValue>(app.world_mut());
+        cap_req.request_component_write::<NewValueChange<Color>>(app.world_mut());
+        if !app.is_plugin_added::<TrackValueChangePlugin<Color>>() {
+            app.add_plugins(TrackValueChangePlugin::<Color>::default());
+        }
+    }
+}
 
 /// Lets the panel read and clear an enum select's [`PickedVariant`].
 pub struct CapabilityEnumSelect;
@@ -195,6 +213,8 @@ pub fn edit_fields(ui: &mut Imm<CapsPanel>, value: &mut dyn PartialReflect) {
             number_row(row, name, caption, attrs, number);
         } else if let Some(number) = field.try_downcast_mut::<i64>() {
             number_row(row, name, caption, attrs, number);
+        } else if let Some(color) = field.try_downcast_mut::<Color>() {
+            color_row(row, name, caption, color);
         } else if let Some(variants) = unit_variants(field) {
             enum_row(row, name, caption, variants, field);
         } else if let Some(TypeInfo::Struct(_)) = field.get_represented_type_info() {
@@ -407,6 +427,42 @@ fn fuzzy_row(
                 });
             });
         });
+    });
+}
+
+/// A feathers color input, a swatch that opens a picker, with its caption beside it, as a
+/// checkbox has. The input is named `input`.
+fn color_row(
+    row: ImmEntity<CapsPanel>,
+    name: &'static str,
+    caption: &'static str,
+    color: &mut Color,
+) {
+    row.on_spawn_insert(move || (Name::new(name), widget_line())).add(|ui| {
+        let initial = *color;
+        let mut input = ui
+            .ch()
+            .on_spawn_apply_scene(|| bsn! { #input @FeathersColorInput })
+            .on_spawn_insert(move || {
+                (ColorInputValue(initial), NewValueChange::<Color>::default())
+            });
+        if !input.will_be_spawned() {
+            if let Ok(Some(mut picked)) = input.cap_get_component_mut::<NewValueChange<Color>>()
+                && let Some(value) = NewValueChange::take(&mut picked)
+            {
+                *color = value;
+            }
+            // Shows a color changed elsewhere, or just picked: the input does not update itself.
+            let shown = input
+                .cap_get_component::<ColorInputValue>()
+                .ok()
+                .flatten()
+                .map(|value| value.0);
+            if shown != Some(*color) {
+                input.entity_commands().insert(ColorInputValue(*color));
+            }
+        }
+        ui.ch().on_spawn_apply_scene(move || label(caption));
     });
 }
 
