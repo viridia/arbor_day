@@ -1,8 +1,7 @@
 //! The plant in the view, rebuilt from the [`Species`] whenever it changes.
 
 use bevy::{
-    asset::RenderAssetUsages, mesh::Indices, prelude::*,
-    render::render_resource::PrimitiveTopology,
+    asset::RenderAssetUsages, mesh::Indices, prelude::*, render::render_resource::PrimitiveTopology,
 };
 
 use crate::{
@@ -117,9 +116,12 @@ fn to_mesh(geometry: Geometry, color: Color) -> Mesh {
     let normals: Vec<[f32; 3]> = geometry.normals.iter().map(|n| n.to_array()).collect();
     // Vertex colors are linear.
     let colors = vec![color.to_linear().to_f32_array(); positions.len()];
-    Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default())
-        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
-        .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
-        .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, colors)
-        .with_inserted_indices(Indices::U32(geometry.indices))
+    Mesh::new(
+        PrimitiveTopology::TriangleList,
+        RenderAssetUsages::default(),
+    )
+    .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
+    .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
+    .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, colors)
+    .with_inserted_indices(Indices::U32(geometry.indices))
 }

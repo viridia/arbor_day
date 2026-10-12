@@ -128,7 +128,12 @@ pub fn plant(species: &Species) -> (Geometry, usize) {
 pub fn trunk(trunk: &Trunk) -> Geometry {
     let mut geometry = Geometry::default();
     let sides = trunk.sides.max(3) as u32;
-    tube(&mut geometry, &trunk_rings(trunk), trunk_radii(trunk), sides);
+    tube(
+        &mut geometry,
+        &trunk_rings(trunk),
+        trunk_radii(trunk),
+        sides,
+    );
     geometry
 }
 
@@ -145,7 +150,14 @@ pub fn limbs(species: &Species) -> Vec<Limb> {
     for (level, params) in species.grown_levels().iter().enumerate() {
         let mut children = Vec::new();
         if level == 0 {
-            grow_level(&species.envelope, params, level, taper, trunk, &mut children);
+            grow_level(
+                &species.envelope,
+                params,
+                level,
+                taper,
+                trunk,
+                &mut children,
+            );
         }
         for parent in grown.iter().filter(|limb: &&Limb| limb.level + 1 == level) {
             let parent = Parent {
@@ -153,7 +165,14 @@ pub fn limbs(species: &Species) -> Vec<Limb> {
                 radii: parent.radii,
                 rng: &parent.rng,
             };
-            grow_level(&species.envelope, params, level, taper, parent, &mut children);
+            grow_level(
+                &species.envelope,
+                params,
+                level,
+                taper,
+                parent,
+                &mut children,
+            );
         }
         grown.extend(children);
     }
@@ -282,7 +301,9 @@ fn grow_limb(
         let knot = (along.floor() as usize).min(knots.len() - 2);
         let blend = along - knot as f32;
         let blend = blend * blend * (3.0 - 2.0 * blend);
-        knots[knot].lerp(knots[knot + 1], blend).clamp_length_max(1.0)
+        knots[knot]
+            .lerp(knots[knot + 1], blend)
+            .clamp_length_max(1.0)
     };
     let (bend_sin, bend_cos) = params.bend_toward.sin_cos();
     let max_turn = MAX_RING_TURN_DEGREES.to_radians();
@@ -691,14 +712,21 @@ mod tests {
         let tip = *trunk(&species.trunk).positions.last().unwrap();
         for limb in limbs(&species) {
             let angle = limb.direction().angle_between(tip);
-            assert!((angle - species.limbs[0].angle.center).abs() < 1e-5, "{limb:?}");
+            assert!(
+                (angle - species.limbs[0].angle.center).abs() < 1e-5,
+                "{limb:?}"
+            );
         }
     }
 
     #[test]
     fn varied_values_stay_within_their_spread_and_limits() {
         let mut species = regular();
-        species.limbs[0].angle = Fuzzy::new(60.0_f32.to_radians(), 10.0_f32.to_radians(), Distribution::Uniform);
+        species.limbs[0].angle = Fuzzy::new(
+            60.0_f32.to_radians(),
+            10.0_f32.to_radians(),
+            Distribution::Uniform,
+        );
         // Reaching past the envelope is clamped to reaching it.
         species.limbs[0].reach = Fuzzy::new(0.95, 0.2, Distribution::Uniform);
         let tip = *trunk(&species.trunk).positions.last().unwrap();
@@ -707,8 +735,14 @@ mod tests {
             .iter()
             .map(|limb| limb.direction().angle_between(tip).to_degrees())
             .collect();
-        assert!(angles.iter().all(|angle| (49.99..=70.01).contains(angle)), "{angles:?}");
-        assert!(angles.iter().any(|angle| (angle - angles[0]).abs() > 0.1), "{angles:?}");
+        assert!(
+            angles.iter().all(|angle| (49.99..=70.01).contains(angle)),
+            "{angles:?}"
+        );
+        assert!(
+            angles.iter().any(|angle| (angle - angles[0]).abs() > 0.1),
+            "{angles:?}"
+        );
         for limb in &limbs {
             let whole = distance_to_envelope(&species.envelope, limb.origin(), limb.direction());
             assert!(limb.length() <= whole + 1e-3);
@@ -874,7 +908,10 @@ mod tests {
                 let p = &geometry.positions;
                 let facing = (p[b] - p[a]).cross(p[c] - p[a]);
                 let n = &geometry.normals;
-                assert!(facing.dot(n[a] + n[b] + n[c]) > 0.0, "bend {bend}: {triangle:?}");
+                assert!(
+                    facing.dot(n[a] + n[b] + n[c]) > 0.0,
+                    "bend {bend}: {triangle:?}"
+                );
             }
         }
     }

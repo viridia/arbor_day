@@ -124,6 +124,9 @@ mod tests {
             Fuzzy::new(1.0, 0.2, shape).sample(&mut rng);
             rng.next_u64()
         };
-        assert_eq!(next_after(Distribution::Uniform), next_after(Distribution::Bell));
+        assert_eq!(
+            next_after(Distribution::Uniform),
+            next_after(Distribution::Bell)
+        );
     }
 }

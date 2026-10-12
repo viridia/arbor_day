@@ -7,12 +7,12 @@
 
 use bevy::{
     camera::primitives::Aabb,
+    camera::visibility::VisibilitySystems,
     input::mouse::MouseScrollUnit,
     picking::{
         events::{PointerDrag, PointerScroll},
         pointer::PointerButton,
     },
-    camera::visibility::VisibilitySystems,
     prelude::*,
     transform::TransformSystems,
 };
@@ -306,9 +306,10 @@ pub fn zoom_on_scroll(
         MouseScrollUnit::Line => LINE_PIXELS,
         MouseScrollUnit::Pixel => 1.0,
     };
-    let delta = gesture
-        .scroll
-        .feed(Vec2::new(scroll.x, scroll.y) * pixels, time.elapsed_secs_f64());
+    let delta = gesture.scroll.feed(
+        Vec2::new(scroll.x, scroll.y) * pixels,
+        time.elapsed_secs_f64(),
+    );
     if delta.x != 0.0 {
         turntable.spin(-delta.x * SPIN_PER_PIXEL);
     }
@@ -340,7 +341,10 @@ mod tests {
         for i in 0..20 {
             axis.feed(Vec2::new(5.0, 0.0), i as f64 * FRAME);
         }
-        assert_eq!(axis.feed(Vec2::new(1.0, 4.0), 20.0 * FRAME), Vec2::new(1.0, 0.0));
+        assert_eq!(
+            axis.feed(Vec2::new(1.0, 4.0), 20.0 * FRAME),
+            Vec2::new(1.0, 0.0)
+        );
     }
 
     #[test]

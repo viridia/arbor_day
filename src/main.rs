@@ -10,8 +10,8 @@ use bevy::{
             FeathersSplitPaneHandle, NumberInputUnits, ScrollbarGutter,
         },
         dark_theme::create_dark_theme,
-        theme::{ThemeBackgroundColor, ThemedText, UiTheme},
         display::label,
+        theme::{ThemeBackgroundColor, ThemedText, UiTheme},
         tokens,
     },
     light::{NotShadowCaster, NotShadowReceiver},
@@ -29,7 +29,7 @@ use bevy_remote_driver::RemoteDriverPlugin;
 use fuzzy::{Distribution, Fuzzy};
 use keys::KeysPlugin;
 use plant::{Plant, PlantEnvelope, PlantPlugin, PlantStats};
-use properties::{Caption, CapsPanel, Precision, Spinbox, ValueRange, Wrap};
+use properties::{CapsPanel, Caption, Precision, Spinbox, ValueRange, Wrap};
 use settings::{AppSettingsPlugin, MIN_PANE_WIDTH, save_panel_width};
 use species::Species;
 use turntable::{

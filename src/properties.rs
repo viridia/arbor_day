@@ -260,9 +260,13 @@ pub fn edit_fields(ui: &mut Imm<CapsPanel>, value: &mut dyn PartialReflect) {
         } else if let Some(variants) = unit_variants(field) {
             enum_row(row, name, caption, variants, field);
         } else if let Some(TypeInfo::Struct(_)) = field.get_represented_type_info() {
-            group(row.on_spawn_insert(move || Name::new(name)), caption, |ui| {
-                edit_fields(ui, field);
-            });
+            group(
+                row.on_spawn_insert(move || Name::new(name)),
+                caption,
+                |ui| {
+                    edit_fields(ui, field);
+                },
+            );
         } else {
             let text = format!("{caption}: {}", field.reflect_short_type_path());
             row.on_spawn_apply_scene(move || label(text))
@@ -505,8 +509,9 @@ fn seed_row(row: ImmEntity<CapsPanel>, name: &'static str, caption: &'static str
                 *seed = Seed::random();
             }
             button.add(|ui| {
-                ui.ch()
-                    .on_spawn_apply_scene(|| bsn! { @icon("icons/ifl.png") Node { height: px(18) } });
+                ui.ch().on_spawn_apply_scene(
+                    || bsn! { @icon("icons/ifl.png") Node { height: px(18) } },
+                );
             });
         });
     });
@@ -589,32 +594,33 @@ fn color_row(
         justify_content: JustifyContent::SpaceBetween,
         ..widget_line()
     };
-    row.on_spawn_insert(move || (Name::new(name), line())).add(|ui| {
-        ui.ch().on_spawn_apply_scene(move || label(caption));
-        let initial = *color;
-        let mut input = ui
-            .ch()
-            .on_spawn_apply_scene(|| bsn! { #input @FeathersColorInput })
-            .on_spawn_insert(move || {
-                (ColorInputValue(initial), NewValueChange::<Color>::default())
-            });
-        if !input.will_be_spawned() {
-            if let Ok(Some(mut picked)) = input.cap_get_component_mut::<NewValueChange<Color>>()
-                && let Some(value) = NewValueChange::take(&mut picked)
-            {
-                *color = value;
+    row.on_spawn_insert(move || (Name::new(name), line()))
+        .add(|ui| {
+            ui.ch().on_spawn_apply_scene(move || label(caption));
+            let initial = *color;
+            let mut input = ui
+                .ch()
+                .on_spawn_apply_scene(|| bsn! { #input @FeathersColorInput })
+                .on_spawn_insert(move || {
+                    (ColorInputValue(initial), NewValueChange::<Color>::default())
+                });
+            if !input.will_be_spawned() {
+                if let Ok(Some(mut picked)) = input.cap_get_component_mut::<NewValueChange<Color>>()
+                    && let Some(value) = NewValueChange::take(&mut picked)
+                {
+                    *color = value;
+                }
+                // Shows a color changed elsewhere, or just picked: the input does not update itself.
+                let shown = input
+                    .cap_get_component::<ColorInputValue>()
+                    .ok()
+                    .flatten()
+                    .map(|value| value.0);
+                if shown != Some(*color) {
+                    input.entity_commands().insert(ColorInputValue(*color));
+                }
             }
-            // Shows a color changed elsewhere, or just picked: the input does not update itself.
-            let shown = input
-                .cap_get_component::<ColorInputValue>()
-                .ok()
-                .flatten()
-                .map(|value| value.0);
-            if shown != Some(*color) {
-                input.entity_commands().insert(ColorInputValue(*color));
-            }
-        }
-    });
+        });
 }
 
 /// The variant names of `value`'s type, if it is an enum whose variants are all units.

@@ -81,7 +81,9 @@ pub fn spread_strip(ui: &mut Imm<CapsPanel>, fuzzy: Fuzzy, range: StripRange) {
                 );
                 ui.ch_id(index)
                     .on_spawn_insert(move || Name::new(format!("segment{index}")))
-                    .on_hash_change_insert("segment", &key, || segment_bundle(segment, fuzzy.shape));
+                    .on_hash_change_insert("segment", &key, || {
+                        segment_bundle(segment, fuzzy.shape)
+                    });
             }
         });
 }
@@ -156,7 +158,11 @@ fn segments(fuzzy: &Fuzzy, range: &StripRange) -> Vec<Segment> {
         }];
     }
     let (low, high) = (fuzzy.center - fuzzy.spread, fuzzy.center + fuzzy.spread);
-    let turns: &[f32] = if range.wrap { &[-1.0, 0.0, 1.0] } else { &[0.0] };
+    let turns: &[f32] = if range.wrap {
+        &[-1.0, 0.0, 1.0]
+    } else {
+        &[0.0]
+    };
     turns
         .iter()
         .filter_map(|&turn| {
