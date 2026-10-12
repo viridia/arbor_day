@@ -22,7 +22,8 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `93b3dbb` | C13 Captions above fields: a row is a column, the caption in feathers' `label_small` (its field-caption label) 2 px above the inputs, half the 4 px between rows. A number input spans the row; a fuzzy row's center, spread and shape button share a line beneath, so the center gets about 310 px of a 320 px panel rather than 53. Checkboxes keep their caption beside them. Both plans pass unchanged (29 and 10 steps). |
 | (pending) | C14 Spread strip, `src/spread_strip.rs`: a 2 px track across the full width of a fuzzy center input, a child the panel adds to the input's root (`ZIndex(1)`, `Pickable::IGNORE`), so the range maps as the fill bar's does and the strip centres on the fill edge. Lifted 2 px off the bottom edge to clear the rounded corners: a first cut insetting it 4 px each end instead sat visibly off the fill edge when the spread was small and the panel wide. A segment per piece of center ± spread within the range, clamped, or for a wrapping range brought round from the other end (two segments across the seam). Its opacity follows `Distribution::density`: flat for uniform; for bell, the mean of three uniforms, in stops every twelfth of the spread. Nodes are reinserted only when a segment changes; a spread or shape edit shows a frame late, since the strip is built inside the center input before the spread input. The colour is a fixed white at 80% (not a theme token). `Placeholder` gained `axis`, a wrapping fuzzy angle across the seam. A segment is at least 2 px wide, so a tiny spread still shows; with no spread the strip is a solid 2 px tick centred on the value, rather than vanishing. `plans/fuzzy.py` checks one segment for `length` and two for `axis`, then types a spread of 0 and checks the tick (24 steps); unit tests for the segments and the density. |
 
-| (pending) | C6 Growth-model survey, `docs/growth-model.md`, with a screenshot of seedling's trees in Panoply; the choice is D11. Requirements: outlines become a per-species switch, shown in the preview on the bark shell and the leaf texture; leaf textures are flat colors. |
+| `0e9fdef` | C6 Growth-model survey, `docs/growth-model.md`, with a screenshot of seedling's trees in Panoply; the choice is D11. Requirements: outlines become a per-species switch, shown in the preview on the bark shell and the leaf texture; leaf textures are flat colors. |
+| (pending) | C15 A generated trunk (D12): `Species` (`src/species.rs`), a resource holding a `Trunk` group (height, radius, taper, sides, bend); `src/generator.rs` builds a tube of rings along an arc, a ring per 15° of turn, normals shared and leaning with the taper, closed by a fan at the top; `src/plant.rs` rebuilds the `Plant` entity's mesh in place when the species changes, so its bounds and the turntable's framing follow, and records `PlantStats`. The panel edits the trunk and shows the triangle count. The trunk replaces the test torus and `TestShape`. Unit tests for ring count, shared vertices, the base, the height and the winding; `plans/smoke.py` sets 4 sides and checks the count follows (36 steps). |
 
 ## Next
 
@@ -69,6 +70,12 @@ and remove; colors. Notes:
   - Cmd+Z in a focused text field: the text input passes it on, so the window would undo a
     document edit mid-typing. The PR's per-field contexts are for this case.
   - Keys: Cmd+Z and Cmd+Shift+Z (Ctrl+Z and Ctrl+Y elsewhere), in `src/keys.rs` (D8).
+- **Leaf texture painting**, a chunk of its own, since it adds a dependency: a 2D rasterizer on
+  the CPU (requirements, open question 3; the command-line mode needs the CPU path). Seedling's
+  `genLeafTexture.ts` uses a small part of Canvas2D: paths of lines and cubic Béziers, stroke and
+  fill, affine transforms, line width, join and cap, global alpha, solid colors and linear
+  gradients, `clearRect` and `strokeRect`. The candidate must cover that set; propose it before
+  code.
 - **C10 Species data model**, its groups the layers of the growth model (D11; sketched in
   `docs/growth-model.md`, Consequences), and seedling's is wrong where the requirements say (roll compounding through levels, card facing tied to the
   tip, growth modes that disable half the parameters, ranges as low and high). Reflectable types
@@ -166,12 +173,22 @@ and remove; colors. Notes:
   and foliage placement, every direction measured against world up, and cards oriented apart
   from the branch tangent. The design and the survey behind it are in `docs/growth-model.md`.
 
+- **D12** The species is one resource, and any change to it rebuilds the whole plant: most
+  parameters change much of the tree, so finer change detection would save little. The panel
+  edits a copy and writes it back with `set_if_neq`, so the rebuild runs only on a real edit.
+  The leaf texture is the likely exception, being far costlier to make; it can become a second
+  resource if dragging stutters. Plans read the result (`PlantStats` on the plant), since the
+  driver reads components, not resources.
+
 ## Deferred
 
 - **X1** The generator as its own library crate, beside the app: no Bevy dependency beyond
   `bevy_math` (its `libm` feature gives the same float results on every platform), with the
   export command as a binary of that crate, so the asset pipeline and the determinism tests
-  build without the renderer. *Gate:* generator code starts.
+  build without the renderer. Until then the generator is `src/generator.rs`, on Bevy's math
+  types with no ECS. The species types need `bevy_reflect` too, and their editor attributes
+  (`ValueRange` and the rest, now in `src/properties.rs`) would move with them. *Gate:* the
+  command-line export.
 - **X2** A file browser, for Open and Save As: the `rfd` crate (native file dialogs), the
   author's choice. *Gate:* file handling, after C8 (the working document and its path in
   settings).

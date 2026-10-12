@@ -1,9 +1,9 @@
-"""The shell starts from default settings: the panel shows the test object's scale, the panel has
-its default width, the turntable camera frames the object, the zoom and frame keys work, and the
-property editor edits booleans and numbers within their limits."""
+"""The shell starts from default settings: the panel shows the trunk's parameters, the panel has
+its default width, the turntable camera frames the plant, the zoom and frame keys work, the
+property editor edits booleans and numbers within their limits, and an edit rebuilds the plant."""
 
 BIN = "arbor_day"
-SHAPE = "arbor_day::TestShape"
+STATS = "arbor_day::plant::PlantStats"
 PLACEHOLDER = "arbor_day::Placeholder"
 TURNTABLE = "arbor_day::turntable::TurntableCamera"
 PANE = "bevy_ui_widgets::split_pane::Pane"
@@ -12,9 +12,10 @@ VISIBILITY = "bevy_camera::visibility::Visibility"
 
 def run(driver):
     driver.present("Shell", ready=True)  # wait for the UI scene to finish spawning
-    driver.present("Shell/Panel/scale/input")  # the immediate-mode panel has built its rows
+    driver.present("Shell/Panel/sides/input")  # the immediate-mode panel has built its rows
     driver.present("Shell/Panel/Scrollbar")
-    driver.expect("TestObject", SHAPE, {"scale": 1.0})
+    # The default trunk: 6 sides, bent 15°, so one segment of 6 quads and a 6-triangle cap.
+    driver.expect("Plant", STATS, {"triangles": 18})
     # The default width, whatever the developer last dragged it to: a run gets fresh settings.
     driver.expect("Shell/Panel", PANE, {"size": 320.0})
     # The view is never saved: every start frames the subject, from the front.
@@ -47,4 +48,12 @@ def run(driver):
     driver.key("Enter")
     driver.expect("Placeholder", PLACEHOLDER, {"count": 10})
     driver.screenshot("numbers")
+    # Editing the species rebuilds the plant: 4 sides is 8 quad triangles and a 4-triangle cap.
+    driver.click("Shell/Panel/sides/input")
+    driver.key("End")
+    driver.key("Backspace")
+    driver.type("4")
+    driver.key("Enter")
+    driver.expect("Plant", STATS, {"triangles": 12})
+    driver.screenshot("four_sides")
     driver.exit()

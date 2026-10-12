@@ -12,6 +12,7 @@ use bevy::{
         },
         dark_theme::create_dark_theme,
         theme::{ThemeBackgroundColor, ThemedText, UiTheme},
+        display::label,
         tokens,
     },
     prelude::*,
@@ -22,21 +23,26 @@ use bevy::{
 use bevy_immediate::{
     Imm,
     attach::{BevyImmediateAttachPlugin, ImmediateAttach},
-    ui::{CapsUiFeathers, activated::ImmUiActivated},
+    ui::{CapsUiFeathers, activated::ImmUiActivated, text::ImmUiText},
 };
 use bevy_remote_driver::RemoteDriverPlugin;
 use fuzzy::{Distribution, Fuzzy};
 use keys::KeysPlugin;
+use plant::{Plant, PlantPlugin, PlantStats};
 use properties::{Caption, Precision, Spinbox, ValueRange, Wrap};
 use settings::{AppSettingsPlugin, MIN_PANE_WIDTH, save_panel_width};
+use species::Species;
 use turntable::{
     TurntableCamera, TurntablePlugin, TurntableSubject, orbit_on_drag, zoom_on_scroll,
 };
 
 mod fuzzy;
+mod generator;
 mod keys;
+mod plant;
 mod properties;
 mod settings;
+mod species;
 mod spread_strip;
 mod turntable;
 
@@ -62,11 +68,12 @@ fn main() {
             RemoteDriverPlugin,
             TurntablePlugin,
             KeysPlugin,
+            PlantPlugin,
         ))
         .insert_resource(UiTheme(create_dark_theme()))
         .add_observer(use_game_fov)
         .add_systems(Startup, (scene.spawn(), shell_ui.spawn()))
-        .add_systems(Update, (apply_test_shape, apply_placeholder))
+        .add_systems(Update, apply_placeholder)
         .add_systems(PostUpdate, follow_viewport_slot.after(UiSystems::Layout))
         .run();
 }
@@ -86,20 +93,6 @@ struct PanelPane;
 /// The root of the immediate-mode parameter panel.
 #[derive(Component, Default, Clone)]
 struct ParamPanel;
-
-/// The object in the view and what the panel edits, until the generator replaces both.
-#[derive(Component, Reflect, Clone, PartialEq)]
-#[reflect(Component)]
-struct TestShape {
-    #[reflect(@ValueRange::<f32>(0.25..=2.0), @Precision(2), @Caption("Scale"))]
-    scale: f32,
-}
-
-impl Default for TestShape {
-    fn default() -> Self {
-        Self { scale: 1.0 }
-    }
-}
 
 /// Stands in for the species while the property editor is built: a field of each kind it will
 /// edit. `show_ground` hides the ground, so an edit shows in the view. A component on a named
@@ -208,13 +201,10 @@ fn scene() -> impl SceneList {
         Name("Placeholder")
         Placeholder
         --
-        Name("TestObject")
-        TestShape
+        Name("Plant")
+        Plant
         TurntableSubject
-        Mesh3d(asset_value(Torus::default()))
-        MeshMaterial3d::<StandardMaterial>(asset_value(Color::srgb(0.3, 0.55, 0.3)))
-        // Standing on edge, so a spin shows.
-        Transform::from_rotation(Quat::from_rotation_x(std::f32::consts::FRAC_PI_2))
+        MeshMaterial3d::<StandardMaterial>(asset_value(Color::srgb(0.42, 0.33, 0.25)))
     }
 }
 
@@ -315,7 +305,8 @@ fn shell_ui() -> impl Scene {
 
 #[derive(SystemParam)]
 struct PanelParams<'w, 's> {
-    shapes: Query<'w, 's, &'static mut TestShape>,
+    species: ResMut<'w, Species>,
+    stats: Query<'w, 's, &'static PlantStats>,
     cameras: Query<'w, 's, &'static mut TurntableCamera>,
     placeholders: Query<'w, 's, &'static mut Placeholder>,
 }
@@ -324,21 +315,25 @@ impl ImmediateAttach<CapsUiFeathers> for ParamPanel {
     type Params = PanelParams<'static, 'static>;
 
     fn construct(ui: &mut Imm<CapsUiFeathers>, params: &mut PanelParams) {
-        let Ok(mut shape) = params.shapes.single_mut() else {
-            return;
-        };
-        // Edit a copy: writing through `Mut` every frame would mark the shape changed every frame.
-        let mut edited = shape.clone();
+        // Edit a copy: writing through `ResMut` every frame would mark the species changed every
+        // frame, and the plant would rebuild every frame.
+        let mut edited = params.species.clone();
         ui.ch().on_spawn_apply_scene(subpane).add(|ui| {
             ui.ch().on_spawn_apply_scene(subpane_header).add(|ui| {
                 ui.ch()
-                    .on_spawn_apply_scene(|| bsn! { Text("Test object") ThemedText });
+                    .on_spawn_apply_scene(|| bsn! { Text("Trunk") ThemedText });
             });
             ui.ch()
                 .on_spawn_apply_scene(subpane_body)
-                .add(|ui| properties::edit_fields(ui, &mut edited));
+                .add(|ui| properties::edit_fields(ui, &mut edited.trunk));
         });
-        shape.set_if_neq(edited);
+        params.species.set_if_neq(edited);
+
+        let triangles = params.stats.single().map_or(0, |stats| stats.triangles);
+        ui.ch()
+            .on_spawn_apply_scene(|| label(""))
+            .on_spawn_insert(|| Name::new("Triangles"))
+            .text(format!("{triangles} triangles"));
 
         ui.ch().on_spawn_apply_scene(subpane).add(|ui| {
             ui.ch().on_spawn_apply_scene(subpane_header).add(|ui| {
@@ -391,15 +386,6 @@ fn apply_placeholder(
         } else {
             Visibility::Hidden
         };
-    }
-}
-
-/// Scales the test object, keeping it standing on the ground.
-fn apply_test_shape(mut shapes: Query<(&TestShape, &mut Transform), Changed<TestShape>>) {
-    let torus = Torus::default();
-    for (shape, mut transform) in &mut shapes {
-        transform.scale = Vec3::splat(shape.scale);
-        transform.translation.y = (torus.major_radius + torus.minor_radius) * shape.scale;
     }
 }
 
