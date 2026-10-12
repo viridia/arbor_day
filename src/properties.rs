@@ -406,7 +406,7 @@ fn fuzzy_row(
             let mut button = ui.ch().on_spawn_apply_scene(|| {
                 bsn! {
                     @FeathersToolButton { @variant: {ButtonVariant::Plain} }
-                    Name("shape")
+                    #shape
                 }
             });
             if button.activated() {
@@ -519,7 +519,7 @@ fn enum_row(
                     })
                     .collect();
                 let rows: Box<dyn SceneList> = Box::new(rows);
-                bsn! { @FeathersSelect { @options: {rows} } Name("select") }
+                bsn! { @FeathersSelect { @options: {rows} } #select }
             });
         let Ok(Some(mut state)) = select.cap_get_component_mut::<PickedVariant>() else {
             return;

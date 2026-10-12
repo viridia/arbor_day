@@ -28,6 +28,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | (pending) | C17 Nested structs as subpanes: a field whose type is a struct (other than `Fuzzy`, which has its own row) is a feathers subpane named after the field, headed by its caption, its fields rows of their own, recursively. `properties::group` builds a subpane; the panel walks `Species` itself, its fields captioned Envelope and Trunk, and the View and Placeholder subpanes use `group` too. The placeholder's `nested` is now a subpane within the Placeholder subpane. `plans/smoke.py` finds `trunk/sides` and `nested/size`, and toggles `nested/flag` (40 steps); `envelope.py` (17) and `fuzzy.py` (24) pass unchanged. |
 | (pending) | C21 Turntable feel (D7 amended): framing is one-shot, `frame_pending` set by Frame and at start, so editing no longer moves the camera; `keep_framed` now only refits the framed sphere to the viewport. Framing runs after `CalculateBounds` and waits for every subject's `Aabb`. Drags and scrolls move along one axis at a time (`DominantAxis` in `src/turntable.rs`, on a `TurntableGesture` component the camera requires). `plans/smoke.py` checks the framing flags, raises the envelope to 12 and screenshots it outgrowing the frame, then frames it (50 steps); unit tests for the axis choice. The axis choice is checked by hand on a trackpad: the driver cannot drag or scroll. |
 | (pending) | C20 Bark color: `Species` gained `Bark { color }`, written into the trunk mesh as a vertex color (linear) under a white material, and recorded on `PlantStats` as sRGB hex (`bark_color`) for plans. A `Color` field's row is feathers' `FeathersColorInput`, its caption on the left and the swatch at the row's right end. `CapabilityColorInput` in `src/properties.rs` binds it: `bevy_immediate`'s `NewValueChange<Color>` takes the picked color, and the panel writes `ColorInputValue` when the shown color differs, since the input does not update itself. The picker's parts are named by feathers' `#name`s (`wheel`, `mode_rgb`, `hex_input`), so `plans/bark.py` opens the picker, types `336699` into the hex field in RGB mode, checks the bark color, and closes it with Escape (25 steps). `smoke.py` (50), `envelope.py` (17) and `fuzzy.py` (24) pass. The picker's mode and recent colors are not saved (X14). |
+| (pending) | C22 Names as `#name`: the literal `Name("…")`s in `bsn!` (`src/main.rs`, and `#shape` and `#select` in `src/properties.rs`) are `#name`s, which insert the same `Name` and make the entity referable in the scene. Names computed at run time (`Name({variant})`, `Name::new`) are unchanged. `smoke.py` (50), `envelope.py` (17), `fuzzy.py` (24) and `bark.py` (25) pass unchanged. |
 
 ## Next
 
@@ -49,10 +50,6 @@ C13 put captions above fields, C14 drew the spread strip, C17 made nested struct
 added colors. From here the generator sets the order (`docs/growth-model.md`), each step bringing
 the widget kind it needs:
 
-- **C22 Names as `#name`.** Scenes name entities with `Name("…")`; `#name` in `bsn!` inserts the
-  same `Name` and also makes the entity referable in the scene, as feathers' own widgets do.
-  Convert the literal ones in `bsn!` (`src/main.rs`, `src/properties.rs`); names computed at run
-  time stay `Name::new`. Plans should pass unchanged.
 - **C18 One level of limbs**: phyllotaxis, elevation from world up, reach to the envelope, which
   needs the envelope's radius at a height (`profile_width` scaled between crown base and top).
   The trunk keeps its own height until the Stems group, when it becomes the envelope's height

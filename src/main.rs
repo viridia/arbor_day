@@ -179,13 +179,13 @@ fn scene() -> impl SceneList {
         ..default()
     };
     bsn_list! {
-        Name("SceneCamera")
+        #SceneCamera
         SceneCamera
         Camera3d
         TurntableCamera
         --
         // Draws the UI over the whole window, on top of the scene camera.
-        Name("UiCamera")
+        #UiCamera
         Camera2d
         Camera {
             order: 1,
@@ -193,28 +193,28 @@ fn scene() -> impl SceneList {
         }
         IsDefaultUiCamera
         --
-        Name("Sun")
+        #Sun
         DirectionalLight {
             shadow_maps_enabled: true,
         }
         Transform::from_xyz(4.0, 8.0, 4.0).looking_at(Vec3::ZERO, Vec3::Y)
         --
-        Name("Ground")
+        #Ground
         Ground
         Mesh3d(asset_value(Circle::new(4.0)))
         MeshMaterial3d::<StandardMaterial>(asset_value(Color::srgb(0.25, 0.28, 0.3)))
         Transform::from_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2))
         --
-        Name("Placeholder")
+        #Placeholder
         Placeholder
         --
-        Name("Plant")
+        #Plant
         Plant
         TurntableSubject
         // White, so the mesh's vertex colors show as they are.
         MeshMaterial3d::<StandardMaterial>(asset_value(Color::WHITE))
         --
-        Name("Envelope")
+        #Envelope
         PlantEnvelope
         // Framed with the plant, so Frame fits the whole crown.
         TurntableSubject
@@ -235,7 +235,7 @@ fn use_game_fov(add: On<Add<SceneCamera>>, mut projections: Query<&mut Projectio
 
 fn shell_ui() -> impl Scene {
     bsn! {
-        Name("Shell")
+        #Shell
         // `min_height: 0` down the whole chain: a flex item's minimum height is otherwise its
         // content's, so a tall panel would stretch every ancestor past the window, and nothing
         // would scroll.
@@ -256,7 +256,7 @@ fn shell_ui() -> impl Scene {
             on(save_panel_width)
             Children [
                 @FeathersPane { @size: 1.0, @min_size: MIN_PANE_WIDTH }
-                Name("Panel")
+                #Panel
                 PanelPane
                 ThemeBackgroundColor(tokens::WINDOW_BG)
                 Children [
@@ -295,7 +295,7 @@ fn shell_ui() -> impl Scene {
                             @target: #scrolled,
                             @orientation: {ControlOrientation::Vertical}
                         }
-                        Name("Scrollbar")
+                        #Scrollbar
                         Node {
                             position_type: PositionType::Absolute,
                             right: px(4),
@@ -309,7 +309,7 @@ fn shell_ui() -> impl Scene {
                 @FeathersSplitPaneHandle
                 --
                 @FeathersPane { @size: 3.0, @min_size: MIN_PANE_WIDTH }
-                Name("View")
+                #View
                 ViewportSlot
                 // Drags and scrolls over the view move the camera; the panel's stay in the panel.
                 on(orbit_on_drag)
@@ -349,7 +349,7 @@ impl ImmediateAttach<CapsPanel> for ParamPanel {
                 .on_spawn_apply_scene(|| {
                     bsn! {
                         @FeathersButton { @caption: bsn! { Text("Frame") ThemedText } }
-                        Name("Frame")
+                        #Frame
                     }
                 })
                 .activated();
