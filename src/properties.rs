@@ -31,7 +31,10 @@ use bevy_immediate::{
     },
 };
 
-use crate::fuzzy::{Distribution, Fuzzy};
+use crate::{
+    fuzzy::{Distribution, Fuzzy},
+    spread_strip::{StripRange, spread_strip},
+};
 
 /// The inclusive range a number may take. Dragging spans the same range, so the input looks and
 /// drags like a slider, unless the field is also marked [`Spinbox`].
@@ -220,14 +223,14 @@ fn number_row<T: NumberField>(
 }
 
 /// A number input named `name`, `width` wide, or taking a widget line's spare width if
-/// `Val::Auto`.
-fn number_input<T: NumberField>(
-    input: ImmEntity<CapsUiFeathers>,
+/// `Val::Auto`. Returns the input, for adding children of its own.
+fn number_input<'r, 'w, 's, T: NumberField>(
+    input: ImmEntity<'r, 'w, 's, CapsUiFeathers>,
     name: &'static str,
     look: NumberLook,
     width: Val,
     value: &mut T,
-) {
+) -> ImmEntity<'r, 'w, 's, CapsUiFeathers> {
     let grow: f32 = if width == Val::Auto { 1.0 } else { 0.0 };
     let initial = value.to_number_input_value();
     // The input writes its text from the components present when its text field spawns, so the
@@ -259,14 +262,17 @@ fn number_input<T: NumberField>(
         .on_spawn_apply_scene(
             move || bsn! { @FeathersNumberInput Node { flex_grow: {grow}, width: {width} } },
         );
-    if !input.will_be_spawned() {
-        input.number_input(value);
+    if input.will_be_spawned() {
+        input
+    } else {
+        input.number_input(value)
     }
 }
 
 /// A fuzzy number's row: its center as a slider, its spread as a spinbox, and a button that
 /// toggles the distribution's shape, showing the current one. The field's [`ValueRange`] bounds
 /// the center; the spread goes up to half of it, so a spread can reach across the whole range.
+/// With a range, the center input also shows the spread strip.
 fn fuzzy_row(
     row: ImmEntity<CapsUiFeathers>,
     name: &'static str,
@@ -275,10 +281,15 @@ fn fuzzy_row(
     fuzzy: &mut Fuzzy,
 ) {
     let center_look = NumberLook::from_attributes::<f32>(attrs);
-    let half_range = match &center_look.range {
-        Some(NumericRange::F32(range)) => (range.end() - range.start()) * 0.5,
-        _ => f32::MAX,
+    let strip_range = match &center_look.range {
+        Some(NumericRange::F32(range)) => Some(StripRange {
+            start: *range.start(),
+            end: *range.end(),
+            wrap: center_look.wrap,
+        }),
+        _ => None,
     };
+    let half_range = strip_range.map_or(f32::MAX, |range| (range.end - range.start) * 0.5);
     let spread_look = NumberLook {
         range: Some(NumericRange::F32(0.0..=half_range)),
         slider: false,
@@ -288,7 +299,13 @@ fn fuzzy_row(
     row.on_spawn_insert(move || row_node(name)).add(|ui| {
         row_caption(ui, caption);
         ui.ch().on_spawn_insert(widget_line).add(|ui| {
-            number_input(ui.ch(), "center", center_look, Val::Auto, &mut fuzzy.center);
+            let center = number_input(ui.ch(), "center", center_look, Val::Auto, &mut fuzzy.center);
+            // Drawn from this frame's center and last frame's spread and shape, a frame behind
+            // when they change.
+            if let Some(range) = strip_range {
+                let drawn = *fuzzy;
+                center.add(|ui| spread_strip(ui, drawn, range));
+            }
             number_input(ui.ch(), "spread", spread_look, px(56), &mut fuzzy.spread);
             let mut button = ui.ch().on_spawn_apply_scene(|| {
                 bsn! {

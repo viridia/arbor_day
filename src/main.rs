@@ -37,6 +37,7 @@ mod fuzzy;
 mod keys;
 mod properties;
 mod settings;
+mod spread_strip;
 mod turntable;
 
 /// The game camera's vertical field of view (Panoply's `DEFAULT_FOV`, 40°), so plants are seen as
@@ -126,6 +127,12 @@ struct Placeholder {
         @NumberInputUnits::new_static("angle_degrees"),
     )]
     tilt: Fuzzy,
+    #[reflect(
+        @ValueRange::<f32>(-std::f32::consts::PI..=std::f32::consts::PI),
+        @NumberInputUnits::new_static("angle_degrees"),
+        @Wrap,
+    )]
+    axis: Fuzzy,
     mode: PlaceholderMode,
     nested: PlaceholderNested,
 }
@@ -141,6 +148,12 @@ impl Default for Placeholder {
             length: Fuzzy::new(1.0, 0.25, Distribution::Uniform),
             // In the units shown, so the input shows no tail of digits.
             tilt: Fuzzy::new(0.0, 15.0_f32.to_radians(), Distribution::Bell),
+            // Its spread crosses the seam at 180°, so its strip is two segments.
+            axis: Fuzzy::new(
+                170.0_f32.to_radians(),
+                30.0_f32.to_radians(),
+                Distribution::Uniform,
+            ),
             mode: PlaceholderMode::First,
             nested: PlaceholderNested::default(),
         }

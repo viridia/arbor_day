@@ -19,7 +19,8 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `65d6413` | C9 Property editor, numbers (D9): `f32`, `f64`, `i32`, `i64` fields get a feathers number input beside a feathers `label`; attributes set limits, slider or spinbox look, precision, step, units and wrap; `Caption` renames a row. The test object's scale is a reflected field edited the same way, replacing C1's slider. `Placeholder` is now a component on a named entity, so plans can read it; it gained an angle (degrees, wrapping). `plans/smoke.py` types 42 into `count` (0 to 10) and reads 10 (28 steps). Worked around a duplicated first text (X9). |
 | `a19ec61` | C11 The panel scrolls, as feathers' list view does: a frame with a `ScrollbarGutter` around a node with `Overflow::scroll_y()` and `ScrollArea`, and a `FeathersScrollbar` targeting it. The gutter is reserved only while the scrollbar shows, so the panel keeps its own right margin, and the gutter is exactly the scrollbar's 10 px (6 wide, 4 from the edge), the margin being the gap before it. It first did not scroll: the shell's root and the split pane had `height: 100%` but the default minimum height, a flex item's content height, so tall content stretched every node past the window (measured: 2750 px in a 1440 px window); `min_height: 0` on both fixed it. `plans/smoke.py` checks the scrollbar exists (29 steps); scrolling checked with a temporary tall node, since the placeholder fits the default window. |
 | `df0b83c` | C12 Fuzzy numbers (D10), `src/fuzzy.rs`: `Fuzzy { center, spread, shape }`, `shape` a `Distribution`, uniform or bell. Its row: the center as a slider bounded by the field's `ValueRange`, the spread as a 56 px spinbox from 0 to half that range, and a plain tool button (`ButtonVariant::Plain`) whose icon shows the shape and toggles it, the icons the author's (`artwork/distributions.svg`, exported to `assets/icons/`, shown 18 px tall). Number inputs share `NumberLook` (the attributes) and `number_input` (the X9 workaround). A row's gap between widgets is 4 px, as between rows. `plans/fuzzy.py` toggles both shapes (10 steps). |
-| (pending) | C13 Captions above fields: a row is a column, the caption in feathers' `label_small` (its field-caption label) 2 px above the inputs, half the 4 px between rows. A number input spans the row; a fuzzy row's center, spread and shape button share a line beneath, so the center gets about 310 px of a 320 px panel rather than 53. Checkboxes keep their caption beside them. Both plans pass unchanged (29 and 10 steps). |
+| `93b3dbb` | C13 Captions above fields: a row is a column, the caption in feathers' `label_small` (its field-caption label) 2 px above the inputs, half the 4 px between rows. A number input spans the row; a fuzzy row's center, spread and shape button share a line beneath, so the center gets about 310 px of a 320 px panel rather than 53. Checkboxes keep their caption beside them. Both plans pass unchanged (29 and 10 steps). |
+| (pending) | C14 Spread strip, `src/spread_strip.rs`: a 2 px track across the full width of a fuzzy center input, a child the panel adds to the input's root (`ZIndex(1)`, `Pickable::IGNORE`), so the range maps as the fill bar's does and the strip centres on the fill edge. Lifted 2 px off the bottom edge to clear the rounded corners: a first cut insetting it 4 px each end instead sat visibly off the fill edge when the spread was small and the panel wide. A segment per piece of center ± spread within the range, clamped, or for a wrapping range brought round from the other end (two segments across the seam). Its opacity follows `Distribution::density`: flat for uniform; for bell, the mean of three uniforms, in stops every twelfth of the spread. Nodes are reinserted only when a segment changes; a spread or shape edit shows a frame late, since the strip is built inside the center input before the spread input. The colour is a fixed white at 80% (not a theme token). `Placeholder` gained `axis`, a wrapping fuzzy angle across the seam. A segment is at least 2 px wide, so a tiny spread still shows; with no spread the strip is a solid 2 px tick centred on the value, rather than vanishing. `plans/fuzzy.py` checks one segment for `length` and two for `axis`, then types a spread of 0 and checks the tick (24 steps); unit tests for the segments and the density. |
 
 ## Next
 
@@ -37,17 +38,7 @@ walking reflected fields (`field_entries`, `FieldEdit`) but not a base: it reads
 has no per-type hook, and is retained-mode.
 
 C5 did booleans, C9 numbers and C12 fuzzy numbers (`src/properties.rs`, attributes per D9);
-C13 put captions above fields. Then, in order:
-
-- **C14 Spread strip.** A strip 2 px tall inside the bottom edge of the center input, spanning
-  center ± spread against the input's range: an absolutely placed child that the panel adds to the
-  number input's root, its `left` and `width` in percent, clamped to 0 to 100 (clamping in place
-  of clipping), inset to clear the rounded corners, `Pickable::IGNORE` so scrubbing still reaches
-  the input. Flat for uniform, fading toward its ends for bell. A wrapping center's spread can
-  cross the seam: two segments, and the generator samples such angles modulo a turn. Not drawn in
-  the fill gradient: feathers' fill code matches exactly one gradient.
-
-Then a chunk each, ids assigned when planned: enums; nested structs as subpanes; `Vec`s with add
+C13 put captions above fields, C14 drew the spread strip. Then a chunk each, ids assigned when planned: enums; nested structs as subpanes; `Vec`s with add
 and remove; colors. Notes:
 
   - The number input scrubs with Shift for slow and has no fast modifier (X4).
@@ -87,7 +78,8 @@ and remove; colors. Notes:
   center ± spread, so spread means the farthest a value goes in both shapes (a true gaussian's
   tails would break the requirement that every variation is bounded). Every varied parameter
   draws three numbers whatever its shape, so toggling one shape does not shift the rest of its
-  random stream. Serialized by reflection only, no serde derives: TOML in settings
+  random stream. A wrapping parameter's spread can cross the seam (the spread strip draws it in
+  two segments), so the generator samples such angles modulo a turn. Serialized by reflection only, no serde derives: TOML in settings
   (C8), JSON as the glTF extra, one representation that cannot drift. Seedling's groups for
   reference: `trunk`; `branch[]`, one per level; and the leaf as `leafGroup` (arrangement),
   `leafShape` and `leafColor`.
@@ -216,6 +208,9 @@ and remove; colors. Notes:
   captions); (4) not yet filed. *Gate:* fixes in the Bevy we build against; then wrapping inputs
   may keep the slider look, rows may use the input's own caption, and angle drags round in
   degrees.
+- **X11** The spread strip's colour from the feathers theme rather than a fixed white at 80%. A
+  gradient's stops take colours, not tokens, so it means reading `UiTheme` in the panel and
+  redrawing on a theme change. *Gate:* a second theme, or the white reading poorly over a fill.
 - **X8** Pinch to zoom on a trackpad. C4 zooms on vertical scroll only; a pinch arrives as
   `PinchGesture`, not as a pointer event, so it needs its own path to the view. *Gate:* scroll
   zoom proves awkward on a trackpad.
