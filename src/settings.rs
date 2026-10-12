@@ -6,8 +6,7 @@ use bevy::{
     ecs::system::NonSendMarker,
     prelude::*,
     settings::{
-        ReflectSettingsGroup, SaveSettingsDeferred, SaveSettingsSync, SettingsGroup,
-        SettingsPlugin,
+        ReflectSettingsGroup, SaveSettingsDeferred, SaveSettingsSync, SettingsGroup, SettingsPlugin,
     },
     ui_widgets::{Pane, ValueChange},
     window::{PrimaryWindow, WindowCloseRequested, WindowMode, WindowResized, WindowResolution},
@@ -58,7 +57,11 @@ impl Plugin for AppSettingsPlugin {
         apply_window_settings(app);
         app.add_systems(
             Update,
-            (update_window_settings, exit_on_window_close, fit_panel_width),
+            (
+                update_window_settings,
+                exit_on_window_close,
+                fit_panel_width,
+            ),
         )
         .add_systems(Last, save_on_exit);
     }

@@ -9,6 +9,7 @@ use bevy::{
         events::{PointerDrag, PointerScroll},
         pointer::PointerButton,
     },
+    camera::visibility::VisibilitySystems,
     prelude::*,
     transform::TransformSystems,
 };
@@ -27,11 +28,14 @@ pub struct TurntablePlugin;
 
 impl Plugin for TurntablePlugin {
     fn build(&self, app: &mut App) {
+        // Framing reads the subject's world transform, so it runs after propagation; otherwise a
+        // change to the subject reaches the camera a frame late and the view jitters.
         app.add_systems(
             PostUpdate,
             (keep_subject_framed, place_camera)
                 .chain()
-                .before(TransformSystems::Propagate),
+                .after(TransformSystems::Propagate)
+                .before(VisibilitySystems::UpdateFrusta),
         );
     }
 }
@@ -183,15 +187,23 @@ fn world_bounds(
     bounds
 }
 
-fn place_camera(mut cameras: Query<(&TurntableCamera, &mut Transform), Changed<TurntableCamera>>) {
-    for (turntable, mut transform) in &mut cameras {
+/// Runs after transform propagation, so it sets the camera's `GlobalTransform` as well; the camera
+/// must have no parent.
+fn place_camera(
+    mut cameras: Query<
+        (&TurntableCamera, &mut Transform, &mut GlobalTransform),
+        Changed<TurntableCamera>,
+    >,
+) {
+    for (turntable, mut transform, mut global) in &mut cameras {
         let offset = Vec3::new(
             turntable.elevation.cos() * turntable.azimuth.sin(),
             turntable.elevation.sin(),
             turntable.elevation.cos() * turntable.azimuth.cos(),
         ) * turntable.distance;
-        *transform =
-            Transform::from_translation(turntable.focus + offset).looking_at(turntable.focus, Vec3::Y);
+        *transform = Transform::from_translation(turntable.focus + offset)
+            .looking_at(turntable.focus, Vec3::Y);
+        *global = GlobalTransform::from(*transform);
     }
 }
 

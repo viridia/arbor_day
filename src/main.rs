@@ -7,8 +7,8 @@ use bevy::{
         FeathersPlugins,
         containers::{subpane, subpane_body, subpane_header},
         controls::{
-            FeathersButton, FeathersPane, FeathersSlider, FeathersSplitPane,
-            FeathersSplitPaneHandle,
+            FeathersButton, FeathersPane, FeathersSplitPane, FeathersSplitPaneHandle,
+            NumberInputUnits,
         },
         dark_theme::create_dark_theme,
         theme::{ThemeBackgroundColor, ThemedText, UiTheme},
@@ -16,20 +16,24 @@ use bevy::{
     },
     prelude::*,
     ui::{IsDefaultUiCamera, UiGlobalTransform, UiSystems},
-    ui_widgets::{SliderPrecision, SliderStep, split_pane_self_update},
+    ui_widgets::split_pane_self_update,
     window::{ExitCondition, PrimaryWindow},
 };
 use bevy_immediate::{
     Imm,
     attach::{BevyImmediateAttachPlugin, ImmediateAttach},
-    ui::{CapsUiFeathers, activated::ImmUiActivated, slider_value::ImmUiSliderValue},
+    ui::{CapsUiFeathers, activated::ImmUiActivated},
 };
 use bevy_remote_driver::RemoteDriverPlugin;
 use keys::KeysPlugin;
+use properties::{Caption, Precision, Spinbox, ValueRange, Wrap};
 use settings::{AppSettingsPlugin, MIN_PANE_WIDTH, save_panel_width};
-use turntable::{TurntableCamera, TurntablePlugin, TurntableSubject, orbit_on_drag, zoom_on_scroll};
+use turntable::{
+    TurntableCamera, TurntablePlugin, TurntableSubject, orbit_on_drag, zoom_on_scroll,
+};
 
 mod keys;
+mod properties;
 mod settings;
 mod turntable;
 
@@ -59,7 +63,7 @@ fn main() {
         .insert_resource(UiTheme(create_dark_theme()))
         .add_observer(use_game_fov)
         .add_systems(Startup, (scene.spawn(), shell_ui.spawn()))
-        .add_systems(Update, apply_test_shape)
+        .add_systems(Update, (apply_test_shape, apply_placeholder))
         .add_systems(PostUpdate, follow_viewport_slot.after(UiSystems::Layout))
         .run();
 }
@@ -84,6 +88,7 @@ struct ParamPanel;
 #[derive(Component, Reflect, Clone, PartialEq)]
 #[reflect(Component)]
 struct TestShape {
+    #[reflect(@ValueRange::<f32>(0.25..=2.0), @Precision(2), @Caption("Scale"))]
     scale: f32,
 }
 
@@ -92,6 +97,60 @@ impl Default for TestShape {
         Self { scale: 1.0 }
     }
 }
+
+/// Stands in for the species while the property editor is built: a field of each kind it will
+/// edit. `show_ground` hides the ground, so an edit shows in the view. A component on a named
+/// entity rather than a resource, so plans can read it.
+#[derive(Component, Reflect, Clone, PartialEq)]
+#[reflect(Component)]
+struct Placeholder {
+    #[reflect(@Caption("Show ground"))]
+    show_ground: bool,
+    smooth: bool,
+    #[reflect(@ValueRange::<i32>(0..=10), @Spinbox)]
+    count: i32,
+    #[reflect(@ValueRange::<f32>(0.0..=1.0), @Precision(2))]
+    amount: f32,
+    #[reflect(
+        @ValueRange::<f32>(-std::f32::consts::PI..=std::f32::consts::PI),
+        @NumberInputUnits::new_static("angle_degrees"),
+        @Wrap,
+    )]
+    angle: f32,
+    mode: PlaceholderMode,
+    nested: PlaceholderNested,
+}
+
+impl Default for Placeholder {
+    fn default() -> Self {
+        Self {
+            show_ground: true,
+            smooth: false,
+            count: 3,
+            amount: 0.5,
+            angle: 0.0,
+            mode: PlaceholderMode::First,
+            nested: PlaceholderNested::default(),
+        }
+    }
+}
+
+#[derive(Reflect, Clone, Copy, PartialEq, Default)]
+enum PlaceholderMode {
+    #[default]
+    First,
+    Second,
+}
+
+#[derive(Reflect, Clone, PartialEq, Default)]
+struct PlaceholderNested {
+    flag: bool,
+    size: f32,
+}
+
+/// The ground disc, which [`Placeholder::show_ground`] hides.
+#[derive(Component, Default, Clone)]
+struct Ground;
 
 fn scene() -> impl SceneList {
     bsn_list! {
@@ -116,9 +175,13 @@ fn scene() -> impl SceneList {
         Transform::from_xyz(4.0, 8.0, 4.0).looking_at(Vec3::ZERO, Vec3::Y)
         --
         Name("Ground")
+        Ground
         Mesh3d(asset_value(Circle::new(4.0)))
         MeshMaterial3d::<StandardMaterial>(asset_value(Color::srgb(0.25, 0.28, 0.3)))
         Transform::from_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2))
+        --
+        Name("Placeholder")
+        Placeholder
         --
         Name("TestObject")
         TestShape
@@ -186,6 +249,7 @@ fn shell_ui() -> impl Scene {
 struct PanelParams<'w, 's> {
     shapes: Query<'w, 's, &'static mut TestShape>,
     cameras: Query<'w, 's, &'static mut TurntableCamera>,
+    placeholders: Query<'w, 's, &'static mut Placeholder>,
 }
 
 impl ImmediateAttach<CapsUiFeathers> for ParamPanel {
@@ -196,30 +260,17 @@ impl ImmediateAttach<CapsUiFeathers> for ParamPanel {
             return;
         };
         // Edit a copy: writing through `Mut` every frame would mark the shape changed every frame.
-        let mut scale = shape.scale;
-
+        let mut edited = shape.clone();
         ui.ch().on_spawn_apply_scene(subpane).add(|ui| {
             ui.ch().on_spawn_apply_scene(subpane_header).add(|ui| {
                 ui.ch()
                     .on_spawn_apply_scene(|| bsn! { Text("Test object") ThemedText });
             });
-            ui.ch().on_spawn_apply_scene(subpane_body).add(|ui| {
-                ui.ch()
-                    .on_spawn_apply_scene(|| {
-                        bsn! {
-                            @FeathersSlider { @min: 0.25, @max: 2.0 }
-                            SliderStep(0.05)
-                            SliderPrecision(2)
-                            Name("Scale")
-                        }
-                    })
-                    .slider(&mut scale);
-            });
+            ui.ch()
+                .on_spawn_apply_scene(subpane_body)
+                .add(|ui| properties::edit_fields(ui, &mut edited));
         });
-
-        if shape.scale != scale {
-            shape.scale = scale;
-        }
+        shape.set_if_neq(edited);
 
         ui.ch().on_spawn_apply_scene(subpane).add(|ui| {
             ui.ch().on_spawn_apply_scene(subpane_header).add(|ui| {
@@ -241,6 +292,37 @@ impl ImmediateAttach<CapsUiFeathers> for ParamPanel {
                 }
             });
         });
+
+        let Ok(mut placeholder) = params.placeholders.single_mut() else {
+            return;
+        };
+        let mut edited = placeholder.clone();
+        ui.ch().on_spawn_apply_scene(subpane).add(|ui| {
+            ui.ch().on_spawn_apply_scene(subpane_header).add(|ui| {
+                ui.ch()
+                    .on_spawn_apply_scene(|| bsn! { Text("Placeholder") ThemedText });
+            });
+            ui.ch()
+                .on_spawn_apply_scene(subpane_body)
+                .add(|ui| properties::edit_fields(ui, &mut edited));
+        });
+        placeholder.set_if_neq(edited);
+    }
+}
+
+fn apply_placeholder(
+    placeholders: Query<&Placeholder, Changed<Placeholder>>,
+    mut grounds: Query<&mut Visibility, With<Ground>>,
+) {
+    let Ok(placeholder) = placeholders.single() else {
+        return;
+    };
+    for mut visibility in &mut grounds {
+        *visibility = if placeholder.show_ground {
+            Visibility::Inherited
+        } else {
+            Visibility::Hidden
+        };
     }
 }
 

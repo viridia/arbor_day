@@ -15,6 +15,8 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `d1ae223` | C2 Settings (D6): window position, size and fullscreen (after Panoply's `window_settings.rs`), and the panel's width, in `src/settings.rs`; saved on any exit, including the driver's. `plans/smoke.py` checks the panel starts at its default width; the run saved to its own `settings/`, and the developer's file was untouched. |
 | `eafef5a` | C4 Turntable camera (D7), `src/turntable.rs`: spin by horizontal drag or scroll, tilt by vertical drag, zoom by vertical scroll toward the height under the pointer, a Frame button that also resets the tilt; the home elevation and field of view are the game's. Speeds tuned by hand. The test torus stands on edge so a spin shows. `plans/smoke.py` checks the camera starts framed from the front and clicks Frame (9 steps). Spin and zoom are checked by hand: the driver cannot drag or scroll. |
 | `0d1aee5` | C3 Keys (D8), `src/keys.rs`: one observer on the window; F frames, + and − zoom about the focus (`=` and `_` too, for the unshifted and shifted keys), Ctrl+Q quits through the saving exit path, except on macOS, where the OS takes Cmd+Q before the app sees it. `plans/smoke.py` presses − twice and F, checking framing is let go and taken back (15 steps). By hand: typing F into a number input does not frame; clicking the view gives letter keys back. |
+| (pending) | C5 Property editor, booleans: `src/properties.rs` walks a reflected struct's fields, a row per field named after it; `bool` gets a feathers checkbox bound through reflection, every other field a label with its name and type. A `Placeholder` resource (two `bool`s, `i32`, `f32`, an enum, a nested struct) stands in for the species; `show_ground` hides the ground. The panel edits a copy and writes back with `set_if_neq`. `plans/smoke.py` checks the labels and toggles the ground (22 steps). |
+| (pending) | C9 Property editor, numbers (D9): `f32`, `f64`, `i32`, `i64` fields get a feathers number input beside a feathers `label`; attributes set limits, slider or spinbox look, precision, step, units and wrap; `Caption` renames a row. The test object's scale is a reflected field edited the same way, replacing C1's slider. `Placeholder` is now a component on a named entity, so plans can read it; it gained an angle (degrees, wrapping). `plans/smoke.py` types 42 into `count` (0 to 10) and reads 10 (28 steps). Worked around a duplicated first text (X9). |
 
 ## Next
 
@@ -31,23 +33,20 @@ subpanes; seedling's look is not a target. `bevy_inspector`'s `details_panel` is
 walking reflected fields (`field_entries`, `FieldEdit`) but not a base: it reads no attributes,
 has no per-type hook, and is retained-mode.
 
-- **C5 Property editor: booleans.** A placeholder resource of a few field types (a `bool` or two,
-  an `i32`, an `f32`, an enum, a nested struct). The panel walks it by reflection: `bool` fields
-  get a feathers checkbox, every other field a static label with its name and type. An edited
-  checkbox writes through reflection. Then a chunk each, ids assigned when planned: numbers (limits,
-  step, precision, units, angles that wrap); center and spread, as two number inputs; enums;
-  nested structs as subpanes; `Vec`s with add and remove; colors. The C1 scale slider becomes a
-  number input with the numbers chunk. Notes:
-  - Angles: `NumberInputUnits` (`angle_degrees`) shows radians as degrees; an angle that is a
-    full turn gets a `HardLimit` of one turn and `NumberInputWrap::Wrap` (seedling's `axis`); one
-    that is not (seedling's `angle`, away from the parent branch) clamps. A wrapping center's
-    spread can cross the seam, so the generator samples such angles modulo a turn.
-  - The spread input's `SoftLimit` fill shows the spread against its maximum. A band on the
-    center's input would need the number input to expose its inner fill entity (upstream).
+C5 did booleans and C9 numbers (`src/properties.rs`, attributes per D9). Then a chunk each, ids
+assigned when planned: center and spread, as two number inputs; enums; nested structs as
+subpanes; `Vec`s with add and remove; colors. Notes for those chunks:
+
+  - Center and spread: the attributes on a `Varied` field bound its center. The spread input's
+    `SoftLimit` fill shows the spread against its maximum. A band on the center's input would
+    need the number input to expose its inner fill entity (upstream). A wrapping center's spread
+    can cross the seam, so the generator samples such angles modulo a turn.
   - Distribution shape: a plain (borderless) icon button beside the spread toggles uniform and
     bell, its icon showing the current shape; the author draws both icons (PNG, since feathers
     icons are images).
   - The number input scrubs with Shift for slow and has no fast modifier (X4).
+  - Labels above fields: try stacking each caption above its input, as in the Bevy editor's
+    Figma mocks, instead of beside it; the next chunk after C9 is committed.
 - **C8 Working document in settings.** A settings group holding the working species and, once
   set, the file path, so a restart returns to unsaved edits and Save writes to the right file.
   Seedling did the same (`localStorage` key `sapling-doc`, written on unload: the parameter JSON,
@@ -129,7 +128,25 @@ has no per-type hook, and is retained-mode.
   subject; spinning and tilting keep it, zooming clears it, Frame sets it again. Frame leaves the
   spin alone. The view is not saved: every start frames the subject.
   The module is shaped like `bevy_camera_controller`'s (a component, a plugin, input from picking
-  events) so it can be offered upstream (X7).
+  events) so it can be offered upstream (X7). Framing reads the subject's world transform, so it
+  runs after transform propagation (before frustum update) and sets the camera's
+  `GlobalTransform` itself; run before propagation, a scale change reached the camera a frame
+  late and the view jittered. The camera must therefore have no parent.
+- **D9** Property editor attributes follow the author's `bevy_reactor_prop_inspect`
+  (`../bevy_reactor_3/crates/bevy_reactor_prop_inspect/src/attribute.rs`), the design borrowed,
+  not the code (it uses older feathers names): `ValueRange<T>`, `Precision(i32)`, `Step<T>`,
+  written `#[reflect(@ValueRange::<f32>(0.0..=1.0), @Precision(2))]`, read from the type
+  (`StructInfo::field_at(i).custom_attributes()`), not the value. Added: `Caption` renames a row;
+  `NumberInputUnits` is itself the units attribute (`angle_degrees` shows radians as degrees);
+  `Wrap` for an angle of a full turn (seedling's `axis`; its `angle`, away from the parent branch,
+  clamps), which also makes the input a spinbox, since feathers clamps a drag to the soft limit
+  before wrapping (X10); `Spinbox`. Every number is a feathers number input; the slider is not used. Its
+  `ValueRange` is always the `HardLimit`: no value here normally sits in a range while
+  occasionally leaving it (HDR illuminance would), so a soft limit is never a narrower range. It is
+  the same range, and its presence only chooses the look: a fill bar dragged like a slider (the
+  default, as in reactor), or with `Spinbox` none, showing the step chevrons on hover. Row
+  captions use feathers' `label`, which sets its own font: plain `Text` in a row node gets the
+  default font, since the panel's font does not reach it. Multiline text waits for text fields.
 - **D8** Keys are handled by an observer of `FocusedInput<KeyboardInput>` on the primary window,
   not `bevy_action_map`: the keys are fixed, with no rebinding or saved bindings. Focused input
   reaches the window either way, directly when nothing has focus or bubbling up from the focused
@@ -161,6 +178,22 @@ has no per-type hook, and is retained-mode.
   2026-10-11). Pan-orbit can turn off pan and fix the up direction, but cannot lock pitch, and it
   orbits about the point under the pointer rather than a fixed vertical axis through the subject.
   *Gate:* C4 landed and used long enough to settle its controls.
+- **X9** Report upstream: a feathers number input given its value twice before its text applies
+  shows the text twice ("11" for 1, "0°0°" for 0°). Its observers queue select-all and insert on
+  `EditableText` after comparing against `value()`, which ignores queued edits, so the second
+  write is queued too, and its select-all does not cover the first insert. It happens on the
+  spawn frame, where the scene's default `NumericValue` writes "0" and `bevy_immediate`'s
+  `number_input` always inserts the value again. `src/properties.rs` works around it: the value,
+  limits and units are inserted before the scene, so the first write is right, and the binding
+  starts the frame after (`will_be_spawned`). *Gate:* the author decides where to report it
+  (feathers or `bevy_text`), or Panoply's editor hits it.
+- **X10** Feathers number input gaps, upstream. (1) Its step chevrons show on hover but nothing
+  handles a click (no observer on `NumberInputDecrement` or `NumberInputIncrement`, at our commit
+  and on newer main), so a press falls through to the scrubber and drags. (2) A drag clamps to
+  the `SoftLimit` before applying `NumberInputWrap`, so a wrapping input with the slider look
+  never wraps when dragged (typing does); skip the soft clamp when wrapping. (3) A caption of its
+  own: `label_text` is the short sigil label (X, Y, Z), not a field caption. *Gate:* the author's
+  call, as the number input's author.
 - **X8** Pinch to zoom on a trackpad. C4 zooms on vertical scroll only; a pinch arrives as
   `PinchGesture`, not as a pointer event, so it needs its own path to the view. *Gate:* scroll
   zoom proves awkward on a trackpad.
