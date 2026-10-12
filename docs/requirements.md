@@ -8,8 +8,8 @@ The tool makes the flora for Panoply (`../panoply`) and shares context with it: 
 the asset pipeline it feeds, and the editor UI architecture (X3 in Panoply's migration ledger,
 `docs/migration.md`).
 
-This document says what the tool must do. It does not pick a growth algorithm; that needs a
-survey first (Research, below).
+This document says what the tool must do. The growth model is chosen in
+[growth-model.md](growth-model.md), after the survey under Research, below.
 
 Backward compatibility is not a goal. The existing plants stay as they are, and seedling stays
 available to regenerate them. New models may replace them species by species if they look
@@ -23,9 +23,10 @@ from general tree generators (SpeedTree, Blender's Sapling, The Grove, Arbaro):
 1. **Fine structure goes into the texture, not the mesh.** Twigs and leaves are painted onto
    a few alpha-masked cards; only the trunk and major limbs are geometry. The budget is
    hundreds of triangles per plant, not tens of thousands.
-2. **The art style is art nouveau, after Mucha.** Plants have dark outlines like the rest of
-   the game. Bark meshes carry outline metadata, which the game draws as an inverted hull
-   (Panoply's `docs/outlines.md`); leaf textures have their outlines painted in.
+2. **The art style is art nouveau, after Mucha: flat pastels, with the visual detail in the
+   scene rather than in the plants' textures.** A species may have dark outlines like the rest
+   of the game, or none. Outlined bark meshes carry outline metadata, which the game draws as an
+   inverted hull (Panoply's `docs/outlines.md`); outlined leaf textures have them painted in.
 
 Botanical accuracy matters only as far as it reads at a distance. Silhouette, crown shape, and
 art direction come first.
@@ -82,8 +83,9 @@ Priority: **M** must, **S** should, **C** could.
 ### Output
 
 - **M** One glTF binary per plant: a scene named after the plant, a bark mesh and a leaf mesh.
-- **M** Bark: `POSITION`, `NORMAL`, opaque material with the outline width as a material extra,
-  `"outline": <width>`, as the game reads it. No pipeline patching needed.
+- **M** Bark: `POSITION`, `NORMAL`, opaque material. When the species is outlined, the outline
+  width as a material extra, `"outline": <width>`, as the game reads it. No pipeline patching
+  needed.
 - **M** Leaves: `POSITION`, `NORMAL`, `TEXCOORD_0`, double-sided, alpha mode `MASK` with an
   authored cutoff, texture embedded.
 - **M** Units are meters, +Y up, origin at the base of the trunk at ground level.
@@ -116,9 +118,12 @@ Priority: **M** must, **S** should, **C** could.
   the outer branches sized to fill the crown envelope.
 - **M** Card shapes beyond the current creased quad: at least crossed cards and cupped cards,
   chosen so the crown reads as a mass from any angle (plants are rotated randomly).
-- **M** Leaf textures painted with outlines: a dark stroke around each leaf or leaf cluster,
-  its width set in texture pixels and checked at the size the card shows on screen.
-- **M** Twigs and small stems painted into the texture, with the bark color and outline.
+- **M** Outlines are a per-species switch covering bark and leaves. When on, leaf textures are
+  painted with a dark stroke around each leaf or leaf cluster, its width set in texture pixels
+  and checked at the size the card shows on screen.
+- **M** Twigs and small stems painted into the texture, with the bark color, and the outline
+  when the species has one.
+- **M** Leaf textures in flat colors: fills and simple gradients, not painted detail.
 - **S** More than one leaf texture region per plant (e.g. a dense cluster for the crown
   interior, a sparse one for edges).
 - **S** Painted styles beyond a single leaf shape: needle clusters for conifers, blossoms,
@@ -225,8 +230,9 @@ conventions, and lessons:
 Features:
 
 - **M** Live preview while editing parameters: orbit, zoom, wireframe, triangle count.
-- **M** Preview with the game's look: outline shell, alpha mask, the game's sun and hemisphere
-  light, and a ground plane.
+- **M** Preview with the game's look: alpha mask, the game's sun and hemisphere light, and a
+  ground plane. The outline switch shows in both places it applies: the bark drawn with the
+  outline shell, and the leaf texture regenerated with outlines painted in.
 - **M** A view of the leaf texture beside the 3D preview.
 - **S** A preview at game distance and scale: a small patch of forest of the current plant
   (and its variants), so the author judges it as it will be seen.

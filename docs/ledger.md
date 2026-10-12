@@ -22,6 +22,8 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `93b3dbb` | C13 Captions above fields: a row is a column, the caption in feathers' `label_small` (its field-caption label) 2 px above the inputs, half the 4 px between rows. A number input spans the row; a fuzzy row's center, spread and shape button share a line beneath, so the center gets about 310 px of a 320 px panel rather than 53. Checkboxes keep their caption beside them. Both plans pass unchanged (29 and 10 steps). |
 | (pending) | C14 Spread strip, `src/spread_strip.rs`: a 2 px track across the full width of a fuzzy center input, a child the panel adds to the input's root (`ZIndex(1)`, `Pickable::IGNORE`), so the range maps as the fill bar's does and the strip centres on the fill edge. Lifted 2 px off the bottom edge to clear the rounded corners: a first cut insetting it 4 px each end instead sat visibly off the fill edge when the spread was small and the panel wide. A segment per piece of center ± spread within the range, clamped, or for a wrapping range brought round from the other end (two segments across the seam). Its opacity follows `Distribution::density`: flat for uniform; for bell, the mean of three uniforms, in stops every twelfth of the spread. Nodes are reinserted only when a segment changes; a spread or shape edit shows a frame late, since the strip is built inside the center input before the spread input. The colour is a fixed white at 80% (not a theme token). `Placeholder` gained `axis`, a wrapping fuzzy angle across the seam. A segment is at least 2 px wide, so a tiny spread still shows; with no spread the strip is a solid 2 px tick centred on the value, rather than vanishing. `plans/fuzzy.py` checks one segment for `length` and two for `axis`, then types a spread of 0 and checks the tick (24 steps); unit tests for the segments and the density. |
 
+| (pending) | C6 Growth-model survey, `docs/growth-model.md`, with a screenshot of seedling's trees in Panoply; the choice is D11. Requirements: outlines become a per-species switch, shown in the preview on the bark shell and the leaf texture; leaf textures are flat colors. |
+
 ## Next
 
 File handling brings Save and Open keys (D8).
@@ -67,10 +69,8 @@ and remove; colors. Notes:
   - Cmd+Z in a focused text field: the text input passes it on, so the window would undo a
     document edit mid-typing. The PR's per-field contexts are for this case.
   - Keys: Cmd+Z and Cmd+Shift+Z (Ctrl+Z and Ctrl+Y elsewhere), in `src/keys.rs` (D8).
-- **C6 Growth-model survey** (requirements, Research): a short write-up with a recommendation.
-  The gate for the generator.
-- **C10 Species data model**, after C6, since the model follows the growth model, and seedling's
-  is wrong where the requirements say (roll compounding through levels, card facing tied to the
+- **C10 Species data model**, its groups the layers of the growth model (D11; sketched in
+  `docs/growth-model.md`, Consequences), and seedling's is wrong where the requirements say (roll compounding through levels, card facing tied to the
   tip, growth modes that disable half the parameters, ranges as low and high). Reflectable types
   with `Default` for initial values and attributes for the editor; a
   `Fuzzy { center, spread, shape }` type for varied parameters, `shape` uniform or bell. The bell
@@ -162,6 +162,10 @@ and remove; colors. Notes:
   `FuzzyNumber` (rules out a later `Fuzzy<Color>`). A fuzzy number's membership is not a
   probability, but nobody reading `length: Fuzzy` takes it for anything but a bounded variation.
 
+- **D11** The growth model is parametric per level, with a crown envelope that sets limb reach
+  and foliage placement, every direction measured against world up, and cards oriented apart
+  from the branch tangent. The design and the survey behind it are in `docs/growth-model.md`.
+
 ## Deferred
 
 - **X1** The generator as its own library crate, beside the app: no Bevy dependency beyond
@@ -203,9 +207,10 @@ and remove; colors. Notes:
   own: `label_text` is the short sigil label (X, Y, Z), not a field caption. (4) A drag rounds
   to `NumberInputPrecision` in the canonical units, not the units shown: an angle with precision
   2 snaps to 0.01 rad, so a drag lands on values like 17.761973°; round through the
-  `UnitsFormat` instead. Read from `emit_drag_value_change`, not yet seen by hand. Filed upstream
-  as bevy#26124 (chevrons), bevy#26125 (wrap under a soft limit) and bevy#26126 (field
-  captions); (4) not yet filed. *Gate:* fixes in the Bevy we build against; then wrapping inputs
+  `UnitsFormat` instead. Without a `NumberInputPrecision` a drag does not round at all (tilt
+  drags to `86.90488°`), and a precision cannot help an angle, since `Precision(0)` snaps to whole
+  radians. Filed upstream as bevy#26124 (chevrons), bevy#26125 (wrap under a soft limit),
+  bevy#26126 (field captions) and bevy#26130 (rounding). *Gate:* fixes in the Bevy we build against; then wrapping inputs
   may keep the slider look, rows may use the input's own caption, and angle drags round in
   degrees.
 - **X11** The spread strip's colour from the feathers theme rather than a fixed white at 80%. A
@@ -214,6 +219,14 @@ and remove; colors. Notes:
 - **X8** Pinch to zoom on a trackpad. C4 zooms on vertical scroll only; a pinch arrives as
   `PinchGesture`, not as a pointer event, so it needs its own path to the view. *Gate:* scroll
   zoom proves awkward on a trackpad.
+- **X12** Space colonization (`docs/growth-model.md`) choosing the directions of the last limb
+  level only, competing for points in the envelope's shell. *Gate:* crowns show holes or read
+  as too regular.
+- **X13** Panoply's leaf material keeps the exported normal on back faces: `cull_mode: None`
+  with `double_sided: false`, set where flora loads, since Bevy flips a double-sided material's
+  back-face normal (`prepare_world_normal`) and crown shading normals would then point inward.
+  An item for Panoply's ledger. *Gate:* crown softness above 0 judged worth keeping, in the
+  preview and in the game.
 
 ## Notes
 
