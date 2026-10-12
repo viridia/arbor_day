@@ -5,10 +5,10 @@ BIN = "arbor_day"
 STATS = "arbor_day::plant::PlantStats"
 
 
-def set_number(driver, path, text):
-    """Replaces a number input's text. A click places the cursor rather than selecting, so clear
-    what is there first."""
-    driver.click(f"Shell/Panel/limbs[0]/{path}/input")
+def set_number(driver, path, text, input="input"):
+    """Replaces a number input's text; a fuzzy row's center input is `center`. A click places the
+    cursor rather than selecting, so clear what is there first."""
+    driver.click(f"Shell/Panel/limbs[0]/{path}/{input}")
     driver.key("End")
     for _ in range(6):
         driver.key("Backspace")
@@ -27,7 +27,7 @@ def run(driver):
     set_number(driver, "nodes", "2")
     driver.expect("Plant", STATS, {"limbs": 6})
     # Nodes from the trunk's foot: the lower of the two sits under the crown base.
-    set_number(driver, "start", "0")
+    set_number(driver, "start", "0", input="center")
     driver.expect("Plant", STATS, {"limbs": 3})
     driver.screenshot("below_the_crown")
     set_number(driver, "nodes", "0")

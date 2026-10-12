@@ -6,6 +6,7 @@ use std::f32::consts::TAU;
 use bevy::math::{Quat, Vec2, Vec3};
 
 use crate::{
+    fuzzy::Fuzzy,
     random::Rng,
     species::{Envelope, LimbLevel, Profile, Species, Trunk},
 };
@@ -19,6 +20,14 @@ const TRACE_STEP: f32 = 0.02;
 
 /// The distance along a limb between wander's random turns, in metres.
 const WANDER_SPACING: f32 = 1.0;
+
+/// Streams forked from a stem's own: its children take theirs by index from 0, so these take
+/// indices no child reaches.
+const WANDER_STREAM: u64 = u64::MAX;
+/// The values drawn for a limb itself: its angle and reach.
+const OWN_VALUES_STREAM: u64 = u64::MAX - 1;
+/// The layout of a stem's children: their span and the turns between nodes.
+const LAYOUT_STREAM: u64 = u64::MAX - 2;
 
 /// Halvings in finding where a ray leaves the envelope: the largest envelope's 90 m bound to under
 /// a tenth of a millimetre.
@@ -204,27 +213,42 @@ fn grow_level(
 ) {
     let nodes = params.nodes.max(0) as u32;
     let per_node = params.per_node.max(1) as u32;
-    let (angle_sin, angle_cos) = params.angle.sin_cos();
+    // The span and the turns between nodes are the parent's, drawn from a stream of its own beside
+    // its limbs'.
+    let mut layout = parent.rng.fork(LAYOUT_STREAM);
+    let span_start = draw(&params.start, "start", &mut layout);
+    let span_end = draw(&params.end, "end", &mut layout);
+    let mut node_azimuth = 0.0;
     for node in 0..nodes {
+        // A turn is any angle, so the divergence is not clamped; adding it is the same modulo a
+        // turn.
+        let divergence = params.divergence.sample(&mut layout);
+        if node > 0 {
+            node_azimuth += divergence;
+        }
         // Centered in equal shares of the span, so one node sits halfway along it.
-        let t = params.start + (params.end - params.start) * (node as f32 + 0.5) / nodes as f32;
+        let t = span_start + (span_end - span_start) * (node as f32 + 0.5) / nodes as f32;
         let frame = parent.frame(t);
         let across = frame.side.cross(frame.tangent);
         let base_radius = params.radius * frame.radius;
         for limb in 0..per_node {
-            let azimuth = node as f32 * params.divergence + TAU * limb as f32 / per_node as f32;
+            let rng = parent.rng.fork((node * per_node + limb) as u64);
+            let mut own = rng.fork(OWN_VALUES_STREAM);
+            let angle = draw(&params.angle, "angle", &mut own);
+            let reach = draw(&params.reach, "reach", &mut own);
+            let azimuth = node_azimuth + TAU * limb as f32 / per_node as f32;
             let (sin, cos) = azimuth.sin_cos();
+            let (angle_sin, angle_cos) = angle.sin_cos();
             let direction =
                 frame.tangent * angle_cos + (frame.side * cos + across * sin) * angle_sin;
-            let reach = params.reach * distance_to_envelope(envelope, frame.point, direction);
-            let rng = parent.rng.fork((node * per_node + limb) as u64);
+            let reach = reach * distance_to_envelope(envelope, frame.point, direction);
             let start = Ring {
                 center: frame.point,
                 tangent: direction,
                 side: upper_side(direction, frame.side),
                 at: 0.0,
             };
-            let rings = grow_limb(envelope, params, start, reach, rng.fork(0));
+            let rings = grow_limb(envelope, params, start, reach, rng.fork(WANDER_STREAM));
             if rings.len() >= 2 && rings[rings.len() - 1].at > base_radius {
                 grown.push(Limb {
                     level,
@@ -306,6 +330,12 @@ fn grow_limb(
         rings.push(ring);
     }
     rings
+}
+
+/// A value drawn from `fuzzy`, clamped to the limits of `LimbLevel`'s field `field`.
+fn draw(fuzzy: &Fuzzy, field: &str, rng: &mut Rng) -> f32 {
+    let limits = LimbLevel::limits(field);
+    fuzzy.sample(rng).clamp(*limits.start(), *limits.end())
 }
 
 /// `from` turned toward `toward` by at most `angle`, both unit vectors.
@@ -525,7 +555,7 @@ fn arc(length: f32, bend: f32, t: f32) -> (Vec3, Vec3) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::random::Seed;
+    use crate::{fuzzy::Distribution, random::Seed};
 
     fn trunk_with(sides: i32, bend_degrees: f32) -> Trunk {
         Trunk {
@@ -621,19 +651,28 @@ mod tests {
         assert_eq!(distance_to_envelope(&envelope, Vec3::Y, Vec3::X), 0.0);
     }
 
-    /// The default species with every level's limbs straight.
-    fn straight() -> Species {
+    /// The default species with every level's limbs straight and nothing varied.
+    fn regular() -> Species {
         let mut species = Species::default();
         for level in &mut species.limbs {
             level.bend_rate = 0.0;
             level.wander = 0.0;
+            for fuzzy in [
+                &mut level.divergence,
+                &mut level.start,
+                &mut level.end,
+                &mut level.angle,
+                &mut level.reach,
+            ] {
+                fuzzy.spread = 0.0;
+            }
         }
         species
     }
 
     #[test]
     fn limbs_reach_their_share_of_the_way_to_the_envelope() {
-        let species = straight();
+        let species = regular();
         let limbs = limbs(&species);
         assert_eq!(limbs.len(), 8);
         for limb in &limbs {
@@ -641,24 +680,44 @@ mod tests {
             let tip = limb.origin() + limb.direction() * limb.length();
             let rest = distance_to_envelope(&species.envelope, tip, limb.direction());
             let whole = limb.length() + rest;
-            assert!((limb.length() - species.limbs[0].reach * whole).abs() < 1e-3);
+            assert!((limb.length() - species.limbs[0].reach.center * whole).abs() < 1e-3);
         }
     }
 
     #[test]
     fn limbs_leave_the_trunk_at_their_angle() {
         // At the default bend the trunk is one straight segment, base to tip.
-        let species = Species::default();
+        let species = regular();
         let tip = *trunk(&species.trunk).positions.last().unwrap();
         for limb in limbs(&species) {
             let angle = limb.direction().angle_between(tip);
-            assert!((angle - species.limbs[0].angle).abs() < 1e-5, "{limb:?}");
+            assert!((angle - species.limbs[0].angle.center).abs() < 1e-5, "{limb:?}");
+        }
+    }
+
+    #[test]
+    fn varied_values_stay_within_their_spread_and_limits() {
+        let mut species = regular();
+        species.limbs[0].angle = Fuzzy::new(60.0_f32.to_radians(), 10.0_f32.to_radians(), Distribution::Uniform);
+        // Reaching past the envelope is clamped to reaching it.
+        species.limbs[0].reach = Fuzzy::new(0.95, 0.2, Distribution::Uniform);
+        let tip = *trunk(&species.trunk).positions.last().unwrap();
+        let limbs = limbs(&species);
+        let angles: Vec<f32> = limbs
+            .iter()
+            .map(|limb| limb.direction().angle_between(tip).to_degrees())
+            .collect();
+        assert!(angles.iter().all(|angle| (49.99..=70.01).contains(angle)), "{angles:?}");
+        assert!(angles.iter().any(|angle| (angle - angles[0]).abs() > 0.1), "{angles:?}");
+        for limb in &limbs {
+            let whole = distance_to_envelope(&species.envelope, limb.origin(), limb.direction());
+            assert!(limb.length() <= whole + 1e-3);
         }
     }
 
     #[test]
     fn deeper_levels_grow_on_the_level_before() {
-        let mut species = straight();
+        let mut species = regular();
         let first = limbs(&species);
         species.limb_levels = 2;
         let both = limbs(&species);
@@ -679,13 +738,13 @@ mod tests {
                 })
                 .expect("a parent under the limb");
             let angle = limb.direction().angle_between(parent.direction());
-            assert!((angle - species.limbs[1].angle).abs() < 1e-3);
+            assert!((angle - species.limbs[1].angle.center).abs() < 1e-3);
         }
     }
 
     #[test]
     fn limbs_bend_toward_their_bend() {
-        let mut species = straight();
+        let mut species = regular();
         // Level, turning fast: the default limbs start 60° from up and soon lie level.
         species.limbs[0].bend_rate = 90.0_f32.to_radians();
         for limb in limbs(&species) {
@@ -775,7 +834,7 @@ mod tests {
 
     #[test]
     fn nodes_hold_their_limbs_evenly_around() {
-        let mut species = straight();
+        let mut species = regular();
         // Straight, so azimuth about the trunk is azimuth about world up.
         species.trunk.bend = 0.0;
         species.limbs[0].nodes = 2;
@@ -789,14 +848,14 @@ mod tests {
         assert!((apart - TAU / 3.0).abs() < 1e-5);
         // The next node turns by the divergence.
         let turned = (azimuth(&limbs[3]) - azimuth(&limbs[0])).rem_euclid(TAU);
-        assert!((turned - species.limbs[0].divergence).abs() < 1e-5);
+        assert!((turned - species.limbs[0].divergence.center).abs() < 1e-5);
     }
 
     #[test]
     fn limbs_starting_below_the_crown_are_left_out() {
-        let mut species = Species::default();
+        let mut species = regular();
         // Nodes at about 0.45, 1.35, 2.25, 3.15 and 4.05 m; the crown base is at 1.8 m.
-        species.limbs[0].start = 0.0;
+        species.limbs[0].start = Fuzzy::exactly(0.0);
         species.limbs[0].nodes = 5;
         assert_eq!(limbs(&species).len(), 3);
     }

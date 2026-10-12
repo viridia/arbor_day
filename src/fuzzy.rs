@@ -23,13 +23,14 @@ impl Fuzzy {
         }
     }
 
+    /// A value with no spread.
+    pub fn exactly(center: f32) -> Self {
+        Self::new(center, 0.0, Distribution::Uniform)
+    }
+
     /// A value within center ± spread. Always draws three numbers, whatever the shape, so
     /// toggling one parameter's shape leaves every later draw from `rng` as it was. A caller
     /// with a wrapping angle reduces it modulo a turn; one with limits clamps it.
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "nothing in the species varies yet")
-    )]
     pub fn sample(&self, rng: &mut Rng) -> f32 {
         let draws = [rng.unit(), rng.unit(), rng.unit()];
         let t = match self.shape {

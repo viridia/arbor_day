@@ -1,8 +1,11 @@
 //! The species: every parameter that shapes a plant, edited in the panel and read by the generator.
 
-use bevy::{feathers::controls::NumberInputUnits, prelude::*};
+use bevy::{feathers::controls::NumberInputUnits, prelude::*, reflect::Typed};
+
+use std::ops::RangeInclusive;
 
 use crate::{
+    fuzzy::{Distribution, Fuzzy},
     properties::{Caption, Precision, ShownCount, Spinbox, ValueRange, Wrap},
     random::Seed,
 };
@@ -53,13 +56,13 @@ impl Default for Species {
                 LimbLevel {
                     nodes: 5,
                     per_node: 2,
-                    divergence: 90.0_f32.to_radians(),
-                    start: 0.3,
-                    end: 0.9,
-                    angle: 45.0_f32.to_radians(),
+                    divergence: degrees(90.0, 20.0),
+                    start: Fuzzy::exactly(0.3),
+                    end: Fuzzy::exactly(0.9),
+                    angle: degrees(45.0, 10.0),
                     bend_rate: 20.0_f32.to_radians(),
                     wander: 30.0_f32.to_radians(),
-                    reach: 0.6,
+                    reach: Fuzzy::new(0.6, 0.1, Distribution::Bell),
                     radius: 0.5,
                     sides: 3,
                     ..LimbLevel::default()
@@ -67,13 +70,13 @@ impl Default for Species {
                 LimbLevel {
                     nodes: 3,
                     per_node: 2,
-                    divergence: 90.0_f32.to_radians(),
-                    start: 0.4,
-                    end: 0.9,
-                    angle: 40.0_f32.to_radians(),
+                    divergence: degrees(90.0, 20.0),
+                    start: Fuzzy::exactly(0.4),
+                    end: Fuzzy::exactly(0.9),
+                    angle: degrees(40.0, 10.0),
                     bend_rate: 20.0_f32.to_radians(),
                     wander: 40.0_f32.to_radians(),
-                    reach: 0.5,
+                    reach: Fuzzy::new(0.5, 0.1, Distribution::Bell),
                     radius: 0.5,
                     sides: 3,
                     ..LimbLevel::default()
@@ -162,26 +165,26 @@ pub struct LimbLevel {
     #[reflect(@ValueRange::<i32>(1..=6), @Spinbox, @Caption("Per node"))]
     pub per_node: i32,
     /// The turn about the parent from one node to the next: 137.5° for a spiral, 180° for
-    /// alternate, 90° for opposite pairs crossing.
+    /// alternate, 90° for opposite pairs crossing. Drawn for each node.
     #[reflect(
         @ValueRange::<f32>(0.0..=std::f32::consts::TAU),
         @Wrap,
         @NumberInputUnits::new_static("angle_degrees"),
     )]
-    pub divergence: f32,
-    /// Where the lowest node sits, as a fraction of the parent's length.
+    pub divergence: Fuzzy,
+    /// Where the lowest node sits, as a fraction of the parent's length. Drawn for each parent.
     #[reflect(@ValueRange::<f32>(0.0..=1.0), @Precision(2), @Caption("Span start"))]
-    pub start: f32,
-    /// Where the highest node sits, as a fraction of the parent's length.
+    pub start: Fuzzy,
+    /// Where the highest node sits, as a fraction of the parent's length. Drawn for each parent.
     #[reflect(@ValueRange::<f32>(0.0..=1.0), @Precision(2), @Caption("Span end"))]
-    pub end: f32,
+    pub end: Fuzzy,
     /// The angle from the parent's direction where the limb starts: 0 runs along it, 90° square
-    /// to it.
+    /// to it. Drawn for each limb.
     #[reflect(
         @ValueRange::<f32>(0.0..=std::f32::consts::PI),
         @NumberInputUnits::new_static("angle_degrees"),
     )]
-    pub angle: f32,
+    pub angle: Fuzzy,
     /// The angle from world up the limb bends toward, keeping its compass heading: 0 up, as a
     /// poplar's, 90° level, as an oak's, 180° down, as a weeping tree's.
     #[reflect(
@@ -205,9 +208,9 @@ pub struct LimbLevel {
     )]
     pub wander: f32,
     /// Length as a fraction of the distance from the limb's start to the envelope along its
-    /// starting direction. A limb also stops where it leaves the envelope.
+    /// starting direction. A limb also stops where it leaves the envelope. Drawn for each limb.
     #[reflect(@ValueRange::<f32>(0.0..=1.0), @Precision(2))]
-    pub reach: f32,
+    pub reach: Fuzzy,
     /// Radius at the base, as a fraction of the parent's radius where the limb starts. Limbs taper
     /// as the trunk does.
     #[reflect(@ValueRange::<f32>(0.05..=1.0), @Precision(2))]
@@ -222,18 +225,37 @@ impl Default for LimbLevel {
         Self {
             nodes: 8,
             per_node: 1,
-            divergence: 137.5_f32.to_radians(),
-            start: 0.4,
-            end: 0.9,
-            angle: 60.0_f32.to_radians(),
+            divergence: degrees(137.5, 10.0),
+            start: Fuzzy::exactly(0.4),
+            end: Fuzzy::exactly(0.9),
+            angle: degrees(60.0, 10.0),
             bend_toward: 90.0_f32.to_radians(),
             bend_rate: 15.0_f32.to_radians(),
             wander: 20.0_f32.to_radians(),
-            reach: 0.9,
+            reach: Fuzzy::new(0.9, 0.1, Distribution::Bell),
             radius: 0.5,
             sides: 4,
         }
     }
+}
+
+impl LimbLevel {
+    /// The limits of the field `name` (its `ValueRange`), to which values drawn for it are
+    /// clamped.
+    pub fn limits(name: &str) -> RangeInclusive<f32> {
+        Self::type_info()
+            .as_struct()
+            .ok()
+            .and_then(|info| info.field(name))
+            .and_then(|field| field.custom_attributes().get::<ValueRange<f32>>())
+            .map(|range| range.0.clone())
+            .unwrap_or_else(|| panic!("LimbLevel has no field `{name}` with a ValueRange<f32>"))
+    }
+}
+
+/// A bell around an angle, both in degrees, as the panel shows them.
+fn degrees(center: f32, spread: f32) -> Fuzzy {
+    Fuzzy::new(center.to_radians(), spread.to_radians(), Distribution::Bell)
 }
 
 /// The bark's look, the same on every stem.

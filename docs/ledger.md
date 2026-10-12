@@ -31,7 +31,8 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `0a3924b` | C18 One level of limbs (D14), reaching toward the envelope; `plans/limbs.py`.           |
 | `1e7bd38` | C19 Up to three limb levels (D15), each at an angle from its parent; `plans/levels.py`. |
 | `5621ce7` | C26 Random streams and `Fuzzy::sample` (D16), `src/random.rs`.                          |
-|           | C23 Curved limbs (D17): bend and wander per metre, and the seed; `plans/growth.py`.     |
+| `258fcd8` | C23 Curved limbs (D17): bend and wander per metre, and the seed; `plans/growth.py`.     |
+|           | C28 Varied level fields (D18): span, divergence, angle and reach are `Fuzzy`.           |
 
 ## Next
 
@@ -45,14 +46,18 @@ Seedling's look is not a target. `bevy_inspector`'s `details_panel` also walks r
 but reads no attributes, has no per-type hook, and is retained-mode. The generator sets the order
 (`docs/growth-model.md`), each step bringing the widget kind it needs:
 
-- **C28 Varied level fields**: bounded jitter within per-level limits; the level's fields that
-  seedling varied become `Fuzzy` (span, reach, angle, divergence), drawn from each limb's
-  stream (D16, D17). Where each value is used, the generator takes a wrapping angle modulo a
-  turn and clamps the rest to the field's limits, since the limits are editor attributes it
-  does not read. Then drop the `dead_code` expectation on `Fuzzy::sample`.
+- **Review of the varied fields**, by the author from the panel: which other level fields
+  (bend, wander, radius, nodes) should vary, and the defaults' spreads.
 - **C29 Pipe-model radii**, and limbs below a radius left to the foliage rather than meshed.
   Until then limbs taper as the trunk does, and three default levels are heavy (wandering limbs
   add rings, 2 × sides triangles each); revisit the third level's defaults then.
+- **C30 Forks**, Weber and Penn's splits: at a point along a limb it ends, and copies of it
+  carry on, turned apart by the fork angle. The copies are the same level as the limb, not its
+  children, so they reach the envelope and bear children as it would; turning both by half the
+  angle reads as the symmetric Y of a child deflecting its parent. Per level: forks per limb (0
+  to 2), fork at (`Fuzzy`, a fraction of the limb), fork angle (`Fuzzy`), and fork roll, where
+  the Y's plane lies, from level to upright. *After* C29, so each copy's radius follows the
+  pipe model (the limb's over √2 for two); C24's leader fork uses the same mechanism.
 - **C24 Stems**: the trunk's height becomes the envelope's height times the leader extent; until
   then the trunk keeps its own height.
 - **C25 A HUD over the view**, to free the panel: every control that changes the preview rather
@@ -73,9 +78,11 @@ but reads no attributes, has no per-type hook, and is retained-mode. The generat
   buttons once the surface lands. Propose the layout before code.
 - **C27 Remove `Placeholder`** (`src/main.rs`) once every widget kind it stands in for has a
   real customer. Numbers, spinboxes, wrapped angles, selects and subpanes have theirs in the
-  species. Left: `Fuzzy` (C28; move `plans/fuzzy.py` onto a species field), and the checkbox,
-  whose only use is `show_ground`, which C25 moves to the HUD; a species bool, or a test of
-  the checkbox row of its own, keeps it covered. *After* C28 and C25.
+  species, and `Fuzzy` has its in the limb levels. Left: `plans/fuzzy.py` reads `Placeholder`
+  (the driver reads components, not the species resource, D12), so it needs another way to
+  read a fuzzy field's state; and the checkbox, whose only use is `show_ground`, which C25
+  moves to the HUD; a species bool, or a test of the checkbox row of its own, keeps it
+  covered. *After* C25.
 - **Computed values are rounded where written**, from the first writer (Reset, Randomize, values
   derived from the generator): the number input never rounds what it shows, so round to the
   field's `Precision` in the units shown, as feathers' color input does
@@ -107,9 +114,10 @@ but reads no attributes, has no per-type hook, and is retained-mode. The generat
 - **C10 Species data model**, its groups the layers of the growth model (D11;
   `docs/growth-model.md`, Consequences), correcting seedling where the requirements say.
   Reflectable types with `Default` for initial values and attributes for the editor, after the
-  fields settle (C28, C29, C24), so saved files are not broken by every change. Serialized by
+  fields settle (the review of varied fields, C29, C24), so saved files are not broken by every change. Serialized by
   reflection only, no serde derives: TOML in settings (C8) and JSON as the glTF
-  extra, one representation that cannot drift. A golden test: a species serialized and compared
+  extra, one representation that cannot drift. The file records the generator version it was
+  made with (X15). A golden test: a species serialized and compared
   with a JSON file in the repo, brought in with `include_str!` rather than quoted inline.
   Seedling's groups for reference: `trunk`;
   `branch[]`, one per level; the leaf as `leafGroup` (arrangement), `leafShape` and `leafColor`.
@@ -250,6 +258,13 @@ but reads no attributes, has no per-type hook, and is retained-mode. The generat
   gives it a number input without a fill and a Random button. The seed list for variants
   (requirements, a species file plus a seed list) can grow from it.
 
+- **D18** A level's varied fields are drawn where they belong: the span once per parent and the
+  divergence once per node, from the parent's layout stream; the angle and reach once per limb,
+  from the limb's own. Fixed streams take fork indices from the top (`u64::MAX` down), so they
+  never meet a child's index. A drawn value is clamped to its field's `ValueRange`, read from
+  the type by reflection (`LimbLevel::limits`), so the limits have one owner; the divergence is
+  not clamped, since any turn is a turn.
+
 ## Deferred
 
 - **X1** The generator as its own library crate, beside the app: no Bevy dependency beyond
@@ -317,6 +332,17 @@ but reads no attributes, has no per-type hook, and is retained-mode. The generat
 - **X14** Feathers' color input should save its `ColorInputSettings` (the picker's mode and recent
   colors) with the app's settings, but does not: a bug upstream, being fixed by someone else.
   Nothing to do here but confirm it once fixed. *Gate:* the fix in the Bevy we build against.
+- **X15** Keeping old trees as they were when the generator changes. The game ships exported
+  meshes, so a tree changes only when regenerated: edited again, or rebuilt by the command-line
+  export (X1) if the asset pipeline runs it. Rather than keeping every past generator (Cargo
+  could depend on several versions under different names), three measures:
+  (1) golden tests, species files with a hash of their meshes, so no output changes by
+  accident; (2) a generator version in the species file, raised only when output changes on
+  purpose, which the export can warn about; (3) an additive change defaults to the old output
+  when the file lacks its field (no wander, say), so a new species' default and a missing
+  field's default are different things. What remains (fixes, reordered draws) is re-exported
+  deliberately, the earlier export being the record. *Gate:* the first species used in
+  Panoply.
 
 ## Notes
 
