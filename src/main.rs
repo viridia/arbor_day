@@ -25,6 +25,7 @@ use bevy_immediate::{
     ui::{CapsUiFeathers, activated::ImmUiActivated},
 };
 use bevy_remote_driver::RemoteDriverPlugin;
+use fuzzy::{Distribution, Fuzzy};
 use keys::KeysPlugin;
 use properties::{Caption, Precision, Spinbox, ValueRange, Wrap};
 use settings::{AppSettingsPlugin, MIN_PANE_WIDTH, save_panel_width};
@@ -32,6 +33,7 @@ use turntable::{
     TurntableCamera, TurntablePlugin, TurntableSubject, orbit_on_drag, zoom_on_scroll,
 };
 
+mod fuzzy;
 mod keys;
 mod properties;
 mod settings;
@@ -117,6 +119,13 @@ struct Placeholder {
         @Wrap,
     )]
     angle: f32,
+    #[reflect(@ValueRange::<f32>(0.0..=2.0), @Precision(2))]
+    length: Fuzzy,
+    #[reflect(
+        @ValueRange::<f32>(-std::f32::consts::FRAC_PI_2..=std::f32::consts::FRAC_PI_2),
+        @NumberInputUnits::new_static("angle_degrees"),
+    )]
+    tilt: Fuzzy,
     mode: PlaceholderMode,
     nested: PlaceholderNested,
 }
@@ -129,6 +138,9 @@ impl Default for Placeholder {
             count: 3,
             amount: 0.5,
             angle: 0.0,
+            length: Fuzzy::new(1.0, 0.25, Distribution::Uniform),
+            // In the units shown, so the input shows no tail of digits.
+            tilt: Fuzzy::new(0.0, 15.0_f32.to_radians(), Distribution::Bell),
             mode: PlaceholderMode::First,
             nested: PlaceholderNested::default(),
         }

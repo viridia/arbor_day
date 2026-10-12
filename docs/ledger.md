@@ -18,6 +18,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `65d6413` | C5 Property editor, booleans: `src/properties.rs` walks a reflected struct's fields, a row per field named after it; `bool` gets a feathers checkbox bound through reflection, every other field a label with its name and type. A `Placeholder` resource (two `bool`s, `i32`, `f32`, an enum, a nested struct) stands in for the species; `show_ground` hides the ground. The panel edits a copy and writes back with `set_if_neq`. `plans/smoke.py` checks the labels and toggles the ground (22 steps). |
 | `65d6413` | C9 Property editor, numbers (D9): `f32`, `f64`, `i32`, `i64` fields get a feathers number input beside a feathers `label`; attributes set limits, slider or spinbox look, precision, step, units and wrap; `Caption` renames a row. The test object's scale is a reflected field edited the same way, replacing C1's slider. `Placeholder` is now a component on a named entity, so plans can read it; it gained an angle (degrees, wrapping). `plans/smoke.py` types 42 into `count` (0 to 10) and reads 10 (28 steps). Worked around a duplicated first text (X9). |
 | `a19ec61` | C11 The panel scrolls, as feathers' list view does: a frame with a `ScrollbarGutter` around a node with `Overflow::scroll_y()` and `ScrollArea`, and a `FeathersScrollbar` targeting it. The gutter is reserved only while the scrollbar shows, so the panel keeps its own right margin, and the gutter is exactly the scrollbar's 10 px (6 wide, 4 from the edge), the margin being the gap before it. It first did not scroll: the shell's root and the split pane had `height: 100%` but the default minimum height, a flex item's content height, so tall content stretched every node past the window (measured: 2750 px in a 1440 px window); `min_height: 0` on both fixed it. `plans/smoke.py` checks the scrollbar exists (29 steps); scrolling checked with a temporary tall node, since the placeholder fits the default window. |
+| (pending) | C12 Fuzzy numbers (D10), `src/fuzzy.rs`: `Fuzzy { center, spread, shape }`, `shape` a `Distribution`, uniform or bell. Its row: the center as a slider bounded by the field's `ValueRange`, the spread as a 56 px spinbox from 0 to half that range, and a plain tool button (`ButtonVariant::Plain`) whose icon shows the shape and toggles it, the icons the author's (`artwork/distributions.svg`, exported to `assets/icons/`, shown 18 px tall). Number inputs share `NumberLook` (the attributes) and `number_input` (the X9 workaround). A row's gap between widgets is 4 px, as between rows. `plans/fuzzy.py` toggles both shapes (10 steps). |
 
 ## Next
 
@@ -26,7 +27,7 @@ File handling brings Save and Open keys (D8).
 The property editor is built against a placeholder struct of a few field types, a widget kind per
 chunk; the species types come later (C10). Its shape so far: the panel walks the reflected value
 in its immediate-mode `construct`, rows keyed by field path (`GetPath` syntax, which C7's undo
-records also use); a table from `TypeId` to widget for types with their own row (`Varied`,
+records also use); a table from `TypeId` to widget for types with their own row (`Fuzzy`,
 later colors); field attributes (`#[reflect(@…)]`, read with `get_attribute`) for limits, step,
 precision, units and wrap. Every number is a feathers number input: with a `SoftLimit` it looks
 and drags like a slider and still takes typing, so the slider is not used. Groups are feathers
@@ -34,20 +35,30 @@ subpanes; seedling's look is not a target. `bevy_inspector`'s `details_panel` is
 walking reflected fields (`field_entries`, `FieldEdit`) but not a base: it reads no attributes,
 has no per-type hook, and is retained-mode.
 
-C5 did booleans and C9 numbers (`src/properties.rs`, attributes per D9). Then a chunk each, ids
-assigned when planned: center and spread, as two number inputs; enums; nested structs as
-subpanes; `Vec`s with add and remove; colors. Notes for those chunks:
+C5 did booleans, C9 numbers and C12 fuzzy numbers (`src/properties.rs`, attributes per D9).
+Then, in order:
 
-  - Center and spread: the attributes on a `Varied` field bound its center. The spread input's
-    `SoftLimit` fill shows the spread against its maximum. A band on the center's input would
-    need the number input to expose its inner fill entity (upstream). A wrapping center's spread
-    can cross the seam, so the generator samples such angles modulo a turn.
-  - Distribution shape: a plain (borderless) icon button beside the spread toggles uniform and
-    bell, its icon showing the current shape; the author draws both icons (PNG, since feathers
-    icons are images).
+- **C13 Labels above fields.** Stack each caption above its input, as in the Bevy editor's Figma
+  mocks, instead of beside it. The fuzzy row needs it most: beside a caption, the center slider
+  gets about 53 px of a 320 px panel.
+- **C14 Spread strip.** A strip 2 px tall inside the bottom edge of the center input, spanning
+  center ± spread against the input's range: an absolutely placed child that the panel adds to the
+  number input's root, its `left` and `width` in percent, clamped to 0 to 100 (clamping in place
+  of clipping), inset to clear the rounded corners, `Pickable::IGNORE` so scrubbing still reaches
+  the input. Flat for uniform, fading toward its ends for bell. A wrapping center's spread can
+  cross the seam: two segments, and the generator samples such angles modulo a turn. Not drawn in
+  the fill gradient: feathers' fill code matches exactly one gradient.
+
+Then a chunk each, ids assigned when planned: enums; nested structs as subpanes; `Vec`s with add
+and remove; colors. Notes:
+
   - The number input scrubs with Shift for slow and has no fast modifier (X4).
-  - Labels above fields: try stacking each caption above its input, as in the Bevy editor's
-    Figma mocks, instead of beside it; the next chunk after C9 is committed.
+  - Digits: the number input never rounds what it shows ("don't lie to the user"), so a value
+    the app computes is rounded where it is written, to the field's `Precision` in the units
+    shown, as feathers' color input rounds its channels to a tenth before inserting them
+    (`scaled_number_input_value`). Defaults are written in the units shown
+    (`15.0_f32.to_radians()`, not `0.3`). Applies when the first such writer lands (Reset,
+    Randomize, values derived from the generator).
 - **C8 Working document in settings.** A settings group holding the working species and, once
   set, the file path, so a restart returns to unsaved edits and Save writes to the right file.
   Seedling did the same (`localStorage` key `sapling-doc`, written on unload: the parameter JSON,
@@ -73,7 +84,7 @@ subpanes; `Vec`s with add and remove; colors. Notes for those chunks:
   is wrong where the requirements say (roll compounding through levels, card facing tied to the
   tip, growth modes that disable half the parameters, ranges as low and high). Reflectable types
   with `Default` for initial values and attributes for the editor; a
-  `Varied { center, spread, shape }` type for varied parameters, `shape` uniform or bell. The bell
+  `Fuzzy { center, spread, shape }` type for varied parameters, `shape` uniform or bell. The bell
   is the mean of three uniform samples: cheap, bell-shaped, and bounded, never past
   center ± spread, so spread means the farthest a value goes in both shapes (a true gaussian's
   tails would break the requirement that every variation is bounded). Every varied parameter
@@ -155,6 +166,11 @@ subpanes; `Vec`s with add and remove; colors. Notes for those chunks:
   editing keys, its own Cmd shortcuts) and passes the rest on (Escape after blurring, Enter,
   Tab, other Cmd shortcuts), so letter keys never fire while typing and Cmd+S works while a
   field has focus. Checked in `bevy_ui_widgets`' `text_input.rs` and `bevy_input_focus`.
+- **D10** A varied parameter is a `Fuzzy`, after the fuzzy number: a value with a peak, bounded
+  support either side, and a shape. Rejected: `Varied` (vague), "window" and "error bars" (the
+  right idea, but read otherwise), `Tolerance` (one of its fields would share the name),
+  `FuzzyNumber` (rules out a later `Fuzzy<Color>`). A fuzzy number's membership is not a
+  probability, but nobody reading `length: Fuzzy` takes it for anything but a bounded variation.
 
 ## Deferred
 
@@ -194,9 +210,14 @@ subpanes; `Vec`s with add and remove; colors. Notes for those chunks:
   and on newer main), so a press falls through to the scrubber and drags. (2) A drag clamps to
   the `SoftLimit` before applying `NumberInputWrap`, so a wrapping input with the slider look
   never wraps when dragged (typing does); skip the soft clamp when wrapping. (3) A caption of its
-  own: `label_text` is the short sigil label (X, Y, Z), not a field caption. Filed upstream as
-  bevy#26124 (chevrons), bevy#26125 (wrap under a soft limit) and bevy#26126 (field captions). *Gate:* fixes in the Bevy we build against; then wrapping inputs may keep
-  the slider look, and rows may use the input's own caption.
+  own: `label_text` is the short sigil label (X, Y, Z), not a field caption. (4) A drag rounds
+  to `NumberInputPrecision` in the canonical units, not the units shown: an angle with precision
+  2 snaps to 0.01 rad, so a drag lands on values like 17.761973°; round through the
+  `UnitsFormat` instead. Read from `emit_drag_value_change`, not yet seen by hand. Filed upstream
+  as bevy#26124 (chevrons), bevy#26125 (wrap under a soft limit) and bevy#26126 (field
+  captions); (4) not yet filed. *Gate:* fixes in the Bevy we build against; then wrapping inputs
+  may keep the slider look, rows may use the input's own caption, and angle drags round in
+  degrees.
 - **X8** Pinch to zoom on a trackpad. C4 zooms on vertical scroll only; a pinch arrives as
   `PinchGesture`, not as a pointer event, so it needs its own path to the view. *Gate:* scroll
   zoom proves awkward on a trackpad.
