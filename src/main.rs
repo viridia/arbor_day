@@ -29,7 +29,7 @@ use bevy_remote_driver::RemoteDriverPlugin;
 use fuzzy::{Distribution, Fuzzy};
 use keys::KeysPlugin;
 use plant::{Plant, PlantEnvelope, PlantPlugin, PlantStats};
-use properties::{CapsPanel, Caption, Precision, Spinbox, ValueRange, Wrap};
+use properties::{CapsPanel, Caption, Precision, PropertiesPlugin, Spinbox, ValueRange, Wrap};
 use settings::{AppSettingsPlugin, MIN_PANE_WIDTH, save_panel_width};
 use species::Species;
 use turntable::{
@@ -65,6 +65,7 @@ fn main() {
             }),
             AppSettingsPlugin,
             FeathersPlugins,
+            PropertiesPlugin,
             BevyImmediateAttachPlugin::<CapsPanel, ParamPanel>::new(),
             RemoteDriverPlugin,
             TurntablePlugin,

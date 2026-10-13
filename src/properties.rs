@@ -15,7 +15,7 @@ use bevy::{
             ButtonVariant, ColorInputValue, FeathersCheckbox, FeathersColorInput, FeathersListRow,
             FeathersNumberInput, FeathersSelect, FeathersToolButton, HardLimit,
             NumberInputPrecision, NumberInputStep, NumberInputUnits, NumberInputWrap, OptionIndex,
-            SoftLimit,
+            SoftLimit, UnitsFormat, UnitsRegistry,
         },
         display::{caption as option_caption, icon, label, label_small},
         theme::ThemedText,
@@ -28,7 +28,7 @@ use bevy::{
         enums::{DynamicEnum, DynamicVariant, VariantInfo},
     },
     ui::Selected,
-    ui_widgets::{NumericRange, SetSelected, ValueChange},
+    ui_widgets::{NumericFormat, NumericRange, NumericValue, SetSelected, ValueChange},
 };
 use bevy_immediate::{
     CapSet, Imm, ImmCapAccessRequests, ImmCapability, ImmEntity, impl_capability_set,
@@ -146,6 +146,43 @@ pub struct Wrap;
 /// count field gets no row of its own.
 #[derive(Debug, Clone, Reflect)]
 pub struct ShownCount(pub &'static str);
+
+/// Registers the editor's units with feathers.
+pub struct PropertiesPlugin;
+
+impl Plugin for PropertiesPlugin {
+    fn build(&self, app: &mut App) {
+        app.world_mut()
+            .resource_mut::<UnitsRegistry>()
+            .insert(&RatioPercent);
+    }
+}
+
+/// Units for a fraction shown as a percentage, `ratio_percent`: 0.4 shows as 40%. Typed text is
+/// read as a percentage, with or without the sign.
+pub struct RatioPercent;
+
+impl UnitsFormat for RatioPercent {
+    fn id(&self) -> &'static str {
+        "ratio_percent"
+    }
+
+    fn format(&self, value: NumericValue, _editing: bool) -> String {
+        // From the value's shortest decimal, so 0.3 shows as 30%: 0.3 as an f32 times 100 is
+        // nearer 30.000002 than 30.
+        let decimal = value.to_string().parse::<f64>().unwrap_or_default() * 100.0;
+        match value {
+            NumericValue::F32(_) => format!("{}%", decimal as f32),
+            _ => format!("{decimal}%"),
+        }
+    }
+
+    fn parse(&self, value: String, fmt: NumericFormat) -> Result<NumericValue, String> {
+        let digits = value.trim();
+        let digits = digits.strip_suffix('%').unwrap_or(digits).trim_end();
+        NumericValue::parse_from(digits, fmt).map(|percent| percent.scale_by(0.01))
+    }
+}
 
 /// A number type the editor shows in a number input.
 trait NumberField: ImmUiNumericValue + FromReflect + Typed + GetTypeRegistration + TypePath {
@@ -726,5 +763,21 @@ fn show_variant(world: &mut World, select: Entity, index: usize) {
             entity: select,
             row,
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn percentages_show_without_a_tail_and_read_back() {
+        for (fraction, shown) in [(0.3, "30%"), (0.07, "7%"), (0.955, "95.5%"), (1.0, "100%")] {
+            assert_eq!(RatioPercent.format(NumericValue::F32(fraction), false), shown);
+            for typed in [shown, shown.trim_end_matches('%'), &format!("{shown} ")] {
+                let read = RatioPercent.parse(typed.to_string(), NumericFormat::F32);
+                assert_eq!(read, Ok(NumericValue::F32(fraction)), "{typed:?}");
+            }
+        }
     }
 }

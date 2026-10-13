@@ -96,7 +96,12 @@ pub struct Envelope {
     #[reflect(@ValueRange::<f32>(0.5..=30.0), @Precision(1))]
     pub height: f32,
     /// Where the crown starts, as a fraction of its height.
-    #[reflect(@ValueRange::<f32>(0.0..=0.95), @Precision(2), @Caption("Crown base"))]
+    #[reflect(
+        @ValueRange::<f32>(0.0..=0.95),
+        @Precision(2),
+        @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("Crown base"),
+    )]
     pub crown_base: f32,
     /// The crown's radius where it is widest, in meters.
     #[reflect(@ValueRange::<f32>(0.1..=15.0), @Precision(1))]
@@ -139,7 +144,11 @@ pub struct Trunk {
     #[reflect(@ValueRange::<f32>(0.02..=1.0), @Precision(2))]
     pub radius: f32,
     /// How much narrower the top is than the base: 0 keeps the radius, 1 closes to a point.
-    #[reflect(@ValueRange::<f32>(0.0..=1.0), @Precision(2))]
+    #[reflect(
+        @ValueRange::<f32>(0.0..=1.0),
+        @Precision(2),
+        @NumberInputUnits::new_static("ratio_percent"),
+    )]
     pub taper: f32,
     /// Sides of each ring.
     #[reflect(@ValueRange::<i32>(3..=8), @Spinbox)]
@@ -173,10 +182,20 @@ pub struct LimbLevel {
     )]
     pub divergence: Fuzzy,
     /// Where the lowest node sits, as a fraction of the parent's length. Drawn for each parent.
-    #[reflect(@ValueRange::<f32>(0.0..=1.0), @Precision(2), @Caption("Span start"))]
+    #[reflect(
+        @ValueRange::<f32>(0.0..=1.0),
+        @Precision(2),
+        @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("Span start"),
+    )]
     pub start: Fuzzy,
     /// Where the highest node sits, as a fraction of the parent's length. Drawn for each parent.
-    #[reflect(@ValueRange::<f32>(0.0..=1.0), @Precision(2), @Caption("Span end"))]
+    #[reflect(
+        @ValueRange::<f32>(0.0..=1.0),
+        @Precision(2),
+        @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("Span end"),
+    )]
     pub end: Fuzzy,
     /// The angle from the parent's direction where the limb starts: 0 runs along it, 90° square
     /// to it. Drawn for each limb.
@@ -197,7 +216,11 @@ pub struct LimbLevel {
     /// crown's radius: 0 keeps it straight. Measured against the crown, so a shrub and a tree
     /// with the same settings bend alike, and against what is left, so every bend target moves
     /// the tip, and longer limbs bend further.
-    #[reflect(@ValueRange::<f32>(0.0..=0.99), @Precision(2))]
+    #[reflect(
+        @ValueRange::<f32>(0.0..=0.99),
+        @Precision(2),
+        @NumberInputUnits::new_static("ratio_percent"),
+    )]
     pub bend: f32,
     /// The most the limb turns at random, per metre, so it winds rather than running straight.
     #[reflect(
@@ -208,11 +231,19 @@ pub struct LimbLevel {
     pub wander: f32,
     /// Length as a fraction of the distance from the limb's start to the envelope along its
     /// starting direction. A limb also stops where it leaves the envelope. Drawn for each limb.
-    #[reflect(@ValueRange::<f32>(0.0..=1.0), @Precision(2))]
+    #[reflect(
+        @ValueRange::<f32>(0.0..=1.0),
+        @Precision(2),
+        @NumberInputUnits::new_static("ratio_percent"),
+    )]
     pub reach: Fuzzy,
     /// Radius at the base, as a fraction of the parent's radius where the limb starts. Limbs taper
     /// as the trunk does.
-    #[reflect(@ValueRange::<f32>(0.05..=1.0), @Precision(2))]
+    #[reflect(
+        @ValueRange::<f32>(0.05..=1.0),
+        @Precision(2),
+        @NumberInputUnits::new_static("ratio_percent"),
+    )]
     pub radius: f32,
     /// Sides of each ring.
     #[reflect(@ValueRange::<i32>(3..=8), @Spinbox)]

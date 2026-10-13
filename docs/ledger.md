@@ -34,6 +34,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `258fcd8` | C23 Curved limbs (D17): bend and wander per metre, and the seed; `plans/growth.py`.     |
 | `7f6431b` | C28 Varied level fields (D18): span, divergence, angle and reach are `Fuzzy`.           |
 | `98382d1` | C31 Bend in proportion (D17): a share of the angle left, per crown radius; the trunk's `bend` is now `lean`. |
+| —         | C34 Fractions as percentages: the `ratio_percent` unit (`properties::RatioPercent`).  |
 
 ## Next
 
@@ -67,7 +68,8 @@ per-type hook, and is retained-mode.
    sides), so the line swells and thins with the view, 50% to 100% at 3 sides, 71% at 4, 87% at
    6. Keep 3 for thin levels, where it saves most and cannot be seen, and 4 or more for the
    trunk and first level. E[3]
-3. **C24 Stems**: the trunk's height becomes the envelope's height times the leader extent; until
+3. **C24 Stems**: the trunk's height becomes the envelope's height times the leader extent (shown
+   in `ratio_percent`, as every fraction is); until
    then the trunk keeps its own height. A fraction is as fine for a herb as for a tree, and the
    envelope becomes the one size. Stems: count and splay (`docs/growth-model.md`, Stems and
    leader), so a shrub or herb is two or three stems spread wide under a crown starting near the
@@ -143,12 +145,6 @@ per-type hook, and is retained-mode.
 
 ### Quick wins
 
-- **C34 Fractions as percentages**: a registered unit, `ratio_percent`, through feathers'
-  `StandardUnitKind` (one unit, "%", at a scale of 0.01), for every field stored as a fraction:
-  crown base, taper, span, reach, limb radius, and C24's leader extent. The species keeps 0 to
-  1; "0.4" reads less directly than "40%". A drag rounds in stored units, so `Precision(2)` is
-  whole percents, as now. Feathers has length, time and angle units but no percentage, so
-  offer it upstream once it has settled here. E[1]
 - **C35 Span as middle and length** (D19), in place of start and end: "Span middle" and "Span
   length", both `Fuzzy`, drawn per parent; the ends are middle ± length/2, clamped to the
   parent, so they cannot cross. Level 1 keeps both spreads at 0. Two fields rather than one
@@ -464,6 +460,10 @@ per-type hook, and is retained-mode.
   density: caption left and value right while idle; while editing, the caption hidden and the
   text right-aligned. The input's `label_text` would make slider widths ragged. *Gate:* the
   change in the Bevy we build against; then rows drop their caption line, halving their height.
+- **X17** Offer `ratio_percent` (`properties::RatioPercent`) to feathers, which has length, time
+  and angle units but no percentage. Not a `StandardUnitKind`: its scaling shows an `f32` 0.3 as
+  30.000002%, so the unit shifts the value's shortest decimal instead; feathers' own units would
+  gain from the same. *Gate:* the unit used through C24 without change.
 
 ## Notes
 
