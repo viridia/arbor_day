@@ -60,7 +60,7 @@ impl Default for Species {
                     start: Fuzzy::exactly(0.3),
                     end: Fuzzy::exactly(0.9),
                     angle: degrees(45.0, 10.0),
-                    bend_rate: 20.0_f32.to_radians(),
+                    bend: 0.5,
                     wander: 30.0_f32.to_radians(),
                     reach: Fuzzy::new(0.6, 0.1, Distribution::Bell),
                     radius: 0.5,
@@ -74,7 +74,7 @@ impl Default for Species {
                     start: Fuzzy::exactly(0.4),
                     end: Fuzzy::exactly(0.9),
                     angle: degrees(40.0, 10.0),
-                    bend_rate: 20.0_f32.to_radians(),
+                    bend: 0.5,
                     wander: 40.0_f32.to_radians(),
                     reach: Fuzzy::new(0.5, 0.1, Distribution::Bell),
                     radius: 0.5,
@@ -149,7 +149,7 @@ pub struct Trunk {
         @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_2),
         @NumberInputUnits::new_static("angle_degrees"),
     )]
-    pub bend: f32,
+    pub lean: f32,
 }
 
 /// One level of limbs on a parent, the trunk or a limb of the level before, in nodes spaced
@@ -193,13 +193,12 @@ pub struct LimbLevel {
         @Caption("Bend toward"),
     )]
     pub bend_toward: f32,
-    /// How fast the limb turns toward its bend, per metre: 0 keeps it straight.
-    #[reflect(
-        @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_2),
-        @NumberInputUnits::new_static("angle_degrees"),
-        @Caption("Bend per metre"),
-    )]
-    pub bend_rate: f32,
+    /// How much of the angle left to its bend the limb turns through over a length equal to the
+    /// crown's radius: 0 keeps it straight. Measured against the crown, so a shrub and a tree
+    /// with the same settings bend alike, and against what is left, so every bend target moves
+    /// the tip, and longer limbs bend further.
+    #[reflect(@ValueRange::<f32>(0.0..=0.99), @Precision(2))]
+    pub bend: f32,
     /// The most the limb turns at random, per metre, so it winds rather than running straight.
     #[reflect(
         @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_2),
@@ -230,7 +229,7 @@ impl Default for LimbLevel {
             end: Fuzzy::exactly(0.9),
             angle: degrees(60.0, 10.0),
             bend_toward: 90.0_f32.to_radians(),
-            bend_rate: 15.0_f32.to_radians(),
+            bend: 0.4,
             wander: 20.0_f32.to_radians(),
             reach: Fuzzy::new(0.9, 0.1, Distribution::Bell),
             radius: 0.5,
@@ -281,7 +280,7 @@ impl Default for Trunk {
             radius: 0.2,
             taper: 0.6,
             sides: 6,
-            bend: 15.0_f32.to_radians(),
+            lean: 15.0_f32.to_radians(),
         }
     }
 }

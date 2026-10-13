@@ -32,7 +32,8 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `1e7bd38` | C19 Up to three limb levels (D15), each at an angle from its parent; `plans/levels.py`. |
 | `5621ce7` | C26 Random streams and `Fuzzy::sample` (D16), `src/random.rs`.                          |
 | `258fcd8` | C23 Curved limbs (D17): bend and wander per metre, and the seed; `plans/growth.py`.     |
-|           | C28 Varied level fields (D18): span, divergence, angle and reach are `Fuzzy`.           |
+| `7f6431b` | C28 Varied level fields (D18): span, divergence, angle and reach are `Fuzzy`.           |
+|           | C31 Bend in proportion (D17): a share of the angle left, per crown radius; the trunk's `bend` is now `lean`. |
 
 ## Next
 
@@ -46,12 +47,6 @@ Seedling's look is not a target. `bevy_inspector`'s `details_panel` also walks r
 but reads no attributes, has no per-type hook, and is retained-mode. The generator sets the order
 (`docs/growth-model.md`), each step bringing the widget kind it needs:
 
-- **C31 Bend in proportion**: each metre closes a fixed fraction of the angle left to the bend
-  target, in place of a fixed turn per metre. With a fixed rate a limb turns at most rate ×
-  length, so a target beyond that does nothing, and where that starts moves with every field
-  that changes limb length. In proportion, every target moves the tip, and longer limbs still
-  bend more. Measured per crown size rather than per metre, so a shrub and a tree with the same
-  settings bend alike.
 - **Review of the varied fields**, by the author from the panel: which other level fields
   (bend, wander, radius, nodes) should vary, and the defaults' spreads. Whether the span varies
   at all: a varied span is not visible in the tree, and two `Fuzzy` ends stand in the way of
@@ -72,10 +67,18 @@ but reads no attributes, has no per-type hook, and is retained-mode. The generat
   offer it upstream once it has settled here.
 - **C33 Sections within a level**, so the panel is not a wall of like sliders: arrangement
   (nodes, per node, divergence, span), direction (angle, bend toward, bend), growth (reach,
-  wander), bark (radius, sides).
+  wander), bark (radius, sides). A field attribute, `@Group("Direction")`, names its section;
+  the property editor collates fields by group, ungrouped fields first, each group under a
+  label. The grouping is the panel's alone: the data stays flat, so paths (`limbs[0].angle`),
+  undo records (C7), saved files and the generator are untouched, and regrouping for looks
+  breaks nothing (X15). Fields are still declared in their groups, so panel and source read in
+  the same order. A sub-struct only where the group is a concept of its own: the arrangement
+  is phyllotaxis, which foliage will need too, so it may become a `Phyllotaxis` type; a nested
+  struct inside a level then shows as a labelled group like the rest, not a full subpane.
 - **C29 Pipe-model radii**, and limbs below a radius left to the foliage rather than meshed.
   Until then limbs taper as the trunk does, and three default levels are heavy (wandering limbs
-  add rings, 2 × sides triangles each); revisit the third level's defaults then.
+  add rings, 2 × sides triangles each); revisit the third level's defaults then, and lower the
+  three-level bound in `default_plants_stay_within_budget`.
 - **C30 Forks**, Weber and Penn's splits: at a point along a limb it ends, and copies of it
   carry on, turned apart by the fork angle. The copies are the same level as the limb, not its
   children, so they reach the envelope and bear children as it would; turning both by half the
@@ -147,7 +150,16 @@ but reads no attributes, has no per-type hook, and is retained-mode. The generat
   extra, one representation that cannot drift. The file records the generator version it was
   made with (X15). A golden test: a species serialized and compared
   with a JSON file in the repo, brought in with `include_str!` rather than quoted inline.
-  Seedling's groups for reference: `trunk`;
+  The limb levels are written as the panel shows them, a list of the shown levels only: the
+  count and the array (D15) move into a `LimbLevels { shown, levels }` type with
+  `#[reflect(SerializeWithRegistry, DeserializeWithRegistry)]`, which writes the shown levels,
+  each by reflection through the registry, and reads one to three, filling the rest from each
+  depth's defaults (moved from `Species::default` to `LimbLevels::default`). Type data on the
+  type, not a `ReflectSerializerProcessor`, since `bevy_settings` makes its own serializer. The
+  panel shows `LimbLevels` flattened, its levels beside the other subpanes, by an attribute. A
+  hidden level then lasts a session, not a save or a restart. Rejected: the species as a `Vec`
+  of grown levels with hidden ones stashed in the editor, the same in files but a larger change
+  that undoes D15. Seedling's groups for reference: `trunk`;
   `branch[]`, one per level; the leaf as `leafGroup` (arrangement), `leafShape` and `leafColor`.
 
 ## Decisions
@@ -266,7 +278,8 @@ but reads no attributes, has no per-type hook, and is retained-mode. The generat
   mesh. A level's parameters mean something only at its depth, so there is no reordering, and
   − and + on the last shown level's header hide it or show the next. The property editor does
   this for any array marked `ShownCount`, naming the count field; each shown item is a subpane
-  beside the struct's other rows, as seedling's were.
+  beside the struct's other rows, as seedling's were. Saved, only the shown levels are written
+  (C10), so a hidden level is kept for the session, not across a save.
 
 - **D16** Random numbers come from our own SplitMix64 (`src/random.rs`), not the `rand` crate:
   `rand` reserves the right to change the values its conversions give between versions, and it
@@ -276,7 +289,8 @@ but reads no attributes, has no per-type hook, and is retained-mode. The generat
   numbers: the bell is their mean, uniform uses the first.
 
 - **D17** A limb is traced in 2 cm steps, turning toward its level's bend (an angle from world
-  up, keeping its compass heading) at a rate per metre, and wandering by turns drawn a metre
+  up, keeping its compass heading), closing a share of the angle left over each crown radius
+  (revised in C31 from a fixed turn per metre), and wandering by turns drawn a metre
   apart and blended smoothly, so its shape does not depend on the step. It stops at its reach
   or where it would leave the envelope. Rings go wherever it has turned 15° since the last, and
   each carries a side transported along the limb without twisting, which sets the ring's roll

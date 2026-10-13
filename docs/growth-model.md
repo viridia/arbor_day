@@ -155,7 +155,7 @@ is set by:
 - **Azimuth**, from the phyllotaxis rule, measured about the parent's tangent. Zero is the
   parent's upper side (world up made square to the tangent), so azimuth means the same thing at
   every level; on the trunk, which has no upper side, zero is square to it in the plane of its
-  bend.
+  lean.
 - **Reach**, its length as a fraction of the distance from its origin to the envelope along its
   initial direction. Children reach the outline whatever their height, and the outline is the
   silhouette.
@@ -164,8 +164,11 @@ Phyllotaxis and reach spread limbs evenly, so seedling's unused `collision.ts` i
 
 Each limb then grows as a curve integrated by arc length: its direction blends toward a per-level
 tropism, an angle from world up (up for poplars, level for oaks, down for weeping and drooping
-forms), at a rate per metre, plus a bounded wander per metre for irregularity, and it stops at its reach or the
-envelope, whichever comes first. Neither depends on ring spacing.
+forms), closing a set share of the angle left to it over each crown radius of length, plus a
+bounded wander per metre for irregularity, and it stops at its reach or the envelope, whichever
+comes first. Neither depends on ring spacing. Because the share is of the angle left, every
+tropism moves the tip, and longer limbs bend further; because it is per crown radius, a shrub
+and a tree with the same settings bend alike.
 
 Radii follow the pipe model: a parent's radius raised to an exponent equals the sum of its
 children's radii raised to it, with one exponent per species. Meshing then decides what is

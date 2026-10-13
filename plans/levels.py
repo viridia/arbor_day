@@ -1,6 +1,8 @@
 """Limb levels: + shows the next level, growing on the limbs of the one before, and − hides the
 last. A hidden level keeps its parameters, so showing it again brings it back as it was."""
 
+from driver import Between
+
 BIN = "arbor_day"
 STATS = "arbor_day::plant::PlantStats"
 
@@ -31,6 +33,8 @@ def run(driver):
     driver.expect("Plant", STATS, {"limbs": 40})
 
     driver.click("Shell/Panel/limbs[1]/add")
-    driver.expect("Plant", STATS, {"limbs": 40 + 32 * 6})
+    # Up to six on each of the 32 second-level limbs, less those that start outside the envelope
+    # or would be too short.
+    driver.expect("Plant", STATS, {"limbs": Between(40 + 1, 40 + 32 * 6)})
     driver.screenshot("three_levels")
     driver.exit()

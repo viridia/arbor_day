@@ -123,7 +123,7 @@ pub fn plant(species: &Species) -> (Geometry, usize) {
     (geometry, limbs.len())
 }
 
-/// The trunk: a tube of rings rising from the origin, bending toward +X along a circular arc,
+/// The trunk: a tube of rings rising from the origin, leaning toward +X along a circular arc,
 /// closed at the top by a fan. The base is left open, since it stands in the ground.
 pub fn trunk(trunk: &Trunk) -> Geometry {
     let mut geometry = Geometry::default();
@@ -306,6 +306,10 @@ fn grow_limb(
             .clamp_length_max(1.0)
     };
     let (bend_sin, bend_cos) = params.bend_toward.sin_cos();
+    // The share of the angle left to the bend that one step closes. Shares compound, so a run of
+    // steps closes the same share whatever the step.
+    let kept_per_crown = 1.0 - params.bend.clamp(0.0, 0.99);
+    let crown = envelope.radius.max(0.01);
     let max_turn = MAX_RING_TURN_DEGREES.to_radians();
 
     let mut rings = vec![start];
@@ -325,7 +329,8 @@ fn grow_limb(
             .or_else(|| Vec3::new(ring.side.x, 0.0, ring.side.z).try_normalize());
         if let Some(heading) = heading {
             let toward = Vec3::Y * bend_cos + heading * bend_sin;
-            tangent = turn_toward(tangent, toward, params.bend_rate * step);
+            let closed = 1.0 - kept_per_crown.powf(step / crown);
+            tangent = turn_toward(tangent, toward, tangent.angle_between(toward) * closed);
         }
         let wander = wander_at(ring.at);
         let push = ring.side * wander.x + ring.side.cross(ring.tangent) * wander.y;
@@ -394,7 +399,7 @@ fn trunk_rings(trunk: &Trunk) -> Vec<Ring> {
     (0..=segments)
         .map(|ring| {
             let t = ring as f32 / segments as f32;
-            let (center, tangent) = arc(height, trunk.bend, t);
+            let (center, tangent) = arc(height, trunk.lean, t);
             Ring {
                 center,
                 tangent,
@@ -405,9 +410,9 @@ fn trunk_rings(trunk: &Trunk) -> Vec<Ring> {
         .collect()
 }
 
-/// Segments in the trunk's tube, by how far it bends.
+/// Segments in the trunk's tube, by how far it leans.
 fn trunk_segments(trunk: &Trunk) -> u32 {
-    ((trunk.bend.abs() / MAX_RING_TURN_DEGREES.to_radians()).ceil() as u32).max(1)
+    ((trunk.lean.abs() / MAX_RING_TURN_DEGREES.to_radians()).ceil() as u32).max(1)
 }
 
 /// The trunk's radius at its base and its top.
@@ -578,10 +583,10 @@ mod tests {
     use super::*;
     use crate::{fuzzy::Distribution, random::Seed};
 
-    fn trunk_with(sides: i32, bend_degrees: f32) -> Trunk {
+    fn trunk_with(sides: i32, lean_degrees: f32) -> Trunk {
         Trunk {
             sides,
-            bend: bend_degrees.to_radians(),
+            lean: lean_degrees.to_radians(),
             ..Trunk::default()
         }
     }
@@ -676,7 +681,7 @@ mod tests {
     fn regular() -> Species {
         let mut species = Species::default();
         for level in &mut species.limbs {
-            level.bend_rate = 0.0;
+            level.bend = 0.0;
             level.wander = 0.0;
             for fuzzy in [
                 &mut level.divergence,
@@ -707,7 +712,7 @@ mod tests {
 
     #[test]
     fn limbs_leave_the_trunk_at_their_angle() {
-        // At the default bend the trunk is one straight segment, base to tip.
+        // At the default lean the trunk is one straight segment, base to tip.
         let species = regular();
         let tip = *trunk(&species.trunk).positions.last().unwrap();
         for limb in limbs(&species) {
@@ -779,17 +784,58 @@ mod tests {
     #[test]
     fn limbs_bend_toward_their_bend() {
         let mut species = regular();
-        // Level, turning fast: the default limbs start 60° from up and soon lie level.
-        species.limbs[0].bend_rate = 90.0_f32.to_radians();
+        species.limbs[0].bend = 0.5;
+        let target = species.limbs[0].bend_toward;
+        let crown = species.envelope.radius;
         for limb in limbs(&species) {
-            assert!(limb.rings.len() > 2, "a bent limb has rings along it");
             let tip = limb.rings[limb.rings.len() - 1].tangent;
-            let from_up = tip.angle_between(Vec3::Y).to_degrees();
-            assert!((from_up - 90.0).abs() < 0.5, "{from_up}");
+            // Half the angle left is closed over each crown radius of length.
+            let left_at_base = target - limb.direction().angle_between(Vec3::Y);
+            let left_at_tip = target - tip.angle_between(Vec3::Y);
+            let expected = left_at_base * 0.5_f32.powf(limb.length() / crown);
+            assert!(
+                (left_at_tip - expected).abs() < 1e-3,
+                "{left_at_tip} {expected}"
+            );
             // The compass heading is kept.
             let heading = |v: Vec3| v.z.atan2(v.x);
             assert!((heading(tip) - heading(limb.direction())).abs() < 1e-3);
         }
+    }
+
+    #[test]
+    fn every_bend_target_moves_the_tip() {
+        let tips = |degrees: f32| {
+            let mut species = regular();
+            species.limbs[0].bend = 0.5;
+            species.limbs[0].bend_toward = degrees.to_radians();
+            limbs(&species)
+                .iter()
+                .map(|limb| limb.rings[limb.rings.len() - 1].tangent)
+                .collect::<Vec<_>>()
+        };
+        let mut previous = tips(90.0);
+        for degrees in [110.0, 130.0, 150.0, 170.0] {
+            let next = tips(degrees);
+            // Each limb's tip droops further, or the limb stops sooner at the envelope.
+            assert_ne!(previous, next, "{degrees}°");
+            previous = next;
+        }
+    }
+
+    #[test]
+    fn default_plants_stay_within_budget() {
+        // Orders of magnitude, not counts: the low hundreds for one level. Three levels are heavy
+        // until thin limbs are left to the foliage; lower this bound then.
+        let triangles = |limb_levels| {
+            let species = Species {
+                limb_levels,
+                ..Species::default()
+            };
+            plant(&species).0.triangles()
+        };
+        assert!((100..1_000).contains(&triangles(1)), "{}", triangles(1));
+        assert!(triangles(3) < 20_000, "{}", triangles(3));
     }
 
     #[test]
@@ -858,7 +904,7 @@ mod tests {
 
     #[test]
     fn limbs_start_on_the_trunk_as_meshed() {
-        // At the default bend the trunk is one straight segment, base to tip.
+        // At the default lean the trunk is one straight segment, base to tip.
         let species = Species::default();
         let tip = *trunk(&species.trunk).positions.last().unwrap();
         for limb in limbs(&species) {
@@ -870,7 +916,7 @@ mod tests {
     fn nodes_hold_their_limbs_evenly_around() {
         let mut species = regular();
         // Straight, so azimuth about the trunk is azimuth about world up.
-        species.trunk.bend = 0.0;
+        species.trunk.lean = 0.0;
         species.limbs[0].nodes = 2;
         species.limbs[0].per_node = 3;
         let limbs = limbs(&species);
@@ -896,9 +942,9 @@ mod tests {
 
     #[test]
     fn winding_faces_the_normals() {
-        for bend in [0.0, 45.0, 90.0] {
+        for lean in [0.0, 45.0, 90.0] {
             let species = Species {
-                trunk: trunk_with(5, bend),
+                trunk: trunk_with(5, lean),
                 limb_levels: 3,
                 ..Species::default()
             };
@@ -910,7 +956,7 @@ mod tests {
                 let n = &geometry.normals;
                 assert!(
                     facing.dot(n[a] + n[b] + n[c]) > 0.0,
-                    "bend {bend}: {triangle:?}"
+                    "lean {lean}: {triangle:?}"
                 );
             }
         }

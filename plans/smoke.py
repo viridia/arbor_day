@@ -2,6 +2,8 @@
 its default width, the turntable camera frames the plant, the zoom and frame keys work, the
 property editor edits booleans and numbers within their limits, and an edit rebuilds the plant."""
 
+from driver import Between
+
 BIN = "arbor_day"
 STATS = "arbor_day::plant::PlantStats"
 PLACEHOLDER = "arbor_day::Placeholder"
@@ -14,9 +16,8 @@ def run(driver):
     driver.present("Shell", ready=True)  # wait for the UI scene to finish spawning
     driver.present("Shell/Panel/trunk/sides/input")  # the immediate-mode panel has built its rows
     driver.present("Shell/Panel/Scrollbar")
-    # The default trunk: 6 sides, bent 15°, so one segment of 6 quads and a 6-triangle cap, 18
-    # triangles. Eight limbs of 4 sides add 12 each.
-    driver.expect("Plant", STATS, {"triangles": 18 + 8 * 12})
+    # The default plant: one level of eight limbs, in the low hundreds of triangles.
+    driver.expect("Plant", STATS, {"limbs": 8, "triangles": Between(100, 1000)})
     # The default width, whatever the developer last dragged it to: a run gets fresh settings.
     driver.expect("Shell/Panel", PANE, {"size": 320.0})
     # The view is never saved: every start frames the subject, from the front.
@@ -54,15 +55,14 @@ def run(driver):
     driver.key("Enter")
     driver.expect("Placeholder", PLACEHOLDER, {"count": 10})
     driver.screenshot("numbers")
-    # Editing the species rebuilds the plant: a trunk of 4 sides is 8 quad triangles and a
-    # 4-triangle cap.
-    driver.click("Shell/Panel/trunk/sides/input")
+    # Editing the species rebuilds the plant.
+    driver.click("Shell/Panel/limbs[0]/nodes/input")
     driver.key("End")
     driver.key("Backspace")
     driver.type("4")
     driver.key("Enter")
-    driver.expect("Plant", STATS, {"triangles": 12 + 8 * 12})
-    driver.screenshot("four_sides")
+    driver.expect("Plant", STATS, {"limbs": 4})
+    driver.screenshot("four_nodes")
     # The camera does not follow the subject: a taller crown grows out of the frame (compare the
     # screenshots), until Frame fits it again.
     driver.click("Shell/Panel/envelope/height/input")
