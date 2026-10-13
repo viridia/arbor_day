@@ -108,15 +108,19 @@ struct Frame {
     tangent: Vec3,
     /// Unit vector square to the tangent, toward azimuth 0.
     side: Vec3,
-    radius: f32,
 }
 
-/// The whole plant: the trunk and its limbs. Returns the geometry and the number of limbs.
+/// The whole plant: the trunk and its limbs, less those thinner at their base than the bark's
+/// thinnest meshed radius, which are left to the foliage. Returns the geometry and the number of
+/// limbs grown, meshed or not.
 pub fn plant(species: &Species) -> (Geometry, usize) {
-    let mut geometry = trunk(&species.trunk);
-    let limbs = limbs(species);
+    let (trunk_top, limbs) = grow(species);
+    let mut geometry = trunk(&species.trunk, trunk_top);
     let levels = species.grown_levels();
-    for limb in &limbs {
+    for limb in limbs
+        .iter()
+        .filter(|limb| limb.radii.0 >= species.bark.min_radius)
+    {
         let sides = levels[limb.level].sides.max(3) as u32;
         tube(&mut geometry, &limb.rings, limb.radii, sides);
     }
@@ -124,66 +128,74 @@ pub fn plant(species: &Species) -> (Geometry, usize) {
 }
 
 /// The trunk: a tube of rings rising from the origin, leaning toward +X along a circular arc,
-/// closed at the top by a fan. The base is left open, since it stands in the ground.
-pub fn trunk(trunk: &Trunk) -> Geometry {
+/// narrowing to `top_radius`, closed at the top by a fan. The base is left open, since it stands
+/// in the ground.
+pub fn trunk(trunk: &Trunk, top_radius: f32) -> Geometry {
     let mut geometry = Geometry::default();
     let sides = trunk.sides.max(3) as u32;
     tube(
         &mut geometry,
         &trunk_rings(trunk),
-        trunk_radii(trunk),
+        (trunk.radius, top_radius),
         sides,
     );
     geometry
 }
 
-/// The limbs, level by level, each level on the limbs of the one before and the first on the
-/// trunk. Limbs come out in level order.
+/// The limbs, as `grow` grows them.
+#[cfg(test)]
 pub fn limbs(species: &Species) -> Vec<Limb> {
+    grow(species).1
+}
+
+/// The limbs, level by level, each level on the limbs of the one before and the first on the
+/// trunk, in level order; and the trunk's radius at its top. A stem's radius at its top is what
+/// its limbs leave it (`grow_level`), so it is set once the level after has grown.
+fn grow(species: &Species) -> (f32, Vec<Limb>) {
     let taper = species.trunk.taper.clamp(0.0, 1.0);
-    let trunk = Parent {
-        rings: &trunk_rings(&species.trunk),
-        radii: trunk_radii(&species.trunk),
-        rng: &species.seed.stream("branching"),
-    };
-    let mut grown = Vec::new();
+    let exponent = species.bark.pipe_exponent.max(1.0);
+    let trunk_rings = trunk_rings(&species.trunk);
+    let trunk_rng = species.seed.stream("branching");
+    let mut trunk_top = species.trunk.radius * (1.0 - taper);
+    let mut grown: Vec<Limb> = Vec::new();
     for (level, params) in species.grown_levels().iter().enumerate() {
         let mut children = Vec::new();
-        if level == 0 {
+        let mut grow_on = |parent| {
             grow_level(
                 &species.envelope,
                 params,
                 level,
                 taper,
-                trunk,
-                &mut children,
-            );
-        }
-        for parent in grown.iter().filter(|limb: &&Limb| limb.level + 1 == level) {
-            let parent = Parent {
-                rings: &parent.rings,
-                radii: parent.radii,
-                rng: &parent.rng,
-            };
-            grow_level(
-                &species.envelope,
-                params,
-                level,
-                taper,
+                exponent,
                 parent,
                 &mut children,
-            );
+            )
+        };
+        if level == 0 {
+            trunk_top = grow_on(Parent {
+                rings: &trunk_rings,
+                radius: species.trunk.radius,
+                rng: &trunk_rng,
+            });
+        }
+        for limb in grown.iter_mut().filter(|limb| limb.level + 1 == level) {
+            limb.radii.1 = grow_on(Parent {
+                rings: &limb.rings,
+                radius: limb.radii.0,
+                rng: &limb.rng,
+            });
         }
         grown.extend(children);
     }
-    grown
+    (trunk_top, grown)
 }
 
 /// A stem limbs grow on: the trunk, or a limb of the level before.
 #[derive(Clone, Copy)]
 struct Parent<'a> {
     rings: &'a [Ring],
-    radii: (f32, f32),
+    /// Radius at the base.
+    radius: f32,
     rng: &'a Rng,
 }
 
@@ -213,7 +225,6 @@ impl Parent<'_> {
             point: a.center.lerp(b.center, along),
             tangent,
             side,
-            radius: self.radii.0 + (self.radii.1 - self.radii.0) * t,
         }
     }
 }
@@ -223,14 +234,23 @@ impl Parent<'_> {
 /// its limbs spaced evenly around it, each leaving at the level's angle from the parent and then
 /// grown (`grow_limb`). A limb whose start lies outside the envelope, or that would be no longer
 /// than it is thick, is left out.
+///
+/// Radii follow the pipe model: a stem's radius raised to `exponent` is shared among the limbs
+/// leaving it and what carries on past them. Each limb's radius is the level's share of the
+/// parent's radius where it leaves, and the parent is that much thinner past it. Returns the
+/// parent's radius at its top: what its limbs leave it, or its base radius tapered if that is
+/// thinner, so the taper is the least a stem narrows.
 fn grow_level(
     envelope: &Envelope,
     params: &LimbLevel,
     level: usize,
     taper: f32,
+    exponent: f32,
     parent: Parent,
     grown: &mut Vec<Limb>,
-) {
+) -> f32 {
+    // The parent's radius raised to the exponent, which each limb leaving it takes its share of.
+    let mut section = parent.radius.powf(exponent);
     // The span, the node count and each node's turn and limb count are the parent's, drawn from a
     // stream of its own beside its limbs'.
     let mut layout = parent.rng.fork(LAYOUT_STREAM);
@@ -253,7 +273,7 @@ fn grow_level(
         let t = span_start + (span_end - span_start) * (node as f32 + 0.5) / nodes as f32;
         let frame = parent.frame(t);
         let across = frame.side.cross(frame.tangent);
-        let base_radius = params.radius * frame.radius;
+        let base_radius = params.radius * section.powf(exponent.recip());
         for limb in 0..per_node {
             let rng = parent.rng.fork(index);
             index += 1;
@@ -274,6 +294,7 @@ fn grow_level(
             };
             let rings = grow_limb(envelope, params, start, reach, rng.fork(WANDER_STREAM));
             if rings.len() >= 2 && rings[rings.len() - 1].at > base_radius {
+                section = (section - base_radius.powf(exponent)).max(0.0);
                 grown.push(Limb {
                     level,
                     rings,
@@ -283,6 +304,10 @@ fn grow_level(
             }
         }
     }
+    // The limbs' narrowing, or at least the taper's.
+    section
+        .powf(exponent.recip())
+        .min(parent.radius * (1.0 - taper))
 }
 
 /// A limb's rings, from `start` for up to `length` along it. The limb is traced in short steps,
@@ -418,14 +443,6 @@ fn trunk_rings(trunk: &Trunk) -> Vec<Ring> {
 /// Segments in the trunk's tube, by how far it leans.
 fn trunk_segments(trunk: &Trunk) -> u32 {
     ((trunk.lean.abs() / MAX_RING_TURN_DEGREES.to_radians()).ceil() as u32).max(1)
-}
-
-/// The trunk's radius at its base and its top.
-fn trunk_radii(trunk: &Trunk) -> (f32, f32) {
-    (
-        trunk.radius,
-        trunk.radius * (1.0 - trunk.taper.clamp(0.0, 1.0)),
-    )
 }
 
 /// Adds a tube through `rings`, each turned to its ring's side, so the tube rolls only as the
@@ -599,14 +616,14 @@ mod tests {
     #[test]
     fn rings_follow_curvature() {
         // Straight: one segment of 6 quads and a 6-triangle cap.
-        assert_eq!(trunk(&trunk_with(6, 0.0)).triangles(), 6 * 2 + 6);
+        assert_eq!(trunk(&trunk_with(6, 0.0), 0.1).triangles(), 6 * 2 + 6);
         // 90° at 15° a ring: six segments.
-        assert_eq!(trunk(&trunk_with(4, 90.0)).triangles(), 4 * 2 * 6 + 4);
+        assert_eq!(trunk(&trunk_with(4, 90.0), 0.1).triangles(), 4 * 2 * 6 + 4);
     }
 
     #[test]
     fn vertices_are_shared() {
-        let geometry = trunk(&trunk_with(5, 30.0));
+        let geometry = trunk(&trunk_with(5, 30.0), 0.1);
         // Two segments: three rings of five, and the tip.
         assert_eq!(geometry.positions.len(), 3 * 5 + 1);
         assert_eq!(geometry.normals.len(), geometry.positions.len());
@@ -614,7 +631,7 @@ mod tests {
 
     #[test]
     fn base_stands_on_the_origin() {
-        let geometry = trunk(&trunk_with(6, 40.0));
+        let geometry = trunk(&trunk_with(6, 40.0), 0.1);
         let base = &geometry.positions[..6];
         let center = base.iter().copied().sum::<Vec3>() / 6.0;
         assert!(center.length() < 1e-5);
@@ -623,7 +640,7 @@ mod tests {
 
     #[test]
     fn straight_trunk_reaches_its_height() {
-        let geometry = trunk(&trunk_with(6, 0.0));
+        let geometry = trunk(&trunk_with(6, 0.0), 0.1);
         let tip = *geometry.positions.last().unwrap();
         assert!((tip - Vec3::Y * Trunk::default().height).length() < 1e-5);
     }
@@ -719,7 +736,7 @@ mod tests {
     fn limbs_leave_the_trunk_at_their_angle() {
         // At the default lean the trunk is one straight segment, base to tip.
         let species = regular();
-        let tip = *trunk(&species.trunk).positions.last().unwrap();
+        let tip = *trunk(&species.trunk, 0.1).positions.last().unwrap();
         for limb in limbs(&species) {
             let angle = limb.direction().angle_between(tip);
             assert!(
@@ -739,7 +756,7 @@ mod tests {
         );
         // Reaching past the envelope is clamped to reaching it.
         species.limbs[0].reach = Fuzzy::new(0.95, 0.2, Distribution::Uniform);
-        let tip = *trunk(&species.trunk).positions.last().unwrap();
+        let tip = *trunk(&species.trunk, 0.1).positions.last().unwrap();
         let limbs = limbs(&species);
         let angles: Vec<f32> = limbs
             .iter()
@@ -765,8 +782,15 @@ mod tests {
         let first = limbs(&species);
         species.limb_levels = 2;
         let both = limbs(&species);
-        // The first level is unchanged, and the second follows it.
-        assert_eq!(both[..first.len()], first[..]);
+        // The first level is unchanged but for its tips, which its limbs narrow, and the second
+        // follows it.
+        let shape = |limbs: &[Limb]| -> Vec<(Vec<Ring>, f32)> {
+            limbs
+                .iter()
+                .map(|limb| (limb.rings.clone(), limb.radii.0))
+                .collect()
+        };
+        assert_eq!(shape(&both[..first.len()]), shape(&first));
         let second = &both[first.len()..];
         assert!(!second.is_empty());
         for limb in second {
@@ -830,8 +854,8 @@ mod tests {
 
     #[test]
     fn default_plants_stay_within_budget() {
-        // Orders of magnitude, not counts: the low hundreds for one level. Three levels are heavy
-        // until thin limbs are left to the foliage; lower this bound then.
+        // Orders of magnitude, not counts: the low hundreds for one level, and for three, under
+        // seedling's trees (about 2,500), since most of the third level is left to the foliage.
         let triangles = |limb_levels| {
             let species = Species {
                 limb_levels,
@@ -840,7 +864,7 @@ mod tests {
             plant(&species).0.triangles()
         };
         assert!((100..1_000).contains(&triangles(1)), "{}", triangles(1));
-        assert!(triangles(3) < 20_000, "{}", triangles(3));
+        assert!(triangles(3) < 3_000, "{}", triangles(3));
     }
 
     #[test]
@@ -911,7 +935,7 @@ mod tests {
     fn limbs_start_on_the_trunk_as_meshed() {
         // At the default lean the trunk is one straight segment, base to tip.
         let species = Species::default();
-        let tip = *trunk(&species.trunk).positions.last().unwrap();
+        let tip = *trunk(&species.trunk, 0.1).positions.last().unwrap();
         for limb in limbs(&species) {
             assert!(limb.origin().cross(tip).length() < 1e-5, "{limb:?}");
         }
@@ -946,6 +970,47 @@ mod tests {
         species.limbs[0].span_length = Fuzzy::exactly(1.0);
         species.limbs[0].density = 2.5;
         assert_eq!(limbs(&species).len(), 3);
+    }
+
+    #[test]
+    fn limbs_share_their_parent_section() {
+        let mut species = regular();
+        species.limbs[0].density = 2.0;
+        species.limbs[0].radius = 0.6;
+        species.bark.pipe_exponent = 2.0;
+        let trunk = species.trunk.radius;
+        let (top, limbs) = grow(&species);
+        assert_eq!(limbs.len(), 2);
+        // The first takes its share of the whole trunk; the second, of what is left past it.
+        let first = 0.6 * trunk;
+        let past_first = (trunk.powi(2) - first.powi(2)).sqrt();
+        let second = 0.6 * past_first;
+        assert!((limbs[0].radii.0 - first).abs() < 1e-6);
+        assert!((limbs[1].radii.0 - second).abs() < 1e-6);
+        // The trunk's top is what is left past both, unless the taper narrows it further.
+        let left = (past_first.powi(2) - second.powi(2)).sqrt();
+        let tapered = trunk * (1.0 - species.trunk.taper);
+        assert!((top - left.min(tapered)).abs() < 1e-6, "{top} {left} {tapered}");
+        // A higher exponent narrows the trunk less.
+        species.bark.pipe_exponent = 3.0;
+        species.trunk.taper = 0.0;
+        let (higher, _) = grow(&species);
+        assert!(higher > left, "{higher} {left}");
+    }
+
+    #[test]
+    fn thin_limbs_are_grown_but_not_meshed() {
+        let mut species = Species {
+            limb_levels: 3,
+            ..Species::default()
+        };
+        let (all, limbs) = plant(&species);
+        species.bark.min_radius = 1.0;
+        let (bare, still) = plant(&species);
+        assert_eq!(still, limbs);
+        let (top, _) = grow(&species);
+        assert_eq!(bare.triangles(), trunk(&species.trunk, top).triangles());
+        assert!(all.triangles() > bare.triangles());
     }
 
     #[test]

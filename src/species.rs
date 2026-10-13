@@ -293,18 +293,29 @@ fn degrees(center: f32, spread: f32) -> Fuzzy {
     Fuzzy::new(center.to_radians(), spread.to_radians(), Distribution::Bell)
 }
 
-/// The bark's look, the same on every stem.
+/// The bark, the same on every stem: its color, how stems narrow, and which are meshed.
 #[derive(Reflect, Clone, PartialEq)]
 pub struct Bark {
     /// The bark's color, written into the mesh as a vertex color, so trunks of different species
     /// can merge into one mesh in the game.
     pub color: Color,
+    /// The pipe model's exponent: a stem's radius raised to it is shared among the limbs leaving
+    /// it and what carries on past them. 2 keeps the wood's cross-section, so a stem narrows most;
+    /// higher, it narrows less.
+    #[reflect(@ValueRange::<f32>(2.0..=3.0), @Precision(1), @Caption("Pipe exponent"))]
+    pub pipe_exponent: f32,
+    /// Limbs thinner than this at their base, in meters, are left to the foliage rather than
+    /// meshed, and so are their own limbs, which are thinner still.
+    #[reflect(@ValueRange::<f32>(0.001..=0.1), @Precision(3), @Caption("Thinnest meshed"))]
+    pub min_radius: f32,
 }
 
 impl Default for Bark {
     fn default() -> Self {
         Self {
             color: Color::srgb(0.42, 0.33, 0.25),
+            pipe_exponent: 2.0,
+            min_radius: 0.01,
         }
     }
 }

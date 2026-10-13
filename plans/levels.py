@@ -37,4 +37,15 @@ def run(driver):
     # envelope or would be too short.
     driver.expect("Plant", STATS, {"limbs": Between(8 + 8 * 2 + 1, 8 + 48 + 48 * 2 * 6)})
     driver.screenshot("three_levels")
+
+    # Limbs under the thinnest meshed radius are still grown but left to the foliage: at 10 cm,
+    # only the trunk is meshed.
+    driver.click("Shell/Panel/bark/min_radius/input")
+    driver.key("End")
+    for _ in range(6):
+        driver.key("Backspace")
+    driver.type("0.1")
+    driver.key("Enter")
+    driver.expect("Plant", STATS, {"triangles": Between(1, 100)})
+    driver.screenshot("trunk_only")
     driver.exit()
