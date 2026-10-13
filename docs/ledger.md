@@ -37,26 +37,114 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 
 ## Next
 
-File handling brings Save and Open keys (D8), and Save and Open buttons at the top of the panel.
-The seed row moves in with them, in a feathers `group` (`containers/group.rs`, no header), so it
-lines up with the subpanes' rows rather than standing at the panel's edge.
+Three parts: the path to the milestone, in order; quick wins, for between big chunks; and
+everything else, unordered. Each item ends with its effort, on `bevy_action_map`'s scale
+(`docs/guidelines.md`, G19): E[1] one function, E[2] several, E[3] a new mechanism (a chunk),
+E[4] more than a chunk (split before it is written). A new idea goes to Later unless the
+milestone needs it.
 
-The property editor gains a widget kind per chunk, built against `Placeholder` until a species
-field needs it (C27). Rows are keyed by field path, in `GetPath` syntax, which C7's undo records also use.
-Seedling's look is not a target. `bevy_inspector`'s `details_panel` also walks reflected fields,
-but reads no attributes, has no per-type hook, and is retained-mode. The generator sets the order
-(`docs/growth-model.md`), each step bringing the widget kind it needs:
+The property editor gains a widget kind as a species field needs it. Rows are keyed by field
+path, in `GetPath` syntax, which C7's undo records also use. Seedling's look is not a target.
+`bevy_inspector`'s `details_panel` also walks reflected fields, but reads no attributes, has no
+per-type hook, and is retained-mode.
 
+### Milestone: the first species exported to Panoply
+
+1. **C36 Nodes by density** (D19): nodes per unit of span (per metre, or per crown radius to
+   match C31; decide in the chunk), so a long parent bears more children than a short one, as
+   seedling's `interval` did. Density × span length is a fraction, rounded at random per parent
+   to its floor or ceiling, with the fraction as the chance of the ceiling. Per node becomes a
+   float the same way (1.5: half the nodes alternate, half opposite). Sides stay whole: mesh
+   detail, not form. E[2]
+2. **C29 Pipe-model radii**, and limbs below a radius left to the foliage rather than meshed.
+   Until then limbs taper as the trunk does, and three default levels are heavy (wandering limbs
+   add rings, 2 × sides triangles each); revisit the third level's defaults then, and lower the
+   three-level bound in `default_plants_stay_within_budget`. The cut-off radius is a species
+   field, so each species sets its own budget; the generator builds in no target, since the
+   budget is still open (requirements, open question 1; seedling's trees are about 2,500 in
+   all). Sides and Panoply's inverted-hull outline (`src/materials/outline.wesl`, extruding along
+   vertex normals): a corner moves out by the full width, a face's middle by width × cos(180° ÷
+   sides), so the line swells and thins with the view, 50% to 100% at 3 sides, 71% at 4, 87% at
+   6. Keep 3 for thin levels, where it saves most and cannot be seen, and 4 or more for the
+   trunk and first level. E[3]
+3. **C24 Stems**: the trunk's height becomes the envelope's height times the leader extent; until
+   then the trunk keeps its own height. A fraction is as fine for a herb as for a tree, and the
+   envelope becomes the one size. Stems: count and splay (`docs/growth-model.md`, Stems and
+   leader), so a shrub or herb is two or three stems spread wide under a crown starting near the
+   ground, as seedling's short trunk splitting just above the root was. The trunk's lean takes
+   its compass direction from the seed (a `trunk` stream, D16), not always +X, so neighbouring
+   trees of one species lean different ways. E[3]
+4. **C30 Forks**, Weber and Penn's splits: at a point along a limb it ends, and copies of it
+   carry on, turned apart by the fork angle. The copies are the same level as the limb, not its
+   children, so they reach the envelope and bear children as it would; turning both by half the
+   angle reads as the symmetric Y of a child deflecting its parent. Per level: forks per limb (0
+   to 2), fork at (`Fuzzy`, a fraction of the limb), fork angle (`Fuzzy`), and fork roll, where
+   the Y's plane lies, from level to upright. *After* C29, so each copy's radius follows the
+   pipe model (the limb's over √2 for two); C24's leader fork uses the same mechanism. E[3]
+5. **C37 Foliage placement** (`docs/growth-model.md`, Foliage): clusters seeded along the parts
+   of the limbs within a shell depth of the envelope, at a spacing set by the author, each a
+   plain quad for now, in a leaf mesh of its own with an alpha-masked material. Bare trees set
+   no foliage. Facing up for now; C39 brings the facing distribution. E[3]
+6. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's `genLeafTexture.ts` ported,
+   its leaf shape and color parameters as species fields with streams of their own
+   (requirements, Parameters, determinism, variants). The texture goes on C37's cards. A golden
+   test on its pixels compares with a tolerance, since SIMD can move a channel by a level. E[3]
+7. **C39 Card shapes and facing**: crossed, cupped and creased cards chosen by weight; a card's
+   normal drawn around a blend of world up and the envelope's outward normal, with a spread, its
+   rotation about the normal free; crown softness for the shading normal (X13). E[3]
+8. **C10 Species data model**, its groups the layers of the growth model (D11;
+   `docs/growth-model.md`, Consequences), correcting seedling where the requirements say.
+   Reflectable types with `Default` for initial values and attributes for the editor, after the
+   fields settle (C35, C36, C29, C24), so saved files are not broken by every change. Serialized
+   by reflection only, no serde derives: TOML in settings (C8) and JSON as the glTF extra, one
+   representation that cannot drift. The file records the generator version it was made with
+   (X15). A golden test: a species serialized and compared with a JSON file in the repo,
+   brought in with `include_str!` rather than quoted inline. The limb levels are written as the
+   panel shows them, a list of the shown levels only: the count and the array (D15) move into a
+   `LimbLevels { shown, levels }` type with `#[reflect(SerializeWithRegistry,
+   DeserializeWithRegistry)]`, which writes the shown levels, each by reflection through the
+   registry, and reads one to three, filling the rest from each depth's defaults (moved from
+   `Species::default` to `LimbLevels::default`). Type data on the type, not a
+   `ReflectSerializerProcessor`, since `bevy_settings` makes its own serializer. The panel shows
+   `LimbLevels` flattened, its levels beside the other subpanes, by an attribute. A hidden level
+   then lasts a session, not a save or a restart. Rejected: the species as a `Vec` of grown
+   levels with hidden ones stashed in the editor, the same in files but a larger change that
+   undoes D15. Seedling's groups for reference: `trunk`; `branch[]`, one per level; the leaf as
+   `leafGroup` (arrangement), `leafShape` and `leafColor`. E[4], split when started
+9. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
+   panel; the file browser is X2. The seed row moves in with them, in a feathers `group`
+   (`containers/group.rs`, no header), so it lines up with the subpanes' rows rather than
+   standing at the panel's edge. E[3]
+10. **C8 Working document in settings.** A settings group holding the working species and, once
+   set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
+   as seedling did. The document's name comes from the file name. Serialized by reflection, as
+   `bevy_settings` does. E[3]
+11. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
+   as a JSON extra (C10), in the form Panoply loads (requirements, Output; "What Panoply does with the output"). Bevy writes no glTF,
+   so this adds a dependency or a writer of our own; propose it before code. The command-line
+   export is X1. E[3]
+
+### Quick wins
+
+- **C34 Fractions as percentages**: a registered unit, `ratio_percent`, through feathers'
+  `StandardUnitKind` (one unit, "%", at a scale of 0.01), for every field stored as a fraction:
+  crown base, taper, span, reach, limb radius, and C24's leader extent. The species keeps 0 to
+  1; "0.4" reads less directly than "40%". A drag rounds in stored units, so `Precision(2)` is
+  whole percents, as now. Feathers has length, time and angle units but no percentage, so
+  offer it upstream once it has settled here. E[1]
 - **C35 Span as middle and length** (D19), in place of start and end: "Span middle" and "Span
   length", both `Fuzzy`, drawn per parent; the ends are middle ± length/2, clamped to the
   parent, so they cannot cross. Level 1 keeps both spreads at 0. Two fields rather than one
   `Fuzzy` for the range: a `Fuzzy` reads as "a value drawn near here", not "this stretch".
-- **C36 Nodes by density** (D19): nodes per unit of span (per metre, or per crown radius to
-  match C31; decide in the chunk), so a long parent bears more children than a short one, as
-  seedling's `interval` did. Density × span length is a fraction, rounded at random per parent
-  to its floor or ceiling, with the fraction as the chance of the ceiling. Per node becomes a
-  float the same way (1.5: half the nodes alternate, half opposite). Sides stay whole: mesh
-  detail, not form.
+  Before C10, since it changes the format. E[2]
+- **C42 Computed values are rounded where written**, from the first writer (Reset, Randomize,
+  values derived from the generator): the number input never rounds what it shows, so round to
+  the field's `Precision` in the units shown, as feathers' color input does
+  (`scaled_number_input_value`). Defaults are written in the units shown
+  (`15.0_f32.to_radians()`, not `0.3`). E[2]
+
+### Later
+
 - **C32 Log scale** for sizes, with no change upstream: an `@LogScale` attribute. The species
   keeps metres; the panel's binding gives the number input ln(value) and a log range, and
   writes e^value back; a registered unit (`length_log_meters`) formats e^value in metres, to
@@ -64,13 +152,7 @@ but reads no attributes, has no per-type hook, and is retained-mode. The generat
   `NumberInputPrecision`, which would round in log units; the binding rounds to the field's
   `Precision` in metres as it writes. Feathers computes a drag from where it started, so the
   rounding should not fight it; check by hand that a drag snaps cleanly. First for the
-  envelope's height (0.5 to 30 m, where a herb lives in the first pixels) and radius.
-- **C34 Fractions as percentages**: a registered unit, `ratio_percent`, through feathers'
-  `StandardUnitKind` (one unit, "%", at a scale of 0.01), for every field stored as a fraction:
-  crown base, taper, span, reach, limb radius, and C24's leader extent. The species keeps 0 to
-  1; "0.4" reads less directly than "40%". A drag rounds in stored units, so `Precision(2)` is
-  whole percents, as now. Feathers has length, time and angle units but no percentage, so
-  offer it upstream once it has settled here.
+  envelope's height (0.5 to 30 m, where a herb lives in the first pixels) and radius. E[3]
 - **C33 Sections within a level**, so the panel is not a wall of like sliders: arrangement
   (nodes, per node, divergence, span), direction (angle, bend toward, bend), growth (reach,
   wander), bark (radius, sides). A field attribute, `@Group("Direction")`, names its section;
@@ -80,58 +162,32 @@ but reads no attributes, has no per-type hook, and is retained-mode. The generat
   breaks nothing (X15). Fields are still declared in their groups, so panel and source read in
   the same order. A sub-struct only where the group is a concept of its own: the arrangement
   is phyllotaxis, which foliage will need too, so it may become a `Phyllotaxis` type; a nested
-  struct inside a level then shows as a labelled group like the rest, not a full subpane.
-- **C29 Pipe-model radii**, and limbs below a radius left to the foliage rather than meshed.
-  Until then limbs taper as the trunk does, and three default levels are heavy (wandering limbs
-  add rings, 2 × sides triangles each); revisit the third level's defaults then, and lower the
-  three-level bound in `default_plants_stay_within_budget`.
-- **C30 Forks**, Weber and Penn's splits: at a point along a limb it ends, and copies of it
-  carry on, turned apart by the fork angle. The copies are the same level as the limb, not its
-  children, so they reach the envelope and bear children as it would; turning both by half the
-  angle reads as the symmetric Y of a child deflecting its parent. Per level: forks per limb (0
-  to 2), fork at (`Fuzzy`, a fraction of the limb), fork angle (`Fuzzy`), and fork roll, where
-  the Y's plane lies, from level to upright. *After* C29, so each copy's radius follows the
-  pipe model (the limb's over √2 for two); C24's leader fork uses the same mechanism.
-- **C24 Stems**: the trunk's height becomes the envelope's height times the leader extent; until
-  then the trunk keeps its own height. A fraction is as fine for a herb as for a tree, and the
-  envelope becomes the one size. Stems: count and splay (`docs/growth-model.md`, Stems and
-  leader), so a shrub or herb is two or three stems spread wide under a crown starting near the
-  ground, as seedling's short trunk splitting just above the root was. The trunk's lean takes
-  its compass direction from the seed (a `trunk` stream, D16), not always +X, so neighbouring
-  trees of one species lean different ways.
+  struct inside a level then shows as a labelled group like the rest, not a full subpane. E[3]
+- **C43 A varied color** (`Fuzzy<Color>`, D10) with the leaf color, for its hue and lightness
+  shifts. E[3]
 - **C25 A HUD over the view**, to free the panel: every control that changes the preview rather
   than the species moves onto the view. Buttons the size and shape of feathers' but translucent:
-  Frame, zoom, orbit and tilt, and
-  toggles for the envelope and the ground. Icons from Material Symbols, chosen by the author,
-  are in `assets/icons/` (48px white PNGs, under their Material names): `center_focus_strong`
-  for Frame (corner brackets: fit the subject to the view), `zoom_in` and `zoom_out`, `360` for orbit (`ImageNode::flip_x` for the other way, and
-  turned 90° for tilt), `language` for the envelope, `landscape` for the ground.
-  Zoom, orbit and tilt move smoothly for as long as the button is held, and a click moves a
-  fixed step, which lets plans drive the camera (the driver cannot drag, and its click is a
-  press and an immediate release). The triangle count in the opposite corner, lower left.
-  Feathers resolves colors per surface (`SurfaceLevel`, set on a container by `ThemeContext`), so
-  a HUD is one more surface: a `SurfaceLevel::Hud` with translucent fills would make plain
-  feathers buttons in it translucent. Recommended: propose that upstream (any editor viewport
-  has such overlays: Blender, Godot, Unity, Bevy's editor, Panoply's X3), and meanwhile register
-  HUD tokens of our own in `UiTheme` with a thin button reading them, replaced by feathers
-  buttons once the surface lands. Propose the layout before code.
+  Frame, zoom, orbit and tilt, and toggles for the envelope and the ground. Icons from Material
+  Symbols, chosen by the author, are in `assets/icons/` (48px white PNGs, under their Material
+  names): `center_focus_strong` for Frame (corner brackets: fit the subject to the view),
+  `zoom_in` and `zoom_out`, `360` for orbit (`ImageNode::flip_x` for the other way, and turned
+  90° for tilt), `language` for the envelope, `landscape` for the ground. Zoom, orbit and tilt
+  move smoothly for as long as the button is held, and a click moves a fixed step, which lets
+  plans drive the camera (the driver cannot drag, and its click is a press and an immediate
+  release). The triangle count in the opposite corner, lower left. Feathers resolves colors per
+  surface (`SurfaceLevel`, set on a container by `ThemeContext`), so a HUD is one more surface:
+  a `SurfaceLevel::Hud` with translucent fills would make plain feathers buttons in it
+  translucent. Recommended: propose that upstream (any editor viewport has such overlays:
+  Blender, Godot, Unity, Bevy's editor, Panoply's X3), and meanwhile register HUD tokens of our
+  own in `UiTheme` with a thin button reading them, replaced by feathers buttons once the
+  surface lands. Propose the layout before code. E[4], split first
 - **C27 Remove `Placeholder`** (`src/main.rs`) once every widget kind it stands in for has a
   real customer. Numbers, spinboxes, wrapped angles, selects and subpanes have theirs in the
   species, and `Fuzzy` has its in the limb levels. Left: `plans/fuzzy.py` reads `Placeholder`
   (the driver reads components, not the species resource, D12), so it needs another way to
   read a fuzzy field's state; and the checkbox, whose only use is `show_ground`, which C25
   moves to the HUD; a species bool, or a test of the checkbox row of its own, keeps it
-  covered. *After* C25.
-- **Computed values are rounded where written**, from the first writer (Reset, Randomize, values
-  derived from the generator): the number input never rounds what it shows, so round to the
-  field's `Precision` in the units shown, as feathers' color input does
-  (`scaled_number_input_value`). Defaults are written in the units shown
-  (`15.0_f32.to_radians()`, not `0.3`).
-- **A varied color** (`Fuzzy<Color>`, D10) with the leaf color, for its hue and lightness shifts.
-- **C8 Working document in settings.** A settings group holding the working species and, once
-  set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
-  as seedling did. The document's name comes from the file name. Serialized by reflection, as
-  `bevy_settings` does. Can start with the placeholder.
+  covered. *After* C25. E[2]
 - **C7 Undo and redo** (requirements, Authoring app). Take the `bevy_undo_redo` crate from the
   author's Bevy PR #23373 (never merged; branch `bevy_undo` in `../bevy`) as `src/undo.rs`, its
   API unchanged and its origin noted: an `UndoAction` trait (`apply` returns the inverse;
@@ -144,31 +200,8 @@ but reads no attributes, has no per-type hook, and is retained-mode. The generat
   - Cmd+Z in a focused text field: the text input passes it on, so the window would undo a
     document edit mid-typing. The PR's per-field contexts are for this case.
   - Keys: Cmd+Z and Cmd+Shift+Z (Ctrl+Z and Ctrl+Y elsewhere), in `src/keys.rs` (D8).
-- **Leaf texture painting**, a chunk of its own, since it adds a dependency: a 2D rasterizer on
-  the CPU (requirements, open question 3; the command-line mode needs the CPU path). Seedling's
-  `genLeafTexture.ts` uses a small part of Canvas2D: paths of lines and cubic Béziers, stroke and
-  fill, affine transforms, line width, join and cap, global alpha, solid colors and linear
-  gradients, `clearRect` and `strokeRect`. The candidate must cover that set; propose it before
-  code.
-- **C10 Species data model**, its groups the layers of the growth model (D11;
-  `docs/growth-model.md`, Consequences), correcting seedling where the requirements say.
-  Reflectable types with `Default` for initial values and attributes for the editor, after the
-  fields settle (C35, C36, C29, C24), so saved files are not broken by every change. Serialized by
-  reflection only, no serde derives: TOML in settings (C8) and JSON as the glTF
-  extra, one representation that cannot drift. The file records the generator version it was
-  made with (X15). A golden test: a species serialized and compared
-  with a JSON file in the repo, brought in with `include_str!` rather than quoted inline.
-  The limb levels are written as the panel shows them, a list of the shown levels only: the
-  count and the array (D15) move into a `LimbLevels { shown, levels }` type with
-  `#[reflect(SerializeWithRegistry, DeserializeWithRegistry)]`, which writes the shown levels,
-  each by reflection through the registry, and reads one to three, filling the rest from each
-  depth's defaults (moved from `Species::default` to `LimbLevels::default`). Type data on the
-  type, not a `ReflectSerializerProcessor`, since `bevy_settings` makes its own serializer. The
-  panel shows `LimbLevels` flattened, its levels beside the other subpanes, by an attribute. A
-  hidden level then lasts a session, not a save or a restart. Rejected: the species as a `Vec`
-  of grown levels with hidden ones stashed in the editor, the same in files but a larger change
-  that undoes D15. Seedling's groups for reference: `trunk`;
-  `branch[]`, one per level; the leaf as `leafGroup` (arrangement), `leafShape` and `leafColor`.
+
+  E[4]
 
 ## Decisions
 
@@ -323,6 +356,14 @@ but reads no attributes, has no per-type hook, and is retained-mode. The generat
   wander (itself the randomness), radius (C29 derives it), sides (mesh detail). Counts become
   fractions rounded at random (C36), and the span becomes middle and length (C35).
 
+- **D20** Leaf textures are painted on the CPU with `tiny-skia`, a pure-Rust port of part of
+  Skia (requirements, open question 3). It covers seedling's Canvas2D subset almost one to one:
+  `PathBuilder` for lines and cubics, `fill_path` and `stroke_path`, `Transform`, `Stroke` for
+  width, join and cap, `LinearGradient`, and paint alpha. On the CPU, so the command-line export
+  (X1) can use it. Rejected: `vello` (GPU, so not for the command line), `vello_cpu` (likely
+  tiny-skia's successor, but its API still moving; revisit when it settles), `raqote` (quieter),
+  Cairo (a C library to build and ship), `lyon` (tessellates, does not rasterize).
+
 ## Deferred
 
 - **X1** The generator as its own library crate, beside the app: no Bevy dependency beyond
@@ -406,10 +447,6 @@ but reads no attributes, has no per-type hook, and is retained-mode. The generat
   density: caption left and value right while idle; while editing, the caption hidden and the
   text right-aligned. The input's `label_text` would make slider widths ragged. *Gate:* the
   change in the Bevy we build against; then rows drop their caption line, halving their height.
-- **X17** Angles as dials, for variety that means something: a dial points the actual way, and
-  for a `Fuzzy` angle can draw the spread as a wedge. Mixed control kinds confuse when the
-  choice looks arbitrary; "every angle is a dial" is a rule a user can see. *Gate:* the panel
-  still reads as a wall after C33's sections.
 
 ## Notes
 

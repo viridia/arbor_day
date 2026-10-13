@@ -279,8 +279,11 @@ The output of this step is a short write-up with a recommendation, before any co
 
 1. Triangle budget: what total per tree, and what split between bark and leaves? Today's
    temperate trees spend 2,000+ on bark; something like 300 to 600 in all may be enough at
-   game distance. Measure on screen first.
+   game distance. Measure on screen first. A typical seedling tree is about 2,500 triangles in
+   all, which the game draws today; 300 to 600 is a guess, not a target. It turns on how many
+   trees are on screen at once, and on how many edges the low-poly look wants.
 2. Crate shape: a generator library plus the authoring app, or a single crate? The shell is
    one crate; the split is proposed in the ledger, X1.
 3. Leaf texture rendering in Rust: a 2D vector rasterizer (e.g. `tiny-skia`) on the CPU, or
-   drawn on the GPU in the app. The command-line mode needs the CPU path either way.
+   drawn on the GPU in the app. The command-line mode needs the CPU path either way. Settled:
+   `tiny-skia` (ledger, D20).
