@@ -112,7 +112,7 @@ impl Default for Envelope {
     fn default() -> Self {
         Self {
             profile: Profile::Ellipsoid,
-            height: 6.0,
+            height: 6.25,
             crown_base: 0.3,
             radius: 2.5,
         }
@@ -134,12 +134,25 @@ pub enum Profile {
     Flame,
 }
 
-/// The main stem, from the ground to the top of the plant.
+/// The stems rising from the ground: one for a tree, several for a shrub.
 #[derive(Reflect, Clone, PartialEq)]
 pub struct Trunk {
-    /// Length along the axis, in meters.
-    #[reflect(@ValueRange::<f32>(0.5..=20.0), @Precision(1))]
-    pub height: f32,
+    /// Stems rising from the ground, spaced evenly around.
+    #[reflect(@ValueRange::<i32>(1..=5), @Spinbox)]
+    pub stems: i32,
+    /// The angle from up at which each stem leaves the ground.
+    #[reflect(
+        @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_3),
+        @NumberInputUnits::new_static("angle_degrees"),
+    )]
+    pub splay: f32,
+    /// Each stem's length along its axis, as a fraction of the envelope's height.
+    #[reflect(
+        @ValueRange::<f32>(0.1..=1.0),
+        @Precision(2),
+        @NumberInputUnits::new_static("ratio_percent"),
+    )]
+    pub leader: f32,
     /// Radius at the base, in meters.
     #[reflect(@ValueRange::<f32>(0.02..=1.0), @Precision(2))]
     pub radius: f32,
@@ -153,7 +166,9 @@ pub struct Trunk {
     /// Sides of each ring.
     #[reflect(@ValueRange::<i32>(3..=8), @Spinbox)]
     pub sides: i32,
-    /// How far the axis turns from vertical between the base and the top.
+    /// How much further from up each stem's axis turns between the base and the top, away from
+    /// the middle. A tree's compass direction is drawn from the seed, so neighbouring trees of one
+    /// species lean different ways.
     #[reflect(
         @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_2),
         @NumberInputUnits::new_static("angle_degrees"),
@@ -323,7 +338,9 @@ impl Default for Bark {
 impl Default for Trunk {
     fn default() -> Self {
         Self {
-            height: 5.0,
+            stems: 1,
+            splay: 0.0,
+            leader: 0.8,
             radius: 0.2,
             taper: 0.6,
             sides: 6,

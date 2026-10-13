@@ -37,7 +37,8 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `e409d08` | C34 Fractions as percentages: the `ratio_percent` unit (`properties::RatioPercent`).  |
 | `c040b8d` | C36 Nodes by density (D21): nodes per crown radius of span, and per node, rounded at random (`Rng::round`). |
 | `1a68679` | C35 Span as middle and length (D19), in place of start and end.                       |
-| —         | C29 Pipe-model radii (D22), and limbs under the thinnest meshed radius left unmeshed; `plans/levels.py` checks the cut-off. |
+| `3cf3760` | C29 Pipe-model radii (D22), and limbs under the thinnest meshed radius left unmeshed; `plans/levels.py` checks the cut-off. |
+| —         | C24 Stems (D23): count, splay and leader; the lean's heading from the seed; `plans/stems.py`. |
 
 ## Next
 
@@ -54,37 +55,47 @@ per-type hook, and is retained-mode.
 
 ### Milestone: the first species exported to Panoply
 
-1. **C24 Stems**: the trunk's height becomes the envelope's height times the leader extent (shown
-   in `ratio_percent`, as every fraction is); until
-   then the trunk keeps its own height. A fraction is as fine for a herb as for a tree, and the
-   envelope becomes the one size. Stems: count and splay (`docs/growth-model.md`, Stems and
-   leader), so a shrub or herb is two or three stems spread wide under a crown starting near the
-   ground, as seedling's short trunk splitting just above the root was. The trunk's lean takes
-   its compass direction from the seed (a `trunk` stream, D16), not always +X, so neighbouring
-   trees of one species lean different ways. E[3]
-2. **C30 Forks**, Weber and Penn's splits: at a point along a limb it ends, and copies of it
+1. **C44 Targets, not filters.** A limb exists only where its node lies inside the envelope, and
+   whether it does rests on settings made apart from the envelope (leader, splay, lean, span,
+   crown base), so pushing any of them far enough empties the plant. Make each a target: a
+   stem's length is the leader times the distance to the envelope along its starting
+   direction, as reach is for limbs, so a splayed stem stops inside the crown; a level's span is
+   measured over the part of the parent inside the crown, so the crown base alone sets where
+   limbs begin and "0 to 100%" spans the crown whatever its shape (only stems change, since limbs
+   lie wholly inside); and each limb subpane's header shows its level's count ("Limbs 1 · 8"),
+   so an emptied level shows while dragging. The default span becomes about 5% to 95% of the
+   crown's stretch; compare the default tree with today's. Left after this: reach or density
+   near 0, which read as what they do. E[3]
+2. **C37 Foliage placement** (`docs/growth-model.md`, Foliage): clusters seeded along the parts
+   of the limbs within a shell depth of the envelope, at a spacing set by the author, each a
+   plain quad for now, in a leaf mesh of its own with an alpha-masked material. Bare trees set
+   no foliage. Facing up for now; C39 brings the facing distribution. Twigs and leaves are
+   judged against each other (twigs need leaves to show they are in the right place, leaves
+   need twigs to sit on), so one side is a placeholder while the other is tuned: the leaves,
+   since the twigs exist. The cards carry a texture taken from a seedling `.glb` (they embed
+   theirs; growth model, Seedling's flora) as a placeholder in `assets/`, until C38 paints
+   them. E[3]
+3. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's `genLeafTexture.ts` ported,
+   its leaf shape and color parameters as species fields with streams of their own
+   (requirements, Parameters, determinism, variants). The texture goes on C37's cards, replacing the placeholder. A golden
+   test on its pixels compares with a tolerance, since SIMD can move a channel by a level. E[3]
+4. **C39 Card shapes and facing**: crossed, cupped and creased cards chosen by weight; a card's
+   normal drawn around a blend of world up and the envelope's outward normal, with a spread, its
+   rotation about the normal free; crown softness for the shading normal (X13). E[3]
+5. **C30 Forks**, Weber and Penn's splits: at a point along a limb it ends, and copies of it
    carry on, turned apart by the fork angle. The copies are the same level as the limb, not its
    children, so they reach the envelope and bear children as it would; turning both by half the
    angle reads as the symmetric Y of a child deflecting its parent. Per level: forks per limb (0
    to 2), fork at (`Fuzzy`, a fraction of the limb), fork angle (`Fuzzy`), and fork roll, where
    the Y's plane lies, from level to upright. Each copy's radius follows the pipe model (D22):
-   the limb's over the exponent's root of the copies, over √2 for two at exponent 2. C24's
-   leader fork uses the same mechanism. E[3]
-3. **C37 Foliage placement** (`docs/growth-model.md`, Foliage): clusters seeded along the parts
-   of the limbs within a shell depth of the envelope, at a spacing set by the author, each a
-   plain quad for now, in a leaf mesh of its own with an alpha-masked material. Bare trees set
-   no foliage. Facing up for now; C39 brings the facing distribution. E[3]
-4. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's `genLeafTexture.ts` ported,
-   its leaf shape and color parameters as species fields with streams of their own
-   (requirements, Parameters, determinism, variants). The texture goes on C37's cards. A golden
-   test on its pixels compares with a tolerance, since SIMD can move a channel by a level. E[3]
-5. **C39 Card shapes and facing**: crossed, cupped and creased cards chosen by weight; a card's
-   normal drawn around a blend of world up and the envelope's outward normal, with a spread, its
-   rotation about the normal free; crown softness for the shading normal (X13). E[3]
+   the limb's over the exponent's root of the copies, over √2 for two at exponent 2. Stems fork
+   the same way, so a decurrent tree's leader stopping short (D23) ends in a fork (growth
+   model, Stems and leader). After foliage, since a crown's look cannot be judged without
+   leaves. E[3]
 6. **C10 Species data model**, its groups the layers of the growth model (D11;
    `docs/growth-model.md`, Consequences), correcting seedling where the requirements say.
    Reflectable types with `Default` for initial values and attributes for the editor, after the
-   fields settle (C24), so saved files are not broken by every change. Serialized
+   fields settle, so saved files are not broken by every change. Serialized
    by reflection only, no serde derives: TOML in settings (C8) and JSON as the glTF extra, one
    representation that cannot drift. The file records the generator version it was made with
    (X15). A golden test: a species serialized and compared with a JSON file in the repo,
@@ -384,6 +395,16 @@ per-type hook, and is retained-mode.
   for thin levels, where it saves most and cannot be seen, and 4 or more for the trunk and the
   first level, as the defaults have it.
 
+- **D23** The stems' length is the leader, a share of the envelope's height, so the envelope is
+  the plant's one size and a fraction suits a herb as well as a tree. Several stems are spaced
+  evenly around the base, each leaving the ground at the splay from up and turning by the lean
+  as it rises, away from the middle; each has the trunk's radius and bears the first limb level,
+  its stream forked from `branching` by its index. The first stem's compass heading is drawn
+  from a `trunk` stream (D16), so neighbouring trees of one species lean different ways. A
+  shrub needs a low crown base too: nodes under the crown, or outside its narrow foot, grow
+  nothing. The panel group stays "Trunk". Defaults keep the 5 m trunk: an 80% leader of a
+  6.25 m envelope.
+
 ## Deferred
 
 - **X1** The generator as its own library crate, beside the app: no Bevy dependency beyond
@@ -470,7 +491,26 @@ per-type hook, and is retained-mode.
 - **X17** Offer `ratio_percent` (`properties::RatioPercent`) to feathers, which has length, time
   and angle units but no percentage. Not a `StandardUnitKind`: its scaling shows an `f32` 0.3 as
   30.000002%, so the unit shifts the value's shortest decimal instead; feathers' own units would
-  gain from the same. *Gate:* the unit used through C24 without change.
+  gain from the same. It has settled: C24's leader took it unchanged. *Gate:* the author's
+  go-ahead to file the PR.
+- **X18** Forms and presets. The tool is for indie developers wanting the common Earth plant
+  types (requirements, What it is for), so presets named after those types ("Fir", "Willow",
+  "Live oak", "Clump"), each a saved species, are its starting points. Whether forms are needed
+  as well is open: a few architectures (excurrent and decurrent, which covers clumps; seedling's
+  48 used only these two, a limit of seedling's rather than of intent, growth model, Seedling's
+  flora), each with a handful of outcome
+  parameters it translates into the engine's ("branches per limb on average" rather than nodes
+  per crown radius). A species would keep every form's parameters with a selector for the
+  active one, as D15 keeps hidden levels, so switching loses nothing and the editor needs no
+  widget for an enum with data; the raw engine stays a developer view. *Gate:* C44, foliage (C37
+  to C39) and C30 landed, since the generator's look cannot be judged without leaves, and
+  presets for the reference set tried: forms only if tuning presets is still too
+  fiddly.
+- **X19** Pendulous levels, for willows: a level whose limbs may hang below the envelope, the
+  envelope guiding rather than clipping them (growth model, How the shapes are covered).
+  *Gate:* a weeping preset (X18).
+- **X20** Foliage radiating from a stem's tip or the ground, for palms, rosettes and tufts
+  (agave, grass, fern), with no limbs. *Gate:* C37 (foliage placement).
 
 ## Notes
 

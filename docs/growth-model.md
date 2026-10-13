@@ -18,6 +18,37 @@ from it.
   each tip, and ground through the gaps. The limbs carry the shape, not the foliage. The orange
   trees, with cards dense enough to merge into one outlined mass, are nearer the goal.
 
+## Seedling's flora
+
+What one game needed, not the coverage target, which is the common Earth types (requirements,
+What it is for; How the shapes are covered, below). Panoply's 48 flora models are seedling output, kept with their parameters in
+`../faery/packages/los-assets/src/flora/<group>/*.glb` (the scene's extras, key `sapling`);
+screenshots of some are in `artwork/reference/seedling/`. Names are labels, not botany: the
+trees are named after real trees without any claim to resemble them, and the crops, herbs and
+shrubs have invented names.
+
+Read from those parameters, the 48 use two architectures, seedling's two modes:
+
+- **Monopodial**, a leader bearing limbs, 35 models: every poplar, hemlock, juniper, pine and
+  dead tree, `desert1`, the three bushes, six shrubs (`buckberry`, `dreamsage`, `eldenthorn`,
+  `scragbush`, `whitespear`, `wracknettle`) and three crops (`millsprout`, `moonblush`,
+  `shadowfoil`). One or two levels. The stalks (`millsprout`, `whitespear`, `wracknettle`) are
+  this with a tall thin trunk and short limbs.
+- **Dichotomous**, a trunk forking again and again, 13 models in two sizes: decurrent trees
+  (`crown-dark`, `crown-med`, `split`, `desert2`), a 1 to 1.6 m trunk forking five or six levels
+  deep; and clumps (`fogroot`, `palecress`, `heartblush`, `sunstalk`, `fireweed`, `leechgrass`,
+  `rimeslip`, `scrubthistle`, `sticklebrush`), a 0.1 to 0.4 m trunk forking two or three ways,
+  two or three levels deep. A clump is a decurrent tree at a small scale.
+
+About a dozen branch structures serve all 48. The six poplars share one, differing in node
+interval, color and leaves; `pine-fluffy` and the dead trees reuse it, the dead ones leafless.
+`pine-arctic1`, `pine-arctic3` and `pine-drooping` share another: limbs at 117° with a slight
+downward flex. A species' identity came mostly from its foliage and one or two shape controls.
+That narrowness is seedling's limit, not the intent: varied structures were wanted but hard to
+reach with its parameters.
+Seedling could not make some wanted forms, such as coast oaks (low, wide, heavy wandering limbs
+from a forking trunk) and willows (pendulous twigs hanging below the crown).
+
 ## What the model has to do
 
 A plant here is a trunk, a handful of limbs, and some tens of foliage cards, in a few hundred
@@ -199,6 +230,14 @@ the card keeps its own normal, as today. Above 0 both faces share it; see Conseq
 | Bare, dead | any | either | 2 to 3 levels, more of the budget | none |
 | Shrub | hemisphere | several stems | 1 level | clusters on the shell |
 | Crop | column | several stems | none or 1 level, opposite or spiral | cards along the stems |
+| Spreading (live oak) | wide hemisphere, low base | short, ends in a fork | 1 to 2 levels, heavy wander, tropism level | clusters on the shell |
+| Weeping (willow) | ellipsoid | ends in a fork | last level pendulous, hanging below the crown | cards along the hanging twigs |
+| Palm | small sphere atop a bare stem | full height, no limbs | none | fronds radiating from the tip |
+| Rosette or tuft (agave, grass, fern) | hemisphere at the ground | none | none | cards radiating from the base |
+
+The last four were beyond seedling. Weeping needs a level allowed below the envelope, so the
+envelope guides it rather than clipping it; palms and rosettes need foliage radiating from a
+stem's tip or the ground.
 
 ## Consequences
 

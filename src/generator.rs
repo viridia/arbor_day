@@ -8,7 +8,7 @@ use bevy::math::{Quat, Vec2, Vec3};
 use crate::{
     fuzzy::Fuzzy,
     random::Rng,
-    species::{Envelope, LimbLevel, Profile, Species, Trunk},
+    species::{Envelope, LimbLevel, Profile, Species},
 };
 
 /// The largest turn of a tube's axis between two rings, so rings are spaced by curvature: a
@@ -110,12 +110,17 @@ struct Frame {
     side: Vec3,
 }
 
-/// The whole plant: the trunk and its limbs, less those thinner at their base than the bark's
+/// The whole plant: the stems and their limbs, less limbs thinner at their base than the bark's
 /// thinnest meshed radius, which are left to the foliage. Returns the geometry and the number of
-/// limbs grown, meshed or not.
+/// limbs grown, meshed or not. Each stem is a tube closed at the top by a fan and left open at
+/// the base, since it stands in the ground.
 pub fn plant(species: &Species) -> (Geometry, usize) {
-    let (trunk_top, limbs) = grow(species);
-    let mut geometry = trunk(&species.trunk, trunk_top);
+    let (stems, limbs) = grow(species);
+    let mut geometry = Geometry::default();
+    let trunk_sides = species.trunk.sides.max(3) as u32;
+    for stem in &stems {
+        tube(&mut geometry, &stem.rings, stem.radii, trunk_sides);
+    }
     let levels = species.grown_levels();
     for limb in limbs
         .iter()
@@ -127,19 +132,38 @@ pub fn plant(species: &Species) -> (Geometry, usize) {
     (geometry, limbs.len())
 }
 
-/// The trunk: a tube of rings rising from the origin, leaning toward +X along a circular arc,
-/// narrowing to `top_radius`, closed at the top by a fan. The base is left open, since it stands
-/// in the ground.
-pub fn trunk(trunk: &Trunk, top_radius: f32) -> Geometry {
-    let mut geometry = Geometry::default();
-    let sides = trunk.sides.max(3) as u32;
-    tube(
-        &mut geometry,
-        &trunk_rings(trunk),
-        (trunk.radius, top_radius),
-        sides,
-    );
-    geometry
+/// A stem rising from the ground, as grown, before meshing.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Stem {
+    /// At least two, base to tip.
+    pub rings: Vec<Ring>,
+    pub radii: (f32, f32),
+    /// The stem's own random stream; its limbs' streams fork from it.
+    rng: Rng,
+}
+
+/// The stems: `stems` of them from the origin, spaced evenly around, each leaving the ground at
+/// the splay from up and turning by the lean as it rises, away from the middle. The first's
+/// compass heading is drawn from the seed.
+fn stems(species: &Species) -> Vec<Stem> {
+    let trunk = &species.trunk;
+    let count = trunk.stems.max(1) as u32;
+    let length = (trunk.leader * species.envelope.height).max(0.01);
+    let heading = species.seed.stream("trunk").unit() * TAU;
+    let branching = species.seed.stream("branching");
+    let top = trunk.radius * (1.0 - trunk.taper.clamp(0.0, 1.0));
+    (0..count)
+        .map(|stem| Stem {
+            rings: stem_rings(
+                length,
+                trunk.splay,
+                trunk.lean,
+                heading + TAU * stem as f32 / count as f32,
+            ),
+            radii: (trunk.radius, top),
+            rng: branching.fork(stem as u64),
+        })
+        .collect()
 }
 
 /// The limbs, as `grow` grows them.
@@ -148,15 +172,13 @@ pub fn limbs(species: &Species) -> Vec<Limb> {
     grow(species).1
 }
 
-/// The limbs, level by level, each level on the limbs of the one before and the first on the
-/// trunk, in level order; and the trunk's radius at its top. A stem's radius at its top is what
-/// its limbs leave it (`grow_level`), so it is set once the level after has grown.
-fn grow(species: &Species) -> (f32, Vec<Limb>) {
+/// The stems, and their limbs level by level, each level on the limbs of the one before and the
+/// first on the stems, in level order. A stem's radius at its top is what its limbs leave it
+/// (`grow_level`), so it is set once the level after has grown.
+fn grow(species: &Species) -> (Vec<Stem>, Vec<Limb>) {
     let taper = species.trunk.taper.clamp(0.0, 1.0);
     let exponent = species.bark.pipe_exponent.max(1.0);
-    let trunk_rings = trunk_rings(&species.trunk);
-    let trunk_rng = species.seed.stream("branching");
-    let mut trunk_top = species.trunk.radius * (1.0 - taper);
+    let mut stems = stems(species);
     let mut grown: Vec<Limb> = Vec::new();
     for (level, params) in species.grown_levels().iter().enumerate() {
         let mut children = Vec::new();
@@ -172,11 +194,13 @@ fn grow(species: &Species) -> (f32, Vec<Limb>) {
             )
         };
         if level == 0 {
-            trunk_top = grow_on(Parent {
-                rings: &trunk_rings,
-                radius: species.trunk.radius,
-                rng: &trunk_rng,
-            });
+            for stem in &mut stems {
+                stem.radii.1 = grow_on(Parent {
+                    rings: &stem.rings,
+                    radius: stem.radii.0,
+                    rng: &stem.rng,
+                });
+            }
         }
         for limb in grown.iter_mut().filter(|limb| limb.level + 1 == level) {
             limb.radii.1 = grow_on(Parent {
@@ -187,7 +211,7 @@ fn grow(species: &Species) -> (f32, Vec<Limb>) {
         }
         grown.extend(children);
     }
-    (trunk_top, grown)
+    (stems, grown)
 }
 
 /// A stem limbs grow on: the trunk, or a limb of the level before.
@@ -421,28 +445,24 @@ fn upper_side(direction: Vec3, parent_side: Vec3) -> Vec3 {
     }
 }
 
-/// The trunk's rings, evenly spaced along its arc. The arc lies in the XY plane, so a side square
-/// to it in that plane never twists: azimuth 0 is toward +X when the trunk is straight.
-fn trunk_rings(trunk: &Trunk) -> Vec<Ring> {
-    let height = trunk.height.max(0.01);
-    let segments = trunk_segments(trunk);
+/// A stem's rings, evenly spaced along its arc (`arc`), turned about the vertical to `heading`.
+/// The arc lies in one vertical plane, so a side square to it in that plane never twists: azimuth
+/// 0 is toward the heading.
+fn stem_rings(length: f32, splay: f32, lean: f32, heading: f32) -> Vec<Ring> {
+    let segments = ((lean.abs() / MAX_RING_TURN_DEGREES.to_radians()).ceil() as u32).max(1);
+    let turn = Quat::from_rotation_y(heading);
     (0..=segments)
         .map(|ring| {
             let t = ring as f32 / segments as f32;
-            let (center, tangent) = arc(height, trunk.lean, t);
+            let (center, tangent) = arc(length, splay, lean, t);
             Ring {
-                center,
-                tangent,
-                side: tangent.cross(Vec3::Z),
-                at: height * t,
+                center: turn * center,
+                tangent: turn * tangent,
+                side: turn * tangent.cross(Vec3::Z),
+                at: length * t,
             }
         })
         .collect()
-}
-
-/// Segments in the trunk's tube, by how far it leans.
-fn trunk_segments(trunk: &Trunk) -> u32 {
-    ((trunk.lean.abs() / MAX_RING_TURN_DEGREES.to_radians()).ceil() as u32).max(1)
 }
 
 /// Adds a tube through `rings`, each turned to its ring's side, so the tube rolls only as the
@@ -587,23 +607,35 @@ fn crown_span(envelope: &Envelope) -> (f32, f32) {
 }
 
 /// The point and unit tangent at `t` (0 to 1) along an arc of length `length` that starts at the
-/// origin going up and turns by `bend` radians toward +X.
-fn arc(length: f32, bend: f32, t: f32) -> (Vec3, Vec3) {
+/// origin `start` radians from up toward +X and turns by `bend` radians further toward +X.
+fn arc(length: f32, start: f32, bend: f32, t: f32) -> (Vec3, Vec3) {
+    let angle = start + bend * t;
+    let (sin, cos) = angle.sin_cos();
+    let tangent = Vec3::new(sin, cos, 0.0);
     if bend.abs() < 1e-4 {
-        return (Vec3::Y * length * t, Vec3::Y);
+        return (tangent * length * t, tangent);
     }
     let radius = length / bend;
-    let (sin, cos) = (bend * t).sin_cos();
+    let (start_sin, start_cos) = start.sin_cos();
     (
-        Vec3::new(radius * (1.0 - cos), radius * sin, 0.0),
-        Vec3::new(sin, cos, 0.0),
+        Vec3::new(radius * (start_cos - cos), radius * (sin - start_sin), 0.0),
+        tangent,
     )
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{fuzzy::Distribution, random::Seed};
+    use crate::{fuzzy::Distribution, random::Seed, species::Trunk};
+    use bevy::math::Vec3Swizzles;
+
+    /// A lone 5 m stem, standing straight up and leaning toward +X.
+    fn stem_mesh(sides: u32, lean_degrees: f32) -> Geometry {
+        let mut geometry = Geometry::default();
+        let rings = stem_rings(5.0, 0.0, lean_degrees.to_radians(), 0.0);
+        tube(&mut geometry, &rings, (0.2, 0.1), sides);
+        geometry
+    }
 
     fn trunk_with(sides: i32, lean_degrees: f32) -> Trunk {
         Trunk {
@@ -616,14 +648,14 @@ mod tests {
     #[test]
     fn rings_follow_curvature() {
         // Straight: one segment of 6 quads and a 6-triangle cap.
-        assert_eq!(trunk(&trunk_with(6, 0.0), 0.1).triangles(), 6 * 2 + 6);
+        assert_eq!(stem_mesh(6, 0.0).triangles(), 6 * 2 + 6);
         // 90° at 15° a ring: six segments.
-        assert_eq!(trunk(&trunk_with(4, 90.0), 0.1).triangles(), 4 * 2 * 6 + 4);
+        assert_eq!(stem_mesh(4, 90.0).triangles(), 4 * 2 * 6 + 4);
     }
 
     #[test]
     fn vertices_are_shared() {
-        let geometry = trunk(&trunk_with(5, 30.0), 0.1);
+        let geometry = stem_mesh(5, 30.0);
         // Two segments: three rings of five, and the tip.
         assert_eq!(geometry.positions.len(), 3 * 5 + 1);
         assert_eq!(geometry.normals.len(), geometry.positions.len());
@@ -631,7 +663,7 @@ mod tests {
 
     #[test]
     fn base_stands_on_the_origin() {
-        let geometry = trunk(&trunk_with(6, 40.0), 0.1);
+        let geometry = stem_mesh(6, 40.0);
         let base = &geometry.positions[..6];
         let center = base.iter().copied().sum::<Vec3>() / 6.0;
         assert!(center.length() < 1e-5);
@@ -639,10 +671,48 @@ mod tests {
     }
 
     #[test]
-    fn straight_trunk_reaches_its_height() {
-        let geometry = trunk(&trunk_with(6, 0.0), 0.1);
-        let tip = *geometry.positions.last().unwrap();
-        assert!((tip - Vec3::Y * Trunk::default().height).length() < 1e-5);
+    fn a_straight_stem_reaches_the_leader() {
+        let mut species = Species::default();
+        species.trunk.lean = 0.0;
+        species.trunk.leader = 0.5;
+        let tip = stems(&species)[0].rings.last().unwrap().center;
+        let height = 0.5 * species.envelope.height;
+        assert!((tip - Vec3::Y * height).length() < 1e-5, "{tip}");
+    }
+
+    #[test]
+    fn stems_splay_evenly_around() {
+        let mut species = Species::default();
+        species.trunk.stems = 3;
+        species.trunk.splay = 30.0_f32.to_radians();
+        species.trunk.lean = 0.0;
+        let stems = stems(&species);
+        assert_eq!(stems.len(), 3);
+        let directions: Vec<Vec3> = stems.iter().map(|stem| stem.rings[0].tangent).collect();
+        for direction in &directions {
+            assert!((direction.angle_between(Vec3::Y).to_degrees() - 30.0).abs() < 1e-3);
+        }
+        let heading = |v: Vec3| v.z.atan2(v.x);
+        for pair in directions.windows(2) {
+            let apart = (heading(pair[0]) - heading(pair[1])).rem_euclid(TAU);
+            assert!((apart - TAU / 3.0).abs() < 1e-4, "{}", apart.to_degrees());
+        }
+    }
+
+    #[test]
+    fn the_seed_turns_the_lean() {
+        let tip = |seed| {
+            let species = Species {
+                seed: Seed(seed),
+                ..Species::default()
+            };
+            stems(&species)[0].rings.last().unwrap().center
+        };
+        // The same height and lean, in another compass direction.
+        let (one, two) = (tip(1), tip(2));
+        assert!((one.y - two.y).abs() < 1e-5);
+        assert!((one.xz().length() - two.xz().length()).abs() < 1e-5);
+        assert!(one.xz().angle_to(two.xz()).abs() > 0.1, "{one} {two}");
     }
 
     #[test]
@@ -677,6 +747,7 @@ mod tests {
     fn envelope_radius_is_zero_outside_the_crown() {
         let envelope = Envelope {
             profile: Profile::Column,
+            height: 6.0,
             ..Envelope::default()
         };
         // Crown base at 1.8 m, top at 6 m.
@@ -689,6 +760,7 @@ mod tests {
     fn rays_leave_the_envelope_at_its_surface() {
         let envelope = Envelope {
             profile: Profile::Column,
+            height: 6.0,
             ..Envelope::default()
         };
         let origin = Vec3::Y * 3.0;
@@ -736,7 +808,7 @@ mod tests {
     fn limbs_leave_the_trunk_at_their_angle() {
         // At the default lean the trunk is one straight segment, base to tip.
         let species = regular();
-        let tip = *trunk(&species.trunk, 0.1).positions.last().unwrap();
+        let tip = stems(&species)[0].rings.last().unwrap().center;
         for limb in limbs(&species) {
             let angle = limb.direction().angle_between(tip);
             assert!(
@@ -756,7 +828,7 @@ mod tests {
         );
         // Reaching past the envelope is clamped to reaching it.
         species.limbs[0].reach = Fuzzy::new(0.95, 0.2, Distribution::Uniform);
-        let tip = *trunk(&species.trunk, 0.1).positions.last().unwrap();
+        let tip = stems(&species)[0].rings.last().unwrap().center;
         let limbs = limbs(&species);
         let angles: Vec<f32> = limbs
             .iter()
@@ -935,7 +1007,7 @@ mod tests {
     fn limbs_start_on_the_trunk_as_meshed() {
         // At the default lean the trunk is one straight segment, base to tip.
         let species = Species::default();
-        let tip = *trunk(&species.trunk, 0.1).positions.last().unwrap();
+        let tip = stems(&species)[0].rings.last().unwrap().center;
         for limb in limbs(&species) {
             assert!(limb.origin().cross(tip).length() < 1e-5, "{limb:?}");
         }
@@ -965,7 +1037,7 @@ mod tests {
     fn limbs_starting_below_the_crown_are_left_out() {
         let mut species = regular();
         // Five nodes along the whole trunk, two crown radii, at 0.5, 1.5, 2.5, 3.5 and 4.5 m; the
-        // crown base is at 1.8 m.
+        // crown base is at 1.875 m.
         species.limbs[0].span_middle = Fuzzy::exactly(0.5);
         species.limbs[0].span_length = Fuzzy::exactly(1.0);
         species.limbs[0].density = 2.5;
@@ -979,7 +1051,8 @@ mod tests {
         species.limbs[0].radius = 0.6;
         species.bark.pipe_exponent = 2.0;
         let trunk = species.trunk.radius;
-        let (top, limbs) = grow(&species);
+        let (stems, limbs) = grow(&species);
+        let top = stems[0].radii.1;
         assert_eq!(limbs.len(), 2);
         // The first takes its share of the whole trunk; the second, of what is left past it.
         let first = 0.6 * trunk;
@@ -994,7 +1067,7 @@ mod tests {
         // A higher exponent narrows the trunk less.
         species.bark.pipe_exponent = 3.0;
         species.trunk.taper = 0.0;
-        let (higher, _) = grow(&species);
+        let higher = grow(&species).0[0].radii.1;
         assert!(higher > left, "{higher} {left}");
     }
 
@@ -1008,8 +1081,8 @@ mod tests {
         species.bark.min_radius = 1.0;
         let (bare, still) = plant(&species);
         assert_eq!(still, limbs);
-        let (top, _) = grow(&species);
-        assert_eq!(bare.triangles(), trunk(&species.trunk, top).triangles());
+        // The trunk alone: at the default lean, one segment of 6 quads and a 6-triangle cap.
+        assert_eq!(bare.triangles(), 6 * 2 + 6);
         assert!(all.triangles() > bare.triangles());
     }
 

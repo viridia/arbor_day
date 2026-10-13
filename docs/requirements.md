@@ -4,9 +4,9 @@ A Rust port of the tree generator in `../seedling` (TypeScript, Electron, three.
 because `seedling` is taken on crates.io. `arbor_day` (and `arbor-day`, which crates.io treats
 as the same name) is free as of 2026-10-11.
 
-The tool makes the flora for Panoply (`../panoply`) and shares context with it: the art style,
-the asset pipeline it feeds, and the editor UI architecture (X3 in Panoply's migration ledger,
-`docs/migration.md`).
+Panoply (`../panoply`) is its first user, and for now its only one, and shares context with it:
+the art style, the asset pipeline it feeds, and the editor UI architecture (X3 in Panoply's
+migration ledger, `docs/migration.md`). Panoply is not the only intended user (What it is for).
 
 This document says what the tool must do. The growth model is chosen in
 [growth-model.md](growth-model.md), after the survey under Research, below.
@@ -17,15 +17,19 @@ better.
 
 ## What it is for
 
+A tool for indie game developers who want to populate a world with flora quickly and easily: a
+diverse, though not comprehensive, collection of the common Earth tree and plant types, each
+recognizable as its type. It does not compete with commercial add-ons for Blender or Maya.
+
 Low-poly plants for large forests where each plant is small on screen. Two things set it apart
 from general tree generators (SpeedTree, Blender's Sapling, The Grove, Arbaro):
 
 1. **Fine structure goes into the texture, not the mesh.** Twigs and leaves are painted onto
    a few alpha-masked cards; only the trunk and major limbs are geometry. The budget is
    hundreds of triangles per plant, not tens of thousands.
-2. **The art style is art nouveau, after Mucha: flat pastels, with the visual detail in the
-   scene rather than in the plants' textures.** A species may have dark outlines like the rest
-   of the game, or none. Outlined bark meshes carry outline metadata, which the game draws as an
+2. **Stylized, not photoreal.** Panoply's style is art nouveau, after Mucha: flat pastels, with
+   the visual detail in the scene rather than in the plants' textures. A species may have dark
+   outlines like the rest of the game, or none. Outlined bark meshes carry outline metadata, which the game draws as an
    inverted hull (Panoply's `docs/outlines.md`); outlined leaf textures have them painted in.
 
 Botanical accuracy matters only as far as it reads at a distance. Silhouette, crown shape, and
@@ -55,6 +59,7 @@ art direction come first.
 - `collision.ts` (pick branch angles to minimize self-shading) exists but is not used.
 - Trees often came out contorted, with branches and leaf cards facing every which way. The
   code shows why (see Order and variation, below).
+- Its output, measured: `docs/growth-model.md`, Seedling's flora.
 - The editor is a React control panel of property groups with a three.js preview that orbits
   on horizontal scroll.
 
