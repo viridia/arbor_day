@@ -35,7 +35,8 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `7f6431b` | C28 Varied level fields (D18): span, divergence, angle and reach are `Fuzzy`.           |
 | `98382d1` | C31 Bend in proportion (D17): a share of the angle left, per crown radius; the trunk's `bend` is now `lean`. |
 | `e409d08` | C34 Fractions as percentages: the `ratio_percent` unit (`properties::RatioPercent`).  |
-| —         | C36 Nodes by density (D21): nodes per crown radius of span, and per node, rounded at random (`Rng::round`). |
+| `c040b8d` | C36 Nodes by density (D21): nodes per crown radius of span, and per node, rounded at random (`Rng::round`). |
+| —         | C35 Span as middle and length (D19), in place of start and end.                       |
 
 ## Next
 
@@ -92,7 +93,7 @@ per-type hook, and is retained-mode.
 7. **C10 Species data model**, its groups the layers of the growth model (D11;
    `docs/growth-model.md`, Consequences), correcting seedling where the requirements say.
    Reflectable types with `Default` for initial values and attributes for the editor, after the
-   fields settle (C35, C29, C24), so saved files are not broken by every change. Serialized
+   fields settle (C29, C24), so saved files are not broken by every change. Serialized
    by reflection only, no serde derives: TOML in settings (C8) and JSON as the glTF extra, one
    representation that cannot drift. The file records the generator version it was made with
    (X15). A golden test: a species serialized and compared with a JSON file in the repo,
@@ -140,11 +141,6 @@ per-type hook, and is retained-mode.
 
 ### Quick wins
 
-- **C35 Span as middle and length** (D19), in place of start and end: "Span middle" and "Span
-  length", both `Fuzzy`, drawn per parent; the ends are middle ± length/2, clamped to the
-  parent, so they cannot cross. Level 1 keeps both spreads at 0. Two fields rather than one
-  `Fuzzy` for the range: a `Fuzzy` reads as "a value drawn near here", not "this stretch".
-  Before C10, since it changes the format. E[2]
 - **C42 Computed values are rounded where written**, from the first writer (Reset, Randomize,
   values derived from the generator): the number input never rounds what it shows, so round to
   the field's `Precision` in the units shown, as feathers' color input does
@@ -361,8 +357,11 @@ per-type hook, and is retained-mode.
   species should differ (the envelope's lean and squash, the trunk's lean direction). The
   trunk does not vary otherwise. Kept as `Fuzzy`: angle and reach per limb, divergence per node,
   the most visible variety. Not varied: bend toward and bend (wander already irregularizes),
-  wander (itself the randomness), radius (C29 derives it), sides (mesh detail). Counts become
-  fractions rounded at random (C36), and the span becomes middle and length (C35).
+  wander (itself the randomness), radius (C29 derives it), sides (mesh detail). Counts are
+  fractions rounded at random (D21). The span is a middle and a length, both `Fuzzy` and drawn
+  per parent, its ends middle ± length/2 cut short at the parent's ends, so they cannot cross:
+  two fields rather than one `Fuzzy` for the range, which would read as "a value drawn near
+  here", not "this stretch".
 
 - **D20** Leaf textures are painted on the CPU with `tiny-skia`, a pure-Rust port of part of
   Skia (requirements, open question 3). It covers seedling's Canvas2D subset almost one to one:

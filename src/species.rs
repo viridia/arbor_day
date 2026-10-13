@@ -57,8 +57,8 @@ impl Default for Species {
                     density: 9.0,
                     per_node: 2.0,
                     divergence: degrees(90.0, 20.0),
-                    start: Fuzzy::exactly(0.3),
-                    end: Fuzzy::exactly(0.9),
+                    span_middle: Fuzzy::exactly(0.6),
+                    span_length: Fuzzy::exactly(0.6),
                     angle: degrees(45.0, 10.0),
                     bend: 0.5,
                     wander: 30.0_f32.to_radians(),
@@ -71,8 +71,8 @@ impl Default for Species {
                     density: 19.0,
                     per_node: 2.0,
                     divergence: degrees(90.0, 20.0),
-                    start: Fuzzy::exactly(0.4),
-                    end: Fuzzy::exactly(0.9),
+                    span_middle: Fuzzy::exactly(0.65),
+                    span_length: Fuzzy::exactly(0.5),
                     angle: degrees(40.0, 10.0),
                     bend: 0.5,
                     wander: 40.0_f32.to_radians(),
@@ -184,22 +184,24 @@ pub struct LimbLevel {
         @NumberInputUnits::new_static("angle_degrees"),
     )]
     pub divergence: Fuzzy,
-    /// Where the lowest node sits, as a fraction of the parent's length. Drawn for each parent.
+    /// The middle of the stretch of the parent bearing nodes, as a fraction of the parent's
+    /// length. Drawn for each parent.
     #[reflect(
         @ValueRange::<f32>(0.0..=1.0),
         @Precision(2),
         @NumberInputUnits::new_static("ratio_percent"),
-        @Caption("Span start"),
+        @Caption("Span middle"),
     )]
-    pub start: Fuzzy,
-    /// Where the highest node sits, as a fraction of the parent's length. Drawn for each parent.
+    pub span_middle: Fuzzy,
+    /// The length of the stretch bearing nodes, as a fraction of the parent's length; it is cut
+    /// short where it would pass either end of the parent. Drawn for each parent.
     #[reflect(
         @ValueRange::<f32>(0.0..=1.0),
         @Precision(2),
         @NumberInputUnits::new_static("ratio_percent"),
-        @Caption("Span end"),
+        @Caption("Span length"),
     )]
-    pub end: Fuzzy,
+    pub span_length: Fuzzy,
     /// The angle from the parent's direction where the limb starts: 0 runs along it, 90° square
     /// to it. Drawn for each limb.
     #[reflect(
@@ -259,8 +261,8 @@ impl Default for LimbLevel {
             density: 8.0,
             per_node: 1.0,
             divergence: degrees(137.5, 10.0),
-            start: Fuzzy::exactly(0.4),
-            end: Fuzzy::exactly(0.9),
+            span_middle: Fuzzy::exactly(0.65),
+            span_length: Fuzzy::exactly(0.5),
             angle: degrees(60.0, 10.0),
             bend_toward: 90.0_f32.to_radians(),
             bend: 0.4,

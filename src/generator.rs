@@ -234,9 +234,10 @@ fn grow_level(
     // The span, the node count and each node's turn and limb count are the parent's, drawn from a
     // stream of its own beside its limbs'.
     let mut layout = parent.rng.fork(LAYOUT_STREAM);
-    let span_start = draw(&params.start, "start", &mut layout);
-    let span_end = draw(&params.end, "end", &mut layout);
-    let span_length = (span_end - span_start).max(0.0) * parent.rings[parent.rings.len() - 1].at;
+    let middle = draw(&params.span_middle, "span_middle", &mut layout);
+    let half = draw(&params.span_length, "span_length", &mut layout) * 0.5;
+    let (span_start, span_end) = ((middle - half).max(0.0), (middle + half).min(1.0));
+    let span_length = (span_end - span_start) * parent.rings[parent.rings.len() - 1].at;
     let nodes = layout.round(params.density * span_length / envelope.radius.max(0.01));
     let mut node_azimuth = 0.0;
     let mut index = 0;
@@ -689,8 +690,8 @@ mod tests {
             level.wander = 0.0;
             for fuzzy in [
                 &mut level.divergence,
-                &mut level.start,
-                &mut level.end,
+                &mut level.span_middle,
+                &mut level.span_length,
                 &mut level.angle,
                 &mut level.reach,
             ] {
@@ -941,10 +942,23 @@ mod tests {
         let mut species = regular();
         // Five nodes along the whole trunk, two crown radii, at 0.5, 1.5, 2.5, 3.5 and 4.5 m; the
         // crown base is at 1.8 m.
-        species.limbs[0].start = Fuzzy::exactly(0.0);
-        species.limbs[0].end = Fuzzy::exactly(1.0);
+        species.limbs[0].span_middle = Fuzzy::exactly(0.5);
+        species.limbs[0].span_length = Fuzzy::exactly(1.0);
         species.limbs[0].density = 2.5;
         assert_eq!(limbs(&species).len(), 3);
+    }
+
+    #[test]
+    fn the_span_is_cut_short_at_the_parent_end() {
+        let mut species = regular();
+        species.trunk.lean = 0.0;
+        // From halfway up the 5 m trunk to its top, one crown radius, not the 5 m asked for.
+        species.limbs[0].span_middle = Fuzzy::exactly(1.0);
+        species.limbs[0].span_length = Fuzzy::exactly(1.0);
+        species.limbs[0].density = 2.0;
+        let limbs = limbs(&species);
+        assert_eq!(limbs.len(), 2);
+        assert!(limbs.iter().all(|limb| (2.5..5.0).contains(&limb.origin().y)));
     }
 
     #[test]
