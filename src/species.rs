@@ -54,8 +54,8 @@ impl Default for Species {
             limbs: [
                 LimbLevel::default(),
                 LimbLevel {
-                    nodes: 5,
-                    per_node: 2,
+                    density: 9.0,
+                    per_node: 2.0,
                     divergence: degrees(90.0, 20.0),
                     start: Fuzzy::exactly(0.3),
                     end: Fuzzy::exactly(0.9),
@@ -68,8 +68,8 @@ impl Default for Species {
                     ..LimbLevel::default()
                 },
                 LimbLevel {
-                    nodes: 3,
-                    per_node: 2,
+                    density: 19.0,
+                    per_node: 2.0,
                     divergence: degrees(90.0, 20.0),
                     start: Fuzzy::exactly(0.4),
                     end: Fuzzy::exactly(0.9),
@@ -166,13 +166,16 @@ pub struct Trunk {
 /// toward the envelope, bending toward an angle from world up and wandering as it goes.
 #[derive(Reflect, Clone, PartialEq)]
 pub struct LimbLevel {
-    /// Places along the parent where limbs start.
-    #[reflect(@ValueRange::<i32>(0..=20), @Spinbox)]
-    pub nodes: i32,
+    /// Places where limbs start, per crown radius of the parent's span, so a long parent bears
+    /// more than a short one. Measured against the crown, so a shrub and a tree with the same
+    /// settings branch alike. A parent's count is rounded up or down at random, up with the chance
+    /// of its fraction.
+    #[reflect(@ValueRange::<f32>(0.0..=40.0), @Precision(1), @Caption("Nodes per crown radius"))]
+    pub density: f32,
     /// Limbs at each node, evenly spaced around it: 1 for alternate or spiral, 2 for opposite,
-    /// more for a whorl.
-    #[reflect(@ValueRange::<i32>(1..=6), @Spinbox, @Caption("Per node"))]
-    pub per_node: i32,
+    /// more for a whorl. Rounded at random for each node, so 1.5 makes half the nodes opposite.
+    #[reflect(@ValueRange::<f32>(1.0..=6.0), @Precision(1), @Caption("Per node"))]
+    pub per_node: f32,
     /// The turn about the parent from one node to the next: 137.5° for a spiral, 180° for
     /// alternate, 90° for opposite pairs crossing. Drawn for each node.
     #[reflect(
@@ -253,8 +256,8 @@ pub struct LimbLevel {
 impl Default for LimbLevel {
     fn default() -> Self {
         Self {
-            nodes: 8,
-            per_node: 1,
+            density: 8.0,
+            per_node: 1.0,
             divergence: degrees(137.5, 10.0),
             start: Fuzzy::exactly(0.4),
             end: Fuzzy::exactly(0.9),

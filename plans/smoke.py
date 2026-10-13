@@ -55,8 +55,8 @@ def run(driver):
     driver.key("Enter")
     driver.expect("Placeholder", PLACEHOLDER, {"count": 10})
     driver.screenshot("numbers")
-    # Editing the species rebuilds the plant.
-    driver.click("Shell/Panel/limbs[0]/nodes/input")
+    # Editing the species rebuilds the plant: four nodes on the trunk's span of one crown radius.
+    driver.click("Shell/Panel/limbs[0]/density/input")
     driver.key("End")
     driver.key("Backspace")
     driver.type("4")

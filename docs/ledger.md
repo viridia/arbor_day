@@ -34,7 +34,8 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `258fcd8` | C23 Curved limbs (D17): bend and wander per metre, and the seed; `plans/growth.py`.     |
 | `7f6431b` | C28 Varied level fields (D18): span, divergence, angle and reach are `Fuzzy`.           |
 | `98382d1` | C31 Bend in proportion (D17): a share of the angle left, per crown radius; the trunk's `bend` is now `lean`. |
-| —         | C34 Fractions as percentages: the `ratio_percent` unit (`properties::RatioPercent`).  |
+| `e409d08` | C34 Fractions as percentages: the `ratio_percent` unit (`properties::RatioPercent`).  |
+| —         | C36 Nodes by density (D21): nodes per crown radius of span, and per node, rounded at random (`Rng::round`). |
 
 ## Next
 
@@ -51,13 +52,7 @@ per-type hook, and is retained-mode.
 
 ### Milestone: the first species exported to Panoply
 
-1. **C36 Nodes by density** (D19): nodes per unit of span (per metre, or per crown radius to
-   match C31; decide in the chunk), so a long parent bears more children than a short one, as
-   seedling's `interval` did. Density × span length is a fraction, rounded at random per parent
-   to its floor or ceiling, with the fraction as the chance of the ceiling. Per node becomes a
-   float the same way (1.5: half the nodes alternate, half opposite). Sides stay whole: mesh
-   detail, not form. E[2]
-2. **C29 Pipe-model radii**, and limbs below a radius left to the foliage rather than meshed.
+1. **C29 Pipe-model radii**, and limbs below a radius left to the foliage rather than meshed.
    Until then limbs taper as the trunk does, and three default levels are heavy (wandering limbs
    add rings, 2 × sides triangles each); revisit the third level's defaults then, and lower the
    three-level bound in `default_plants_stay_within_budget`. The cut-off radius is a species
@@ -68,7 +63,7 @@ per-type hook, and is retained-mode.
    sides), so the line swells and thins with the view, 50% to 100% at 3 sides, 71% at 4, 87% at
    6. Keep 3 for thin levels, where it saves most and cannot be seen, and 4 or more for the
    trunk and first level. E[3]
-3. **C24 Stems**: the trunk's height becomes the envelope's height times the leader extent (shown
+2. **C24 Stems**: the trunk's height becomes the envelope's height times the leader extent (shown
    in `ratio_percent`, as every fraction is); until
    then the trunk keeps its own height. A fraction is as fine for a herb as for a tree, and the
    envelope becomes the one size. Stems: count and splay (`docs/growth-model.md`, Stems and
@@ -76,28 +71,28 @@ per-type hook, and is retained-mode.
    ground, as seedling's short trunk splitting just above the root was. The trunk's lean takes
    its compass direction from the seed (a `trunk` stream, D16), not always +X, so neighbouring
    trees of one species lean different ways. E[3]
-4. **C30 Forks**, Weber and Penn's splits: at a point along a limb it ends, and copies of it
+3. **C30 Forks**, Weber and Penn's splits: at a point along a limb it ends, and copies of it
    carry on, turned apart by the fork angle. The copies are the same level as the limb, not its
    children, so they reach the envelope and bear children as it would; turning both by half the
    angle reads as the symmetric Y of a child deflecting its parent. Per level: forks per limb (0
    to 2), fork at (`Fuzzy`, a fraction of the limb), fork angle (`Fuzzy`), and fork roll, where
    the Y's plane lies, from level to upright. *After* C29, so each copy's radius follows the
    pipe model (the limb's over √2 for two); C24's leader fork uses the same mechanism. E[3]
-5. **C37 Foliage placement** (`docs/growth-model.md`, Foliage): clusters seeded along the parts
+4. **C37 Foliage placement** (`docs/growth-model.md`, Foliage): clusters seeded along the parts
    of the limbs within a shell depth of the envelope, at a spacing set by the author, each a
    plain quad for now, in a leaf mesh of its own with an alpha-masked material. Bare trees set
    no foliage. Facing up for now; C39 brings the facing distribution. E[3]
-6. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's `genLeafTexture.ts` ported,
+5. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's `genLeafTexture.ts` ported,
    its leaf shape and color parameters as species fields with streams of their own
    (requirements, Parameters, determinism, variants). The texture goes on C37's cards. A golden
    test on its pixels compares with a tolerance, since SIMD can move a channel by a level. E[3]
-7. **C39 Card shapes and facing**: crossed, cupped and creased cards chosen by weight; a card's
+6. **C39 Card shapes and facing**: crossed, cupped and creased cards chosen by weight; a card's
    normal drawn around a blend of world up and the envelope's outward normal, with a spread, its
    rotation about the normal free; crown softness for the shading normal (X13). E[3]
-8. **C10 Species data model**, its groups the layers of the growth model (D11;
+7. **C10 Species data model**, its groups the layers of the growth model (D11;
    `docs/growth-model.md`, Consequences), correcting seedling where the requirements say.
    Reflectable types with `Default` for initial values and attributes for the editor, after the
-   fields settle (C35, C36, C29, C24), so saved files are not broken by every change. Serialized
+   fields settle (C35, C29, C24), so saved files are not broken by every change. Serialized
    by reflection only, no serde derives: TOML in settings (C8) and JSON as the glTF extra, one
    representation that cannot drift. The file records the generator version it was made with
    (X15). A golden test: a species serialized and compared with a JSON file in the repo,
@@ -113,15 +108,15 @@ per-type hook, and is retained-mode.
    levels with hidden ones stashed in the editor, the same in files but a larger change that
    undoes D15. Seedling's groups for reference: `trunk`; `branch[]`, one per level; the leaf as
    `leafGroup` (arrangement), `leafShape` and `leafColor`. E[4], split when started
-9. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
+8. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
    panel; the file browser is X2. The seed row moves in with them, in a feathers `group`
    (`containers/group.rs`, no header), so it lines up with the subpanes' rows rather than
    standing at the panel's edge. E[3]
-10. **C8 Working document in settings.** A settings group holding the working species and, once
+9. **C8 Working document in settings.** A settings group holding the working species and, once
    set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
    as seedling did. The document's name comes from the file name. Serialized by reflection, as
    `bevy_settings` does. E[3]
-11. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
+10. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
    as a JSON extra (C10), in the form Panoply loads (requirements, Output; "What Panoply does with the output"). Bevy writes no glTF,
    so this adds a dependency or a writer of our own; propose it before code. The command-line
    export is X1. Research so far (2026-10-12), the author also asking skein's author:
@@ -376,6 +371,13 @@ per-type hook, and is retained-mode.
   (X1) can use it. Rejected: `vello` (GPU, so not for the command line), `vello_cpu` (likely
   tiny-skia's successor, but its API still moving; revisit when it settles), `raqote` (quieter),
   Cairo (a C library to build and ship), `lyon` (tessellates, does not rasterize).
+
+- **D21** A level's nodes are a density, per crown radius of the parent's span, not per metre,
+  as bend is measured against the crown (D17): a species scaled up keeps its form and its
+  triangle count. Seedling's `interval` was absolute, as real internodes nearly are. The count
+  per parent and the limbs per node are fractions rounded at random (`Rng::round`, always one
+  draw), from the parent's layout stream; limbs take stream indices in order, whatever each
+  node's count. Lengthening the span below the crown base adds only nodes that are left out.
 
 ## Deferred
 

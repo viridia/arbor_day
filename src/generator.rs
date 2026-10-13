@@ -218,10 +218,11 @@ impl Parent<'_> {
     }
 }
 
-/// Adds one parent's limbs of one level: nodes spaced evenly along the span, each turned by the
-/// divergence from the one below, its limbs spaced evenly around it, each leaving at the level's
-/// angle from the parent and then grown (`grow_limb`). A limb whose start lies outside the
-/// envelope, or that would be no longer than it is thick, is left out.
+/// Adds one parent's limbs of one level: nodes spaced evenly along the span, as many as the
+/// level's density gives for the span's length, each turned by the divergence from the one below,
+/// its limbs spaced evenly around it, each leaving at the level's angle from the parent and then
+/// grown (`grow_limb`). A limb whose start lies outside the envelope, or that would be no longer
+/// than it is thick, is left out.
 fn grow_level(
     envelope: &Envelope,
     params: &LimbLevel,
@@ -230,14 +231,15 @@ fn grow_level(
     parent: Parent,
     grown: &mut Vec<Limb>,
 ) {
-    let nodes = params.nodes.max(0) as u32;
-    let per_node = params.per_node.max(1) as u32;
-    // The span and the turns between nodes are the parent's, drawn from a stream of its own beside
-    // its limbs'.
+    // The span, the node count and each node's turn and limb count are the parent's, drawn from a
+    // stream of its own beside its limbs'.
     let mut layout = parent.rng.fork(LAYOUT_STREAM);
     let span_start = draw(&params.start, "start", &mut layout);
     let span_end = draw(&params.end, "end", &mut layout);
+    let span_length = (span_end - span_start).max(0.0) * parent.rings[parent.rings.len() - 1].at;
+    let nodes = layout.round(params.density * span_length / envelope.radius.max(0.01));
     let mut node_azimuth = 0.0;
+    let mut index = 0;
     for node in 0..nodes {
         // A turn is any angle, so the divergence is not clamped; adding it is the same modulo a
         // turn.
@@ -245,13 +247,15 @@ fn grow_level(
         if node > 0 {
             node_azimuth += divergence;
         }
+        let per_node = layout.round(params.per_node).max(1);
         // Centered in equal shares of the span, so one node sits halfway along it.
         let t = span_start + (span_end - span_start) * (node as f32 + 0.5) / nodes as f32;
         let frame = parent.frame(t);
         let across = frame.side.cross(frame.tangent);
         let base_radius = params.radius * frame.radius;
         for limb in 0..per_node {
-            let rng = parent.rng.fork((node * per_node + limb) as u64);
+            let rng = parent.rng.fork(index);
+            index += 1;
             let mut own = rng.fork(OWN_VALUES_STREAM);
             let angle = draw(&params.angle, "angle", &mut own);
             let reach = draw(&params.reach, "reach", &mut own);
@@ -885,7 +889,7 @@ mod tests {
     #[test]
     fn hidden_levels_do_not_grow() {
         let mut species = Species::default();
-        species.limbs[2].nodes = 20;
+        species.limbs[2].density = 40.0;
         let one = limbs(&species).len();
         species.limb_levels = 2;
         let two = limbs(&species);
@@ -917,8 +921,9 @@ mod tests {
         let mut species = regular();
         // Straight, so azimuth about the trunk is azimuth about world up.
         species.trunk.lean = 0.0;
-        species.limbs[0].nodes = 2;
-        species.limbs[0].per_node = 3;
+        // Two nodes on the span's 2.5 m, a crown radius.
+        species.limbs[0].density = 2.0;
+        species.limbs[0].per_node = 3.0;
         let limbs = limbs(&species);
         assert_eq!(limbs.len(), 6);
         // A node's limbs share an origin and stand a third of a turn apart.
@@ -934,10 +939,48 @@ mod tests {
     #[test]
     fn limbs_starting_below_the_crown_are_left_out() {
         let mut species = regular();
-        // Nodes at about 0.45, 1.35, 2.25, 3.15 and 4.05 m; the crown base is at 1.8 m.
+        // Five nodes along the whole trunk, two crown radii, at 0.5, 1.5, 2.5, 3.5 and 4.5 m; the
+        // crown base is at 1.8 m.
         species.limbs[0].start = Fuzzy::exactly(0.0);
-        species.limbs[0].nodes = 5;
+        species.limbs[0].end = Fuzzy::exactly(1.0);
+        species.limbs[0].density = 2.5;
         assert_eq!(limbs(&species).len(), 3);
+    }
+
+    #[test]
+    fn nodes_are_counted_in_crown_radii() {
+        let mut species = regular();
+        species.trunk.lean = 0.0;
+        // The span is 2.5 m, one crown radius, then two.
+        species.limbs[0].density = 2.0;
+        assert_eq!(limbs(&species).len(), 2);
+        species.envelope.radius = 1.25;
+        assert_eq!(limbs(&species).len(), 4);
+    }
+
+    #[test]
+    fn fractional_counts_average_out_over_seeds() {
+        // Limbs on the trunk for each of many seeds, with `density` and `per_node` as given.
+        let counts = |density: f32, per_node: f32| -> Vec<usize> {
+            (0..400)
+                .map(|seed| {
+                    let mut species = regular();
+                    species.seed = Seed(seed);
+                    species.limbs[0].density = density;
+                    species.limbs[0].per_node = per_node;
+                    limbs(&species).len()
+                })
+                .collect()
+        };
+        let mean = |counts: &[usize]| counts.iter().sum::<usize>() as f32 / counts.len() as f32;
+        // 2.5 nodes on the span's crown radius: two or three.
+        let nodes = counts(2.5, 1.0);
+        assert!(nodes.iter().all(|count| (2..=3).contains(count)), "{nodes:?}");
+        assert!((mean(&nodes) - 2.5).abs() < 0.1, "{}", mean(&nodes));
+        // Eight nodes of one or two limbs.
+        let limbs = counts(8.0, 1.5);
+        assert!(limbs.iter().all(|count| (8..=16).contains(count)), "{limbs:?}");
+        assert!((mean(&limbs) - 12.0).abs() < 0.3, "{}", mean(&limbs));
     }
 
     #[test]

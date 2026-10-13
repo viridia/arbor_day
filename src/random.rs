@@ -64,6 +64,12 @@ impl Rng {
     pub fn unit(&mut self) -> f32 {
         (self.next_u64() >> 40) as f32 / (1u32 << 24) as f32
     }
+
+    /// `value` rounded down or up at random, up with the chance of its fraction, so counts drawn
+    /// this way average `value`. Negative values count as 0. Always draws one number.
+    pub fn round(&mut self, value: f32) -> u32 {
+        (value.max(0.0) + self.unit()).floor() as u32
+    }
 }
 
 /// SplitMix64's output function.
@@ -120,5 +126,15 @@ mod tests {
         assert!(units.iter().all(|u| (0.0..1.0).contains(u)));
         let mean = units.iter().sum::<f32>() / units.len() as f32;
         assert!((mean - 0.5).abs() < 0.01, "{mean}");
+    }
+
+    #[test]
+    fn rounding_averages_the_value() {
+        let mut rng = Rng::stream(2, "test");
+        assert_eq!(rng.round(3.0), 3);
+        let counts: Vec<u32> = (0..10_000).map(|_| rng.round(2.25)).collect();
+        assert!(counts.iter().all(|count| (2..=3).contains(count)));
+        let mean = counts.iter().sum::<u32>() as f32 / counts.len() as f32;
+        assert!((mean - 2.25).abs() < 0.02, "{mean}");
     }
 }
