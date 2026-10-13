@@ -82,12 +82,18 @@ Priority: **M** must, **S** should, **C** could.
 
 ### Output
 
-- **M** One glTF binary per plant: a scene named after the plant, a bark mesh and a leaf mesh.
+- **M** One glTF per plant: a scene named after the plant, a bark mesh and a leaf mesh. A `.gltf`
+  with its buffer is enough, since the pipeline can pack it with gltf-transform; a `.glb`
+  written directly is a **C**.
 - **M** Bark: `POSITION`, `NORMAL`, opaque material. When the species is outlined, the outline
   width as a material extra, `"outline": <width>`, as the game reads it. No pipeline patching
   needed.
 - **M** Leaves: `POSITION`, `NORMAL`, `TEXCOORD_0`, double-sided, alpha mode `MASK` with an
-  authored cutoff, texture embedded.
+  authored cutoff. The texture is a separate image file the glTF references; the asset
+  pipeline (overrun with gltf-transform) decides its final form: atlas, mipmaps, KTX2, and
+  whether it is embedded. Once loaded, embedded and separate cost the same; separate is shared
+  by path across models, so leaves of many plants can use one texture and merge (X15), and
+  mipmapping is work on image files.
 - **M** Units are meters, +Y up, origin at the base of the trunk at ground level.
 - **S** Bark color as a vertex color (or a material the merge in Panoply's X15 can turn into
   one), so trunks of different species merge into one mesh.

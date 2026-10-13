@@ -122,7 +122,24 @@ per-type hook, and is retained-mode.
 11. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
    as a JSON extra (C10), in the form Panoply loads (requirements, Output; "What Panoply does with the output"). Bevy writes no glTF,
    so this adds a dependency or a writer of our own; propose it before code. The command-line
-   export is X1. E[3]
+   export is X1. Research so far (2026-10-12), the author also asking skein's author:
+   - `gltf-json` (the `gltf` crate's JSON types, ~11M downloads), with the GLB framing (header,
+     JSON chunk, binary chunk) written here: every byte ours, and `extras` on every object
+     (behind a feature), which the species needs. Leading candidate. The leaf texture needs a PNG
+     encoder (the `png` crate; see whether Bevy already pulls it in).
+   - `mesh-tools` (0.4.0, ~7k downloads): a mesh generator first, with GLB export, vertex
+     colors, alpha mask and embedded images, but extras not shown; half of it duplicates ours.
+   - `gltforge` (0.0.6, ~400 downloads): a reader, exporting through a Unity plugin, too young.
+     Ruled out.
+
+   The export writes `.gltf`, `.bin` and the leaf texture as a separate `.png` (requirements,
+   Output); the pipeline (overrun with gltf-transform) packs, mipmaps and converts. GLB written
+   here is optional. KTX2 in Bevy's glTF loader (`bevy_gltf/src/loader/mod.rs:1227`): any image
+   source goes through `Image::from_buffer` by mime type or extension, so KTX2 loads with
+   Bevy's `ktx2` feature, embedded or by path, and a path is loaded as its own asset, shared
+   across models. But Bevy does not read `KHR_texture_basisu` (`bevy_gltf/src/lib.rs:122`,
+   bevy#19104), which gltf-transform's KTX2 conversion writes; so the pipeline points the image
+   straight at the `.ktx2`, which Bevy accepts though the standard does not. E[2]
 
 ### Quick wins
 
