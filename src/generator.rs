@@ -1,7 +1,7 @@
 //! The generator: a species in, a plant's geometry out. Plain functions on Bevy's math types, with
 //! no ECS, so they can move to a library of their own (ledger X1).
 
-use std::f32::consts::TAU;
+use std::f32::consts::{FRAC_PI_2, TAU};
 
 use bevy::math::{Quat, Vec2, Vec3};
 
@@ -112,9 +112,9 @@ struct Frame {
 
 /// The whole plant: the stems and their limbs, less limbs thinner at their base than the bark's
 /// thinnest meshed radius, which are left to the foliage. Returns the geometry and the number of
-/// limbs grown, meshed or not. Each stem is a tube closed at the top by a fan and left open at
-/// the base, since it stands in the ground.
-pub fn plant(species: &Species) -> (Geometry, usize) {
+/// limbs grown on each grown level, meshed or not. Each stem is a tube closed at the top by a fan
+/// and left open at the base, since it stands in the ground.
+pub fn plant(species: &Species) -> (Geometry, Vec<usize>) {
     let (stems, limbs) = grow(species);
     let mut geometry = Geometry::default();
     let trunk_sides = species.trunk.sides.max(3) as u32;
@@ -129,7 +129,11 @@ pub fn plant(species: &Species) -> (Geometry, usize) {
         let sides = levels[limb.level].sides.max(3) as u32;
         tube(&mut geometry, &limb.rings, limb.radii, sides);
     }
-    (geometry, limbs.len())
+    let mut counts = vec![0; levels.len()];
+    for limb in &limbs {
+        counts[limb.level] += 1;
+    }
+    (geometry, counts)
 }
 
 /// A stem rising from the ground, as grown, before meshing.
@@ -143,12 +147,13 @@ pub struct Stem {
 }
 
 /// The stems: `stems` of them from the origin, spaced evenly around, each leaving the ground at
-/// the splay from up and turning by the lean as it rises, away from the middle. The first's
-/// compass heading is drawn from the seed.
+/// the splay from up and turning by the lean as it rises, away from the middle, but never past
+/// level, where it would sink again. The first's compass heading is drawn from the seed.
 fn stems(species: &Species) -> Vec<Stem> {
     let trunk = &species.trunk;
     let count = trunk.stems.max(1) as u32;
     let length = (trunk.leader * species.envelope.height).max(0.01);
+    let lean = trunk.lean.min((FRAC_PI_2 - trunk.splay).max(0.0));
     let heading = species.seed.stream("trunk").unit() * TAU;
     let branching = species.seed.stream("branching");
     let top = trunk.radius * (1.0 - trunk.taper.clamp(0.0, 1.0));
@@ -157,7 +162,7 @@ fn stems(species: &Species) -> Vec<Stem> {
             rings: stem_rings(
                 length,
                 trunk.splay,
-                trunk.lean,
+                lean,
                 heading + TAU * stem as f32 / count as f32,
             ),
             radii: (trunk.radius, top),
@@ -251,13 +256,40 @@ impl Parent<'_> {
             side,
         }
     }
+
+    /// The part of the parent inside the crown, from the first of its points inside to the last,
+    /// as fractions of its length; `None` if no point a trace step apart is inside. A limb lies
+    /// wholly inside, so only a stem's part is shorter than the stem.
+    fn inside_part(&self, crown: &Envelope) -> Option<(f32, f32)> {
+        let length = self.rings[self.rings.len() - 1].at;
+        let steps = ((length / TRACE_STEP).ceil() as u32).max(1);
+        let inside = |t: f32| inside_envelope(crown, self.frame(t).point);
+        let at = |step: u32| step as f32 / steps as f32;
+        let first = (0..=steps).find(|&step| inside(at(step)))?;
+        let last = (first..=steps).rev().find(|&step| inside(at(step)))?;
+        // Each end lies between a step inside and its neighbour outside: halve the gap.
+        let edge = |mut inner: f32, mut outer: f32| {
+            for _ in 0..ENVELOPE_BISECTIONS {
+                let middle = (inner + outer) * 0.5;
+                if inside(middle) {
+                    inner = middle;
+                } else {
+                    outer = middle;
+                }
+            }
+            inner
+        };
+        let start = if first > 0 { edge(at(first), at(first - 1)) } else { 0.0 };
+        let end = if last < steps { edge(at(last), at(last + 1)) } else { 1.0 };
+        Some((start, end))
+    }
 }
 
-/// Adds one parent's limbs of one level: nodes spaced evenly along the span, as many as the
-/// level's density gives for the span's length, each turned by the divergence from the one below,
-/// its limbs spaced evenly around it, each leaving at the level's angle from the parent and then
-/// grown (`grow_limb`). A limb whose start lies outside the envelope, or that would be no longer
-/// than it is thick, is left out.
+/// Adds one parent's limbs of one level: nodes spaced evenly along the span, a stretch of the
+/// part of the parent inside the crown, as many as the level's density gives for the span's
+/// length, each turned by the divergence from the one below, its limbs spaced evenly around it,
+/// each leaving at the level's angle from the parent and then grown (`grow_limb`). A limb whose
+/// start lies outside the crown, or that would be no longer than it is thick, is left out.
 ///
 /// Radii follow the pipe model: a stem's radius raised to `exponent` is shared among the limbs
 /// leaving it and what carries on past them. Each limb's radius is the level's share of the
@@ -275,12 +307,18 @@ fn grow_level(
 ) -> f32 {
     // The parent's radius raised to the exponent, which each limb leaving it takes its share of.
     let mut section = parent.radius.powf(exponent);
+    let tapered = parent.radius * (1.0 - taper);
+    let Some((inside_start, inside_end)) = parent.inside_part(envelope) else {
+        return tapered;
+    };
     // The span, the node count and each node's turn and limb count are the parent's, drawn from a
     // stream of its own beside its limbs'.
     let mut layout = parent.rng.fork(LAYOUT_STREAM);
     let middle = draw(&params.span_middle, "span_middle", &mut layout);
     let half = draw(&params.span_length, "span_length", &mut layout) * 0.5;
-    let (span_start, span_end) = ((middle - half).max(0.0), (middle + half).min(1.0));
+    let inside = inside_end - inside_start;
+    let span_start = inside_start + inside * (middle - half).max(0.0);
+    let span_end = inside_start + inside * (middle + half).min(1.0);
     let span_length = (span_end - span_start) * parent.rings[parent.rings.len() - 1].at;
     let nodes = layout.round(params.density * span_length / envelope.radius.max(0.01));
     let mut node_azimuth = 0.0;
@@ -329,9 +367,7 @@ fn grow_level(
         }
     }
     // The limbs' narrowing, or at least the taper's.
-    section
-        .powf(exponent.recip())
-        .min(parent.radius * (1.0 - taper))
+    section.powf(exponent.recip()).min(tapered)
 }
 
 /// A limb's rings, from `start` for up to `length` along it. The limb is traced in short steps,
@@ -681,6 +717,29 @@ mod tests {
     }
 
     #[test]
+    fn stems_never_turn_past_level() {
+        let mut species = Species::default();
+        species.trunk.splay = 50.0_f32.to_radians();
+        species.trunk.lean = 90.0_f32.to_radians();
+        let tip = stems(&species)[0].rings.last().unwrap().tangent;
+        assert!(tip.y > -1e-5, "{tip}");
+    }
+
+    #[test]
+    fn slant_bends_a_stem_without_lengthening_it() {
+        let length = |splay: f32, lean: f32| {
+            let mut species = Species::default();
+            species.trunk.splay = splay.to_radians();
+            species.trunk.lean = lean.to_radians();
+            stems(&species)[0].rings.last().unwrap().at
+        };
+        let upright = length(0.0, 0.0);
+        for (splay, lean) in [(0.0, 45.0), (60.0, 0.0), (60.0, 90.0)] {
+            assert!((length(splay, lean) - upright).abs() < 1e-3, "{splay} {lean}");
+        }
+    }
+
+    #[test]
     fn stems_splay_evenly_around() {
         let mut species = Species::default();
         species.trunk.stems = 3;
@@ -790,9 +849,41 @@ mod tests {
         species
     }
 
+    /// `regular`, with an upright stem in a column crown: the stem is inside the crown from the
+    /// crown base at 1.25 m to its tip at 5.25 m, two crown radii of 2 m, and the first level's
+    /// span is its middle half, one crown radius.
+    fn straight() -> Species {
+        let mut species = regular();
+        species.trunk.lean = 0.0;
+        species.trunk.leader = 0.84;
+        species.envelope.profile = Profile::Column;
+        species.envelope.crown_base = 0.2;
+        species.envelope.radius = 2.0;
+        species.limbs[0].span_length = Fuzzy::exactly(0.5);
+        species
+    }
+
+    /// A stem's inside part, as heights.
+    fn inside_heights(species: &Species) -> (f32, f32) {
+        let stem = &stems(species)[0];
+        let parent = Parent {
+            rings: &stem.rings,
+            radius: stem.radii.0,
+            rng: &stem.rng,
+        };
+        let (start, end) = parent.inside_part(&species.envelope).expect("a stem inside the crown");
+        (parent.frame(start).point.y, parent.frame(end).point.y)
+    }
+
+    #[test]
+    fn the_straight_stem_is_inside_where_it_says() {
+        let (start, end) = inside_heights(&straight());
+        assert!((start - 1.25).abs() < 1e-4 && (end - 5.25).abs() < 1e-4, "{start} {end}");
+    }
+
     #[test]
     fn limbs_reach_their_share_of_the_way_to_the_envelope() {
-        let species = regular();
+        let species = straight();
         let limbs = limbs(&species);
         assert_eq!(limbs.len(), 8);
         for limb in &limbs {
@@ -1015,10 +1106,9 @@ mod tests {
 
     #[test]
     fn nodes_hold_their_limbs_evenly_around() {
-        let mut species = regular();
         // Straight, so azimuth about the trunk is azimuth about world up.
-        species.trunk.lean = 0.0;
-        // Two nodes on the span's 2.5 m, a crown radius.
+        let mut species = straight();
+        // Two nodes on the span's crown radius.
         species.limbs[0].density = 2.0;
         species.limbs[0].per_node = 3.0;
         let limbs = limbs(&species);
@@ -1034,19 +1124,22 @@ mod tests {
     }
 
     #[test]
-    fn limbs_starting_below_the_crown_are_left_out() {
-        let mut species = regular();
-        // Five nodes along the whole trunk, two crown radii, at 0.5, 1.5, 2.5, 3.5 and 4.5 m; the
-        // crown base is at 1.875 m.
-        species.limbs[0].span_middle = Fuzzy::exactly(0.5);
+    fn the_span_is_measured_inside_the_crown() {
+        let mut species = straight();
+        // Five nodes along the whole of the stem inside the crown, two crown radii, at 1.65, 2.45,
+        // 3.25, 4.05 and 4.85 m.
         species.limbs[0].span_length = Fuzzy::exactly(1.0);
         species.limbs[0].density = 2.5;
-        assert_eq!(limbs(&species).len(), 3);
+        let heights: Vec<f32> = limbs(&species).iter().map(|limb| limb.origin().y).collect();
+        assert_eq!(heights.len(), 5);
+        for (height, expected) in heights.iter().zip([1.65, 2.45, 3.25, 4.05, 4.85]) {
+            assert!((height - expected).abs() < 1e-3, "{heights:?}");
+        }
     }
 
     #[test]
     fn limbs_share_their_parent_section() {
-        let mut species = regular();
+        let mut species = straight();
         species.limbs[0].density = 2.0;
         species.limbs[0].radius = 0.6;
         species.bark.pipe_exponent = 2.0;
@@ -1088,25 +1181,24 @@ mod tests {
 
     #[test]
     fn the_span_is_cut_short_at_the_parent_end() {
-        let mut species = regular();
-        species.trunk.lean = 0.0;
-        // From halfway up the 5 m trunk to its top, one crown radius, not the 5 m asked for.
+        let mut species = straight();
+        // From halfway along the stem's part inside the crown to the tip, one crown radius, not
+        // the two asked for.
         species.limbs[0].span_middle = Fuzzy::exactly(1.0);
         species.limbs[0].span_length = Fuzzy::exactly(1.0);
         species.limbs[0].density = 2.0;
         let limbs = limbs(&species);
         assert_eq!(limbs.len(), 2);
-        assert!(limbs.iter().all(|limb| (2.5..5.0).contains(&limb.origin().y)));
+        assert!(limbs.iter().all(|limb| (3.25..5.25).contains(&limb.origin().y)));
     }
 
     #[test]
     fn nodes_are_counted_in_crown_radii() {
-        let mut species = regular();
-        species.trunk.lean = 0.0;
-        // The span is 2.5 m, one crown radius, then two.
+        let mut species = straight();
+        // The span is 2 m, one crown radius, then two.
         species.limbs[0].density = 2.0;
         assert_eq!(limbs(&species).len(), 2);
-        species.envelope.radius = 1.25;
+        species.envelope.radius = 1.0;
         assert_eq!(limbs(&species).len(), 4);
     }
 
@@ -1116,7 +1208,7 @@ mod tests {
         let counts = |density: f32, per_node: f32| -> Vec<usize> {
             (0..400)
                 .map(|seed| {
-                    let mut species = regular();
+                    let mut species = straight();
                     species.seed = Seed(seed);
                     species.limbs[0].density = density;
                     species.limbs[0].per_node = per_node;

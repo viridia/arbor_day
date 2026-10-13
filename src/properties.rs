@@ -6,7 +6,7 @@
 //! above its inputs, so they get the panel's full width. Field attributes (below) set a row's
 //! caption and a number's limits, precision, step, units and wrapping.
 
-use std::ops::RangeInclusive;
+use std::{collections::HashMap, ops::RangeInclusive};
 
 use bevy::{
     feathers::{
@@ -41,7 +41,9 @@ use bevy_immediate::{
         disabled::{self, ImmUiInteractionsDisabled},
         interaction, layout_order, look,
         number_input::{self, ImmUiNumberInput, ImmUiNumericValue},
-        selected, slider_base_color, slider_value, text, text_input,
+        selected, slider_base_color, slider_value,
+        text::{self, ImmUiText},
+        text_input,
         track_value_change_plugin::{NewValueChange, TrackValueChangePlugin},
     },
 };
@@ -226,8 +228,12 @@ impl NumberField for i64 {
     }
 }
 
+/// Text shown after an item's caption in its subpane header ("Limbs 1 · 8"), keyed by the item's
+/// name (`limbs[0]`): figures about the item that the panel's owner knows and the item does not.
+pub type HeaderNotes = HashMap<String, String>;
+
 /// Adds a row for each field of `value`, which must be a struct, editing the fields in place.
-pub fn edit_fields(ui: &mut Imm<CapsPanel>, value: &mut dyn PartialReflect) {
+pub fn edit_fields(ui: &mut Imm<CapsPanel>, value: &mut dyn PartialReflect, notes: &HeaderNotes) {
     // Attributes belong to the type, so read them from its info, not the value.
     let Some(TypeInfo::Struct(info)) = value.get_represented_type_info() else {
         return;
@@ -265,7 +271,7 @@ pub fn edit_fields(ui: &mut Imm<CapsPanel>, value: &mut dyn PartialReflect) {
             && let Some((_, count, range)) = counts.iter().find(|(count, ..)| *count == shown.0)
             && let ReflectMut::Array(items) = field.reflect_mut()
         {
-            let new_count = shown_items(ui, name, caption, items, *count, range.clone());
+            let new_count = shown_items(ui, name, caption, items, *count, range.clone(), notes);
             if new_count != *count {
                 new_counts.push((shown.0, new_count));
             }
@@ -301,7 +307,7 @@ pub fn edit_fields(ui: &mut Imm<CapsPanel>, value: &mut dyn PartialReflect) {
                 row.on_spawn_insert(move || Name::new(name)),
                 caption,
                 |ui| {
-                    edit_fields(ui, field);
+                    edit_fields(ui, field, notes);
                 },
             );
         } else {
@@ -319,8 +325,9 @@ pub fn edit_fields(ui: &mut Imm<CapsPanel>, value: &mut dyn PartialReflect) {
     }
 }
 
-/// The first `count` of `items`, a subpane each named `name[index]`, the last with − and +
-/// buttons, named `remove` and `add`. Returns the count as the buttons leave it.
+/// The first `count` of `items`, a subpane each named `name[index]` and headed with its note, if
+/// any, the last with − and + buttons, named `remove` and `add`. Returns the count as the buttons
+/// leave it.
 fn shown_items(
     ui: &mut Imm<CapsPanel>,
     name: &'static str,
@@ -328,6 +335,7 @@ fn shown_items(
     items: &mut dyn Array,
     count: i32,
     range: RangeInclusive<i32>,
+    notes: &HeaderNotes,
 ) -> i32 {
     // Never none: with no subpane there would be no + to bring one back.
     let min = (*range.start()).max(1);
@@ -339,6 +347,10 @@ fn shown_items(
             continue;
         };
         let item_name = format!("{name}[{index}]");
+        let header = match notes.get(&item_name) {
+            Some(note) => format!("{caption} {} · {note}", index + 1),
+            None => format!("{caption} {}", index + 1),
+        };
         let pane = ui
             .ch_id((name, index))
             .on_spawn_insert(move || Name::new(item_name.clone()));
@@ -358,8 +370,8 @@ fn shown_items(
                 new_count = (count - removed as i32 + added as i32).clamp(min, max);
             }
         };
-        group_with_tools(pane, format!("{caption} {}", index + 1), tools, |ui| {
-            edit_fields(ui, item);
+        group_with_tools(pane, header, tools, |ui| {
+            edit_fields(ui, item, notes);
         });
     }
     new_count
@@ -383,7 +395,7 @@ pub fn group<'w, 's>(
 }
 
 /// A feathers subpane headed `caption`, with buttons built by `tools` at the header's right end,
-/// its body built by `body`.
+/// its body built by `body`. The caption follows `caption` as it changes.
 fn group_with_tools<'w, 's>(
     pane: ImmEntity<'_, 'w, 's, CapsPanel>,
     caption: String,
@@ -393,7 +405,8 @@ fn group_with_tools<'w, 's>(
     pane.on_spawn_apply_scene(subpane).add(|ui| {
         ui.ch().on_spawn_apply_scene(subpane_header).add(|ui| {
             ui.ch()
-                .on_spawn_apply_scene(move || bsn! { Text({caption.clone()}) ThemedText });
+                .on_spawn_apply_scene(|| bsn! { Text("") ThemedText })
+                .on_hash_change_text_fn(&caption, || caption.clone());
             ui.ch().on_spawn_insert(widget_line).add(tools);
         });
         ui.ch().on_spawn_apply_scene(subpane_body).add(body);

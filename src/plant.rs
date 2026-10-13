@@ -39,6 +39,8 @@ pub struct Plant;
 pub struct PlantStats {
     pub triangles: u32,
     pub limbs: u32,
+    /// Limbs on each grown level, first to last.
+    pub level_limbs: Vec<u32>,
     /// The seed the plant was grown from.
     pub seed: i32,
     /// The bark's vertex color, as sRGB hex.
@@ -55,11 +57,12 @@ fn build_plant(
         if current.is_some() && !species.is_changed() {
             continue;
         }
-        let (geometry, limbs) = generator::plant(&species);
+        let (geometry, level_limbs) = generator::plant(&species);
         let color = species.bark.color;
         let stats = PlantStats {
             triangles: geometry.triangles() as u32,
-            limbs: limbs as u32,
+            limbs: level_limbs.iter().sum::<usize>() as u32,
+            level_limbs: level_limbs.iter().map(|&count| count as u32).collect(),
             seed: species.seed.0,
             bark_color: color.to_srgba().to_hex(),
         };

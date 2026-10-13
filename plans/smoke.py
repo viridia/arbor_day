@@ -16,8 +16,8 @@ def run(driver):
     driver.present("Shell", ready=True)  # wait for the UI scene to finish spawning
     driver.present("Shell/Panel/trunk/sides/input")  # the immediate-mode panel has built its rows
     driver.present("Shell/Panel/Scrollbar")
-    # The default plant: one level of eight limbs, in the low hundreds of triangles.
-    driver.expect("Plant", STATS, {"limbs": 8, "triangles": Between(100, 1000)})
+    # The default plant: one level of eight or nine limbs, in the low hundreds of triangles.
+    driver.expect("Plant", STATS, {"limbs": Between(8, 9), "triangles": Between(100, 1000)})
     # The default width, whatever the developer last dragged it to: a run gets fresh settings.
     driver.expect("Shell/Panel", PANE, {"size": 320.0})
     # The view is never saved: every start frames the subject, from the front.
@@ -55,13 +55,14 @@ def run(driver):
     driver.key("Enter")
     driver.expect("Placeholder", PLACEHOLDER, {"count": 10})
     driver.screenshot("numbers")
-    # Editing the species rebuilds the plant: four nodes on the trunk's span of one crown radius.
+    # Editing the species rebuilds the plant: four or five nodes on the trunk's span of a little
+    # over one crown radius.
     driver.click("Shell/Panel/limbs[0]/density/input")
     driver.key("End")
     driver.key("Backspace")
     driver.type("4")
     driver.key("Enter")
-    driver.expect("Plant", STATS, {"limbs": 4})
+    driver.expect("Plant", STATS, {"limbs": Between(4, 5)})
     driver.screenshot("four_nodes")
     # The camera does not follow the subject: a taller crown grows out of the frame (compare the
     # screenshots), until Frame fits it again.

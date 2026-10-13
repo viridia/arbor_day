@@ -29,7 +29,9 @@ use bevy_remote_driver::RemoteDriverPlugin;
 use fuzzy::{Distribution, Fuzzy};
 use keys::KeysPlugin;
 use plant::{Plant, PlantEnvelope, PlantPlugin, PlantStats};
-use properties::{CapsPanel, Caption, Precision, PropertiesPlugin, Spinbox, ValueRange, Wrap};
+use properties::{
+    CapsPanel, Caption, HeaderNotes, Precision, PropertiesPlugin, Spinbox, ValueRange, Wrap,
+};
 use settings::{AppSettingsPlugin, MIN_PANE_WIDTH, save_panel_width};
 use species::Species;
 use turntable::{
@@ -336,7 +338,20 @@ impl ImmediateAttach<CapsPanel> for ParamPanel {
         // Edit a copy: writing through `ResMut` every frame would mark the species changed every
         // frame, and the plant would rebuild every frame.
         let mut edited = params.species.clone();
-        properties::edit_fields(ui, &mut edited);
+        // Each limb level's count in its header, so a level some setting has emptied shows.
+        let notes: HeaderNotes = params
+            .stats
+            .single()
+            .map(|stats| {
+                stats
+                    .level_limbs
+                    .iter()
+                    .enumerate()
+                    .map(|(level, count)| (format!("limbs[{level}]"), count.to_string()))
+                    .collect()
+            })
+            .unwrap_or_default();
+        properties::edit_fields(ui, &mut edited, &notes);
         params.species.set_if_neq(edited);
 
         let triangles = params.stats.single().map_or(0, |stats| stats.triangles);
@@ -365,7 +380,7 @@ impl ImmediateAttach<CapsPanel> for ParamPanel {
         };
         let mut edited = placeholder.clone();
         properties::group(ui.ch(), "Placeholder", |ui| {
-            properties::edit_fields(ui, &mut edited);
+            properties::edit_fields(ui, &mut edited, &HeaderNotes::default());
         });
         placeholder.set_if_neq(edited);
     }

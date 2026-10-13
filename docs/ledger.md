@@ -38,7 +38,8 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `c040b8d` | C36 Nodes by density (D21): nodes per crown radius of span, and per node, rounded at random (`Rng::round`). |
 | `1a68679` | C35 Span as middle and length (D19), in place of start and end.                       |
 | `3cf3760` | C29 Pipe-model radii (D22), and limbs under the thinnest meshed radius left unmeshed; `plans/levels.py` checks the cut-off. |
-| —         | C24 Stems (D23): count, splay and leader; the lean's heading from the seed; `plans/stems.py`. |
+| `5eca2d9` | C24 Stems (D23): count, splay and leader; the lean's heading from the seed; `plans/stems.py`. |
+| (pending) | C44 Spans inside the crown (D24); stems keep their length when they lean, and never turn past level; each limb level's header shows its count. |
 
 ## Next
 
@@ -55,17 +56,13 @@ per-type hook, and is retained-mode.
 
 ### Milestone: the first species exported to Panoply
 
-1. **C44 Targets, not filters.** A limb exists only where its node lies inside the envelope, and
-   whether it does rests on settings made apart from the envelope (leader, splay, lean, span,
-   crown base), so pushing any of them far enough empties the plant. Make each a target: a
-   stem's length is the leader times the distance to the envelope along its starting
-   direction, as reach is for limbs, so a splayed stem stops inside the crown; a level's span is
-   measured over the part of the parent inside the crown, so the crown base alone sets where
-   limbs begin and "0 to 100%" spans the crown whatever its shape (only stems change, since limbs
-   lie wholly inside); and each limb subpane's header shows its level's count ("Limbs 1 · 8"),
-   so an emptied level shows while dragging. The default span becomes about 5% to 95% of the
-   crown's stretch; compare the default tree with today's. Left after this: reach or density
-   near 0, which read as what they do. E[3]
+1. **C46 Node bias and jitter, in place of the span.** Two fields per level, over the part of
+   the parent inside the crown (D24), replacing span middle and length: a bias (−100% to +100%)
+   pushing nodes toward the parent's base or its tip, as basitony and acrotony do (shrubs favour
+   the base, trees the tip), the density still setting how many; and a jitter (0 to 100%), how
+   far each node may move from its even place, as a share of the gap, drawn from the parent's
+   layout stream (D18). A sharply bare stretch, such as a bare leader tip, waits for a species
+   that needs it. E[2]
 2. **C37 Foliage placement** (`docs/growth-model.md`, Foliage): clusters seeded along the parts
    of the limbs within a shell depth of the envelope, at a spacing set by the author, each a
    plain quad for now, in a leaf mesh of its own with an alpha-masked material. Bare trees set
@@ -75,14 +72,28 @@ per-type hook, and is retained-mode.
    since the twigs exist. The cards carry a texture taken from a seedling `.glb` (they embed
    theirs; growth model, Seedling's flora) as a placeholder in `assets/`, until C38 paints
    them. E[3]
-3. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's `genLeafTexture.ts` ported,
+3. **C45 Contact sheets**, so designs are explored in sweeps rather than one screenshot at a
+   time, by the author or by an agent. A second binary (`src/bin/sheet.rs`; the modules move
+   behind a `src/lib.rs` so both binaries share them) reads a species file and a sweep (seeds,
+   or one field's values by reflection path), grows each plant with the generator, lays them out
+   in a grid at game scale (150 to 300 px a plant, the size they are in Panoply), saves one PNG
+   and exits; no panel, no driver. Species files are read by reflection, the part of C10's
+   serialization this needs, pulled forward. Costs: an image is about width × height ÷ 750
+   tokens, so a 3 × 3 sheet near 900 px square is about 1,000, nine designs for the price of
+   one screenshot. Uses: interactive selection (a sheet of variants, the author picks, the next
+   sheet varies the pick), presets (X18), and tuning twigs against C37's placeholder leaves.
+   Unattended exploration runs in a subagent, keeping the images out of the main conversation:
+   sweeping parameters needs only writing sweep files and running the one command, so a narrow
+   allowlist covers it; trying generator changes (a form, say) runs in a git worktree that is
+   thrown away afterwards, the findings written up and built properly. E[3]
+4. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's `genLeafTexture.ts` ported,
    its leaf shape and color parameters as species fields with streams of their own
    (requirements, Parameters, determinism, variants). The texture goes on C37's cards, replacing the placeholder. A golden
    test on its pixels compares with a tolerance, since SIMD can move a channel by a level. E[3]
-4. **C39 Card shapes and facing**: crossed, cupped and creased cards chosen by weight; a card's
+5. **C39 Card shapes and facing**: crossed, cupped and creased cards chosen by weight; a card's
    normal drawn around a blend of world up and the envelope's outward normal, with a spread, its
    rotation about the normal free; crown softness for the shading normal (X13). E[3]
-5. **C30 Forks**, Weber and Penn's splits: at a point along a limb it ends, and copies of it
+6. **C30 Forks**, Weber and Penn's splits: at a point along a limb it ends, and copies of it
    carry on, turned apart by the fork angle. The copies are the same level as the limb, not its
    children, so they reach the envelope and bear children as it would; turning both by half the
    angle reads as the symmetric Y of a child deflecting its parent. Per level: forks per limb (0
@@ -90,9 +101,10 @@ per-type hook, and is retained-mode.
    the Y's plane lies, from level to upright. Each copy's radius follows the pipe model (D22):
    the limb's over the exponent's root of the copies, over √2 for two at exponent 2. Stems fork
    the same way, so a decurrent tree's leader stopping short (D23) ends in a fork (growth
-   model, Stems and leader). After foliage, since a crown's look cannot be judged without
-   leaves. E[3]
-6. **C10 Species data model**, its groups the layers of the growth model (D11;
+   model, Stems and leader). A stem's fork may lie below the crown base: the leader sets the
+   axis's length, the fork where it splits. After foliage, since a crown's
+   look cannot be judged without leaves. E[3]
+7. **C10 Species data model**, its groups the layers of the growth model (D11;
    `docs/growth-model.md`, Consequences), correcting seedling where the requirements say.
    Reflectable types with `Default` for initial values and attributes for the editor, after the
    fields settle, so saved files are not broken by every change. Serialized
@@ -111,15 +123,15 @@ per-type hook, and is retained-mode.
    levels with hidden ones stashed in the editor, the same in files but a larger change that
    undoes D15. Seedling's groups for reference: `trunk`; `branch[]`, one per level; the leaf as
    `leafGroup` (arrangement), `leafShape` and `leafColor`. E[4], split when started
-7. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
+8. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
    panel; the file browser is X2. The seed row moves in with them, in a feathers `group`
    (`containers/group.rs`, no header), so it lines up with the subpanes' rows rather than
    standing at the panel's edge. E[3]
-8. **C8 Working document in settings.** A settings group holding the working species and, once
+9. **C8 Working document in settings.** A settings group holding the working species and, once
    set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
    as seedling did. The document's name comes from the file name. Serialized by reflection, as
    `bevy_settings` does. E[3]
-9. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
+10. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
    as a JSON extra (C10), in the form Panoply loads (requirements, Output; "What Panoply does with the output"). Bevy writes no glTF,
    so this adds a dependency or a writer of our own; propose it before code. The command-line
    export is X1. Research so far (2026-10-12), the author also asking skein's author:
@@ -148,6 +160,9 @@ per-type hook, and is retained-mode.
   the field's `Precision` in the units shown, as feathers' color input does
   (`scaled_number_input_value`). Defaults are written in the units shown
   (`15.0_f32.to_radians()`, not `0.3`). E[2]
+- **C47 A sense of scale**: metre rings on the ground disc (`src/main.rs`, `Circle::new(4.0)`),
+  since Frame fits any plant to the view and hides how big it is. Seedling never zoomed, so its
+  plants showed their size. E[1]
 
 ### Later
 
@@ -171,6 +186,9 @@ per-type hook, and is retained-mode.
   struct inside a level then shows as a labelled group like the rest, not a full subpane. E[3]
 - **C43 A varied color** (`Fuzzy<Color>`, D10) with the leaf color, for its hue and lightness
   shifts. E[3]
+- **C48 Arching stems**, for fountain shrubs: a lean past level, so a stem rises and then droops
+  toward the ground, stopping above it. D24 stops the lean at level until a preset needs more
+  (X18). E[2]
 - **C25 A HUD over the view**, to free the panel: every control that changes the preview rather
   than the species moves onto the view. Buttons the size and shape of feathers' but translucent:
   Frame, zoom, orbit and tilt, and toggles for the envelope and the ground. Icons from Material
@@ -378,7 +396,7 @@ per-type hook, and is retained-mode.
   triangle count. Seedling's `interval` was absolute, as real internodes nearly are. The count
   per parent and the limbs per node are fractions rounded at random (`Rng::round`, always one
   draw), from the parent's layout stream; limbs take stream indices in order, whatever each
-  node's count. Lengthening the span below the crown base adds only nodes that are left out.
+  node's count. The span is measured over the part of the parent inside the crown (D24).
 
 - **D22** Radii follow the pipe model top-down, from the trunk's radius, which the author sets: a
   stem's radius raised to the bark's exponent (2 to 3) is shared among the limbs leaving it and
@@ -395,15 +413,25 @@ per-type hook, and is retained-mode.
   for thin levels, where it saves most and cannot be seen, and 4 or more for the trunk and the
   first level, as the defaults have it.
 
-- **D23** The stems' length is the leader, a share of the envelope's height, so the envelope is
-  the plant's one size and a fraction suits a herb as well as a tree. Several stems are spaced
+- **D23** The leader is each stem's length along its axis as a fraction of the envelope's
+  height, so the envelope is the plant's one size and a fraction suits a herb as well as a
+  tree. Splay and lean bend a stem without lengthening it (D24). Several stems are spaced
   evenly around the base, each leaving the ground at the splay from up and turning by the lean
   as it rises, away from the middle; each has the trunk's radius and bears the first limb level,
   its stream forked from `branching` by its index. The first stem's compass heading is drawn
-  from a `trunk` stream (D16), so neighbouring trees of one species lean different ways. A
-  shrub needs a low crown base too: nodes under the crown, or outside its narrow foot, grow
-  nothing. The panel group stays "Trunk". Defaults keep the 5 m trunk: an 80% leader of a
-  6.25 m envelope.
+  from a `trunk` stream (D16), so neighbouring trees of one species lean different ways. The
+  panel group stays "Trunk".
+
+- **D24** The crown is the author's: each setting changes one thing, and the crown is never
+  resized to fit the stems. A stem keeps its length whatever its splay and lean, so leaning
+  droops it, and the lean stops at level so a stem never sinks toward the ground (C48). A span
+  is measured over the part of its parent inside the crown, so the crown base alone sets where
+  a stem's limbs begin; limbs lie wholly inside, so their spans are unchanged. A stem that
+  misses the crown bears no limbs, which its level's header count shows. Rejected: fitting the
+  crown to the stems, so no setting could leave them outside it (C44's first form). The
+  stems' length was solved to reach a height in the crown and the crown widened by their
+  spread, so lean lengthened the stems and widened the crown, and raising the crown base
+  lengthened splayed stems to several metres.
 
 ## Deferred
 
@@ -511,6 +539,12 @@ per-type hook, and is retained-mode.
   *Gate:* a weeping preset (X18).
 - **X20** Foliage radiating from a stem's tip or the ground, for palms, rosettes and tufts
   (agave, grass, fern), with no limbs. *Gate:* C37 (foliage placement).
+- **X21** Find out why `bevy_immediate`'s `.text()` on the subpane headers, called every frame
+  with an unchanged string, stopped clicks on the bark's color swatch from opening its picker
+  (`plans/bark.py` failed three runs in three), and report it to the fork. The headers use
+  `on_hash_change_text_fn`, which writes only when the text changes, and the plan passes. Until
+  then, a panel binds changing text that way. *Gate:* Panoply's editor taking the panel
+  patterns (D3).
 
 ## Notes
 

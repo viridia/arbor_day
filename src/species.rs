@@ -167,8 +167,8 @@ pub struct Trunk {
     #[reflect(@ValueRange::<i32>(3..=8), @Spinbox)]
     pub sides: i32,
     /// How much further from up each stem's axis turns between the base and the top, away from
-    /// the middle. A tree's compass direction is drawn from the seed, so neighbouring trees of one
-    /// species lean different ways.
+    /// the middle, but never past level. A tree's compass direction is drawn from the seed, so
+    /// neighbouring trees of one species lean different ways.
     #[reflect(
         @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_2),
         @NumberInputUnits::new_static("angle_degrees"),
@@ -199,8 +199,9 @@ pub struct LimbLevel {
         @NumberInputUnits::new_static("angle_degrees"),
     )]
     pub divergence: Fuzzy,
-    /// The middle of the stretch of the parent bearing nodes, as a fraction of the parent's
-    /// length. Drawn for each parent.
+    /// The middle of the stretch of the parent bearing nodes, as a fraction of the part of the
+    /// parent inside the crown, so the crown base sets where a stem's limbs begin. Drawn for each
+    /// parent.
     #[reflect(
         @ValueRange::<f32>(0.0..=1.0),
         @Precision(2),
@@ -208,8 +209,9 @@ pub struct LimbLevel {
         @Caption("Span middle"),
     )]
     pub span_middle: Fuzzy,
-    /// The length of the stretch bearing nodes, as a fraction of the parent's length; it is cut
-    /// short where it would pass either end of the parent. Drawn for each parent.
+    /// The length of the stretch bearing nodes, as a fraction of the part of the parent inside
+    /// the crown; it is cut short where it would pass either end of that part. Drawn for each
+    /// parent.
     #[reflect(
         @ValueRange::<f32>(0.0..=1.0),
         @Precision(2),
@@ -276,8 +278,8 @@ impl Default for LimbLevel {
             density: 8.0,
             per_node: 1.0,
             divergence: degrees(137.5, 10.0),
-            span_middle: Fuzzy::exactly(0.65),
-            span_length: Fuzzy::exactly(0.5),
+            span_middle: Fuzzy::exactly(0.5),
+            span_length: Fuzzy::exactly(0.9),
             angle: degrees(60.0, 10.0),
             bend_toward: 90.0_f32.to_radians(),
             bend: 0.4,
