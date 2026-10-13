@@ -33,7 +33,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `5621ce7` | C26 Random streams and `Fuzzy::sample` (D16), `src/random.rs`.                          |
 | `258fcd8` | C23 Curved limbs (D17): bend and wander per metre, and the seed; `plans/growth.py`.     |
 | `7f6431b` | C28 Varied level fields (D18): span, divergence, angle and reach are `Fuzzy`.           |
-|           | C31 Bend in proportion (D17): a share of the angle left, per crown radius; the trunk's `bend` is now `lean`. |
+| `98382d1` | C31 Bend in proportion (D17): a share of the angle left, per crown radius; the trunk's `bend` is now `lean`. |
 
 ## Next
 
@@ -47,10 +47,16 @@ Seedling's look is not a target. `bevy_inspector`'s `details_panel` also walks r
 but reads no attributes, has no per-type hook, and is retained-mode. The generator sets the order
 (`docs/growth-model.md`), each step bringing the widget kind it needs:
 
-- **Review of the varied fields**, by the author from the panel: which other level fields
-  (bend, wander, radius, nodes) should vary, and the defaults' spreads. Whether the span varies
-  at all: a varied span is not visible in the tree, and two `Fuzzy` ends stand in the way of
-  one range row (X5), which would also stop the end being set below the start.
+- **C35 Span as middle and length** (D19), in place of start and end: "Span middle" and "Span
+  length", both `Fuzzy`, drawn per parent; the ends are middle ± length/2, clamped to the
+  parent, so they cannot cross. Level 1 keeps both spreads at 0. Two fields rather than one
+  `Fuzzy` for the range: a `Fuzzy` reads as "a value drawn near here", not "this stretch".
+- **C36 Nodes by density** (D19): nodes per unit of span (per metre, or per crown radius to
+  match C31; decide in the chunk), so a long parent bears more children than a short one, as
+  seedling's `interval` did. Density × span length is a fraction, rounded at random per parent
+  to its floor or ceiling, with the fraction as the chance of the ceiling. Per node becomes a
+  float the same way (1.5: half the nodes alternate, half opposite). Sides stay whole: mesh
+  detail, not form.
 - **C32 Log scale** for sizes, with no change upstream: an `@LogScale` attribute. The species
   keeps metres; the panel's binding gives the number input ln(value) and a log range, and
   writes e^value back; a registered unit (`length_log_meters`) formats e^value in metres, to
@@ -90,7 +96,9 @@ but reads no attributes, has no per-type hook, and is retained-mode. The generat
   then the trunk keeps its own height. A fraction is as fine for a herb as for a tree, and the
   envelope becomes the one size. Stems: count and splay (`docs/growth-model.md`, Stems and
   leader), so a shrub or herb is two or three stems spread wide under a crown starting near the
-  ground, as seedling's short trunk splitting just above the root was.
+  ground, as seedling's short trunk splitting just above the root was. The trunk's lean takes
+  its compass direction from the seed (a `trunk` stream, D16), not always +X, so neighbouring
+  trees of one species lean different ways.
 - **C25 A HUD over the view**, to free the panel: every control that changes the preview rather
   than the species moves onto the view. Buttons the size and shape of feathers' but translucent:
   Frame, zoom, orbit and tilt, and
@@ -145,7 +153,7 @@ but reads no attributes, has no per-type hook, and is retained-mode. The generat
 - **C10 Species data model**, its groups the layers of the growth model (D11;
   `docs/growth-model.md`, Consequences), correcting seedling where the requirements say.
   Reflectable types with `Default` for initial values and attributes for the editor, after the
-  fields settle (the review of varied fields, C29, C24), so saved files are not broken by every change. Serialized by
+  fields settle (C35, C36, C29, C24), so saved files are not broken by every change. Serialized by
   reflection only, no serde derives: TOML in settings (C8) and JSON as the glTF
   extra, one representation that cannot drift. The file records the generator version it was
   made with (X15). A golden test: a species serialized and compared
@@ -307,6 +315,14 @@ but reads no attributes, has no per-type hook, and is retained-mode. The generat
   the type by reflection (`LimbLevel::limits`), so the limits have one owner; the divergence is
   not clamped, since any turn is a turn.
 
+- **D19** Variance pays where instances are many. A value drawn once per plant is invisible
+  within a tree and differs only from seed to seed, so it varies only where trees of one
+  species should differ (the envelope's lean and squash, the trunk's lean direction). The
+  trunk does not vary otherwise. Kept as `Fuzzy`: angle and reach per limb, divergence per node,
+  the most visible variety. Not varied: bend toward and bend (wander already irregularizes),
+  wander (itself the randomness), radius (C29 derives it), sides (mesh detail). Counts become
+  fractions rounded at random (C36), and the span becomes middle and length (C35).
+
 ## Deferred
 
 - **X1** The generator as its own library crate, beside the app: no Bevy dependency beyond
@@ -324,9 +340,9 @@ but reads no attributes, has no per-type hook, and is retained-mode. The generat
   reserve the name with a placeholder.
 - **X4** A fast modifier for scrubbing feathers number inputs, upstream (Shift for slow is all
   there is). *Gate:* spread inputs prove slow to drag.
-- **X5** A dual-thumb range slider (requirements, Authoring app, a **C** item). *Gate:* the
-  center-and-spread row proves clumsy, or the span becomes one row (the review of varied
-  fields): span start and end as two rows let the end go below the start.
+- **X5** A dual-thumb range slider (requirements, Authoring app, a **C** item). C35's middle and
+  length keep the span's ends from crossing, which was the case that called for it. *Gate:* the
+  center-and-spread row proves clumsy.
 - **X6** A view gizmo, and a home elevation and field of view set per project, for games whose
   camera differs from Panoply's. C4 has tilt by dragging, but its home view is Panoply's.
   *Gate:* another game using the tool.
