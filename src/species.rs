@@ -6,7 +6,7 @@ use std::ops::RangeInclusive;
 
 use crate::{
     fuzzy::{Distribution, Fuzzy},
-    properties::{Caption, Precision, ShownCount, Spinbox, ValueRange, Wrap},
+    properties::{Caption, Precision, ShownCount, Spinbox, ValueRange},
     random::Seed,
 };
 
@@ -56,7 +56,7 @@ impl Default for Species {
                 LimbLevel {
                     density: 9.0,
                     per_node: 2.0,
-                    divergence: degrees(90.0, 20.0),
+                    facing: Facing::Sides,
                     bias: 0.3,
                     angle: degrees(45.0, 10.0),
                     bend: 0.5,
@@ -69,7 +69,7 @@ impl Default for Species {
                 LimbLevel {
                     density: 19.0,
                     per_node: 2.0,
-                    divergence: degrees(90.0, 20.0),
+                    facing: Facing::Sides,
                     bias: 0.4,
                     angle: degrees(40.0, 10.0),
                     bend: 0.5,
@@ -185,18 +185,19 @@ pub struct LimbLevel {
     /// chance of its fraction.
     #[reflect(@ValueRange::<f32>(0.0..=40.0), @Precision(1), @Caption("Nodes per crown radius"))]
     pub density: f32,
-    /// Limbs at each node, evenly spaced around it: 1 for alternate or spiral, 2 for opposite,
-    /// more for a whorl. Rounded at random for each node, so 1.5 makes half the nodes opposite.
+    /// Limbs at each node: 1 for a spiral, 2 for opposite pairs, more for a whorl. Rounded at
+    /// random for each node, so 1.5 makes half the nodes opposite.
     #[reflect(@ValueRange::<f32>(1.0..=6.0), @Precision(1), @Caption("Per node"))]
     pub per_node: f32,
-    /// The turn about the parent from one node to the next: 137.5° for a spiral, 180° for
-    /// alternate, 90° for opposite pairs crossing. Drawn for each node.
+    /// Which way around the parent its limbs leave.
+    pub facing: Facing,
+    /// The most each limb turns about the parent at random, away from where its facing puts it.
+    /// Drawn for each limb.
     #[reflect(
-        @ValueRange::<f32>(0.0..=std::f32::consts::TAU),
-        @Wrap,
+        @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_2),
         @NumberInputUnits::new_static("angle_degrees"),
     )]
-    pub divergence: Fuzzy,
+    pub skew: f32,
     /// Where nodes crowd along the part of the parent inside the crown: toward its base below 0,
     /// as a shrub's do, toward its tip above, as a tree's do, evenly at 0.
     #[reflect(
@@ -263,7 +264,8 @@ impl Default for LimbLevel {
         Self {
             density: 8.0,
             per_node: 1.0,
-            divergence: degrees(137.5, 10.0),
+            facing: Facing::Around,
+            skew: 20.0_f32.to_radians(),
             bias: 0.0,
             angle: degrees(60.0, 10.0),
             bend_toward: 90.0_f32.to_radians(),
@@ -288,6 +290,22 @@ impl LimbLevel {
             .map(|range| range.0.clone())
             .unwrap_or_else(|| panic!("LimbLevel has no field `{name}` with a ValueRange<f32>"))
     }
+}
+
+/// Which way around its parent a level's limbs leave, the parent's upper side being the one
+/// nearest world up. Each limb then turns by up to the level's skew.
+#[derive(Reflect, Clone, Copy, PartialEq, Debug)]
+pub enum Facing {
+    /// Each node where the limbs below crowd it least, so one limb a node spirals by about
+    /// 137.5°, pairs cross and whorls alternate, as phyllotaxis does.
+    Around,
+    /// To the parent's flanks, in a flat spray (amphitony, as in elm and beech): one limb a node
+    /// on the less crowded flank, so they alternate, a pair on both.
+    Sides,
+    /// From the parent's upper side (epitony).
+    Up,
+    /// From the parent's underside (hypotony).
+    Down,
 }
 
 /// A bell around an angle, both in degrees, as the panel shows them.

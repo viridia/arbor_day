@@ -1,14 +1,14 @@
 //! The generator: a species in, a plant's geometry out. Plain functions on Bevy's math types, with
 //! no ECS, so they can move to a library of their own (ledger X1).
 
-use std::f32::consts::{FRAC_PI_2, TAU};
+use std::f32::consts::{FRAC_PI_2, PI, TAU};
 
 use bevy::math::{Quat, Vec2, Vec3};
 
 use crate::{
     fuzzy::Fuzzy,
     random::Rng,
-    species::{Envelope, LimbLevel, Profile, Species},
+    species::{Envelope, Facing, LimbLevel, Profile, Species},
 };
 
 /// The largest turn of a tube's axis between two rings, so rings are spaced by curvature: a
@@ -32,6 +32,18 @@ const LAYOUT_STREAM: u64 = u64::MAX - 2;
 /// The most a node moves from its even place, as a share of the gap between places, so nodes are
 /// not spaced like rungs. Under half, so neighbours never swap.
 const NODE_JITTER: f32 = 0.3;
+
+/// Turns tried for each node, evenly around the parent.
+const AZIMUTH_CANDIDATES: u32 = 72;
+/// How much of a placed limb's crowding is left one mean gap further along the parent.
+const CROWDING_FADE: f32 = 0.7;
+/// The power the nearness of two azimuths is raised to, so crowding falls off sharply around a
+/// limb. With `CROWDING_FADE`, it gives the golden angle for one limb a node; gentler, the turn
+/// falls to 180°, and sharper, it turns erratic.
+const CROWDING_SHARPNESS: i32 = 4;
+/// How much a limb pointing straight out from the plant's axis gains, a crown radius off it,
+/// against crowding of 1 for a limb at the same azimuth one gap away.
+const OUTWARD_WEIGHT: f32 = 1.0;
 
 /// Halvings in finding where a ray leaves the envelope: the largest envelope's 90 m bound to under
 /// a tenth of a millimetre.
@@ -290,9 +302,9 @@ impl Parent<'_> {
 }
 
 /// Adds one parent's limbs of one level: nodes along the part of the parent inside the crown, as
-/// many as the level's density gives for its length, each placed by `node_place`, each turned by
-/// the divergence from the one below, its limbs spaced evenly around it,
-/// each leaving at the level's angle from the parent and then grown (`grow_limb`). A limb whose
+/// many as the level's density gives for its length, each placed by `node_place` and turned by
+/// `node_azimuth`, its limbs spaced evenly around it, each leaving at the level's angle from the
+/// parent and then grown (`grow_limb`). A limb whose
 /// start lies outside the crown, or that would be no longer than it is thick, is left out.
 ///
 /// Radii follow the pipe model: a stem's radius raised to `exponent` is shared among the limbs
@@ -318,31 +330,35 @@ fn grow_level(
     // The node count and each node's turn, limb count and place are the parent's, drawn from a
     // stream of its own beside its limbs'.
     let mut layout = parent.rng.fork(LAYOUT_STREAM);
+    let length = parent.rings[parent.rings.len() - 1].at;
     let inside = inside_end - inside_start;
-    let inside_length = inside * parent.rings[parent.rings.len() - 1].at;
+    let inside_length = inside * length;
     let nodes = layout.round(params.density * inside_length / envelope.radius.max(0.01));
-    let mut node_azimuth = 0.0;
+    let gap = inside_length / nodes.max(1) as f32;
+    // Each limb placed so far: how far along the parent it leaves, and its azimuth.
+    let mut placed: Vec<(f32, f32)> = Vec::new();
     let mut index = 0;
     for node in 0..nodes {
-        // A turn is any angle, so the divergence is not clamped; adding it is the same modulo a
-        // turn.
-        let divergence = params.divergence.sample(&mut layout);
-        if node > 0 {
-            node_azimuth += divergence;
-        }
         let per_node = layout.round(params.per_node).max(1);
         let place = node_place(node, nodes, params.bias, layout.unit());
         let t = inside_start + inside * place;
         let frame = parent.frame(t);
         let across = frame.side.cross(frame.tangent);
+        let crowd = Crowd {
+            at: t * length,
+            gap,
+            placed: &placed,
+        };
+        let azimuths = node_azimuths(&frame, per_node, params.facing, &crowd, envelope);
         let base_radius = params.radius * section.powf(exponent.recip());
-        for limb in 0..per_node {
+        for azimuth in azimuths {
             let rng = parent.rng.fork(index);
             index += 1;
             let mut own = rng.fork(OWN_VALUES_STREAM);
             let angle = draw(&params.angle, "angle", &mut own);
             let reach = draw(&params.reach, "reach", &mut own);
-            let azimuth = node_azimuth + TAU * limb as f32 / per_node as f32;
+            let azimuth = azimuth + (own.unit() * 2.0 - 1.0) * params.skew;
+            placed.push((t * length, azimuth));
             let (sin, cos) = azimuth.sin_cos();
             let (angle_sin, angle_cos) = angle.sin_cos();
             let direction =
@@ -456,6 +472,84 @@ fn node_place(node: u32, nodes: u32, bias: f32, unit: f32) -> f32 {
     let jitter = (unit * 2.0 - 1.0) * NODE_JITTER;
     let even = (node as f32 + 0.5 + jitter) / nodes as f32;
     even.powf(4.0_f32.powf(-bias.clamp(-1.0, 1.0)))
+}
+
+/// The limbs already on a parent, as a node about to be placed at `at` metres along it sees them.
+struct Crowd<'a> {
+    at: f32,
+    /// The mean gap between nodes, in metres, over which crowding fades by `CROWDING_FADE`.
+    gap: f32,
+    /// Each limb's distance along the parent, in metres, and its azimuth.
+    placed: &'a [(f32, f32)],
+}
+
+/// The azimuths of a node's `per_node` limbs, as `facing` places them before their skew:
+/// - around, spaced evenly, turned to the least cost of `AZIMUTH_CANDIDATES` turns;
+/// - to the sides, on alternate flanks, the first on the flank of lower cost;
+/// - up or down, all on the parent's upper side or its underside.
+///
+/// A turn's cost is how crowded its limbs are by those already placed, less how far they point
+/// out from the plant's axis. Crowding is how near each limb's azimuth is to each placed one's,
+/// sharpened, and faded with their distance along the parent; so around, one limb a node settles
+/// into a spiral of about 137.5°, pairs cross and whorls alternate, as phyllotaxis does.
+fn node_azimuths(
+    frame: &Frame,
+    per_node: u32,
+    facing: Facing,
+    crowd: &Crowd,
+    envelope: &Envelope,
+) -> Vec<f32> {
+    let across = frame.side.cross(frame.tangent);
+    // The azimuth of the parent's upper side, nearest world up; an upright parent's is its side's.
+    let up = Vec3::Y.reject_from_normalized(frame.tangent);
+    let upper = if up.length_squared() > 1e-6 {
+        up.dot(across).atan2(up.dot(frame.side))
+    } else {
+        0.0
+    };
+    // Out from the axis, as much as the node is off it, up to a crown radius.
+    let out = Vec3::new(frame.point.x, 0.0, frame.point.z) / envelope.radius.max(0.01);
+    let out = out.clamp_length_max(1.0);
+    let cost = |azimuth: f32| {
+        let crowding: f32 = crowd
+            .placed
+            .iter()
+            .map(|&(at, other)| {
+                let near = (1.0 + (azimuth - other).cos()) * 0.5;
+                let fade = CROWDING_FADE.powf((crowd.at - at).abs() / crowd.gap.max(1e-3));
+                fade * near.powi(CROWDING_SHARPNESS)
+            })
+            .sum();
+        let (sin, cos) = azimuth.sin_cos();
+        crowding - OUTWARD_WEIGHT * (frame.side * cos + across * sin).dot(out)
+    };
+    // The limbs from a first azimuth, `apart` between each, and the first of `candidates` whose
+    // limbs cost least together.
+    let group = |first: f32, apart: f32| -> Vec<f32> {
+        (0..per_node).map(|limb| first + apart * limb as f32).collect()
+    };
+    let least = |candidates: &mut dyn Iterator<Item = f32>, apart: f32| -> Vec<f32> {
+        let mut best = (0.0, f32::INFINITY);
+        for first in candidates {
+            let total: f32 = group(first, apart).into_iter().map(cost).sum();
+            if total < best.1 {
+                best = (first, total);
+            }
+        }
+        group(best.0, apart)
+    };
+    match facing {
+        Facing::Around => least(
+            &mut (0..AZIMUTH_CANDIDATES).map(|i| TAU * i as f32 / AZIMUTH_CANDIDATES as f32),
+            TAU / per_node as f32,
+        ),
+        Facing::Sides => least(
+            &mut [upper + FRAC_PI_2, upper - FRAC_PI_2].into_iter(),
+            PI,
+        ),
+        Facing::Up => group(upper, 0.0),
+        Facing::Down => group(upper + PI, 0.0),
+    }
 }
 
 /// A value drawn from `fuzzy`, clamped to the limits of `LimbLevel`'s field `field`.
@@ -846,11 +940,8 @@ mod tests {
         for level in &mut species.limbs {
             level.bend = 0.0;
             level.wander = 0.0;
-            for fuzzy in [
-                &mut level.divergence,
-                &mut level.angle,
-                &mut level.reach,
-            ] {
+            level.skew = 0.0;
+            for fuzzy in [&mut level.angle, &mut level.reach] {
                 fuzzy.spread = 0.0;
             }
         }
@@ -1124,9 +1215,115 @@ mod tests {
         let azimuth = |limb: &Limb| limb.direction().z.atan2(limb.direction().x);
         let apart = (azimuth(&limbs[1]) - azimuth(&limbs[0])).rem_euclid(TAU);
         assert!((apart - TAU / 3.0).abs() < 1e-5);
-        // The next node turns by the divergence.
-        let turned = (azimuth(&limbs[3]) - azimuth(&limbs[0])).rem_euclid(TAU);
-        assert!((turned - species.limbs[0].divergence.center).abs() < 1e-5);
+    }
+
+    /// The turns between successive nodes on `straight`'s upright stem, in degrees, modulo the
+    /// angle between a node's limbs, since they are alike. The first few are left out, while the
+    /// pattern settles.
+    fn node_turns(per_node: f32) -> Vec<f32> {
+        let mut species = straight();
+        species.limbs[0].density = 8.0;
+        species.limbs[0].per_node = per_node;
+        let limbs = limbs(&species);
+        let per_node = per_node as usize;
+        assert_eq!(limbs.len(), 16 * per_node);
+        let azimuth = |limb: &Limb| limb.direction().z.atan2(limb.direction().x).to_degrees();
+        let between = 360.0 / per_node as f32;
+        limbs
+            .chunks(per_node)
+            .map(|node| azimuth(&node[0]))
+            .collect::<Vec<_>>()
+            .windows(2)
+            .skip(3)
+            .map(|pair| (pair[1] - pair[0]).rem_euclid(between))
+            .collect()
+    }
+
+    fn mean(values: &[f32]) -> f32 {
+        values.iter().sum::<f32>() / values.len() as f32
+    }
+
+    #[test]
+    fn competition_gives_the_classic_patterns() {
+        // One limb a node spirals by the golden angle, pairs cross, and whorls of three alternate.
+        // A turn either way reads the same. With nodes unevenly spaced, a spiral's turns swing
+        // about the golden angle, and are judged by their mean.
+        let spiral: Vec<f32> = node_turns(1.0).iter().map(|turn| turn.min(360.0 - turn)).collect();
+        assert!((mean(&spiral) - 137.5).abs() < 8.0, "{spiral:?}");
+        // Pairs cross at 90° and whorls of three alternate at 60°, the most a turn can be from
+        // the last node's limbs, so they are judged by how far each turn is from it.
+        for (per_node, expected) in [(2.0, 90.0), (3.0, 60.0)] {
+            let off: Vec<f32> = node_turns(per_node)
+                .iter()
+                .map(|turn| (turn - expected).abs())
+                .collect();
+            assert!(mean(&off) < 12.0, "{per_node}: {off:?}");
+        }
+    }
+
+    /// The vertical part of each second-level limb's direction, on level first-level limbs, with
+    /// the second level facing `facing`.
+    fn rises(facing: Facing) -> Vec<f32> {
+        let mut species = straight();
+        species.limb_levels = 2;
+        species.limbs[0].angle = Fuzzy::new(FRAC_PI_2, 0.0, Distribution::Uniform);
+        species.limbs[1].facing = facing;
+        species.limbs[1].per_node = 1.0;
+        let limbs = limbs(&species);
+        let rises: Vec<f32> = limbs
+            .iter()
+            .filter(|limb| limb.level == 1)
+            .map(|limb| limb.direction().y)
+            .collect();
+        assert!(rises.len() > 20, "{}", rises.len());
+        rises
+    }
+
+    #[test]
+    fn limbs_on_a_level_parent_face_as_asked() {
+        let level = |rises: &[f32]| mean(&rises.iter().map(|y| y.abs()).collect::<Vec<_>>());
+        let around = rises(Facing::Around);
+        assert!(level(&rises(Facing::Sides)) < 0.5 * level(&around));
+        assert!(mean(&rises(Facing::Up)) > 0.4);
+        assert!(mean(&rises(Facing::Down)) < -0.4);
+        assert!(mean(&around).abs() < 0.2);
+    }
+
+    #[test]
+    fn skew_turns_each_limb_on_its_own() {
+        // How far each pair's limbs are from opposite, about the upright stem, in degrees.
+        let off_opposite = |skew: f32| -> Vec<f32> {
+            let mut species = straight();
+            species.limbs[0].per_node = 2.0;
+            species.limbs[0].skew = skew.to_radians();
+            let azimuth = |limb: &Limb| limb.direction().z.atan2(limb.direction().x).to_degrees();
+            limbs(&species)
+                .chunks(2)
+                .map(|pair| ((azimuth(&pair[1]) - azimuth(&pair[0])).rem_euclid(360.0) - 180.0).abs())
+                .collect()
+        };
+        assert!(off_opposite(0.0).iter().all(|off| *off < 1e-3));
+        // Each limb turns up to 30°, so a pair is at most 60° from opposite.
+        let skewed = off_opposite(30.0);
+        assert!(skewed.iter().all(|off| *off <= 60.0 + 1e-3), "{skewed:?}");
+        assert!(mean(&skewed) > 10.0, "{skewed:?}");
+    }
+
+    #[test]
+    fn splayed_stems_send_their_limbs_outward() {
+        let mut species = regular();
+        species.trunk.stems = 3;
+        species.trunk.splay = 30.0_f32.to_radians();
+        species.trunk.lean = 0.0;
+        // How far each limb points out from the axis, horizontally.
+        let outward: Vec<f32> = limbs(&species)
+            .iter()
+            .map(|limb| {
+                let out = Vec3::new(limb.origin().x, 0.0, limb.origin().z).normalize();
+                limb.direction().dot(out)
+            })
+            .collect();
+        assert!(mean(&outward) > 0.2, "{outward:?}");
     }
 
     #[test]

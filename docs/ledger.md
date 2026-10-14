@@ -40,7 +40,8 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `3cf3760` | C29 Pipe-model radii (D22), and limbs under the thinnest meshed radius left unmeshed; `plans/levels.py` checks the cut-off. |
 | `5eca2d9` | C24 Stems (D23): count, splay and leader; the lean's heading from the seed; `plans/stems.py`. |
 | `b3a1947` | C44 Spans inside the crown (D24); stems keep their length when they lean, and never turn past level; each limb level's header shows its count. |
-| (pending) | C46 Node bias (D25) in place of the span, and nodes moved from their even places by a constant jitter; `plans/bias.py`. |
+| `e64daa1` | C46 Node bias (D25) in place of the span, and nodes moved from their even places by a constant jitter; `plans/bias.py`. |
+| (pending) | C51 Children placed by competition and facing, with a skew per limb (D26), in place of the divergence; `plans/facing.py`. |
 
 ## Next
 
@@ -57,23 +58,7 @@ per-type hook, and is retained-mode.
 
 ### Milestone: the first species exported to Panoply
 
-1. **C51 Children placed by competition** (D26), in place of the divergence. Nodes are placed
-   up the parent in order. For each, candidate azimuths every 10° are scored, a node's limbs
-   as one group turned as a unit, and the best is moved by a small random turn drawn from the
-   layout stream (D18). The score is the sum of three terms:
-   - crowding: each earlier child on the parent counts against azimuths near its own, less
-     the further along the parent it sits;
-   - facing: a new per-level field, `Facing` (Around, Sides, Up, Down), counts for azimuths
-     near the parent's flanks, its upper side or its underside, scaled by how far the parent
-     is from vertical, so an upright stem ignores it;
-   - room: the distance to the envelope along the limb's starting direction, so children
-     favour the side with more light, splayed stems their outer side.
-
-   The constants (how fast crowding fades, the terms' weights, the random turn) are set once
-   and kept (D25), tuned so the defaults give a golden-angle spiral for one limb per node,
-   crossing pairs for two and alternating whorls for more, checked by test. D14, D18 and D19
-   follow. E[3]
-2. **C50 Wander as kinks** (D25): a limb is straight between kinks, in place of turns blended
+1. **C50 Wander as kinks** (D25): a limb is straight between kinks, in place of turns blended
    into a curve (D17); smooth curves come from bend. Angle and bend trace the limb's course,
    and each segment points off that course by a random angle up to the wander, at a random
    angle around it. Each deviation is from the course, not from the segment before, so a limb
@@ -83,7 +68,7 @@ per-type hook, and is retained-mode.
    and the crown reads as a fractal. Wander becomes the most a segment points off the course,
    0° to 45°, rather than a turn per metre. A ring sits at each kink, turned halfway between
    the two directions, so the tube does not pinch. E[2]
-3. **C37 Foliage placement** (`docs/growth-model.md`, Foliage): clusters seeded along the parts
+2. **C37 Foliage placement** (`docs/growth-model.md`, Foliage): clusters seeded along the parts
    of the limbs within a shell depth of the envelope, at a spacing set by the author, each a
    plain quad for now, in a leaf mesh of its own with an alpha-masked material. Bare trees set
    no foliage. Facing up for now; C39 brings the facing distribution. Twigs and leaves are
@@ -92,7 +77,7 @@ per-type hook, and is retained-mode.
    since the twigs exist. The cards carry a texture taken from a seedling `.glb` (they embed
    theirs; growth model, Seedling's flora) as a placeholder in `assets/`, until C38 paints
    them. E[3]
-4. **C45 Contact sheets**, so designs are explored in sweeps rather than one screenshot at a
+3. **C45 Contact sheets**, so designs are explored in sweeps rather than one screenshot at a
    time, by the author or by an agent. A second binary (`src/bin/sheet.rs`; the modules move
    behind a `src/lib.rs` so both binaries share them) reads a species file and a sweep (seeds,
    or one field's values by reflection path), grows each plant with the generator, lays them out
@@ -106,14 +91,14 @@ per-type hook, and is retained-mode.
    sweeping parameters needs only writing sweep files and running the one command, so a narrow
    allowlist covers it; trying generator changes (a form, say) runs in a git worktree that is
    thrown away afterwards, the findings written up and built properly. E[3]
-5. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's `genLeafTexture.ts` ported,
+4. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's `genLeafTexture.ts` ported,
    its leaf shape and color parameters as species fields with streams of their own
    (requirements, Parameters, determinism, variants). The texture goes on C37's cards, replacing the placeholder. A golden
    test on its pixels compares with a tolerance, since SIMD can move a channel by a level. E[3]
-6. **C39 Card shapes and facing**: crossed, cupped and creased cards chosen by weight; a card's
+5. **C39 Card shapes and facing**: crossed, cupped and creased cards chosen by weight; a card's
    normal drawn around a blend of world up and the envelope's outward normal, with a spread, its
    rotation about the normal free; crown softness for the shading normal (X13). E[3]
-7. **C30 Forks**, Weber and Penn's splits: at a point along a limb it ends, and copies of it
+6. **C30 Forks**, Weber and Penn's splits: at a point along a limb it ends, and copies of it
    carry on, turned apart by the fork angle. The copies are the same level as the limb, not its
    children, so they reach the envelope and bear children as it would; turning both by half the
    angle reads as the symmetric Y of a child deflecting its parent. Per level: forks per limb (0
@@ -124,7 +109,7 @@ per-type hook, and is retained-mode.
    model, Stems and leader). A stem's fork may lie below the crown base: the leader sets the
    axis's length, the fork where it splits. After foliage, since a crown's
    look cannot be judged without leaves. E[3]
-8. **C10 Species data model**, its groups the layers of the growth model (D11;
+7. **C10 Species data model**, its groups the layers of the growth model (D11;
    `docs/growth-model.md`, Consequences), correcting seedling where the requirements say.
    Reflectable types with `Default` for initial values and attributes for the editor, after the
    fields settle, so saved files are not broken by every change. Serialized
@@ -143,15 +128,15 @@ per-type hook, and is retained-mode.
    levels with hidden ones stashed in the editor, the same in files but a larger change that
    undoes D15. Seedling's groups for reference: `trunk`; `branch[]`, one per level; the leaf as
    `leafGroup` (arrangement), `leafShape` and `leafColor`. E[4], split when started
-9. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
+8. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
    panel; the file browser is X2. The seed row moves in with them, in a feathers `group`
    (`containers/group.rs`, no header), so it lines up with the subpanes' rows rather than
    standing at the panel's edge. E[3]
-10. **C8 Working document in settings.** A settings group holding the working species and, once
+9. **C8 Working document in settings.** A settings group holding the working species and, once
    set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
    as seedling did. The document's name comes from the file name. Serialized by reflection, as
    `bevy_settings` does. E[3]
-11. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
+10. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
    as a JSON extra (C10), in the form Panoply loads (requirements, Output; "What Panoply does with the output"). Bevy writes no glTF,
    so this adds a dependency or a writer of our own; propose it before code. The command-line
    export is X1. Research so far (2026-10-12), the author also asking skein's author:
@@ -195,7 +180,7 @@ per-type hook, and is retained-mode.
   rounding should not fight it; check by hand that a drag snaps cleanly. First for the
   envelope's height (0.5 to 30 m, where a herb lives in the first pixels) and radius. E[3]
 - **C33 Sections within a level**, so the panel is not a wall of like sliders: arrangement
-  (nodes, per node, divergence, bias), direction (angle, bend toward, bend), growth (reach,
+  (nodes, per node, facing, skew, bias), direction (angle, bend toward, bend), growth (reach,
   wander), bark (radius, sides). A field attribute, `@Group("Direction")`, names its section;
   the property editor collates fields by group, ungrouped fields first, each group under a
   label. The grouping is the panel's alone: the data stays flat, so paths (`limbs[0].angle`),
@@ -353,9 +338,10 @@ per-type hook, and is retained-mode.
   with `CapsUiFeathers` when the fork changes it. A select rather than radio buttons: one row
   however many variants.
 
-- **D14** Phyllotaxis is two numbers per level, limbs per node and the divergence between nodes,
-  in place of a rule enum: they cover spiral, alternate, opposite and whorled
-  (`docs/growth-model.md`, Limbs), and each changes one visible thing.
+- **D14** Phyllotaxis is limbs per node and a facing per level (D26), in place of a rule enum:
+  competition gives the spiral, crossing pairs and alternating whorls (`docs/growth-model.md`,
+  Limbs), and each field changes one visible thing. Revised in C51 from limbs per node and a
+  divergence between nodes.
 
 - **D15** Limb levels are a fixed array of three and a count of those shown, 1 to 3, not a list
   that grows and shrinks: a hidden level keeps its parameters, so hiding one and showing it again
@@ -385,18 +371,18 @@ per-type hook, and is retained-mode.
   gives it a number input without a fill and a Random button. The seed list for variants
   (requirements, a species file plus a seed list) can grow from it.
 
-- **D18** A level's varied fields are drawn where they belong: the divergence and each node's
-  jitter once per node, from the parent's layout stream; the angle and reach once per limb,
-  from the limb's own. Fixed streams take fork indices from the top (`u64::MAX` down), so they
-  never meet a child's index. A drawn value is clamped to its field's `ValueRange`, read from
-  the type by reflection (`LimbLevel::limits`), so the limits have one owner; the divergence is
-  not clamped, since any turn is a turn.
+- **D18** A level's varied fields are drawn where they belong: each node's jitter and limb count
+  once per node, from the parent's layout stream; the angle, reach and skew once per limb, from
+  the limb's own. Fixed streams take fork indices from the top (`u64::MAX` down), so they never
+  meet a child's index. A drawn value is clamped to its field's `ValueRange`, read from the
+  type by reflection (`LimbLevel::limits`), so the limits have one owner; the skew is not
+  clamped, since any turn is a turn.
 
 - **D19** Variance pays where instances are many. A value drawn once per plant is invisible
   within a tree and differs only from seed to seed, so it varies only where trees of one
   species should differ (the envelope's lean and squash, the trunk's lean direction). The
-  trunk does not vary otherwise. Kept as `Fuzzy`: angle and reach per limb, divergence per node,
-  the most visible variety. Not varied: bend toward and bend (wander already irregularizes),
+  trunk does not vary otherwise. Kept as `Fuzzy`: angle and reach per limb, the most visible
+  variety; the skew is a turn either way of up to its value, per limb (D26). Not varied: bend toward and bend (wander already irregularizes),
   wander (itself the randomness), radius (the pipe model derives it, D22), sides (mesh detail),
   bias (each node's jitter varies the places, D25). Counts are fractions rounded at random
   (D21).
@@ -453,10 +439,9 @@ per-type hook, and is retained-mode.
 
 - **D25** A new behaviour changes what a field means, or is derived, before it adds a field: a
   level has many already. So the span's two fields become one bias, with a constant jitter
-  (C46); one facing choice replaces the divergence, competition placing the children (C51,
-  D26), rather than a facing and a pull being added beside it; wander becomes kinks spaced by
-  the internode, smooth curves being bend's (C50), rather than gaining a smoothness and a
-  spacing. A level goes from 12 fields to 11. The bias pushes even
+  (C46); a facing and a skew replace the divergence, competition placing the children (C51,
+  D26); wander becomes kinks spaced by the internode, smooth curves being bend's (C50), rather
+  than gaining a smoothness and a spacing. A level keeps 12 fields. The bias pushes even
   places toward the tip or the base by raising them to the power 4^−bias, keeping both ends and
   the order; jitter moves a node up to 30% of the gap first. Left out until a preset needs
   them: a jitter per level (a fir's even whorls), and a sharply bare stretch, such as a bare
@@ -468,12 +453,27 @@ per-type hook, and is retained-mode.
   last ones; Douady and Couder, that an inhibition fading with distance yields the golden
   angle, crossing pairs and alternating whorls), so the spiral the divergence set by hand
   comes out of the rule, and the same rule serves lateral limbs, which a divergence served
-  poorly. The patterns a level can ask for are around, sides, up and down; no tree fans
-  vertically. Room to the envelope stands in for light, so children face outward where the
-  crown has space, as splayed stems' do. Rejected: children facing from the flank with a
-  divergence of 180° (C49, never built), which flattened lateral limbs only when the author
-  set it and left the trunk's spiral fixed; and full space colonization (X12), with limbs on
-  different parents competing, which stays deferred.
+  poorly. A level's facing is one of the patterns botany names on sloping limbs (Hallé,
+  Oldeman and Tomlinson), measured from the parent's upper side, the one nearest world up; no
+  tree fans vertically:
+  - around: competition turns each node's limbs, spaced evenly, to the least crowded place,
+    and toward the outside, the more so the further the node is from the plant's axis, so
+    splayed stems' children face outward, toward light;
+  - sides (amphitony): limbs on alternate flanks, competition picking the less crowded flank
+    for the first, so one limb a node alternates and a pair takes both;
+  - up and down (epitony and hypotony): every limb on the upper side or the underside, with no
+    competition.
+
+  Each limb then turns by its own random amount up to the level's skew, so a pair is not held
+  opposite and the pattern loosens. The constants (crowding fades to 0.7 a mean gap further
+  along the parent, nearness is raised to the 4th power, and outward counts 1 against
+  crowding's 1) were tuned in simulation: gentler crowding falls to 180° turns, sharper turns
+  erratic. Rejected: children facing from the flank with a divergence of 180° (C49, never
+  built), which flattened lateral limbs only when the author set it and left the trunk's
+  spiral fixed; facing as a weighted preference beside competition, which up and down could
+  not apply to a pair, one limb of which always faced each way; room to the envelope for
+  light, which near the crown's edge turns children inward; and full space colonization
+  (X12), with limbs on different parents competing, which stays deferred.
 
 ## Deferred
 
@@ -598,8 +598,8 @@ per-type hook, and is retained-mode.
   children placed along a parent, and for leaves, as in Xfrog and SpeedTree. Its signal would be
   a curve over the parent's length (0 to 1) rather than a scalar, as Reaktor's is a function of
   time. Twig density would then be a distribution whose density is a curve, shaped by
-  primitives such as a window (the part inside the crown), a skew (C46's bias) and noise (its jitter). The
-  hard part is that change: the engine would evaluate curves rather than read fields. Likely
+  primitives such as a window (the part inside the crown), a push toward one end (C46's bias)
+  and noise (its jitter). The hard part is that change: the engine would evaluate curves rather than read fields. Likely
   more than this tool needs. E[5] *Gate:* forms written in code (X18) prove too many or too
   rigid.
 - **X23** Kinks at the nodes, the limb deflecting away from each child it gives off, as

@@ -173,11 +173,13 @@ dichotomous modes; the fork parameters apply whenever the leader stops short.
 
 ### Limbs
 
-One to three levels. Each level places children in nodes spaced along a span of the parent, with
-bounded jitter on each angle. Phyllotaxis is two numbers: limbs per node, spaced evenly around
-it, and the divergence, the turn from one node to the next. One per node at 137.5° is a spiral,
-at 180° alternate; two at 90° are opposite pairs crossing; more are a whorl. A child's direction
-is set by:
+One to three levels. Each level places children in nodes along the part of the parent inside the
+crown, with bounded jitter on each angle. Phyllotaxis is limbs per node and a facing (ledger
+D26). Facing around, each node turns to where the limbs below crowd it least, which gives a
+spiral of about 137.5° for one per node, opposite pairs crossing for two, and alternating whorls
+for more. Facing sides, limbs alternate flank to flank; up or down, they leave from the parent's
+upper side or underside. Each limb then turns at random by up to the level's skew. A child's
+direction is set by:
 
 - **Angle**, from the parent's direction where the child starts, a fuzzy value per level,
   clamped to per-level limits: the angle seen at the fork, as in Weber and Penn. Measured from
@@ -245,8 +247,8 @@ For the species data model (C10), the groups follow the layers:
 
 - **Envelope:** profile, height, crown base, radius, lean, squash.
 - **Stems:** count, splay, leader extent, fork count and angle.
-- **Limb levels**, a list: nodes, limbs per node and divergence, span on the parent,
-  angle and its limits, azimuth jitter, reach, tropism, wander, radius ratio.
+- **Limb levels**, a list: nodes, limbs per node, facing and skew, bias along the parent,
+  angle and its limits, reach, tropism, wander, radius ratio.
 - **Bark:** base radius, pipe exponent, flare, color.
 - **Foliage:** spacing, shell depth, card shapes and weights, size, facing (up-to-outward blend,
   spread), crown softness.
