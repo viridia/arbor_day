@@ -49,7 +49,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `dd130b3` | C56 A HUD over the view (D28), `src/hud.rs`: the triangle count, and toggles for the envelope and the ground, which leaves `Placeholder`. |
 | `86fa129` | C64 The HUD's toggles saved, as `ViewSettings` (D28). |
 | `86fa129` | C57 Camera buttons on the HUD (D28): orbit, zoom, tilt and Frame, moving while held; the panel's "View" group goes. Needs `bevy_remote_driver`'s press and hold. |
-| (pending) | C27 `Placeholder` removed, and `Wrap` with it (D9). The plant carries the species it was grown from (`GrownFrom`, D12), which plans read with the driver's `expect(…, at="limbs[0].angle")`; `PlantStats` drops the seed. The Bark group moves up under Trunk. X25 (`bevy::annotations`) and C65 (wireframe toggle) recorded. |
+| `51ce5ca` | C27 `Placeholder` removed, and `Wrap` with it (D9). The plant carries the species it was grown from (`GrownFrom`, D12), which plans read with the driver's `expect(…, at="limbs[0].angle")`; `PlantStats` drops the seed. The Bark group moves up under Trunk. X25 (`bevy::annotations`) and C65 (wireframe toggle) recorded. |
 
 ## Next
 
@@ -102,13 +102,20 @@ per-type hook, and is retained-mode.
    sweeping parameters needs only writing sweep files and running the one command, so a narrow
    allowlist covers it; trying generator changes (a form, say) runs in a git worktree that is
    thrown away afterwards, the findings written up and built properly. E[3]
-3. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's `genLeafTexture.ts` ported,
-   its leaf shape and color parameters, and the sprig's arrangement (`leafGroup`'s fan and
-   pairs; growth model, Consequences), as species fields with streams of their own
-   (requirements, Parameters, determinism, variants). The texture goes on C37's cards, replacing
-   the placeholder, with mipmaps, since the placeholder's 128 px shimmers at game scale. A golden
-   test on its pixels compares with a tolerance, since SIMD can move a channel by a level. E[3]
-4. **C39 Card shapes and facing**: crossed, cupped and creased cards chosen by weight (seedling's
+3. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's leaf, as D29 has it, its
+   fields in a "Sprig" and a "Leaf" group under Foliage, and the `Interval` type (D10) for its
+   variations. The painter takes the outline as an
+   argument, a width in texture pixels or none, which C38 fixes at a constant until C66 makes it
+   the species'. The texture goes on C37's cards, replacing the placeholder, with mipmaps, since
+   the placeholder's 128 px shimmers at game scale. A golden test on its pixels compares with a
+   tolerance, since SIMD can move a channel by a level. E[3]
+4. **C66 Outlines**, a switch for the whole plant (requirements, Foliage): an "Outline" group
+   with the switch, the bark's width as the game reads it, and the leaf stroke's in texture
+   pixels (growth model, Consequences). On, the leaf texture is painted with its strokes (D29),
+   the preview draws the bark with an inverted hull after Panoply's `src/materials/outline.wesl`,
+   and the export writes the `"outline"` material extra (C41). Off, none of these; whether the
+   translucent strokes between leaves stay is judged then. E[3]
+5. **C39 Card shapes and facing**: crossed, cupped and creased cards chosen by weight (seedling's
    `lateralDroop` folds a card about its midrib, `axialDroop` bends its far half down); the face
    target (D27) widened from world up to a blend of up and the envelope's outward normal, with a
    spread; crown softness for the shading normal (X13), built as a weight and judged in the
@@ -116,7 +123,7 @@ per-type hook, and is retained-mode.
    edge-on to the game's camera (45° down), to judge facing and folding by numbers as well as by
    eye. Card counts multiply with levels (the default with three: 525 cards, 1,050 triangles),
    so look at density against the budget too. E[3]
-5. **C30 Forks**, Weber and Penn's splits: at a point along a limb it ends, and copies of it
+6. **C30 Forks**, Weber and Penn's splits: at a point along a limb it ends, and copies of it
    carry on, turned apart by the fork angle. The copies are the same level as the limb, not its
    children, so they reach the envelope and bear children as it would; turning both by half the
    angle reads as the symmetric Y of a child deflecting its parent. Per level: forks per limb (0
@@ -127,7 +134,7 @@ per-type hook, and is retained-mode.
    model, Stems and leader). A stem's fork may lie below the crown base: the trunk's height
    sets the axis's length, the fork where it splits. After foliage, since a crown's
    look cannot be judged without leaves. E[3]
-6. **C10 Species data model**, its groups the layers of the growth model (D11;
+7. **C10 Species data model**, its groups the layers of the growth model (D11;
    `docs/growth-model.md`, Consequences), correcting seedling where the requirements say.
    Reflectable types with `Default` for initial values and attributes for the editor, after the
    fields settle, so saved files are not broken by every change. Serialized
@@ -146,15 +153,17 @@ per-type hook, and is retained-mode.
    levels with hidden ones stashed in the editor, the same in files but a larger change that
    undoes D15. Seedling's groups for reference: `trunk`; `branch[]`, one per level; the leaf as
    `leafGroup` (arrangement), `leafShape` and `leafColor`. E[4], split when started
-7. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
+8. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
    panel; the file browser is X2. The seed row moves in with them, in a feathers `group`
    (`containers/group.rs`, no header), so it lines up with the subpanes' rows rather than
-   standing at the panel's edge. E[3]
-8. **C8 Working document in settings.** A settings group holding the working species and, once
+   standing at the panel's edge. File commands act on the active document, so that tabs (X26)
+   need not change them. E[3]
+9. **C8 Working document in settings.** A settings group holding the working species and, once
    set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
    as seedling did. The document's name comes from the file name. Serialized by reflection, as
-   `bevy_settings` does. E[3]
-9. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
+   `bevy_settings` does. Stored as a list of open documents holding one, and the active one's
+   index, so several (X26) need no change of format. E[3]
+10. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
    as a JSON extra (C10), in the form Panoply loads (requirements, Output; "What Panoply does with the output"). Bevy writes no glTF,
    so this adds a dependency or a writer of our own; propose it before code. The command-line
    export is X1. Research so far (2026-10-12), the author also asking skein's author:
@@ -202,11 +211,15 @@ per-type hook, and is retained-mode.
 - **C42 Computed values are rounded where written**, from the first writer (Reset, Randomize,
   values derived from the generator): the number input never rounds what it shows, so round to
   the field's `Precision` in the units shown, as feathers' color input does
-  (`scaled_number_input_value`). Defaults are written in the units shown
+  (`scaled_number_input_value`), or with `NumberInputPrecision::round` once bevy#26158 lands.
+  Defaults are written in the units shown
   (`15.0_f32.to_radians()`, not `0.3`). E[2]
 - **C47 A sense of scale**: metre rings on the ground disc (`src/main.rs`, `Circle::new(4.0)`),
   since Frame fits any plant to the view and hides how big it is. Seedling never zoomed, so its
   plants showed their size. E[1]
+- **C67 The leaf texture on the HUD** (D28), for tuning the leaf (requirements, Authoring app):
+  the painted texture as an inset over a checkerboard, so its transparency shows, behind a
+  toggle saved in `ViewSettings`. After C38. E[2]
 
 ### Later
 
@@ -268,6 +281,7 @@ per-type hook, and is retained-mode.
   - Cmd+Z in a focused text field: the text input passes it on, so the window would undo a
     document edit mid-typing. The PR's per-field contexts are for this case.
   - Keys: Cmd+Z and Cmd+Shift+Z (Ctrl+Z and Ctrl+Y elsewhere), in `src/keys.rs` (D8).
+  - A context per document, so several open documents (X26) each keep their own history.
 
   E[4]
 - **C54 Radiating foliage** (was X20, its gate C37 passed): cards radiating from a stem's tip or
@@ -357,6 +371,11 @@ per-type hook, and is retained-mode.
   right idea, but read otherwise), `Tolerance` (one of its fields would share the name),
   `FuzzyNumber` (rules out a later `Fuzzy<Color>`). A fuzzy number's membership is not a
   probability, but nobody reading `length: Fuzzy` takes it for anything but a bounded variation.
+  Where too few values are drawn for a shape to show, such as the leaves of one sprig, a varied
+  parameter is an `Interval` instead: center ± spread, drawn uniformly with one draw, its row a
+  `Fuzzy`'s with an empty space where the shape toggle would be, so the two rows' inputs line
+  up (C38). Not in Bevy's prelude, so `bevy_math`'s
+  `curve::Interval` does not clash.
 
 - **D11** The growth model is parametric per level, with a crown envelope that sets limb reach
   and foliage placement, limbs bending toward directions measured against world up, and cards
@@ -565,6 +584,35 @@ per-type hook, and is retained-mode.
   the placeholder it came from: a trunk sunk below the ground (C58) shows only with the ground
   hidden.
 
+- **D29** The leaf texture is seedling's (`genLeafShape.ts`, `genLeafTexture.ts`, and
+  `createLeafStamps` in `MeshGenerator.ts`), the look the author tuned, with five changes.
+  Kept: a leaf is a cubic Bézier half-outline, mirrored, split into segments; each segment's end
+  is pushed outward (serration) and toward the tip (rake), with jitter, and a straight line back
+  to the curve makes the tooth; serration also sharpens the tip. A sprig is a fan (count, angle,
+  a size taper per step) and pairs down the stem at the fan's angle. Each leaf is filled with
+  an inner and an outer color, in a lateral or axial gradient in its own frame, shifted in hue
+  and lightness at random per leaf. Every leaf is stroked black first, then each is filled and
+  stroked translucent dark, so the black shows only around the cluster and the leaves within it
+  are parted by faint lines. The texture is square, fitted to the sprig. Changed:
+  - Colors are painted as picked. Seedling converted them to linear and painted those values as
+    sRGB (three.js r136's `getStyle` does not convert back), so leaves came out far darker than
+    their swatches: poplar-green's outer `rgb(80,201,80)` painted near `rgb(20,149,20)`. Colors
+    were tuned by eye on the preview, so seedling's stored values are not targets.
+  - Lengths are fractions of the leaf's length, which is not a field. The sprig is scaled to fit
+    the texture, so seedling's length mattered only against constants in absolute units (tooth
+    depth 40 × serration, jitter ±10, outline 2, spacing), and changing it changed the teeth and
+    the outline's weight. The outline's width is in texture pixels.
+  - A painted stem, which seedling coded but left off: a midrib in the bark color, outlined, from
+    the texture's bottom edge (the card's base on the twig, D27) through the pairs to the fan.
+    Its width is a constant.
+  - The angle and spacing variations are `Interval`s (D10). The color shift per leaf is in Oklch
+    rather than HSL, so a step of lightness looks alike on every hue.
+  - Shape, arrangement and color draw from streams of their own (D16); seedling's one stream
+    reshuffled the leaf on any edit.
+
+  The fan's angle still sets the pairs', until a preset needs them apart. The droops shape the
+  card, not the texture (C39). Seedling's 47 models used every field, jitter least (3).
+
 ## Deferred
 
 - **X1** The generator as its own library crate, beside the app: no Bevy dependency beyond
@@ -613,8 +661,10 @@ per-type hook, and is retained-mode.
   `UnitsFormat` instead. Without a `NumberInputPrecision` a drag does not round at all (tilt
   drags to `86.90488°`), and a precision cannot help an angle, since `Precision(0)` snaps to whole
   radians. Filed upstream as bevy#26124 (chevrons), bevy#26125 (wrap under a soft limit),
-  bevy#26126 (field captions) and bevy#26130 (rounding). *Gate:* fixes in the Bevy we build against; then rows may use the input's own caption, and angle drags round in
-  degrees.
+  bevy#26126 (field captions) and bevy#26130 (rounding). The author has PRs open for all but the
+  wrap: bevy#26158 (rounding, and X17's unit), and the chevrons' and the captions' (X16). *Gate:*
+  fixes in the Bevy we build against; then rows may use the input's own caption, and angle drags
+  round in degrees.
 - **X11** The spread strip's colour from the feathers theme rather than a fixed white at 80%. A
   gradient's stops take colours, not tokens, so it means reading `UiTheme` in the panel and
   redrawing on a theme change. *Gate:* a second theme, or the white reading poorly over a fill.
@@ -645,13 +695,12 @@ per-type hook, and is retained-mode.
   Panoply.
 - **X16** Captions inside feathers' number input, upstream, by the author, for seedling's
   density: caption left and value right while idle; while editing, the caption hidden and the
-  text right-aligned. The input's `label_text` would make slider widths ragged. *Gate:* the
-  change in the Bevy we build against; then rows drop their caption line, halving their height.
-- **X17** Offer `ratio_percent` (`properties::RatioPercent`) to feathers, which has length, time
-  and angle units but no percentage. Not a `StandardUnitKind`: its scaling shows an `f32` 0.3 as
-  30.000002%, so the unit shifts the value's shortest decimal instead; feathers' own units would
-  gain from the same. It has settled: C24's leader took it unchanged. *Gate:* the author's
-  go-ahead to file the PR.
+  text right-aligned. The input's `label_text` would make slider widths ragged. PR open, fixing
+  bevy#26126. *Gate:* the change in the Bevy we build against; then rows drop their caption
+  line, halving their height.
+- **X17** Drop `properties::RatioPercent` for feathers' own, which bevy#26158 adds under the
+  same name and id (`ratio_percent`), so the two cannot both be registered. *Gate:* bevy#26158
+  in the Bevy we build against.
 - **X18** Forms and presets. The tool is for indie developers wanting the common Earth plant
   types (requirements, What it is for), so presets named after those types ("Fir", "Willow",
   "Live oak", "Clump"), each a saved species, are its starting points. Whether forms are needed
@@ -707,6 +756,19 @@ per-type hook, and is retained-mode.
   `Spinbox` (its follow-ups), `ShownCount`, and units, since its `Unit` is a label while ours
   names a feathers units format that also scales and parses. *Gate:* the PR in the Bevy we
   build against.
+- **X26** Several open documents, as tabs above the panel (a feathers tab list), for an artist
+  working on variants of one species. Each document an entity holding its species, file path
+  and name, the species no longer one resource (D12). A new document is "Untitled" until its
+  first save names it after the file. There is one plant, rebuilt from the active document's
+  species on a switch, as on any edit (D12): hiding inactive plants instead would keep their
+  meshes and textures in memory, and every system that assumes one plant (framing, the HUD's
+  toggles, plans selecting `Plant`) would need to skip them. If painting the leaf texture (C38)
+  makes switching stutter, cache the texture per document. Until then, nothing may assume
+  there is only one document: C8 stores a list, C40 acts on the active document, C7 keeps a
+  history per document. Open: closing a tab with unsaved changes, whether a new document starts
+  from defaults or a copy of the active one, and which
+  need tabs serve that C45's sheets do not (editing variants one at a time, against comparing
+  them side by side). *Gate:* C8 and C40 landed, and an author working on variants.
 
 ## Notes
 
