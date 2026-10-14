@@ -10,7 +10,6 @@ use bevy::{
             FeathersSplitPaneHandle, NumberInputUnits, ScrollbarGutter,
         },
         dark_theme::create_dark_theme,
-        display::label,
         theme::{ThemeBackgroundColor, ThemedText, UiTheme},
         tokens,
     },
@@ -23,10 +22,11 @@ use bevy::{
 use bevy_immediate::{
     Imm,
     attach::{BevyImmediateAttachPlugin, ImmediateAttach},
-    ui::{activated::ImmUiActivated, text::ImmUiText},
+    ui::activated::ImmUiActivated,
 };
 use bevy_remote_driver::RemoteDriverPlugin;
 use fuzzy::{Distribution, Fuzzy};
+use hud::{Ground, HudPlugin, hud};
 use keys::KeysPlugin;
 use plant::{Plant, PlantEnvelope, PlantLeaves, PlantPlugin, PlantStats};
 use properties::{
@@ -40,6 +40,7 @@ use turntable::{
 
 mod fuzzy;
 mod generator;
+mod hud;
 mod keys;
 mod plant;
 mod properties;
@@ -73,11 +74,11 @@ fn main() {
             TurntablePlugin,
             KeysPlugin,
             PlantPlugin,
+            HudPlugin,
         ))
         .insert_resource(UiTheme(create_dark_theme()))
         .add_observer(use_game_fov)
         .add_systems(Startup, (scene.spawn(), shell_ui.spawn()))
-        .add_systems(Update, apply_placeholder)
         .add_systems(PostUpdate, follow_viewport_slot.after(UiSystems::Layout))
         .run();
 }
@@ -99,13 +100,11 @@ struct PanelPane;
 struct ParamPanel;
 
 /// Stands in for the species while the property editor is built: a field of each kind it will
-/// edit. `show_ground` hides the ground, so an edit shows in the view. A component on a named
-/// entity rather than a resource, so plans can read it.
+/// edit. A component on a named entity rather than a resource, so plans can read it.
 #[derive(Component, Reflect, Clone, PartialEq)]
 #[reflect(Component)]
 struct Placeholder {
-    #[reflect(@Caption("Show ground"))]
-    show_ground: bool,
+    #[reflect(@Caption("Smooth shading"))]
     smooth: bool,
     #[reflect(@ValueRange::<i32>(0..=10), @Spinbox)]
     count: i32,
@@ -137,7 +136,6 @@ struct Placeholder {
 impl Default for Placeholder {
     fn default() -> Self {
         Self {
-            show_ground: true,
             smooth: false,
             count: 3,
             amount: 0.5,
@@ -169,10 +167,6 @@ struct PlaceholderNested {
     flag: bool,
     size: f32,
 }
-
-/// The ground disc, which [`Placeholder::show_ground`] hides.
-#[derive(Component, Default, Clone)]
-struct Ground;
 
 fn scene() -> impl SceneList {
     // Lines take no light, so the envelope reads the same from every side.
@@ -322,6 +316,7 @@ fn shell_ui() -> impl Scene {
                 // Drags and scrolls over the view move the camera; the panel's stay in the panel.
                 on(orbit_on_drag)
                 on(zoom_on_scroll)
+                Children [ @hud() ]
             ]
         ]
     }
@@ -358,12 +353,6 @@ impl ImmediateAttach<CapsPanel> for ParamPanel {
         properties::edit_fields(ui, &mut edited, &notes);
         params.species.set_if_neq(edited);
 
-        let triangles = params.stats.single().map_or(0, |stats| stats.triangles);
-        ui.ch()
-            .on_spawn_apply_scene(|| label(""))
-            .on_spawn_insert(|| Name::new("Triangles"))
-            .text(format!("{triangles} triangles"));
-
         properties::group(ui.ch(), "View", |ui| {
             let framed = ui
                 .ch()
@@ -387,22 +376,6 @@ impl ImmediateAttach<CapsPanel> for ParamPanel {
             properties::edit_fields(ui, &mut edited, &HeaderNotes::default());
         });
         placeholder.set_if_neq(edited);
-    }
-}
-
-fn apply_placeholder(
-    placeholders: Query<&Placeholder, Changed<Placeholder>>,
-    mut grounds: Query<&mut Visibility, With<Ground>>,
-) {
-    let Ok(placeholder) = placeholders.single() else {
-        return;
-    };
-    for mut visibility in &mut grounds {
-        *visibility = if placeholder.show_ground {
-            Visibility::Inherited
-        } else {
-            Visibility::Hidden
-        };
     }
 }
 

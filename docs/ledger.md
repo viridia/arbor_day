@@ -45,7 +45,8 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `9123c76` | C50 Wander as kinks about the course, for limbs and now the trunk (D17); lighter second and third levels by default; `plans/wander.py`. |
 | `0e52df1` | C37 Foliage placement (D27): sprig cards along the last level's twigs in the crown's shell, seedling's leaf texture as a placeholder (`assets/leaf-placeholder.png`); `plans/foliage.py`. |
 | `528af7d` | C61 Trunk as the source of truth (D23): the trunk's height in metres, and a "Crown" group (top and base measured against it) in place of the envelope's height and the leader. |
-| (pending) | C53 Four plans in place of twelve: `smoke.py` (with the seed), `widgets.py` (fuzzy rows, selects, color), `levels.py` (with foliage), and `shapes.py`, a gallery of screenshots with no checks. C59 Header counts in parentheses ("Limbs 1 (8)"). |
+| `c53b181` | C53 Four plans in place of twelve: `smoke.py` (with the seed), `widgets.py` (fuzzy rows, selects, color), `levels.py` (with foliage), and `shapes.py`, a gallery of screenshots with no checks. C59 Header counts in parentheses ("Limbs 1 (8)"). |
+| (pending) | C56 A HUD over the view (D28), `src/hud.rs`: the triangle count, and toggles for the envelope and the ground, which leaves `Placeholder`. |
 
 ## Next
 
@@ -240,37 +241,26 @@ per-type hook, and is retained-mode.
   children attach along the kept rings, as now. One rule for curvature and kinks, so the kink
   ring's threshold goes. The tolerance is a constant, tuned against the triangle budget and
   screenshots; tied to Panoply's camera instead, the generator would depend on the game. E[2]
-- **C56 A HUD over the view** (C25 split, its first part), to free the panel: controls that
-  change the preview rather than the species move onto the view. The triangle count in the lower
-  left; toggles for the envelope and the ground in the upper right. The ground toggle stays: a
-  trunk sunk below the ground (C58) shows only with the ground hidden; or the toggle switches
-  between the ground and an infinite grid. Buttons the size and shape of feathers' but
-  translucent. Feathers' `SurfaceLevel` and `ButtonVariant` are exhaustive enums, so neither can
-  gain a HUD case here; we need one widget, a tool button, so fork feathers' button as one
-  reading HUD tokens of our own registered in `UiTheme`. The author's widget library (BYOA,
-  stalled) would make this moot. Icons from Material Symbols, chosen by the author, are in
-  `assets/icons/` (48px white PNGs, under their Material names): `language` for the envelope,
-  `landscape` for the ground. E[3]
 - **C57 Camera buttons on the HUD** (C25 split, its second part): Frame, zoom, orbit and tilt,
-  with the tool button from C56. Proposed layout, after Google Maps, the author to confirm: an L
+  as C56's HUD buttons (D28) in its grid. The Frame button leaves the panel, and its "View"
+  group with it. Proposed layout, after Google Maps, the author to confirm: an L
   in the lower right, orbit along the bottom (spinning is horizontal), zoom and tilt up the right
   side (vertical), Frame in the corner where they meet. Icons: `center_focus_strong` for Frame
   (corner brackets: fit the subject to the view), `zoom_in` and `zoom_out`, `360` for orbit
   (`ImageNode::flip_x` for the other way, and turned 90° for tilt). Zoom, orbit and tilt move
   smoothly for as long as a button is held, and a click moves a fixed step, which lets plans
   drive the camera (the driver cannot drag, and its click is a press and an immediate release).
-  *After* C56. E[3]
+  E[3]
 - **C58 Trunk below ground**, so a tree placed on a slope still meets the ground on its low side:
   the stems start below the origin by their base radius times the tangent of the steepest slope
   a tree stands on, a constant rather than a species field. At 45° the depth is the base radius.
   *Gate:* trees on slopes in Panoply showing a gap.
 - **C27 Remove `Placeholder`** (`src/main.rs`). Every widget kind it stands in for has a real
-  customer in the species, but for the checkbox (`show_ground`, which C56 moves to the HUD) and
-  `Wrap`, which nothing in the species uses: delete `Wrap`, and keep the checkbox row unused
-  until a species field needs one. Plans read `Placeholder` because the driver reads components,
-  not the species resource (D12), so the plant entity carries a copy of the `Species` as a
-  component, inserted on each rebuild, and plans check species fields in its place
-  (`limbs[0].angle.shape`). *After* C56. E[2]
+  customer in the species, but for the checkbox and `Wrap`, which nothing in the species uses:
+  delete `Wrap`, and keep the checkbox row unused until a species field needs one. Plans read
+  `Placeholder` because the driver reads components, not the species resource (D12), so the
+  plant entity carries a copy of the `Species` as a component, inserted on each rebuild, and
+  plans check species fields in its place (`limbs[0].angle.shape`). E[2]
 - **C7 Undo and redo** (requirements, Authoring app). Take the `bevy_undo_redo` crate from the
   author's Bevy PR #23373 (never merged; branch `bevy_undo` in `../bevy`) as `src/undo.rs`, its
   API unchanged and its origin noted: an `UndoAction` trait (`apply` returns the inverse;
@@ -556,6 +546,20 @@ per-type hook, and is retained-mode.
   (`FOLIAGE_STREAM`). Rejected: a free turn about the normal, which read as scattered leaves;
   every level bearing clusters, which put leaves on boughs and stacked counts. Seedling put one
   card at each leaf-bearing tip, scaled by the branch; spacing along the shell is ours.
+
+- **D28** The HUD (`src/hud.rs`) holds controls that change the preview rather than the species,
+  over the view: a grid filling the view pane with the panel's spacing (8 px padding and gaps),
+  ignored by picking, so the view's drags and scrolls pass between its buttons. Its buttons are
+  our own, a `bevy_ui_widgets` `Button` the size of feathers' tool button, with fixed
+  translucent grays rather than theme tokens: the theme is for a light and dark switch, which a
+  HUD over the scene does not follow, so forking feathers' button and registering tokens would
+  buy nothing. A toggle keeps no state of its own; it flips its target's `Visibility` and dims
+  its icon while the target is hidden, so plans check the target. `Button` stops presses and
+  clicks but not drags, so the grid stops `PointerDrag` bubbling up from a button, or a drag
+  that starts on one would turn the camera. Icons are Material Symbols, chosen by the author,
+  in `assets/icons/` (48 px white PNGs, under their Material names). The ground toggle outlives
+  the placeholder it came from: a trunk sunk below the ground (C58) shows only with the ground
+  hidden.
 
 ## Deferred
 

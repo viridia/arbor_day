@@ -1,6 +1,7 @@
 """The shell starts from default settings: the panel shows the trunk's parameters, the panel has
-its default width, the turntable camera frames the plant, the zoom and frame keys work, the
-property editor edits booleans and numbers within their limits, an edit rebuilds the plant, and
+its default width, the turntable camera frames the plant, the zoom and frame keys work, the HUD's
+toggles hide the ground and envelope, the property editor edits booleans and numbers within their
+limits, an edit rebuilds the plant, and
 the seed reaches the plant, typed or picked by Random."""
 
 from driver import Between
@@ -43,11 +44,17 @@ def run(driver):
     driver.click("Shell/Panel/nested/flag")
     driver.expect("Placeholder", PLACEHOLDER, {"nested": {"flag": True}})
     driver.screenshot("nested")
-    driver.click("Shell/Panel/show_ground")
+    # The HUD over the view: the triangle count, and toggles that hide the ground and envelope.
+    driver.present("Shell/View/triangles")
+    driver.click("Shell/View/ground")
     driver.expect("Ground", VISIBILITY, "Hidden")
-    driver.screenshot("no_ground")
-    driver.click("Shell/Panel/show_ground")
+    driver.click("Shell/View/envelope")
+    driver.expect("Envelope", VISIBILITY, "Hidden")
+    driver.screenshot("hud_hidden")
+    driver.click("Shell/View/ground")
     driver.expect("Ground", VISIBILITY, "Inherited")
+    driver.click("Shell/View/envelope")
+    driver.expect("Envelope", VISIBILITY, "Inherited")
     # Typing past `count`'s range (0 to 10) stops at its hard limit. A click places the cursor
     # rather than selecting, so clear the default (3) first.
     driver.expect("Placeholder", PLACEHOLDER, {"count": 3})
