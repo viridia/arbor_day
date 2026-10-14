@@ -16,8 +16,8 @@ def run(driver):
     driver.present("Shell", ready=True)  # wait for the UI scene to finish spawning
     driver.present("Shell/Panel/trunk/sides/input")  # the immediate-mode panel has built its rows
     driver.present("Shell/Panel/Scrollbar")
-    # The default plant: one level of eight or nine limbs, in the low hundreds of triangles.
-    driver.expect("Plant", STATS, {"limbs": Between(8, 9), "triangles": Between(100, 1000)})
+    # The default plant: one level of nine or ten limbs, in the low hundreds of triangles.
+    driver.expect("Plant", STATS, {"limbs": Between(9, 10), "triangles": Between(100, 1000)})
     # The default width, whatever the developer last dragged it to: a run gets fresh settings.
     driver.expect("Shell/Panel", PANE, {"size": 320.0})
     # The view is never saved: every start frames the subject, from the front.
@@ -55,8 +55,8 @@ def run(driver):
     driver.key("Enter")
     driver.expect("Placeholder", PLACEHOLDER, {"count": 10})
     driver.screenshot("numbers")
-    # Editing the species rebuilds the plant: four or five nodes on the trunk's span of a little
-    # over one crown radius.
+    # Editing the species rebuilds the plant: four or five nodes on the trunk's 1.25 crown radii
+    # inside the crown.
     driver.click("Shell/Panel/limbs[0]/density/input")
     driver.key("End")
     driver.key("Backspace")

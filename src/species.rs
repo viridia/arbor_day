@@ -57,8 +57,7 @@ impl Default for Species {
                     density: 9.0,
                     per_node: 2.0,
                     divergence: degrees(90.0, 20.0),
-                    span_middle: Fuzzy::exactly(0.6),
-                    span_length: Fuzzy::exactly(0.6),
+                    bias: 0.3,
                     angle: degrees(45.0, 10.0),
                     bend: 0.5,
                     wander: 30.0_f32.to_radians(),
@@ -71,8 +70,7 @@ impl Default for Species {
                     density: 19.0,
                     per_node: 2.0,
                     divergence: degrees(90.0, 20.0),
-                    span_middle: Fuzzy::exactly(0.65),
-                    span_length: Fuzzy::exactly(0.5),
+                    bias: 0.4,
                     angle: degrees(40.0, 10.0),
                     bend: 0.5,
                     wander: 40.0_f32.to_radians(),
@@ -176,15 +174,15 @@ pub struct Trunk {
     pub lean: f32,
 }
 
-/// One level of limbs on a parent, the trunk or a limb of the level before, in nodes spaced
-/// evenly along a span of the parent. Each limb leaves at an angle from its parent and grows
+/// One level of limbs on a parent, the trunk or a limb of the level before, in nodes along the
+/// part of the parent inside the crown. Each limb leaves at an angle from its parent and grows
 /// toward the envelope, bending toward an angle from world up and wandering as it goes.
 #[derive(Reflect, Clone, PartialEq)]
 pub struct LimbLevel {
-    /// Places where limbs start, per crown radius of the parent's span, so a long parent bears
-    /// more than a short one. Measured against the crown, so a shrub and a tree with the same
-    /// settings branch alike. A parent's count is rounded up or down at random, up with the chance
-    /// of its fraction.
+    /// Places where limbs start, per crown radius of the parent inside the crown, so a long parent
+    /// bears more than a short one. Measured against the crown, so a shrub and a tree with the
+    /// same settings branch alike. A parent's count is rounded up or down at random, up with the
+    /// chance of its fraction.
     #[reflect(@ValueRange::<f32>(0.0..=40.0), @Precision(1), @Caption("Nodes per crown radius"))]
     pub density: f32,
     /// Limbs at each node, evenly spaced around it: 1 for alternate or spiral, 2 for opposite,
@@ -199,26 +197,14 @@ pub struct LimbLevel {
         @NumberInputUnits::new_static("angle_degrees"),
     )]
     pub divergence: Fuzzy,
-    /// The middle of the stretch of the parent bearing nodes, as a fraction of the part of the
-    /// parent inside the crown, so the crown base sets where a stem's limbs begin. Drawn for each
-    /// parent.
+    /// Where nodes crowd along the part of the parent inside the crown: toward its base below 0,
+    /// as a shrub's do, toward its tip above, as a tree's do, evenly at 0.
     #[reflect(
-        @ValueRange::<f32>(0.0..=1.0),
+        @ValueRange::<f32>(-1.0..=1.0),
         @Precision(2),
         @NumberInputUnits::new_static("ratio_percent"),
-        @Caption("Span middle"),
     )]
-    pub span_middle: Fuzzy,
-    /// The length of the stretch bearing nodes, as a fraction of the part of the parent inside
-    /// the crown; it is cut short where it would pass either end of that part. Drawn for each
-    /// parent.
-    #[reflect(
-        @ValueRange::<f32>(0.0..=1.0),
-        @Precision(2),
-        @NumberInputUnits::new_static("ratio_percent"),
-        @Caption("Span length"),
-    )]
-    pub span_length: Fuzzy,
+    pub bias: f32,
     /// The angle from the parent's direction where the limb starts: 0 runs along it, 90° square
     /// to it. Drawn for each limb.
     #[reflect(
@@ -278,8 +264,7 @@ impl Default for LimbLevel {
             density: 8.0,
             per_node: 1.0,
             divergence: degrees(137.5, 10.0),
-            span_middle: Fuzzy::exactly(0.5),
-            span_length: Fuzzy::exactly(0.9),
+            bias: 0.0,
             angle: degrees(60.0, 10.0),
             bend_toward: 90.0_f32.to_radians(),
             bend: 0.4,

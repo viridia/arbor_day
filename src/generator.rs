@@ -26,8 +26,12 @@ const WANDER_SPACING: f32 = 1.0;
 const WANDER_STREAM: u64 = u64::MAX;
 /// The values drawn for a limb itself: its angle and reach.
 const OWN_VALUES_STREAM: u64 = u64::MAX - 1;
-/// The layout of a stem's children: their span and the turns between nodes.
+/// The layout of a stem's children: their count, and each node's turn, limb count and place.
 const LAYOUT_STREAM: u64 = u64::MAX - 2;
+
+/// The most a node moves from its even place, as a share of the gap between places, so nodes are
+/// not spaced like rungs. Under half, so neighbours never swap.
+const NODE_JITTER: f32 = 0.3;
 
 /// Halvings in finding where a ray leaves the envelope: the largest envelope's 90 m bound to under
 /// a tenth of a millimetre.
@@ -285,9 +289,9 @@ impl Parent<'_> {
     }
 }
 
-/// Adds one parent's limbs of one level: nodes spaced evenly along the span, a stretch of the
-/// part of the parent inside the crown, as many as the level's density gives for the span's
-/// length, each turned by the divergence from the one below, its limbs spaced evenly around it,
+/// Adds one parent's limbs of one level: nodes along the part of the parent inside the crown, as
+/// many as the level's density gives for its length, each placed by `node_place`, each turned by
+/// the divergence from the one below, its limbs spaced evenly around it,
 /// each leaving at the level's angle from the parent and then grown (`grow_limb`). A limb whose
 /// start lies outside the crown, or that would be no longer than it is thick, is left out.
 ///
@@ -311,16 +315,12 @@ fn grow_level(
     let Some((inside_start, inside_end)) = parent.inside_part(envelope) else {
         return tapered;
     };
-    // The span, the node count and each node's turn and limb count are the parent's, drawn from a
+    // The node count and each node's turn, limb count and place are the parent's, drawn from a
     // stream of its own beside its limbs'.
     let mut layout = parent.rng.fork(LAYOUT_STREAM);
-    let middle = draw(&params.span_middle, "span_middle", &mut layout);
-    let half = draw(&params.span_length, "span_length", &mut layout) * 0.5;
     let inside = inside_end - inside_start;
-    let span_start = inside_start + inside * (middle - half).max(0.0);
-    let span_end = inside_start + inside * (middle + half).min(1.0);
-    let span_length = (span_end - span_start) * parent.rings[parent.rings.len() - 1].at;
-    let nodes = layout.round(params.density * span_length / envelope.radius.max(0.01));
+    let inside_length = inside * parent.rings[parent.rings.len() - 1].at;
+    let nodes = layout.round(params.density * inside_length / envelope.radius.max(0.01));
     let mut node_azimuth = 0.0;
     let mut index = 0;
     for node in 0..nodes {
@@ -331,8 +331,8 @@ fn grow_level(
             node_azimuth += divergence;
         }
         let per_node = layout.round(params.per_node).max(1);
-        // Centered in equal shares of the span, so one node sits halfway along it.
-        let t = span_start + (span_end - span_start) * (node as f32 + 0.5) / nodes as f32;
+        let place = node_place(node, nodes, params.bias, layout.unit());
+        let t = inside_start + inside * place;
         let frame = parent.frame(t);
         let across = frame.side.cross(frame.tangent);
         let base_radius = params.radius * section.powf(exponent.recip());
@@ -446,6 +446,16 @@ fn grow_limb(
         rings.push(ring);
     }
     rings
+}
+
+/// Where node `node` of `nodes` sits, as a fraction of the stretch bearing them: centred in its
+/// equal share, moved by up to `NODE_JITTER` of a share by `unit` (0 to 1), then pushed toward
+/// the tip by a positive `bias` or the base by a negative one. The push raises the place to the
+/// power 4^−bias, which keeps the ends where they are and the nodes in order.
+fn node_place(node: u32, nodes: u32, bias: f32, unit: f32) -> f32 {
+    let jitter = (unit * 2.0 - 1.0) * NODE_JITTER;
+    let even = (node as f32 + 0.5 + jitter) / nodes as f32;
+    even.powf(4.0_f32.powf(-bias.clamp(-1.0, 1.0)))
 }
 
 /// A value drawn from `fuzzy`, clamped to the limits of `LimbLevel`'s field `field`.
@@ -838,8 +848,6 @@ mod tests {
             level.wander = 0.0;
             for fuzzy in [
                 &mut level.divergence,
-                &mut level.span_middle,
-                &mut level.span_length,
                 &mut level.angle,
                 &mut level.reach,
             ] {
@@ -850,8 +858,7 @@ mod tests {
     }
 
     /// `regular`, with an upright stem in a column crown: the stem is inside the crown from the
-    /// crown base at 1.25 m to its tip at 5.25 m, two crown radii of 2 m, and the first level's
-    /// span is its middle half, one crown radius.
+    /// crown base at 1.25 m to its tip at 5.25 m, two crown radii of 2 m.
     fn straight() -> Species {
         let mut species = regular();
         species.trunk.lean = 0.0;
@@ -859,7 +866,6 @@ mod tests {
         species.envelope.profile = Profile::Column;
         species.envelope.crown_base = 0.2;
         species.envelope.radius = 2.0;
-        species.limbs[0].span_length = Fuzzy::exactly(0.5);
         species
     }
 
@@ -885,7 +891,7 @@ mod tests {
     fn limbs_reach_their_share_of_the_way_to_the_envelope() {
         let species = straight();
         let limbs = limbs(&species);
-        assert_eq!(limbs.len(), 8);
+        assert_eq!(limbs.len(), 16);
         for limb in &limbs {
             assert_eq!(limb.rings.len(), 2, "a straight limb is one segment");
             let tip = limb.origin() + limb.direction() * limb.length();
@@ -1108,8 +1114,8 @@ mod tests {
     fn nodes_hold_their_limbs_evenly_around() {
         // Straight, so azimuth about the trunk is azimuth about world up.
         let mut species = straight();
-        // Two nodes on the span's crown radius.
-        species.limbs[0].density = 2.0;
+        // Two nodes on the stem's two crown radii.
+        species.limbs[0].density = 1.0;
         species.limbs[0].per_node = 3.0;
         let limbs = limbs(&species);
         assert_eq!(limbs.len(), 6);
@@ -1124,23 +1130,60 @@ mod tests {
     }
 
     #[test]
-    fn the_span_is_measured_inside_the_crown() {
+    fn nodes_lie_near_their_even_places_inside_the_crown() {
         let mut species = straight();
-        // Five nodes along the whole of the stem inside the crown, two crown radii, at 1.65, 2.45,
-        // 3.25, 4.05 and 4.85 m.
-        species.limbs[0].span_length = Fuzzy::exactly(1.0);
+        // Five nodes along the stem's two crown radii inside the crown, each within 30% of the
+        // 0.8 m gap of 1.65, 2.45, 3.25, 4.05 and 4.85 m.
         species.limbs[0].density = 2.5;
         let heights: Vec<f32> = limbs(&species).iter().map(|limb| limb.origin().y).collect();
         assert_eq!(heights.len(), 5);
         for (height, expected) in heights.iter().zip([1.65, 2.45, 3.25, 4.05, 4.85]) {
-            assert!((height - expected).abs() < 1e-3, "{heights:?}");
+            assert!((height - expected).abs() <= 0.24 + 1e-3, "{heights:?}");
+        }
+        assert!(heights.iter().any(|height| {
+            [1.65, 2.45, 3.25, 4.05, 4.85]
+                .iter()
+                .all(|expected| (height - expected).abs() > 1e-3)
+        }));
+    }
+
+    #[test]
+    fn the_bias_crowds_nodes_toward_the_tip_or_the_base() {
+        let mean_height = |bias: f32| {
+            let mut species = straight();
+            species.limbs[0].density = 2.5;
+            species.limbs[0].bias = bias;
+            let heights: Vec<f32> = limbs(&species).iter().map(|limb| limb.origin().y).collect();
+            assert_eq!(heights.len(), 5);
+            assert!(heights.iter().all(|height| (1.25..=5.25).contains(height)));
+            assert!(heights.is_sorted(), "{heights:?}");
+            heights.iter().sum::<f32>() / 5.0
+        };
+        // The stem inside the crown is 1.25 to 5.25 m, its middle 3.25 m.
+        assert!(mean_height(1.0) > 4.0);
+        assert!(mean_height(-1.0) < 2.5);
+        assert!(mean_height(0.5) > mean_height(0.0));
+        assert!(mean_height(-0.5) < mean_height(0.0));
+    }
+
+    #[test]
+    fn node_places_keep_their_ends_and_order() {
+        for bias in [-1.0, -0.3, 0.0, 0.3, 1.0] {
+            // Pushed as far as jitter goes, the first node down and the last up.
+            let first = node_place(0, 4, bias, 0.0);
+            let last = node_place(3, 4, bias, 1.0);
+            assert!(first > 0.0 && last < 1.0, "{bias}: {first} {last}");
+            // Neighbours pushed toward each other stay in order.
+            for node in 0..3 {
+                assert!(node_place(node, 4, bias, 1.0) < node_place(node + 1, 4, bias, 0.0));
+            }
         }
     }
 
     #[test]
     fn limbs_share_their_parent_section() {
         let mut species = straight();
-        species.limbs[0].density = 2.0;
+        species.limbs[0].density = 1.0;
         species.limbs[0].radius = 0.6;
         species.bark.pipe_exponent = 2.0;
         let trunk = species.trunk.radius;
@@ -1180,23 +1223,10 @@ mod tests {
     }
 
     #[test]
-    fn the_span_is_cut_short_at_the_parent_end() {
-        let mut species = straight();
-        // From halfway along the stem's part inside the crown to the tip, one crown radius, not
-        // the two asked for.
-        species.limbs[0].span_middle = Fuzzy::exactly(1.0);
-        species.limbs[0].span_length = Fuzzy::exactly(1.0);
-        species.limbs[0].density = 2.0;
-        let limbs = limbs(&species);
-        assert_eq!(limbs.len(), 2);
-        assert!(limbs.iter().all(|limb| (3.25..5.25).contains(&limb.origin().y)));
-    }
-
-    #[test]
     fn nodes_are_counted_in_crown_radii() {
         let mut species = straight();
-        // The span is 2 m, one crown radius, then two.
-        species.limbs[0].density = 2.0;
+        // The stem inside the crown is 4 m, two crown radii, then four.
+        species.limbs[0].density = 1.0;
         assert_eq!(limbs(&species).len(), 2);
         species.envelope.radius = 1.0;
         assert_eq!(limbs(&species).len(), 4);
@@ -1217,12 +1247,12 @@ mod tests {
                 .collect()
         };
         let mean = |counts: &[usize]| counts.iter().sum::<usize>() as f32 / counts.len() as f32;
-        // 2.5 nodes on the span's crown radius: two or three.
-        let nodes = counts(2.5, 1.0);
+        // 2.5 nodes on the stem's two crown radii: two or three.
+        let nodes = counts(1.25, 1.0);
         assert!(nodes.iter().all(|count| (2..=3).contains(count)), "{nodes:?}");
         assert!((mean(&nodes) - 2.5).abs() < 0.1, "{}", mean(&nodes));
         // Eight nodes of one or two limbs.
-        let limbs = counts(8.0, 1.5);
+        let limbs = counts(4.0, 1.5);
         assert!(limbs.iter().all(|count| (8..=16).contains(count)), "{limbs:?}");
         assert!((mean(&limbs) - 12.0).abs() < 0.3, "{}", mean(&limbs));
     }

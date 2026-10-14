@@ -21,17 +21,17 @@ def set_number(driver, path, text):
 def run(driver):
     driver.present("Shell", ready=True)  # wait for the UI scene to finish spawning
     driver.present("Shell/Panel/trunk/stems/input")  # the immediate-mode panel has built its rows
-    driver.expect("Plant", STATS, {"limbs": Between(8, 9)})
+    driver.expect("Plant", STATS, {"limbs": Between(9, 10)})
 
     # Three stems, each with limbs of its own along its part inside the crown.
     set_number(driver, "stems", "3")
     set_number(driver, "splay", "25")
-    driver.expect("Plant", STATS, {"limbs": Between(9, 3 * 9)})
+    driver.expect("Plant", STATS, {"limbs": Between(9, 3 * 10)})
     driver.screenshot("three_stems")
 
     # Shorter stems bear fewer limbs: with the crown starting 30% of the way up, half-height
     # splayed stems pass through little of its narrow foot, so few if any remain.
     set_number(driver, "leader", "50")
-    driver.expect("Plant", STATS, {"limbs": Between(0, 3 * 9 - 1)})
+    driver.expect("Plant", STATS, {"limbs": Between(0, 3 * 10 - 1)})
     driver.screenshot("short_leader")
     driver.exit()

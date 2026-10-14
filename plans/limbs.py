@@ -1,6 +1,6 @@
 """One level of limbs on the trunk, reaching toward the envelope: more limbs per node and fewer
-nodes rebuild the plant. The span is a little over one crown radius, so the node count is the
-density or one more."""
+nodes rebuild the plant. The trunk inside the crown is about 1.25 crown radii, so the node count
+is about 1.25 times the density."""
 
 from driver import Between
 
@@ -22,10 +22,10 @@ def set_number(driver, path, text, input="input"):
 def run(driver):
     driver.present("Shell", ready=True)  # wait for the UI scene to finish spawning
     driver.present("Shell/Panel/limbs[0]/density/input")  # the immediate-mode panel has built its rows
-    driver.expect("Plant", STATS, {"limbs": Between(8, 9)})
+    driver.expect("Plant", STATS, {"limbs": Between(9, 10)})
     driver.screenshot("spiral")
     set_number(driver, "per_node", "3")
-    driver.expect("Plant", STATS, {"limbs": Between(24, 27)})
+    driver.expect("Plant", STATS, {"limbs": Between(27, 30)})
     driver.screenshot("whorled")
     set_number(driver, "density", "2")
     driver.expect("Plant", STATS, {"limbs": Between(6, 9)})
