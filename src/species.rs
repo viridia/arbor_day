@@ -54,26 +54,26 @@ impl Default for Species {
             limbs: [
                 LimbLevel::default(),
                 LimbLevel {
-                    density: 9.0,
-                    per_node: 2.0,
+                    density: 7.0,
+                    per_node: 1.7,
                     facing: Facing::Sides,
                     bias: 0.3,
                     angle: degrees(45.0, 10.0),
                     bend: 0.5,
-                    wander: 30.0_f32.to_radians(),
+                    wander: 15.0_f32.to_radians(),
                     reach: Fuzzy::new(0.6, 0.1, Distribution::Bell),
                     radius: 0.5,
                     sides: 3,
                     ..LimbLevel::default()
                 },
                 LimbLevel {
-                    density: 19.0,
+                    density: 10.0,
                     per_node: 2.0,
                     facing: Facing::Sides,
                     bias: 0.4,
                     angle: degrees(40.0, 10.0),
                     bend: 0.5,
-                    wander: 40.0_f32.to_radians(),
+                    wander: 20.0_f32.to_radians(),
                     reach: Fuzzy::new(0.5, 0.1, Distribution::Bell),
                     radius: 0.5,
                     sides: 3,
@@ -172,6 +172,13 @@ pub struct Trunk {
         @NumberInputUnits::new_static("angle_degrees"),
     )]
     pub lean: f32,
+    /// The most each internode of a stem points off its course, which the splay and lean set, so
+    /// it zigzags about it as a limb does. A kink falls every internode of the first limb level.
+    #[reflect(
+        @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_4),
+        @NumberInputUnits::new_static("angle_degrees"),
+    )]
+    pub wander: f32,
 }
 
 /// One level of limbs on a parent, the trunk or a limb of the level before, in nodes along the
@@ -231,11 +238,12 @@ pub struct LimbLevel {
         @NumberInputUnits::new_static("ratio_percent"),
     )]
     pub bend: f32,
-    /// The most the limb turns at random, per metre, so it winds rather than running straight.
+    /// The most each internode points off the limb's course, which the angle and bend set, so the
+    /// limb zigzags about it rather than running smooth. A kink falls every internode, a crown
+    /// radius over the next level's density, so twigs kink finer than limbs.
     #[reflect(
-        @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_2),
+        @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_4),
         @NumberInputUnits::new_static("angle_degrees"),
-        @Caption("Wander per metre"),
     )]
     pub wander: f32,
     /// Length as a fraction of the distance from the limb's start to the envelope along its
@@ -270,7 +278,7 @@ impl Default for LimbLevel {
             angle: degrees(60.0, 10.0),
             bend_toward: 90.0_f32.to_radians(),
             bend: 0.4,
-            wander: 20.0_f32.to_radians(),
+            wander: 10.0_f32.to_radians(),
             reach: Fuzzy::new(0.9, 0.1, Distribution::Bell),
             radius: 0.5,
             sides: 4,
@@ -350,6 +358,7 @@ impl Default for Trunk {
             taper: 0.6,
             sides: 6,
             lean: 15.0_f32.to_radians(),
+            wander: 8.0_f32.to_radians(),
         }
     }
 }

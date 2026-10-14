@@ -3,7 +3,7 @@
 
 use std::f32::consts::{FRAC_PI_2, PI, TAU};
 
-use bevy::math::{Quat, Vec2, Vec3};
+use bevy::math::{Mat3, Quat, Vec3};
 
 use crate::{
     fuzzy::Fuzzy,
@@ -14,12 +14,14 @@ use crate::{
 /// The largest turn of a tube's axis between two rings, so rings are spaced by curvature: a
 /// straight tube is one segment, and a bent one gets a ring per this much turn.
 const MAX_RING_TURN_DEGREES: f32 = 15.0;
+/// The least turn at a kink that places a ring, lower than `MAX_RING_TURN_DEGREES` so a modest
+/// wander still shows as a zigzag rather than being smoothed over.
+const MIN_KINK_TURN_DEGREES: f32 = 5.0;
+/// Internodes of the level a limb bears between its kinks: more than one, for fewer rings.
+const KINK_INTERNODES: f32 = 1.5;
 
 /// The step in tracing a limb, in metres.
 const TRACE_STEP: f32 = 0.02;
-
-/// The distance along a limb between wander's random turns, in metres.
-const WANDER_SPACING: f32 = 1.0;
 
 /// Streams forked from a stem's own: its children take theirs by index from 0, so these take
 /// indices no child reaches.
@@ -164,7 +166,8 @@ pub struct Stem {
 
 /// The stems: `stems` of them from the origin, spaced evenly around, each leaving the ground at
 /// the splay from up and turning by the lean as it rises, away from the middle, but never past
-/// level, where it would sink again. The first's compass heading is drawn from the seed.
+/// level, where it would sink again, and kinking about that course by the trunk's wander. The
+/// first's compass heading is drawn from the seed.
 fn stems(species: &Species) -> Vec<Stem> {
     let trunk = &species.trunk;
     let count = trunk.stems.max(1) as u32;
@@ -173,16 +176,23 @@ fn stems(species: &Species) -> Vec<Stem> {
     let heading = species.seed.stream("trunk").unit() * TAU;
     let branching = species.seed.stream("branching");
     let top = trunk.radius * (1.0 - trunk.taper.clamp(0.0, 1.0));
+    // A stem kinks by the internodes of the first limb level, which it bears.
+    let spacing = kink_spacing(&species.envelope, &species.limbs[0]);
     (0..count)
-        .map(|stem| Stem {
-            rings: stem_rings(
-                length,
-                trunk.splay,
-                lean,
-                heading + TAU * stem as f32 / count as f32,
-            ),
-            radii: (trunk.radius, top),
-            rng: branching.fork(stem as u64),
+        .map(|stem| {
+            let rng = branching.fork(stem as u64);
+            let kinks = Kinks::new(spacing, trunk.wander, rng.fork(WANDER_STREAM));
+            Stem {
+                rings: stem_rings(
+                    length,
+                    trunk.splay,
+                    lean,
+                    heading + TAU * stem as f32 / count as f32,
+                    kinks,
+                ),
+                radii: (trunk.radius, top),
+                rng,
+            }
         })
         .collect()
 }
@@ -197,23 +207,11 @@ pub fn limbs(species: &Species) -> Vec<Limb> {
 /// first on the stems, in level order. A stem's radius at its top is what its limbs leave it
 /// (`grow_level`), so it is set once the level after has grown.
 fn grow(species: &Species) -> (Vec<Stem>, Vec<Limb>) {
-    let taper = species.trunk.taper.clamp(0.0, 1.0);
-    let exponent = species.bark.pipe_exponent.max(1.0);
     let mut stems = stems(species);
     let mut grown: Vec<Limb> = Vec::new();
-    for (level, params) in species.grown_levels().iter().enumerate() {
+    for level in 0..species.grown_levels().len() {
         let mut children = Vec::new();
-        let mut grow_on = |parent| {
-            grow_level(
-                &species.envelope,
-                params,
-                level,
-                taper,
-                exponent,
-                parent,
-                &mut children,
-            )
-        };
+        let mut grow_on = |parent| grow_level(species, level, parent, &mut children);
         if level == 0 {
             for stem in &mut stems {
                 stem.radii.1 = grow_on(Parent {
@@ -301,26 +299,26 @@ impl Parent<'_> {
     }
 }
 
-/// Adds one parent's limbs of one level: nodes along the part of the parent inside the crown, as
-/// many as the level's density gives for its length, each placed by `node_place` and turned by
-/// `node_azimuth`, its limbs spaced evenly around it, each leaving at the level's angle from the
-/// parent and then grown (`grow_limb`). A limb whose
-/// start lies outside the crown, or that would be no longer than it is thick, is left out.
+/// Adds one parent's limbs of level `level`: nodes along the part of the parent inside the crown,
+/// as many as the level's density gives for its length, each placed by `node_place`, its limbs
+/// turned about the parent by `node_azimuths` and their skew, each leaving at the level's angle
+/// from the parent and then grown (`grow_limb`). A limb whose start lies outside the crown, or
+/// that would be no longer than it is thick, is left out.
 ///
-/// Radii follow the pipe model: a stem's radius raised to `exponent` is shared among the limbs
-/// leaving it and what carries on past them. Each limb's radius is the level's share of the
+/// Radii follow the pipe model: a stem's radius raised to the bark's exponent is shared among the
+/// limbs leaving it and what carries on past them. Each limb's radius is the level's share of the
 /// parent's radius where it leaves, and the parent is that much thinner past it. Returns the
 /// parent's radius at its top: what its limbs leave it, or its base radius tapered if that is
 /// thinner, so the taper is the least a stem narrows.
-fn grow_level(
-    envelope: &Envelope,
-    params: &LimbLevel,
-    level: usize,
-    taper: f32,
-    exponent: f32,
-    parent: Parent,
-    grown: &mut Vec<Limb>,
-) -> f32 {
+fn grow_level(species: &Species, level: usize, parent: Parent, grown: &mut Vec<Limb>) -> f32 {
+    let envelope = &species.envelope;
+    let levels = species.grown_levels();
+    let params = &levels[level];
+    let taper = species.trunk.taper.clamp(0.0, 1.0);
+    let exponent = species.bark.pipe_exponent.max(1.0);
+    // A limb kinks by the internodes of the level it bears, shown or not, so showing a level
+    // leaves its parents' shapes alone; the last level's limbs, by their own.
+    let spacing = kink_spacing(envelope, species.limbs.get(level + 1).unwrap_or(params));
     // The parent's radius raised to the exponent, which each limb leaving it takes its share of.
     let mut section = parent.radius.powf(exponent);
     let tapered = parent.radius * (1.0 - taper);
@@ -370,7 +368,8 @@ fn grow_level(
                 side: upper_side(direction, frame.side),
                 at: 0.0,
             };
-            let rings = grow_limb(envelope, params, start, reach, rng.fork(WANDER_STREAM));
+            let kinks = Kinks::new(spacing, params.wander, rng.fork(WANDER_STREAM));
+            let rings = grow_limb(envelope, params, start, reach, kinks);
             if rings.len() >= 2 && rings[rings.len() - 1].at > base_radius {
                 section = (section - base_radius.powf(exponent)).max(0.0);
                 grown.push(Limb {
@@ -386,82 +385,52 @@ fn grow_level(
     section.powf(exponent.recip()).min(tapered)
 }
 
-/// A limb's rings, from `start` for up to `length` along it. The limb is traced in short steps,
-/// its direction turning toward the level's bend and wandering at random, and it stops early where
-/// it would leave the envelope. A ring is placed wherever it has turned `MAX_RING_TURN_DEGREES`
-/// since the last, and at the tip.
+/// A limb's rings, from `start` for up to `length` along it. Its course is traced in short steps
+/// from its start, turning toward the level's bend, and the limb kinks about its course
+/// (`Kinks`), placing rings as `Rings` does. It stops early where it would leave the envelope.
 fn grow_limb(
     envelope: &Envelope,
     params: &LimbLevel,
     start: Ring,
     length: f32,
-    mut rng: Rng,
+    mut kinks: Kinks,
 ) -> Vec<Ring> {
-    // Wander's turns are drawn at points `WANDER_SPACING` apart and blended smoothly between, so
-    // the limb's shape does not depend on the step.
-    let knots: Vec<Vec2> = (0..(length / WANDER_SPACING).ceil() as usize + 2)
-        .map(|_| Vec2::new(rng.unit(), rng.unit()) * 2.0 - 1.0)
-        .collect();
-    let wander_at = |at: f32| {
-        let along = at / WANDER_SPACING;
-        let knot = (along.floor() as usize).min(knots.len() - 2);
-        let blend = along - knot as f32;
-        let blend = blend * blend * (3.0 - 2.0 * blend);
-        knots[knot]
-            .lerp(knots[knot + 1], blend)
-            .clamp_length_max(1.0)
-    };
     let (bend_sin, bend_cos) = params.bend_toward.sin_cos();
     // The share of the angle left to the bend that one step closes. Shares compound, so a run of
     // steps closes the same share whatever the step.
     let kept_per_crown = 1.0 - params.bend.clamp(0.0, 0.99);
     let crown = envelope.radius.max(0.01);
-    let max_turn = MAX_RING_TURN_DEGREES.to_radians();
 
-    let mut rings = vec![start];
+    // The course, and a side square to it carried along without twisting.
+    let mut course = start.tangent;
+    let mut course_side = start.side;
+    let mut rings = Rings::new(start);
     let mut ring = start;
-    let mut last_ring_tangent = start.tangent;
     while ring.at < length {
-        let step = TRACE_STEP.min(length - ring.at);
+        let step = kinks.step(ring.at, TRACE_STEP.min(length - ring.at));
         let center = ring.center + ring.tangent * step;
         if !inside_envelope(envelope, center) {
             break;
         }
-        let mut tangent = ring.tangent;
-        // Toward the bend, keeping the compass heading; a limb pointing straight up or down takes
-        // its side's.
-        let heading = Vec3::new(tangent.x, 0.0, tangent.z)
+        let at = ring.at + step;
+        // Toward the bend, keeping the compass heading; a course pointing straight up or down
+        // takes its side's.
+        let heading = Vec3::new(course.x, 0.0, course.z)
             .try_normalize()
-            .or_else(|| Vec3::new(ring.side.x, 0.0, ring.side.z).try_normalize());
+            .or_else(|| Vec3::new(course_side.x, 0.0, course_side.z).try_normalize());
         if let Some(heading) = heading {
             let toward = Vec3::Y * bend_cos + heading * bend_sin;
             let closed = 1.0 - kept_per_crown.powf(step / crown);
-            tangent = turn_toward(tangent, toward, tangent.angle_between(toward) * closed);
+            let turned = turn_toward(course, toward, course.angle_between(toward) * closed);
+            course_side = (Quat::from_rotation_arc(course, turned) * course_side)
+                .reject_from_normalized(turned)
+                .normalize_or(course_side);
+            course = turned;
         }
-        let wander = wander_at(ring.at);
-        let push = ring.side * wander.x + ring.side.cross(ring.tangent) * wander.y;
-        if let Some(axis) = tangent.cross(push).try_normalize() {
-            tangent = Quat::from_axis_angle(axis, params.wander * step * wander.length()) * tangent;
-        }
-        let tangent = tangent.normalize();
-        let side = (Quat::from_rotation_arc(ring.tangent, tangent) * ring.side)
-            .reject_from_normalized(tangent)
-            .normalize_or(ring.side);
-        ring = Ring {
-            center,
-            tangent,
-            side,
-            at: ring.at + step,
-        };
-        if tangent.angle_between(last_ring_tangent) >= max_turn {
-            rings.push(ring);
-            last_ring_tangent = tangent;
-        }
+        let (tangent, kink) = kinks.direction(at, length, course, course_side);
+        ring = rings.advance(ring, center, tangent, at, kink);
     }
-    if ring.at > rings[rings.len() - 1].at {
-        rings.push(ring);
-    }
-    rings
+    rings.finish(ring)
 }
 
 /// Where node `node` of `nodes` sits, as a fraction of the stretch bearing them: centred in its
@@ -585,24 +554,135 @@ fn upper_side(direction: Vec3, parent_side: Vec3) -> Vec3 {
     }
 }
 
-/// A stem's rings, evenly spaced along its arc (`arc`), turned about the vertical to `heading`.
-/// The arc lies in one vertical plane, so a side square to it in that plane never twists: azimuth
-/// 0 is toward the heading.
-fn stem_rings(length: f32, splay: f32, lean: f32, heading: f32) -> Vec<Ring> {
-    let segments = ((lean.abs() / MAX_RING_TURN_DEGREES.to_radians()).ceil() as u32).max(1);
+/// A stem's rings. Its course is an arc (`arc`) turned about the vertical to `heading`, which
+/// lies in one vertical plane, so a side square to it in that plane never twists: azimuth 0 is
+/// toward the heading. The stem kinks about its course as a limb does (`Kinks`).
+fn stem_rings(length: f32, splay: f32, lean: f32, heading: f32, mut kinks: Kinks) -> Vec<Ring> {
     let turn = Quat::from_rotation_y(heading);
-    (0..=segments)
-        .map(|ring| {
-            let t = ring as f32 / segments as f32;
-            let (center, tangent) = arc(length, splay, lean, t);
-            Ring {
-                center: turn * center,
-                tangent: turn * tangent,
-                side: turn * tangent.cross(Vec3::Z),
-                at: length * t,
-            }
-        })
-        .collect()
+    let course_at = |at: f32| {
+        let (_, tangent) = arc(length, splay, lean, at / length);
+        (turn * tangent, turn * tangent.cross(Vec3::Z))
+    };
+    let (tangent, side) = course_at(0.0);
+    let start = Ring {
+        center: Vec3::ZERO,
+        tangent,
+        side,
+        at: 0.0,
+    };
+    let mut rings = Rings::new(start);
+    let mut ring = start;
+    while ring.at < length {
+        let step = kinks.step(ring.at, TRACE_STEP.min(length - ring.at));
+        let at = ring.at + step;
+        let (course, course_side) = course_at(at);
+        let (tangent, kink) = kinks.direction(at, length, course, course_side);
+        ring = rings.advance(ring, ring.center + ring.tangent * step, tangent, at, kink);
+    }
+    rings.finish(ring)
+}
+
+/// The distance between kinks on a limb or stem bearing `bears`: `KINK_INTERNODES` of its
+/// internodes, a crown radius over its density, so twigs kink finer than limbs.
+fn kink_spacing(envelope: &Envelope, bears: &LimbLevel) -> f32 {
+    KINK_INTERNODES * envelope.radius.max(0.01) / bears.density.max(1.0)
+}
+
+/// Where a limb or stem kinks, and which way each stretch between kinks points off its course: up
+/// to `wander` from it, about a random axis, held in the course's frame so it turns with the
+/// course. The first stretch follows the course. Offsets are from the course, not from the
+/// stretch before, so the limb zigzags about its course rather than curling away from it.
+struct Kinks {
+    internode: f32,
+    wander: f32,
+    next: f32,
+    offset: Quat,
+    rng: Rng,
+}
+
+impl Kinks {
+    fn new(internode: f32, wander: f32, rng: Rng) -> Self {
+        Self {
+            internode: internode.max(TRACE_STEP),
+            wander,
+            next: internode.max(TRACE_STEP),
+            offset: Quat::IDENTITY,
+            rng,
+        }
+    }
+
+    /// `step`, cut short to land on the next kink.
+    fn step(&self, at: f32, step: f32) -> f32 {
+        step.min(self.next - at)
+    }
+
+    /// The direction at `at`, `length` being where the limb ends, given its course there and a
+    /// side square to the course; and whether a kink falls there, drawing the next offset.
+    fn direction(&mut self, at: f32, length: f32, course: Vec3, side: Vec3) -> (Vec3, bool) {
+        let kink = at >= self.next - 1e-5 && at < length;
+        if kink {
+            self.next += self.internode;
+            let tilt = self.rng.unit() * self.wander;
+            let around = self.rng.unit() * TAU;
+            self.offset = Quat::from_axis_angle(Vec3::new(around.cos(), around.sin(), 0.0), tilt);
+        }
+        let frame = Quat::from_mat3(&Mat3::from_cols(side, course.cross(side), course));
+        ((frame * self.offset * Vec3::Z).normalize(), kink)
+    }
+}
+
+/// A tube's rings as it is traced: one wherever it has turned `MAX_RING_TURN_DEGREES` since the
+/// last, and one at a kink that turns it `MIN_KINK_TURN_DEGREES` at once, turned halfway between
+/// the internodes meeting there so the tube does not pinch; and one at the tip.
+struct Rings {
+    rings: Vec<Ring>,
+    last_tangent: Vec3,
+}
+
+impl Rings {
+    fn new(start: Ring) -> Self {
+        Self {
+            rings: vec![start],
+            last_tangent: start.tangent,
+        }
+    }
+
+    /// The ring after `ring`, at `center` and `at`, heading `tangent`, its side carried along
+    /// without twisting; placed if it has turned far enough.
+    fn advance(&mut self, ring: Ring, center: Vec3, tangent: Vec3, at: f32, kink: bool) -> Ring {
+        let side = (Quat::from_rotation_arc(ring.tangent, tangent) * ring.side)
+            .reject_from_normalized(tangent)
+            .normalize_or(ring.side);
+        let next = Ring {
+            center,
+            tangent,
+            side,
+            at,
+        };
+        let turned = tangent.angle_between(self.last_tangent);
+        let jump = tangent.angle_between(ring.tangent);
+        if kink && jump >= MIN_KINK_TURN_DEGREES.to_radians() {
+            let halfway = (ring.tangent + tangent).normalize_or(tangent);
+            self.rings.push(Ring {
+                tangent: halfway,
+                side: side.reject_from_normalized(halfway).normalize_or(side),
+                ..next
+            });
+            self.last_tangent = tangent;
+        } else if turned >= MAX_RING_TURN_DEGREES.to_radians() {
+            self.rings.push(next);
+            self.last_tangent = tangent;
+        }
+        next
+    }
+
+    /// The rings, with `tip` added if past the last.
+    fn finish(mut self, tip: Ring) -> Vec<Ring> {
+        if tip.at > self.rings[self.rings.len() - 1].at {
+            self.rings.push(tip);
+        }
+        self.rings
+    }
 }
 
 /// Adds a tube through `rings`, each turned to its ring's side, so the tube rolls only as the
@@ -769,10 +849,11 @@ mod tests {
     use crate::{fuzzy::Distribution, random::Seed, species::Trunk};
     use bevy::math::Vec3Swizzles;
 
-    /// A lone 5 m stem, standing straight up and leaning toward +X.
+    /// A lone 5 m stem, standing straight up and leaning toward +X, with no wander.
     fn stem_mesh(sides: u32, lean_degrees: f32) -> Geometry {
         let mut geometry = Geometry::default();
-        let rings = stem_rings(5.0, 0.0, lean_degrees.to_radians(), 0.0);
+        let kinks = Kinks::new(1.0, 0.0, Rng::stream(0, "test"));
+        let rings = stem_rings(5.0, 0.0, lean_degrees.to_radians(), 0.0, kinks);
         tube(&mut geometry, &rings, (0.2, 0.1), sides);
         geometry
     }
@@ -781,6 +862,7 @@ mod tests {
         Trunk {
             sides,
             lean: lean_degrees.to_radians(),
+            wander: 0.0,
             ..Trunk::default()
         }
     }
@@ -812,7 +894,7 @@ mod tests {
 
     #[test]
     fn a_straight_stem_reaches_the_leader() {
-        let mut species = Species::default();
+        let mut species = regular();
         species.trunk.lean = 0.0;
         species.trunk.leader = 0.5;
         let tip = stems(&species)[0].rings.last().unwrap().center;
@@ -822,7 +904,7 @@ mod tests {
 
     #[test]
     fn stems_never_turn_past_level() {
-        let mut species = Species::default();
+        let mut species = regular();
         species.trunk.splay = 50.0_f32.to_radians();
         species.trunk.lean = 90.0_f32.to_radians();
         let tip = stems(&species)[0].rings.last().unwrap().tangent;
@@ -867,7 +949,7 @@ mod tests {
         let tip = |seed| {
             let species = Species {
                 seed: Seed(seed),
-                ..Species::default()
+                ..regular()
             };
             stems(&species)[0].rings.last().unwrap().center
         };
@@ -937,6 +1019,7 @@ mod tests {
     /// The default species with every level's limbs straight and nothing varied.
     fn regular() -> Species {
         let mut species = Species::default();
+        species.trunk.wander = 0.0;
         for level in &mut species.limbs {
             level.bend = 0.0;
             level.wander = 0.0;
@@ -1135,13 +1218,53 @@ mod tests {
         };
         let max_turn = MAX_RING_TURN_DEGREES.to_radians();
         for limb in limbs(&species) {
+            // A ring is placed once the turn reaches the limit, so by at most a step's turn more,
+            // or a kink's, which can swing from one side of the course to the other.
+            let kink = 2.0 * species.limbs[limb.level].wander;
             for pair in limb.rings.windows(2) {
-                // A ring is placed once the turn reaches the limit, so by at most a step's turn more.
                 let turn = pair[0].tangent.angle_between(pair[1].tangent);
-                assert!(turn < max_turn + 0.05, "{}", turn.to_degrees());
+                assert!(turn < max_turn + kink + 0.05, "{}", turn.to_degrees());
                 assert!(pair[1].at > pair[0].at);
             }
         }
+    }
+
+    /// `straight`, its first level's limbs leaving level and running straight to the column's
+    /// wall 2 m away, but for wandering by `wander` degrees.
+    fn level_limbs(wander: f32) -> Species {
+        let mut species = straight();
+        species.limbs[0].angle = Fuzzy::new(FRAC_PI_2, 0.0, Distribution::Uniform);
+        species.limbs[0].reach = Fuzzy::new(1.0, 0.0, Distribution::Uniform);
+        species.limbs[0].wander = wander.to_radians();
+        species
+    }
+
+    #[test]
+    fn wander_zigzags_about_the_course() {
+        // With no bend the course is the limb's start, and every internode stays within the
+        // wander of it, however many kinks there are: the offsets do not add up.
+        let species = level_limbs(45.0);
+        let limbs = limbs(&species);
+        for limb in &limbs {
+            let course = limb.direction();
+            for ring in &limb.rings {
+                let off = ring.tangent.angle_between(course).to_degrees();
+                assert!(off <= 45.0 + 1e-2, "{off}");
+            }
+        }
+        assert!(limbs.iter().any(|limb| limb.rings.len() > 4));
+    }
+
+    #[test]
+    fn limbs_kink_every_internode_of_the_level_they_bear() {
+        // The first level kinks once every internode of the second, hidden or not: more often,
+        // so with more rings, the denser the second.
+        let rings = |density: f32| -> usize {
+            let mut species = level_limbs(45.0);
+            species.limbs[1].density = density;
+            limbs(&species).iter().map(|limb| limb.rings.len()).sum()
+        };
+        assert!(rings(20.0) > rings(4.0) + 10, "{} {}", rings(20.0), rings(4.0));
     }
 
     #[test]
@@ -1194,7 +1317,7 @@ mod tests {
     #[test]
     fn limbs_start_on_the_trunk_as_meshed() {
         // At the default lean the trunk is one straight segment, base to tip.
-        let species = Species::default();
+        let species = regular();
         let tip = stems(&species)[0].rings.last().unwrap().center;
         for limb in limbs(&species) {
             assert!(limb.origin().cross(tip).length() < 1e-5, "{limb:?}");
@@ -1408,7 +1531,7 @@ mod tests {
     fn thin_limbs_are_grown_but_not_meshed() {
         let mut species = Species {
             limb_levels: 3,
-            ..Species::default()
+            ..regular()
         };
         let (all, limbs) = plant(&species);
         species.bark.min_radius = 1.0;

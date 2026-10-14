@@ -41,7 +41,8 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `5eca2d9` | C24 Stems (D23): count, splay and leader; the lean's heading from the seed; `plans/stems.py`. |
 | `b3a1947` | C44 Spans inside the crown (D24); stems keep their length when they lean, and never turn past level; each limb level's header shows its count. |
 | `e64daa1` | C46 Node bias (D25) in place of the span, and nodes moved from their even places by a constant jitter; `plans/bias.py`. |
-| (pending) | C51 Children placed by competition and facing, with a skew per limb (D26), in place of the divergence; `plans/facing.py`. |
+| `705dc9a` | C51 Children placed by competition and facing, with a skew per limb (D26), in place of the divergence; `plans/facing.py`. |
+| (pending) | C50 Wander as kinks about the course, for limbs and now the trunk (D17); lighter second and third levels by default; `plans/wander.py`. |
 
 ## Next
 
@@ -58,17 +59,7 @@ per-type hook, and is retained-mode.
 
 ### Milestone: the first species exported to Panoply
 
-1. **C50 Wander as kinks** (D25): a limb is straight between kinks, in place of turns blended
-   into a curve (D17); smooth curves come from bend. Angle and bend trace the limb's course,
-   and each segment points off that course by a random angle up to the wander, at a random
-   angle around it. Each deviation is from the course, not from the segment before, so a limb
-   zigzags about a steady line and never curls back: today's wander is a turning rate whose
-   turns add up, so at its highest limbs hook and coil. A kink falls every internode, the crown
-   radius over the next level's density (the last level's own), so twigs kink finer than limbs
-   and the crown reads as a fractal. Wander becomes the most a segment points off the course,
-   0° to 45°, rather than a turn per metre. A ring sits at each kink, turned halfway between
-   the two directions, so the tube does not pinch. E[2]
-2. **C37 Foliage placement** (`docs/growth-model.md`, Foliage): clusters seeded along the parts
+1. **C37 Foliage placement** (`docs/growth-model.md`, Foliage): clusters seeded along the parts
    of the limbs within a shell depth of the envelope, at a spacing set by the author, each a
    plain quad for now, in a leaf mesh of its own with an alpha-masked material. Bare trees set
    no foliage. Facing up for now; C39 brings the facing distribution. Twigs and leaves are
@@ -77,7 +68,7 @@ per-type hook, and is retained-mode.
    since the twigs exist. The cards carry a texture taken from a seedling `.glb` (they embed
    theirs; growth model, Seedling's flora) as a placeholder in `assets/`, until C38 paints
    them. E[3]
-3. **C45 Contact sheets**, so designs are explored in sweeps rather than one screenshot at a
+2. **C45 Contact sheets**, so designs are explored in sweeps rather than one screenshot at a
    time, by the author or by an agent. A second binary (`src/bin/sheet.rs`; the modules move
    behind a `src/lib.rs` so both binaries share them) reads a species file and a sweep (seeds,
    or one field's values by reflection path), grows each plant with the generator, lays them out
@@ -91,14 +82,14 @@ per-type hook, and is retained-mode.
    sweeping parameters needs only writing sweep files and running the one command, so a narrow
    allowlist covers it; trying generator changes (a form, say) runs in a git worktree that is
    thrown away afterwards, the findings written up and built properly. E[3]
-4. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's `genLeafTexture.ts` ported,
+3. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's `genLeafTexture.ts` ported,
    its leaf shape and color parameters as species fields with streams of their own
    (requirements, Parameters, determinism, variants). The texture goes on C37's cards, replacing the placeholder. A golden
    test on its pixels compares with a tolerance, since SIMD can move a channel by a level. E[3]
-5. **C39 Card shapes and facing**: crossed, cupped and creased cards chosen by weight; a card's
+4. **C39 Card shapes and facing**: crossed, cupped and creased cards chosen by weight; a card's
    normal drawn around a blend of world up and the envelope's outward normal, with a spread, its
    rotation about the normal free; crown softness for the shading normal (X13). E[3]
-6. **C30 Forks**, Weber and Penn's splits: at a point along a limb it ends, and copies of it
+5. **C30 Forks**, Weber and Penn's splits: at a point along a limb it ends, and copies of it
    carry on, turned apart by the fork angle. The copies are the same level as the limb, not its
    children, so they reach the envelope and bear children as it would; turning both by half the
    angle reads as the symmetric Y of a child deflecting its parent. Per level: forks per limb (0
@@ -109,7 +100,7 @@ per-type hook, and is retained-mode.
    model, Stems and leader). A stem's fork may lie below the crown base: the leader sets the
    axis's length, the fork where it splits. After foliage, since a crown's
    look cannot be judged without leaves. E[3]
-7. **C10 Species data model**, its groups the layers of the growth model (D11;
+6. **C10 Species data model**, its groups the layers of the growth model (D11;
    `docs/growth-model.md`, Consequences), correcting seedling where the requirements say.
    Reflectable types with `Default` for initial values and attributes for the editor, after the
    fields settle, so saved files are not broken by every change. Serialized
@@ -128,15 +119,15 @@ per-type hook, and is retained-mode.
    levels with hidden ones stashed in the editor, the same in files but a larger change that
    undoes D15. Seedling's groups for reference: `trunk`; `branch[]`, one per level; the leaf as
    `leafGroup` (arrangement), `leafShape` and `leafColor`. E[4], split when started
-8. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
+7. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
    panel; the file browser is X2. The seed row moves in with them, in a feathers `group`
    (`containers/group.rs`, no header), so it lines up with the subpanes' rows rather than
    standing at the panel's edge. E[3]
-9. **C8 Working document in settings.** A settings group holding the working species and, once
+8. **C8 Working document in settings.** A settings group holding the working species and, once
    set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
    as seedling did. The document's name comes from the file name. Serialized by reflection, as
    `bevy_settings` does. E[3]
-10. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
+9. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
    as a JSON extra (C10), in the form Panoply loads (requirements, Output; "What Panoply does with the output"). Bevy writes no glTF,
    so this adds a dependency or a writer of our own; propose it before code. The command-line
    export is X1. Research so far (2026-10-12), the author also asking skein's author:
@@ -194,6 +185,16 @@ per-type hook, and is retained-mode.
 - **C48 Arching stems**, for fountain shrubs: a lean past level, so a stem rises and then droops
   toward the ground, stopping above it. D24 stops the lean at level until a preset needs more
   (X18). E[2]
+- **C52 Rings by visible error** (D17), an optimization, in place of placing them by turn (15°
+  of curvature, 5° at a kink). A limb or stem is traced in full first, then simplified as
+  Ramer, Douglas and Peucker do: from its two ends, the traced point furthest from the chord
+  between them is kept if it lies further than half the tube's radius there, and each half is
+  simplified the same way. A path that stays within the tube's thickness cannot be seen, so
+  thick limbs keep their kinks and twigs straighten into a segment or two, where the triangles
+  are. A kept point's ring faces halfway between its two chords, so the tube does not pinch;
+  children attach along the kept rings, as now. One rule for curvature and kinks, so the kink
+  ring's threshold goes. The tolerance is a constant, tuned against the triangle budget and
+  screenshots; tied to Panoply's camera instead, the generator would depend on the game. E[2]
 - **C25 A HUD over the view**, to free the panel: every control that changes the preview rather
   than the species moves onto the view. Buttons the size and shape of feathers' but translucent:
   Frame, zoom, orbit and tilt, and toggles for the envelope and the ground. Icons from Material
@@ -359,13 +360,25 @@ per-type hook, and is retained-mode.
   alone (requirements, Parameters, determinism, variants). `Fuzzy::sample` always draws three
   numbers: the bell is their mean, uniform uses the first.
 
-- **D17** A limb is traced in 2 cm steps, turning toward its level's bend (an angle from world
-  up, keeping its compass heading), closing a share of the angle left over each crown radius
-  (revised in C31 from a fixed turn per metre), and wandering by turns drawn a metre
-  apart and blended smoothly, so its shape does not depend on the step. It stops at its reach
-  or where it would leave the envelope. Rings go wherever it has turned 15° since the last, and
-  each carries a side transported along the limb without twisting, which sets the ring's roll
-  and its children's azimuth zero. Each limb's stream forks from its parent's by its index
+- **D17** A limb's course is traced in 2 cm steps, turning toward its level's bend (an angle
+  from world up, keeping its compass heading), closing a share of the angle left over each
+  crown radius (revised in C31 from a fixed turn per metre). The limb kinks every 1.5
+  internodes of the level it bears (an internode is a crown radius over that level's density,
+  shown or not, so showing a level leaves its parents alone; the last level's own): each
+  stretch points off the course by a random angle up to the wander, about a random axis, and
+  holds that offset as the course turns. Offsets are from the course, not from the stretch
+  before, so a limb zigzags about a steady line, as sympodial growth does, and twigs kink finer
+  than limbs. Stems kink the same way about their arc, by the trunk's own wander, every 1.5
+  internodes of the first level. Revised in C50 from turns drawn a metre apart, blended
+  smoothly, whose turns added up, so at high wander limbs hooked and coiled. Kinks fall on
+  steps, so the shape does not depend on the step. It stops at its reach or where it would
+  leave the envelope. Rings go wherever it has turned 15° since the last, or at a kink turning
+  it 5° at once, so a modest wander shows; a kink's ring is turned halfway between the
+  stretches meeting there so the tube does not pinch. Kinks roughly triple a tree's triangles,
+  so the defaults' second and third levels are sparser (7 and 10 nodes per crown radius), which
+  keeps three levels under 3,000. Each ring carries a side transported along the limb without
+  twisting, which sets the ring's roll and its children's azimuth zero. Each limb's stream
+  forks from its parent's by its index
   (the trunk's is the seed's `branching` stream), so a limb's draws depend on where it sits,
   not on how many came before. The seed is a `Seed` in the species, saved with it; the panel
   gives it a number input without a fill and a Random button. The seed list for variants

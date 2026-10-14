@@ -1,4 +1,4 @@
-"""Limbs bend and wander as they grow, and the seed sets the wander: a typed seed reaches the plant,
+"""Limbs bend and kink as they grow, and the seed sets the kinks: a typed seed reaches the plant,
 and Random picks another."""
 
 BIN = "arbor_day"
