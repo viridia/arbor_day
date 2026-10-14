@@ -23,6 +23,8 @@ pub struct Species {
     pub seed: Seed,
     #[reflect(@Caption("Trunk"))]
     pub trunk: Trunk,
+    #[reflect(@Caption("Bark"))]
+    pub bark: Bark,
     #[reflect(@Caption("Crown"))]
     pub crown: Crown,
     /// How many of the limb levels grow, from the first. The rest keep their parameters, so a
@@ -32,8 +34,6 @@ pub struct Species {
     /// Each level grows on the limbs of the one before it, the first on the trunk.
     #[reflect(@Caption("Limbs"), @ShownCount("limb_levels"))]
     pub limbs: [LimbLevel; MAX_LIMB_LEVELS],
-    #[reflect(@Caption("Bark"))]
-    pub bark: Bark,
     #[reflect(@Caption("Foliage"))]
     pub foliage: Foliage,
 }
@@ -51,6 +51,7 @@ impl Default for Species {
         Self {
             seed: Seed(1),
             trunk: Trunk::default(),
+            bark: Bark::default(),
             crown: Crown::default(),
             limb_levels: 1,
             limbs: [
@@ -82,7 +83,6 @@ impl Default for Species {
                     ..LimbLevel::default()
                 },
             ],
-            bark: Bark::default(),
             foliage: Foliage::default(),
         }
     }

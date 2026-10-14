@@ -4,7 +4,7 @@
 //! select, nested structs a subpane of rows of their own, an array with a [`ShownCount`] a subpane
 //! per shown item, and every other field a label giving its name and type. A row's caption sits
 //! above its inputs, so they get the panel's full width. Field attributes (below) set a row's
-//! caption and a number's limits, precision, step, units and wrapping.
+//! caption and a number's limits, precision, step and units.
 
 use std::{collections::HashMap, ops::RangeInclusive};
 
@@ -14,8 +14,8 @@ use bevy::{
         controls::{
             ButtonVariant, ColorInputValue, FeathersCheckbox, FeathersColorInput, FeathersListRow,
             FeathersNumberInput, FeathersSelect, FeathersToolButton, HardLimit,
-            NumberInputPrecision, NumberInputStep, NumberInputUnits, NumberInputWrap, OptionIndex,
-            SoftLimit, UnitsFormat, UnitsRegistry,
+            NumberInputPrecision, NumberInputStep, NumberInputUnits, OptionIndex, SoftLimit,
+            UnitsFormat, UnitsRegistry,
         },
         display::{caption as option_caption, icon, label, label_small},
         theme::ThemedText,
@@ -135,11 +135,6 @@ pub struct Caption(pub &'static str);
 /// A number in a [`ValueRange`] shown without the slider fill, as a spinbox with step arrows.
 #[derive(Debug, Clone, Reflect)]
 pub struct Spinbox;
-
-/// A number that wraps around its [`ValueRange`] instead of stopping at its ends, such as an angle
-/// of a full turn. It is shown as a spinbox, since a slider's fill would stop at the ends.
-#[derive(Debug, Clone, Reflect)]
-pub struct Wrap;
 
 /// On an array of structs: the sibling `i32` field holding how many of its items are shown, from
 /// the first. Each shown item is a subpane, captioned with the array's caption and its number,
@@ -420,7 +415,6 @@ struct NumberLook {
     range: Option<NumericRange>,
     /// The fill bar dragged like a slider, rather than a spinbox.
     slider: bool,
-    wrap: bool,
     precision: Option<i32>,
     step: Option<f64>,
     units: Option<NumberInputUnits>,
@@ -431,12 +425,9 @@ impl NumberLook {
         let range = attrs
             .get::<ValueRange<T>>()
             .map(|range| T::range(range.0.clone()));
-        let wrap = range.is_some() && attrs.get::<Wrap>().is_some();
         Self {
-            // Dragging clamps to the soft limit before wrapping, so a wrapping input has none.
-            slider: range.is_some() && attrs.get::<Spinbox>().is_none() && !wrap,
+            slider: range.is_some() && attrs.get::<Spinbox>().is_none(),
             range,
-            wrap,
             precision: attrs.get::<Precision>().map(|precision| precision.0),
             step: attrs.get::<Step<T>>().map(|step| T::to_step(step.0)),
             units: attrs.get::<NumberInputUnits>().cloned(),
@@ -512,9 +503,6 @@ fn number_input<'r, 'w, 's, T: NumberField>(
                 }
                 commands.insert(HardLimit(range));
             }
-            if look.wrap {
-                commands.insert(NumberInputWrap::Wrap);
-            }
             if let Some(precision) = look.precision {
                 commands.insert(NumberInputPrecision(precision));
             }
@@ -541,7 +529,6 @@ fn seed_row(row: ImmEntity<CapsPanel>, name: &'static str, caption: &'static str
     let look = NumberLook {
         range: Some(NumericRange::I32(0..=Seed::MAX)),
         slider: false,
-        wrap: false,
         precision: None,
         step: None,
         units: None,
@@ -584,7 +571,6 @@ fn fuzzy_row(
         Some(NumericRange::F32(range)) => Some(StripRange {
             start: *range.start(),
             end: *range.end(),
-            wrap: center_look.wrap,
         }),
         _ => None,
     };
@@ -592,7 +578,6 @@ fn fuzzy_row(
     let spread_look = NumberLook {
         range: Some(NumericRange::F32(0.0..=half_range)),
         slider: false,
-        wrap: false,
         ..center_look.clone()
     };
     row.on_spawn_insert(move || row_node(name)).add(|ui| {

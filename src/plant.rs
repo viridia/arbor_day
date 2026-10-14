@@ -54,11 +54,15 @@ pub struct PlantStats {
     pub cards: u32,
     /// Limbs on each grown level, first to last.
     pub level_limbs: Vec<u32>,
-    /// The seed the plant was grown from.
-    pub seed: i32,
     /// The bark's vertex color, as sRGB hex.
     pub bark_color: String,
 }
+
+/// The species the plant was last built from, for plans, since the driver reads components, not
+/// resources.
+#[derive(Component, Reflect, Clone)]
+#[reflect(Component)]
+pub struct GrownFrom(pub Species);
 
 fn build_plant(
     mut commands: Commands,
@@ -79,12 +83,13 @@ fn build_plant(
             limbs: level_limbs.iter().sum::<usize>() as u32,
             cards: (grown.leaves.positions.len() / 4) as u32,
             level_limbs: level_limbs.iter().map(|&count| count as u32).collect(),
-            seed: species.seed.0,
             bark_color: color.to_srgba().to_hex(),
         };
         let mesh = to_mesh(grown.bark, color);
         set_mesh(&mut commands, &mut meshes, entity, current, mesh);
-        commands.entity(entity).insert(stats);
+        commands
+            .entity(entity)
+            .insert((stats, GrownFrom(species.clone())));
         let leaf_mesh =
             (!grown.leaves.indices.is_empty()).then(|| to_mesh(grown.leaves, Color::WHITE));
         for (entity, current) in &leaves {

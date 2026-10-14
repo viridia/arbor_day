@@ -47,8 +47,9 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `528af7d` | C61 Trunk as the source of truth (D23): the trunk's height in metres, and a "Crown" group (top and base measured against it) in place of the envelope's height and the leader. |
 | `c53b181` | C53 Four plans in place of twelve: `smoke.py` (with the seed), `widgets.py` (fuzzy rows, selects, color), `levels.py` (with foliage), and `shapes.py`, a gallery of screenshots with no checks. C59 Header counts in parentheses ("Limbs 1 (8)"). |
 | `dd130b3` | C56 A HUD over the view (D28), `src/hud.rs`: the triangle count, and toggles for the envelope and the ground, which leaves `Placeholder`. |
-| (pending) | C64 The HUD's toggles saved, as `ViewSettings` (D28). |
-| (pending) | C57 Camera buttons on the HUD (D28): orbit, zoom, tilt and Frame, moving while held; the panel's "View" group goes. Needs `bevy_remote_driver`'s press and hold. |
+| `86fa129` | C64 The HUD's toggles saved, as `ViewSettings` (D28). |
+| `86fa129` | C57 Camera buttons on the HUD (D28): orbit, zoom, tilt and Frame, moving while held; the panel's "View" group goes. Needs `bevy_remote_driver`'s press and hold. |
+| (pending) | C27 `Placeholder` removed, and `Wrap` with it (D9). The plant carries the species it was grown from (`GrownFrom`, D12), which plans read with the driver's `expect(…, at="limbs[0].angle")`; `PlantStats` drops the seed. The Bark group moves up under Trunk. X25 (`bevy::annotations`) and C65 (wireframe toggle) recorded. |
 
 ## Next
 
@@ -243,16 +244,18 @@ per-type hook, and is retained-mode.
   children attach along the kept rings, as now. One rule for curvature and kinks, so the kink
   ring's threshold goes. The tolerance is a constant, tuned against the triangle budget and
   screenshots; tied to Panoply's camera instead, the generator would depend on the game. E[2]
+- **C65 Wireframe toggle on the HUD** (D28), to see where the triangles go: rings along the bark
+  (D17's spacing, C52), sides per level (D22), and each leaf card's quad, for card density and
+  facing (C39). Bevy's `WireframePlugin` (`bevy_pbr`), drawing lines over the shaded mesh rather
+  than in its place; it needs the `POLYGON_MODE_LINE` and `IMMEDIATES` GPU features, requested
+  through `RenderPlugin`'s `WgpuSettings`, so first confirm Metal has both. A `Wireframe`
+  component on the bark and leaf entities rather than the global `WireframeConfig`, so plans
+  check it as they check `Visibility`. A third toggle in the upper left, saved in `ViewSettings`.
+  The icon, from Material Symbols, is the author's to choose and add to `assets/icons/`. E[2]
 - **C58 Trunk below ground**, so a tree placed on a slope still meets the ground on its low side:
   the stems start below the origin by their base radius times the tangent of the steepest slope
   a tree stands on, a constant rather than a species field. At 45° the depth is the base radius.
   *Gate:* trees on slopes in Panoply showing a gap.
-- **C27 Remove `Placeholder`** (`src/main.rs`). Every widget kind it stands in for has a real
-  customer in the species, but for the checkbox and `Wrap`, which nothing in the species uses:
-  delete `Wrap`, and keep the checkbox row unused until a species field needs one. Plans read
-  `Placeholder` because the driver reads components, not the species resource (D12), so the
-  plant entity carries a copy of the `Species` as a component, inserted on each rebuild, and
-  plans check species fields in its place (`limbs[0].angle.shape`). E[2]
 - **C7 Undo and redo** (requirements, Authoring app). Take the `bevy_undo_redo` crate from the
   author's Bevy PR #23373 (never merged; branch `bevy_undo` in `../bevy`) as `src/undo.rs`, its
   API unchanged and its origin noted: an `UndoAction` trait (`apply` returns the inverse;
@@ -333,9 +336,9 @@ per-type hook, and is retained-mode.
   written `#[reflect(@ValueRange::<f32>(0.0..=1.0), @Precision(2))]`, read from the type
   (`StructInfo::field_at(i).custom_attributes()`), not the value. Added: `Caption` renames a row;
   `NumberInputUnits` is itself the units attribute (`angle_degrees` shows radians as degrees);
-  `Wrap` for an angle of a full turn (seedling's `axis`; its `angle`, away from the parent branch,
-  clamps), which also makes the input a spinbox, since feathers clamps a drag to the soft limit
-  before wrapping (X10); `Spinbox`. Every number is a feathers number input; the slider is not used. Its
+  `Spinbox`. A `Wrap` for an angle of a full turn went with the placeholder (C27), since every
+  species angle clamps; feathers' `NumberInputWrap` remains should one be needed. The checkbox
+  row stays, unused until a species field is a `bool`. Every number is a feathers number input; the slider is not used. Its
   `ValueRange` is always the `HardLimit`: no value here normally sits in a range while
   occasionally leaving it (HDR illuminance would), so a soft limit is never a narrower range. It is
   the same range, and its presence only chooses the look: a fill bar dragged like a slider (the
@@ -366,8 +369,9 @@ per-type hook, and is retained-mode.
   parameters change much of the tree, so finer change detection would save little. The panel
   edits a copy and writes it back with `set_if_neq`, so the rebuild runs only on a real edit.
   The leaf texture is the likely exception, being far costlier to make; it can become a second
-  resource if dragging stutters. Plans read the result (`PlantStats` on the plant), since the
-  driver reads components, not resources.
+  resource if dragging stutters. Plans read the result (`PlantStats` on the plant) and the species
+  it was grown from (`GrownFrom`, a copy as a component), since the driver reads components, not
+  resources; a resource is already a component in this Bevy, so `Species` cannot derive both.
 
 - **D13** An enum field is a feathers select, `bevy_immediate` having no binding for one. Each
   option row carries `OptionIndex`; an observer on the select records the picked index in a
@@ -609,8 +613,7 @@ per-type hook, and is retained-mode.
   `UnitsFormat` instead. Without a `NumberInputPrecision` a drag does not round at all (tilt
   drags to `86.90488°`), and a precision cannot help an angle, since `Precision(0)` snaps to whole
   radians. Filed upstream as bevy#26124 (chevrons), bevy#26125 (wrap under a soft limit),
-  bevy#26126 (field captions) and bevy#26130 (rounding). *Gate:* fixes in the Bevy we build against; then wrapping inputs
-  may keep the slider look, rows may use the input's own caption, and angle drags round in
+  bevy#26126 (field captions) and bevy#26130 (rounding). *Gate:* fixes in the Bevy we build against; then rows may use the input's own caption, and angle drags round in
   degrees.
 - **X11** The spread strip's colour from the feathers theme rather than a fixed white at 80%. A
   gradient's stops take colours, not tokens, so it means reading `UiTheme` in the panel and
@@ -695,6 +698,15 @@ per-type hook, and is retained-mode.
   meshed radius (D22), one card per unmeshed twig along it, rather than leaves lined up with
   meshed twigs (D27). Seen edge-on the twig vanishes, so it needs crossed cards (twice the
   triangles) or facing kept away from edge-on. *Gate:* C45, to compare the two at game scale.
+
+- **X25** The property editor's attributes from `bevy::annotations` (bevy#26164, open): its
+  `ValueRange` (an `f64` range, read with `ValueRange::from_attributes`), `Step` and
+  `DisplayName` in place of ours (`ValueRange<T>`, `Step<T>`, `Caption`), so a species reads
+  the same in any Bevy inspector; `LimbLevel::limits` (D18) reads through `from_attributes`.
+  `Tooltip` for the species' doc comments. Ours stay where it has none: `Precision` and
+  `Spinbox` (its follow-ups), `ShownCount`, and units, since its `Unit` is a label while ours
+  names a feathers units format that also scales and parses. *Gate:* the PR in the Bevy we
+  build against.
 
 ## Notes
 

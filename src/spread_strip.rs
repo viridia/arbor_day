@@ -1,7 +1,6 @@
 //! The spread strip: a thin bar just above the bottom edge of a fuzzy number's center input,
 //! spanning center ± spread against the input's range. Flat for a uniform shape; for a bell, its
-//! opacity follows the bell's density, fading toward the ends. A wrapping range's spread can cross
-//! the seam, and then the strip is two segments, one at each end.
+//! opacity follows the bell's density, fading toward the ends.
 
 use std::f32::consts::FRAC_PI_2;
 
@@ -34,8 +33,6 @@ const BELL_STOPS: usize = 12;
 pub struct StripRange {
     pub start: f32,
     pub end: f32,
-    /// Values past one end come round from the other, as for an angle of a full turn.
-    pub wrap: bool,
 }
 
 /// A visible piece of the strip.
@@ -141,9 +138,8 @@ fn stops(segment: Segment, shape: Distribution) -> Vec<ColorStop> {
         .collect()
 }
 
-/// The pieces of center ± spread that fall within the range: clamped to its ends, or, if it
-/// wraps, the overhang brought round to the other end. With no spread, a tick at the center, of
-/// no width (the node gives it one).
+/// The part of center ± spread that falls within the range, clamped to its ends. With no spread, a
+/// tick at the center, of no width (the node gives it one).
 fn segments(fuzzy: &Fuzzy, range: &StripRange) -> Vec<Segment> {
     let span = range.end - range.start;
     if span <= 0.0 {
@@ -158,24 +154,16 @@ fn segments(fuzzy: &Fuzzy, range: &StripRange) -> Vec<Segment> {
         }];
     }
     let (low, high) = (fuzzy.center - fuzzy.spread, fuzzy.center + fuzzy.spread);
-    let turns: &[f32] = if range.wrap {
-        &[-1.0, 0.0, 1.0]
-    } else {
-        &[0.0]
-    };
-    turns
-        .iter()
-        .filter_map(|&turn| {
-            let (low, high) = (low + turn * span, high + turn * span);
-            let (start, end) = (low.max(range.start), high.min(range.end));
-            (end > start).then(|| Segment {
-                left: (start - range.start) / span,
-                width: (end - start) / span,
-                from: (start - low) / (high - low),
-                to: (end - low) / (high - low),
-            })
-        })
-        .collect()
+    let (start, end) = (low.max(range.start), high.min(range.end));
+    if end <= start {
+        return Vec::new();
+    }
+    vec![Segment {
+        left: (start - range.start) / span,
+        width: (end - start) / span,
+        from: (start - low) / (high - low),
+        to: (end - low) / (high - low),
+    }]
 }
 
 #[cfg(test)]
@@ -189,13 +177,6 @@ mod tests {
     const UNIT: StripRange = StripRange {
         start: 0.0,
         end: 10.0,
-        wrap: false,
-    };
-
-    const TURN: StripRange = StripRange {
-        start: 0.0,
-        end: 360.0,
-        wrap: true,
     };
 
     #[test]
@@ -239,19 +220,6 @@ mod tests {
             }]
         );
         assert_eq!(stops(segments[0], Distribution::Bell)[0].color, STRIP_COLOR);
-    }
-
-    #[test]
-    fn wrapping_across_the_seam() {
-        let segments = segments(&fuzzy(10.0, 30.0), &TURN);
-        assert_eq!(segments.len(), 2);
-        // The overhang below zero comes round to the top end.
-        let top = segments.iter().find(|s| s.left > 0.5).unwrap();
-        let bottom = segments.iter().find(|s| s.left == 0.0).unwrap();
-        assert!((top.left - 340.0 / 360.0).abs() < 1e-6);
-        assert!((top.to - 1.0 / 3.0).abs() < 1e-6);
-        assert!((bottom.width - 40.0 / 360.0).abs() < 1e-6);
-        assert!((bottom.from - 1.0 / 3.0).abs() < 1e-6);
     }
 
     #[test]

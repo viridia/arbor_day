@@ -24,8 +24,8 @@ impl Fuzzy {
     }
 
     /// A value within center ± spread. Always draws three numbers, whatever the shape, so
-    /// toggling one parameter's shape leaves every later draw from `rng` as it was. A caller
-    /// with a wrapping angle reduces it modulo a turn; one with limits clamps it.
+    /// toggling one parameter's shape leaves every later draw from `rng` as it was. A caller with
+    /// limits clamps it.
     pub fn sample(&self, rng: &mut Rng) -> f32 {
         let draws = [rng.unit(), rng.unit(), rng.unit()];
         let t = match self.shape {

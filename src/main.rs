@@ -7,7 +7,7 @@ use bevy::{
         FeathersPlugins,
         controls::{
             FeathersPane, FeathersScrollbar, FeathersSplitPane, FeathersSplitPaneHandle,
-            NumberInputUnits, ScrollbarGutter,
+            ScrollbarGutter,
         },
         dark_theme::create_dark_theme,
         theme::{ThemeBackgroundColor, UiTheme},
@@ -24,13 +24,10 @@ use bevy_immediate::{
     attach::{BevyImmediateAttachPlugin, ImmediateAttach},
 };
 use bevy_remote_driver::RemoteDriverPlugin;
-use fuzzy::{Distribution, Fuzzy};
 use hud::{Ground, HudPlugin, hud};
 use keys::KeysPlugin;
 use plant::{Plant, PlantEnvelope, PlantLeaves, PlantPlugin, PlantStats};
-use properties::{
-    CapsPanel, Caption, HeaderNotes, Precision, PropertiesPlugin, Spinbox, ValueRange, Wrap,
-};
+use properties::{CapsPanel, HeaderNotes, PropertiesPlugin};
 use settings::{AppSettingsPlugin, MIN_PANE_WIDTH, save_panel_width};
 use species::Species;
 use turntable::{
@@ -98,75 +95,6 @@ struct PanelPane;
 #[derive(Component, Default, Clone)]
 struct ParamPanel;
 
-/// Stands in for the species while the property editor is built: a field of each kind it will
-/// edit. A component on a named entity rather than a resource, so plans can read it.
-#[derive(Component, Reflect, Clone, PartialEq)]
-#[reflect(Component)]
-struct Placeholder {
-    #[reflect(@Caption("Smooth shading"))]
-    smooth: bool,
-    #[reflect(@ValueRange::<i32>(0..=10), @Spinbox)]
-    count: i32,
-    #[reflect(@ValueRange::<f32>(0.0..=1.0), @Precision(2))]
-    amount: f32,
-    #[reflect(
-        @ValueRange::<f32>(-std::f32::consts::PI..=std::f32::consts::PI),
-        @NumberInputUnits::new_static("angle_degrees"),
-        @Wrap,
-    )]
-    angle: f32,
-    #[reflect(@ValueRange::<f32>(0.0..=2.0), @Precision(2))]
-    length: Fuzzy,
-    #[reflect(
-        @ValueRange::<f32>(-std::f32::consts::FRAC_PI_2..=std::f32::consts::FRAC_PI_2),
-        @NumberInputUnits::new_static("angle_degrees"),
-    )]
-    tilt: Fuzzy,
-    #[reflect(
-        @ValueRange::<f32>(-std::f32::consts::PI..=std::f32::consts::PI),
-        @NumberInputUnits::new_static("angle_degrees"),
-        @Wrap,
-    )]
-    axis: Fuzzy,
-    mode: PlaceholderMode,
-    nested: PlaceholderNested,
-}
-
-impl Default for Placeholder {
-    fn default() -> Self {
-        Self {
-            smooth: false,
-            count: 3,
-            amount: 0.5,
-            angle: 0.0,
-            length: Fuzzy::new(1.0, 0.25, Distribution::Uniform),
-            // In the units shown, so the input shows no tail of digits.
-            tilt: Fuzzy::new(0.0, 15.0_f32.to_radians(), Distribution::Bell),
-            // Its spread crosses the seam at 180°, so its strip is two segments.
-            axis: Fuzzy::new(
-                170.0_f32.to_radians(),
-                30.0_f32.to_radians(),
-                Distribution::Uniform,
-            ),
-            mode: PlaceholderMode::First,
-            nested: PlaceholderNested::default(),
-        }
-    }
-}
-
-#[derive(Reflect, Clone, Copy, PartialEq, Default)]
-enum PlaceholderMode {
-    #[default]
-    First,
-    Second,
-}
-
-#[derive(Reflect, Clone, PartialEq, Default)]
-struct PlaceholderNested {
-    flag: bool,
-    size: f32,
-}
-
 fn scene() -> impl SceneList {
     // Lines take no light, so the envelope reads the same from every side.
     let envelope_material = StandardMaterial {
@@ -201,9 +129,6 @@ fn scene() -> impl SceneList {
         Mesh3d(asset_value(Circle::new(4.0)))
         MeshMaterial3d::<StandardMaterial>(asset_value(Color::srgb(0.25, 0.28, 0.3)))
         Transform::from_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2))
-        --
-        #Placeholder
-        Placeholder
         --
         #Plant
         Plant
@@ -325,7 +250,6 @@ fn shell_ui() -> impl Scene {
 struct PanelParams<'w, 's> {
     species: ResMut<'w, Species>,
     stats: Query<'w, 's, &'static PlantStats>,
-    placeholders: Query<'w, 's, &'static mut Placeholder>,
 }
 
 impl ImmediateAttach<CapsPanel> for ParamPanel {
@@ -350,15 +274,6 @@ impl ImmediateAttach<CapsPanel> for ParamPanel {
             .unwrap_or_default();
         properties::edit_fields(ui, &mut edited, &notes);
         params.species.set_if_neq(edited);
-
-        let Ok(mut placeholder) = params.placeholders.single_mut() else {
-            return;
-        };
-        let mut edited = placeholder.clone();
-        properties::group(ui.ch(), "Placeholder", |ui| {
-            properties::edit_fields(ui, &mut edited, &HeaderNotes::default());
-        });
-        placeholder.set_if_neq(edited);
     }
 }
 
