@@ -42,7 +42,14 @@ def run(driver):
     driver.screenshot("three_levels")
 
     # Limbs under the thinnest meshed radius are still grown but left to the foliage: at 10 cm,
-    # only the trunk is meshed.
+    # only the trunk is meshed. Bare, so the triangles are the bark's.
+    driver.click("Shell/Panel/foliage/density/input")
+    driver.key("End")
+    for _ in range(6):
+        driver.key("Backspace")
+    driver.type("0")
+    driver.key("Enter")
+    driver.expect("Plant", STATS, {"cards": 0})
     driver.click("Shell/Panel/bark/min_radius/input")
     driver.key("End")
     for _ in range(6):

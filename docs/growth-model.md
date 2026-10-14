@@ -211,13 +211,17 @@ spacing follows curvature, within the triangle budget.
 
 ### Foliage
 
-Clusters are seeded along the parts of the limbs that lie within a shell depth of the envelope,
-at a spacing set by the author, so cards follow the branches and fill the crown's surface. Bare
-trees set no foliage. Each cluster is a card shape (crossed, cupped, creased) chosen by weight.
+Clusters are seeded along the parts of the last level's limbs that lie within a shell depth of
+the envelope, at a spacing set by the author, so cards follow the twigs and fill the crown's
+surface. Bare trees set no foliage. Each cluster is a card shape (crossed, cupped, creased) chosen
+by weight.
 
-A card's face normal is drawn from a bounded distribution around a target: a blend, authored per
-species, of world up and the envelope's outward normal at the card. Its rotation about the normal
-is free. The branch tangent plays no part.
+A card is a sprig: several leaves on a short stem, painted. Its base sits on the twig and its axis
+follows the twig, so the painted stem lines up with the real one, as in seedling. Seen edge-on, a
+card loses some leaves but never a twig. The cost is that a sprig always follows its twig; folding
+the card (creased, cupped) gives some freedom back. The face normal is a target turned about the
+card's axis as near as the axis allows: world up for now, as seedling has it, and later a blend,
+authored per species, of world up and the envelope's outward normal, with a bounded spread.
 
 The card's shading normal is separate from its face: the face normal blended toward the
 envelope's outward normal by a "crown softness" weight, so the crown shades as one mass. At 0
@@ -253,6 +257,8 @@ For the species data model (C10), the groups follow the layers:
 - **Bark:** base radius, pipe exponent, flare, color.
 - **Foliage:** spacing, shell depth, card shapes and weights, size, facing (up-to-outward blend,
   spread), crown softness.
+- **Leaf sprig:** how the leaves are arranged on the card's stem (seedling's `leafGroup`: fan
+  size and angle, pairs along the stem and their spacing, taper), painted into the texture.
 - **Leaf texture:** shape and color as in seedling (`leafShape`, `leafColor`), with their own
   random streams.
 - **Outline:** on or off, and its widths, for the bark shell and the painted leaf stroke.

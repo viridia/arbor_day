@@ -28,7 +28,7 @@ use bevy_immediate::{
 use bevy_remote_driver::RemoteDriverPlugin;
 use fuzzy::{Distribution, Fuzzy};
 use keys::KeysPlugin;
-use plant::{Plant, PlantEnvelope, PlantPlugin, PlantStats};
+use plant::{Plant, PlantEnvelope, PlantLeaves, PlantPlugin, PlantStats};
 use properties::{
     CapsPanel, Caption, HeaderNotes, Precision, PropertiesPlugin, Spinbox, ValueRange, Wrap,
 };
@@ -217,6 +217,10 @@ fn scene() -> impl SceneList {
         TurntableSubject
         // White, so the mesh's vertex colors show as they are.
         MeshMaterial3d::<StandardMaterial>(asset_value(Color::WHITE))
+        --
+        // Not framed: a bare plant has no leaves to bound, and the envelope bounds them.
+        #Leaves
+        PlantLeaves
         --
         #Envelope
         PlantEnvelope

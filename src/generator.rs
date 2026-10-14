@@ -3,12 +3,12 @@
 
 use std::f32::consts::{FRAC_PI_2, PI, TAU};
 
-use bevy::math::{Mat3, Quat, Vec3};
+use bevy::math::{Mat3, Quat, Vec2, Vec3};
 
 use crate::{
     fuzzy::Fuzzy,
     random::Rng,
-    species::{Envelope, Facing, LimbLevel, Profile, Species},
+    species::{Envelope, Facing, Foliage, LimbLevel, Profile, Species},
 };
 
 /// The largest turn of a tube's axis between two rings, so rings are spaced by curvature: a
@@ -30,6 +30,8 @@ const WANDER_STREAM: u64 = u64::MAX;
 const OWN_VALUES_STREAM: u64 = u64::MAX - 1;
 /// The layout of a stem's children: their count, and each node's turn, limb count and place.
 const LAYOUT_STREAM: u64 = u64::MAX - 2;
+/// A limb's leaf clusters: their count, and each one's place and turn.
+const FOLIAGE_STREAM: u64 = u64::MAX - 3;
 
 /// The most a node moves from its even place, as a share of the gap between places, so nodes are
 /// not spaced like rungs. Under half, so neighbours never swap.
@@ -60,12 +62,17 @@ const OUTLINE_RING_EVERY: u32 = 2;
 /// Segments in each ring of the outline.
 const OUTLINE_RING_SIDES: u32 = 24;
 
+/// Segments of the envelope's profile, base to top, in measuring how deep a point lies.
+const DEPTH_STEPS: u32 = 32;
+
 /// Triangles with one normal per vertex. Every triangle meeting at a vertex shares it, so normals
 /// are continuous across the surface and the outline shell has no gaps.
 #[derive(Debug, Default)]
 pub struct Geometry {
     pub positions: Vec<Vec3>,
     pub normals: Vec<Vec3>,
+    /// Texture coordinates, one per vertex, or none for an untextured mesh.
+    pub uvs: Vec<Vec2>,
     /// Counter-clockwise seen from outside, as glTF and Bevy take front faces.
     pub indices: Vec<u32>,
 }
@@ -128,16 +135,25 @@ struct Frame {
     side: Vec3,
 }
 
+/// A plant as generated.
+#[derive(Debug, Default)]
+pub struct Grown {
+    pub bark: Geometry,
+    /// One card for each leaf cluster, textured with the leaf.
+    pub leaves: Geometry,
+    /// Limbs grown on each grown level, meshed or not.
+    pub level_limbs: Vec<usize>,
+}
+
 /// The whole plant: the stems and their limbs, less limbs thinner at their base than the bark's
-/// thinnest meshed radius, which are left to the foliage. Returns the geometry and the number of
-/// limbs grown on each grown level, meshed or not. Each stem is a tube closed at the top by a fan
-/// and left open at the base, since it stands in the ground.
-pub fn plant(species: &Species) -> (Geometry, Vec<usize>) {
+/// thinnest meshed radius, which are left to the foliage, and the foliage (`foliage`). Each stem is
+/// a tube closed at the top by a fan and left open at the base, since it stands in the ground.
+pub fn plant(species: &Species) -> Grown {
     let (stems, limbs) = grow(species);
-    let mut geometry = Geometry::default();
+    let mut bark = Geometry::default();
     let trunk_sides = species.trunk.sides.max(3) as u32;
     for stem in &stems {
-        tube(&mut geometry, &stem.rings, stem.radii, trunk_sides);
+        tube(&mut bark, &stem.rings, stem.radii, trunk_sides);
     }
     let levels = species.grown_levels();
     for limb in limbs
@@ -145,13 +161,87 @@ pub fn plant(species: &Species) -> (Geometry, Vec<usize>) {
         .filter(|limb| limb.radii.0 >= species.bark.min_radius)
     {
         let sides = levels[limb.level].sides.max(3) as u32;
-        tube(&mut geometry, &limb.rings, limb.radii, sides);
+        tube(&mut bark, &limb.rings, limb.radii, sides);
     }
-    let mut counts = vec![0; levels.len()];
+    let mut level_limbs = vec![0; levels.len()];
     for limb in &limbs {
-        counts[limb.level] += 1;
+        level_limbs[limb.level] += 1;
     }
-    (geometry, counts)
+    let twigs = limbs.iter().filter(|limb| limb.level + 1 == levels.len());
+    Grown {
+        bark,
+        leaves: foliage(&species.envelope, &species.foliage, twigs),
+        level_limbs,
+    }
+}
+
+/// Leaf clusters on `twigs`, the last grown level's limbs, along the parts of them within the
+/// foliage's shell of the envelope: as many as its density gives for that length, each placed as
+/// `node_place` places nodes, so they are spread evenly but not like rungs. Each is a card (`card`)
+/// whose sprig grows from its place along the twig.
+fn foliage<'a>(
+    envelope: &Envelope,
+    foliage: &Foliage,
+    twigs: impl Iterator<Item = &'a Limb>,
+) -> Geometry {
+    let crown = envelope.radius.max(0.01);
+    let shell = foliage.shell * crown;
+    let size = foliage.size * crown;
+    let mut leaves = Geometry::default();
+    for twig in twigs {
+        let parent = Parent {
+            rings: &twig.rings,
+            radius: twig.radii.0,
+            rng: &twig.rng,
+        };
+        let length = twig.rings[twig.rings.len() - 1].at;
+        let steps = ((length / TRACE_STEP).ceil() as u32).max(1);
+        // Places a trace step apart in the shell, each standing for a step of the twig.
+        let in_shell: Vec<Frame> = (0..steps)
+            .map(|step| parent.frame((step as f32 + 0.5) / steps as f32))
+            .filter(|frame| {
+                depth_in_envelope(envelope, frame.point).is_some_and(|depth| depth < shell)
+            })
+            .collect();
+        if in_shell.is_empty() {
+            continue;
+        }
+        let mut rng = twig.rng.fork(FOLIAGE_STREAM);
+        let shell_length = in_shell.len() as f32 * length / steps as f32;
+        let clusters = rng.round(foliage.density * shell_length / crown);
+        for cluster in 0..clusters {
+            let place = node_place(cluster, clusters, 0.0, rng.unit());
+            let index = ((place * in_shell.len() as f32) as usize).min(in_shell.len() - 1);
+            card(&mut leaves, &in_shell[index], size);
+        }
+    }
+    leaves
+}
+
+/// Adds a square card `size` across for a sprig growing from `frame`: its base on the twig, its
+/// axis along the twig, so the sprig's painted stem lines up with it, and its face toward the
+/// twig's upper side, world up made square to the twig, so it is turned as near up as the twig
+/// allows. The texture's bottom is the base.
+fn card(geometry: &mut Geometry, frame: &Frame, size: f32) {
+    let first = geometry.positions.len() as u32;
+    let axis = frame.tangent;
+    let normal = upper_side(axis, frame.side);
+    // Square to both, so the corners run counter-clockwise seen from the face.
+    let half_across = axis.cross(normal) * (0.5 * size);
+    let along = axis * size;
+    for (corner, uv) in [
+        (-half_across, Vec2::new(0.0, 1.0)),
+        (half_across, Vec2::new(1.0, 1.0)),
+        (half_across + along, Vec2::new(1.0, 0.0)),
+        (-half_across + along, Vec2::new(0.0, 0.0)),
+    ] {
+        geometry.positions.push(frame.point + corner);
+        geometry.normals.push(normal);
+        geometry.uvs.push(uv);
+    }
+    geometry
+        .indices
+        .extend([first, first + 1, first + 2, first, first + 2, first + 3]);
 }
 
 /// A stem rising from the ground, as grown, before meshing.
@@ -820,6 +910,34 @@ fn inside_envelope(envelope: &Envelope, point: Vec3) -> bool {
     point.x.hypot(point.z) < envelope_radius(envelope, point.y)
 }
 
+/// How far `point` lies in from the envelope's side and top, or `None` outside it. The crown's
+/// base is not counted as surface, so a point just above it is as deep as the side makes it. The
+/// distance is to the profile in the point's meridian plane, as a line through `DEPTH_STEPS` points
+/// and across the top to the axis, which a flat top needs.
+fn depth_in_envelope(envelope: &Envelope, point: Vec3) -> Option<f32> {
+    if !inside_envelope(envelope, point) {
+        return None;
+    }
+    let (base, top) = crown_span(envelope);
+    let at = Vec2::new(point.x.hypot(point.z), point.y);
+    let profile = (0..=DEPTH_STEPS).map(|step| {
+        let t = step as f32 / DEPTH_STEPS as f32;
+        Vec2::new(
+            envelope.radius * profile_width(envelope.profile, t),
+            base + (top - base) * t,
+        )
+    });
+    let outline: Vec<Vec2> = profile.chain([Vec2::new(0.0, top)]).collect();
+    outline
+        .windows(2)
+        .map(|pair| {
+            let (a, b) = (pair[0], pair[1]);
+            let along = (at - a).dot(b - a) / (b - a).length_squared().max(1e-12);
+            at.distance(a + (b - a) * along.clamp(0.0, 1.0))
+        })
+        .reduce(f32::min)
+}
+
 /// The heights of the crown base and the top.
 fn crown_span(envelope: &Envelope) -> (f32, f32) {
     let top = envelope.height.max(0.01);
@@ -1204,7 +1322,7 @@ mod tests {
                 limb_levels,
                 ..Species::default()
             };
-            plant(&species).0.triangles()
+            plant(&species).bark.triangles()
         };
         assert!((100..1_000).contains(&triangles(1)), "{}", triangles(1));
         assert!(triangles(3) < 3_000, "{}", triangles(3));
@@ -1288,7 +1406,7 @@ mod tests {
                 limb_levels: 2,
                 ..Species::default()
             };
-            plant(&species).0.positions
+            plant(&species).bark.positions
         };
         assert_eq!(positions(1), positions(1));
         assert_ne!(positions(1), positions(2));
@@ -1533,13 +1651,15 @@ mod tests {
             limb_levels: 3,
             ..regular()
         };
-        let (all, limbs) = plant(&species);
+        let all = plant(&species);
         species.bark.min_radius = 1.0;
-        let (bare, still) = plant(&species);
-        assert_eq!(still, limbs);
+        let bare = plant(&species);
+        assert_eq!(bare.level_limbs, all.level_limbs);
         // The trunk alone: at the default lean, one segment of 6 quads and a 6-triangle cap.
-        assert_eq!(bare.triangles(), 6 * 2 + 6);
-        assert!(all.triangles() > bare.triangles());
+        assert_eq!(bare.bark.triangles(), 6 * 2 + 6);
+        assert!(all.bark.triangles() > bare.bark.triangles());
+        // Unmeshed twigs still bear the leaves.
+        assert_eq!(bare.leaves.positions, all.leaves.positions);
     }
 
     #[test]
@@ -1585,17 +1705,117 @@ mod tests {
                 limb_levels: 3,
                 ..Species::default()
             };
-            let (geometry, _) = plant(&species);
-            for triangle in geometry.indices.chunks(3) {
-                let [a, b, c] = [0, 1, 2].map(|i| triangle[i] as usize);
-                let p = &geometry.positions;
-                let facing = (p[b] - p[a]).cross(p[c] - p[a]);
-                let n = &geometry.normals;
-                assert!(
-                    facing.dot(n[a] + n[b] + n[c]) > 0.0,
-                    "lean {lean}: {triangle:?}"
-                );
+            let grown = plant(&species);
+            assert!(grown.leaves.triangles() > 0);
+            for geometry in [&grown.bark, &grown.leaves] {
+                for triangle in geometry.indices.chunks(3) {
+                    let [a, b, c] = [0, 1, 2].map(|i| triangle[i] as usize);
+                    let p = &geometry.positions;
+                    let facing = (p[b] - p[a]).cross(p[c] - p[a]);
+                    let n = &geometry.normals;
+                    assert!(
+                        facing.dot(n[a] + n[b] + n[c]) > 0.0,
+                        "lean {lean}: {triangle:?}"
+                    );
+                }
             }
+        }
+    }
+
+    #[test]
+    fn depth_is_measured_from_the_side_and_top() {
+        // A column 2.5 m wide from 1.2 m to 6 m.
+        let envelope = Envelope {
+            profile: Profile::Column,
+            height: 6.0,
+            crown_base: 0.2,
+            ..Envelope::default()
+        };
+        let depth = |x: f32, y: f32| depth_in_envelope(&envelope, Vec3::new(x, y, 0.0));
+        assert!((depth(2.0, 3.0).unwrap() - 0.5).abs() < 1e-4);
+        assert!((depth(0.0, 5.5).unwrap() - 0.5).abs() < 1e-4);
+        // Just above the base, as deep as the side makes it.
+        assert!((depth(0.0, 1.3).unwrap() - 2.5).abs() < 1e-4);
+        assert_eq!(depth(3.0, 3.0), None);
+        assert_eq!(depth(0.0, 1.0), None);
+    }
+
+    /// Where the default plant's cards meet their twigs, with `limb_levels` levels and the foliage
+    /// as given: the middle of each card's base.
+    fn card_bases(limb_levels: i32, foliage: Foliage) -> Vec<Vec3> {
+        let species = Species {
+            limb_levels,
+            foliage,
+            ..Species::default()
+        };
+        plant(&species)
+            .leaves
+            .positions
+            .chunks(4)
+            .map(|corners| (corners[0] + corners[1]) * 0.5)
+            .collect()
+    }
+
+    #[test]
+    fn clusters_grow_in_the_shell() {
+        let foliage = Foliage::default();
+        let envelope = Envelope::default();
+        let bases = card_bases(1, foliage.clone());
+        // Around 60 for the default one-level tree, not hundreds.
+        assert!((20..150).contains(&bases.len()), "{}", bases.len());
+        for base in &bases {
+            let depth = depth_in_envelope(&envelope, *base).expect("inside the envelope");
+            assert!(depth < foliage.shell * envelope.radius + 1e-3, "{depth}");
+        }
+    }
+
+    #[test]
+    fn clusters_follow_the_density() {
+        let with = |density: f32| {
+            card_bases(2, Foliage {
+                density,
+                ..Foliage::default()
+            })
+            .len()
+        };
+        assert_eq!(with(0.0), 0);
+        let (some, more) = (with(5.0), with(20.0));
+        assert!(some > 0 && more > 3 * some, "{some} {more}");
+    }
+
+    #[test]
+    fn cards_lie_along_their_twigs_facing_up() {
+        let foliage = Foliage::default();
+        let side = foliage.size * Envelope::default().radius;
+        let species = Species {
+            foliage,
+            limb_levels: 2,
+            ..regular()
+        };
+        let limbs = limbs(&species);
+        let twigs: Vec<&Limb> = limbs.iter().filter(|limb| limb.level == 1).collect();
+        let leaves = plant(&species).leaves;
+        assert!(!leaves.positions.is_empty());
+        assert_eq!(leaves.uvs.len(), leaves.positions.len());
+        for (corners, normals) in leaves.positions.chunks(4).zip(leaves.normals.chunks(4)) {
+            let base = (corners[0] + corners[1]) * 0.5;
+            let axis = (corners[3] - corners[0]) / side;
+            let across = (corners[1] - corners[0]) / side;
+            let normal = normals[0];
+            assert!((across.length() - 1.0).abs() < 1e-4 && (axis.length() - 1.0).abs() < 1e-4);
+            // Level across, facing as near up as the axis allows.
+            assert!(across.y.abs() < 1e-4, "{across}");
+            assert!(normal.dot(axis).abs() < 1e-4 && normal.y >= 0.0, "{normal}");
+            assert!((normal - Vec3::Y.reject_from(axis).normalize()).length() < 1e-3);
+            // The base on a twig, which the axis follows: straight twigs, so their direction.
+            let twig = twigs
+                .iter()
+                .find(|twig| {
+                    let from = base - twig.origin();
+                    from.cross(twig.direction()).length() < 1e-3
+                })
+                .expect("a twig under the card");
+            assert!(axis.angle_between(twig.direction()) < 1e-3);
         }
     }
 }

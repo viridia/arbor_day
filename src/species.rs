@@ -34,6 +34,8 @@ pub struct Species {
     pub limbs: [LimbLevel; MAX_LIMB_LEVELS],
     #[reflect(@Caption("Bark"))]
     pub bark: Bark,
+    #[reflect(@Caption("Foliage"))]
+    pub foliage: Foliage,
 }
 
 impl Species {
@@ -81,6 +83,7 @@ impl Default for Species {
                 },
             ],
             bark: Bark::default(),
+            foliage: Foliage::default(),
         }
     }
 }
@@ -344,6 +347,41 @@ impl Default for Bark {
             color: Color::srgb(0.42, 0.33, 0.25),
             pipe_exponent: 2.0,
             min_radius: 0.01,
+        }
+    }
+}
+
+/// Leaf clusters on the last grown level's limbs, where they lie near the envelope, so the leaves
+/// follow the twigs and fill the crown's surface. Each cluster is a card facing up.
+#[derive(Reflect, Clone, PartialEq)]
+pub struct Foliage {
+    /// Clusters per crown radius of twig within the shell; 0 for a bare plant. Rounded at random
+    /// for each twig.
+    #[reflect(@ValueRange::<f32>(0.0..=40.0), @Precision(1), @Caption("Clusters per crown radius"))]
+    pub density: f32,
+    /// How far in from the envelope clusters grow, as a fraction of the crown's radius. The
+    /// crown's base is not part of its surface.
+    #[reflect(
+        @ValueRange::<f32>(0.05..=1.0),
+        @Precision(2),
+        @NumberInputUnits::new_static("ratio_percent"),
+    )]
+    pub shell: f32,
+    /// Each card's width, as a fraction of the crown's radius.
+    #[reflect(
+        @ValueRange::<f32>(0.02..=1.0),
+        @Precision(2),
+        @NumberInputUnits::new_static("ratio_percent"),
+    )]
+    pub size: f32,
+}
+
+impl Default for Foliage {
+    fn default() -> Self {
+        Self {
+            density: 10.0,
+            shell: 0.3,
+            size: 0.25,
         }
     }
 }

@@ -42,7 +42,8 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `b3a1947` | C44 Spans inside the crown (D24); stems keep their length when they lean, and never turn past level; each limb level's header shows its count. |
 | `e64daa1` | C46 Node bias (D25) in place of the span, and nodes moved from their even places by a constant jitter; `plans/bias.py`. |
 | `705dc9a` | C51 Children placed by competition and facing, with a skew per limb (D26), in place of the divergence; `plans/facing.py`. |
-| (pending) | C50 Wander as kinks about the course, for limbs and now the trunk (D17); lighter second and third levels by default; `plans/wander.py`. |
+| `9123c76` | C50 Wander as kinks about the course, for limbs and now the trunk (D17); lighter second and third levels by default; `plans/wander.py`. |
+| (pending) | C37 Foliage placement (D27): sprig cards along the last level's twigs in the crown's shell, seedling's leaf texture as a placeholder (`assets/leaf-placeholder.png`); `plans/foliage.py`. |
 
 ## Next
 
@@ -59,16 +60,34 @@ per-type hook, and is retained-mode.
 
 ### Milestone: the first species exported to Panoply
 
-1. **C37 Foliage placement** (`docs/growth-model.md`, Foliage): clusters seeded along the parts
-   of the limbs within a shell depth of the envelope, at a spacing set by the author, each a
-   plain quad for now, in a leaf mesh of its own with an alpha-masked material. Bare trees set
-   no foliage. Facing up for now; C39 brings the facing distribution. Twigs and leaves are
-   judged against each other (twigs need leaves to show they are in the right place, leaves
-   need twigs to sit on), so one side is a placeholder while the other is tuned: the leaves,
-   since the twigs exist. The cards carry a texture taken from a seedling `.glb` (they embed
-   theirs; growth model, Seedling's flora) as a placeholder in `assets/`, until C38 paints
-   them. E[3]
-2. **C45 Contact sheets**, so designs are explored in sweeps rather than one screenshot at a
+1. **C61 Trunk as the source of truth**, since raising the crown moves the trunk with it today.
+   The trunk's `height` in metres, the stem's length along its axis, scales the plant. The crown's
+   top is a multiple of it (100% to 200%: near 100% for an excurrent tree, more for a decurrent
+   one whose leader stops short), and its base a share of it, so raising the top leaves the base
+   alone. The crown's radius stays in metres. Revises D23 (the envelope as the plant's one size)
+   and D24. Ahead of C45, so the sheets sweep settled fields. E[3]
+2. **C63 Branch ends**: where a stem or limb ends and what grows there. Three changes, judged
+   together:
+   - **Start in place of bias.** A share of the parent's part inside the crown, below which no
+     nodes grow; nodes spread evenly from there to the tip, with the constant jitter. Bias
+     (D25) could not push every limb near the top: 4^−bias keeps both ends, so at 100% the
+     lowest node still sits halfway. A predictable range over a guessed curve, until a model is
+     worth exposing (X18, X22). No end: the next rule gives the tip its length.
+   - **A branch carries on as its next level.** A stem or limb with children ends at its last
+     node, and one limb of the next level carries on from there along it: at angle 0, no
+     skew, grown like the level's other limbs (bend, wander, reach to the envelope, children),
+     its radius what the pipe model leaves (D22). So the trunk turns into a branch rather than
+     ending in a post, as in decurrent trees and in an excurrent leader's last shoot, and a
+     limb's tip is a shoot like any other, as in sympodial growth; the pitchfork's middle tine
+     is a carrying-on limb. A fork of one, which C30 generalizes. Adds a limb for each limb with
+     children (about 10 on the default trunk, 64 on the default first level).
+   - **Leaves on every branch end.** Clusters grow on each limb's stretch past its last child,
+     the whole limb on the last level, in the shell as now (D27 revised from the last level
+     only). Stems bear none. Seedling's per-level leaf flag waits until a preset needs to turn
+     this off.
+
+   Ahead of C45, as C61 is. E[3]
+3. **C45 Contact sheets**, so designs are explored in sweeps rather than one screenshot at a
    time, by the author or by an agent. A second binary (`src/bin/sheet.rs`; the modules move
    behind a `src/lib.rs` so both binaries share them) reads a species file and a sweep (seeds,
    or one field's values by reflection path), grows each plant with the generator, lays them out
@@ -77,19 +96,27 @@ per-type hook, and is retained-mode.
    serialization this needs, pulled forward. Costs: an image is about width × height ÷ 750
    tokens, so a 3 × 3 sheet near 900 px square is about 1,000, nine designs for the price of
    one screenshot. Uses: interactive selection (a sheet of variants, the author picks, the next
-   sheet varies the pick), presets (X18), and tuning twigs against C37's placeholder leaves.
+   sheet varies the pick), presets (X18), tuning twigs against C37's placeholder leaves, and
+   comparing card models (X24).
    Unattended exploration runs in a subagent, keeping the images out of the main conversation:
    sweeping parameters needs only writing sweep files and running the one command, so a narrow
    allowlist covers it; trying generator changes (a form, say) runs in a git worktree that is
    thrown away afterwards, the findings written up and built properly. E[3]
-3. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's `genLeafTexture.ts` ported,
-   its leaf shape and color parameters as species fields with streams of their own
-   (requirements, Parameters, determinism, variants). The texture goes on C37's cards, replacing the placeholder. A golden
+4. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's `genLeafTexture.ts` ported,
+   its leaf shape and color parameters, and the sprig's arrangement (`leafGroup`'s fan and
+   pairs; growth model, Consequences), as species fields with streams of their own
+   (requirements, Parameters, determinism, variants). The texture goes on C37's cards, replacing
+   the placeholder, with mipmaps, since the placeholder's 128 px shimmers at game scale. A golden
    test on its pixels compares with a tolerance, since SIMD can move a channel by a level. E[3]
-4. **C39 Card shapes and facing**: crossed, cupped and creased cards chosen by weight; a card's
-   normal drawn around a blend of world up and the envelope's outward normal, with a spread, its
-   rotation about the normal free; crown softness for the shading normal (X13). E[3]
-5. **C30 Forks**, Weber and Penn's splits: at a point along a limb it ends, and copies of it
+5. **C39 Card shapes and facing**: crossed, cupped and creased cards chosen by weight (seedling's
+   `lateralDroop` folds a card about its midrib, `axialDroop` bends its far half down); the face
+   target (D27) widened from world up to a blend of up and the envelope's outward normal, with a
+   spread; crown softness for the shading normal (X13), built as a weight and judged in the
+   preview before it becomes an option or is fixed either way. Measure how far cards are from
+   edge-on to the game's camera (45° down), to judge facing and folding by numbers as well as by
+   eye. Card counts multiply with levels (the default with three: 525 cards, 1,050 triangles),
+   so look at density against the budget too. E[3]
+6. **C30 Forks**, Weber and Penn's splits: at a point along a limb it ends, and copies of it
    carry on, turned apart by the fork angle. The copies are the same level as the limb, not its
    children, so they reach the envelope and bear children as it would; turning both by half the
    angle reads as the symmetric Y of a child deflecting its parent. Per level: forks per limb (0
@@ -100,7 +127,7 @@ per-type hook, and is retained-mode.
    model, Stems and leader). A stem's fork may lie below the crown base: the leader sets the
    axis's length, the fork where it splits. After foliage, since a crown's
    look cannot be judged without leaves. E[3]
-6. **C10 Species data model**, its groups the layers of the growth model (D11;
+7. **C10 Species data model**, its groups the layers of the growth model (D11;
    `docs/growth-model.md`, Consequences), correcting seedling where the requirements say.
    Reflectable types with `Default` for initial values and attributes for the editor, after the
    fields settle, so saved files are not broken by every change. Serialized
@@ -119,15 +146,15 @@ per-type hook, and is retained-mode.
    levels with hidden ones stashed in the editor, the same in files but a larger change that
    undoes D15. Seedling's groups for reference: `trunk`; `branch[]`, one per level; the leaf as
    `leafGroup` (arrangement), `leafShape` and `leafColor`. E[4], split when started
-7. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
+8. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
    panel; the file browser is X2. The seed row moves in with them, in a feathers `group`
    (`containers/group.rs`, no header), so it lines up with the subpanes' rows rather than
    standing at the panel's edge. E[3]
-8. **C8 Working document in settings.** A settings group holding the working species and, once
+9. **C8 Working document in settings.** A settings group holding the working species and, once
    set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
    as seedling did. The document's name comes from the file name. Serialized by reflection, as
    `bevy_settings` does. E[3]
-9. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
+10. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
    as a JSON extra (C10), in the form Panoply loads (requirements, Output; "What Panoply does with the output"). Bevy writes no glTF,
    so this adds a dependency or a writer of our own; propose it before code. The command-line
    export is X1. Research so far (2026-10-12), the author also asking skein's author:
@@ -151,6 +178,36 @@ per-type hook, and is retained-mode.
 
 ### Quick wins
 
+- **C60 Sprig pitch and roll**, two foliage fields. Pitch: the share of the angle between the
+  twig and level that a sprig's axis turns, keeping its heading, from 0% (along the twig, as
+  now) to 100% (level), as a leaf turns to the light; droop below level is the fold's (C39). A
+  steep twig's sprig is then no longer seen edge-on from the game's camera. Roll spread: each
+  card turns about its axis at random by up to this angle, drawn from the twig's foliage stream,
+  so a plant reads from the side too, for games with a lower camera than Panoply's. E[2]
+- **C62 Stems end on their course**: the trunk's kinks (D17) displace its tip like a random
+  walk, since each stretch shifts the rest of the stem sideways, so a stem drifts even at no
+  lean, and the lean cannot cancel it. Trace a stem as now, then shear it back by the tip's
+  miss in proportion to the distance along it, turning each ring's tangent to match: the zigzag
+  stays and the tip lands where splay and lean put it, so the lean is the only tilt. Stems only;
+  limbs keep their drift. E[2]
+- **C59 Header counts in parentheses**: "Limbs 1 (8)", not "Limbs 1 · 8", which reads as items 1
+  to 8 (`properties.rs`, the header's format and `HeaderNotes`' doc comment). E[1]
+- **C55 Angle by place**, seedling's `angleBias` (`MeshGenerator.ts:593`), for crowns bald on
+  top: twigs radiate outward, their leaves with them (D27), and the top shell stays empty. A
+  field per level, "Angle at tip", −90° to 90°: the change in angle from a node at the base of
+  the parent's part inside the crown to one at its tip, scaled by the node's place, added to each
+  limb's drawn angle before it is clamped, so upper limbs leave steeper. The angle's caption
+  becomes "Angle at base". Every level, not only the trunk's as in seedling, so sprays narrow
+  toward a limb's tip. A new field under D25, since nothing yet varies with place along the
+  parent. Default 0, so species are unchanged; the first level's default chosen by eye or by the
+  share of the envelope's top (outward normal within 45° of up) under cards. E[2]
+- **C53 Fewer plans**, since each one launches the app: twelve become four. `smoke.py` takes
+  `growth.py`'s seed checks; `widgets.py` joins `fuzzy.py`, `envelope.py` and `bark.py`;
+  `levels.py` takes `foliage.py`'s checks; `shapes.py` joins the screenshot galleries (`bias.py`,
+  `wander.py`, `facing.py`, `stems.py`, `limbs.py`, the foliage shots), whose checks the
+  generator's unit tests already make, until C45's sheets replace it. `levels.py` failed once
+  in two runs at its foliage density edit (the edit did not apply) and passed with a screenshot
+  before Enter; watch for it in the merged plan. E[2]
 - **C42 Computed values are rounded where written**, from the first writer (Reset, Randomize,
   values derived from the generator): the number input never rounds what it shows, so round to
   the field's `Precision` in the units shown, as feathers' color input does
@@ -195,29 +252,37 @@ per-type hook, and is retained-mode.
   children attach along the kept rings, as now. One rule for curvature and kinks, so the kink
   ring's threshold goes. The tolerance is a constant, tuned against the triangle budget and
   screenshots; tied to Panoply's camera instead, the generator would depend on the game. E[2]
-- **C25 A HUD over the view**, to free the panel: every control that changes the preview rather
-  than the species moves onto the view. Buttons the size and shape of feathers' but translucent:
-  Frame, zoom, orbit and tilt, and toggles for the envelope and the ground. Icons from Material
-  Symbols, chosen by the author, are in `assets/icons/` (48px white PNGs, under their Material
-  names): `center_focus_strong` for Frame (corner brackets: fit the subject to the view),
-  `zoom_in` and `zoom_out`, `360` for orbit (`ImageNode::flip_x` for the other way, and turned
-  90° for tilt), `language` for the envelope, `landscape` for the ground. Zoom, orbit and tilt
-  move smoothly for as long as the button is held, and a click moves a fixed step, which lets
-  plans drive the camera (the driver cannot drag, and its click is a press and an immediate
-  release). The triangle count in the opposite corner, lower left. Feathers resolves colors per
-  surface (`SurfaceLevel`, set on a container by `ThemeContext`), so a HUD is one more surface:
-  a `SurfaceLevel::Hud` with translucent fills would make plain feathers buttons in it
-  translucent. Recommended: propose that upstream (any editor viewport has such overlays:
-  Blender, Godot, Unity, Bevy's editor, Panoply's X3), and meanwhile register HUD tokens of our
-  own in `UiTheme` with a thin button reading them, replaced by feathers buttons once the
-  surface lands. Propose the layout before code. E[4], split first
-- **C27 Remove `Placeholder`** (`src/main.rs`) once every widget kind it stands in for has a
-  real customer. Numbers, spinboxes, wrapped angles, selects and subpanes have theirs in the
-  species, and `Fuzzy` has its in the limb levels. Left: `plans/fuzzy.py` reads `Placeholder`
-  (the driver reads components, not the species resource, D12), so it needs another way to
-  read a fuzzy field's state; and the checkbox, whose only use is `show_ground`, which C25
-  moves to the HUD; a species bool, or a test of the checkbox row of its own, keeps it
-  covered. *After* C25. E[2]
+- **C56 A HUD over the view** (C25 split, its first part), to free the panel: controls that
+  change the preview rather than the species move onto the view. The triangle count in the lower
+  left; toggles for the envelope and the ground in the upper right. The ground toggle stays: a
+  trunk sunk below the ground (C58) shows only with the ground hidden; or the toggle switches
+  between the ground and an infinite grid. Buttons the size and shape of feathers' but
+  translucent. Feathers' `SurfaceLevel` and `ButtonVariant` are exhaustive enums, so neither can
+  gain a HUD case here; we need one widget, a tool button, so fork feathers' button as one
+  reading HUD tokens of our own registered in `UiTheme`. The author's widget library (BYOA,
+  stalled) would make this moot. Icons from Material Symbols, chosen by the author, are in
+  `assets/icons/` (48px white PNGs, under their Material names): `language` for the envelope,
+  `landscape` for the ground. E[3]
+- **C57 Camera buttons on the HUD** (C25 split, its second part): Frame, zoom, orbit and tilt,
+  with the tool button from C56. Proposed layout, after Google Maps, the author to confirm: an L
+  in the lower right, orbit along the bottom (spinning is horizontal), zoom and tilt up the right
+  side (vertical), Frame in the corner where they meet. Icons: `center_focus_strong` for Frame
+  (corner brackets: fit the subject to the view), `zoom_in` and `zoom_out`, `360` for orbit
+  (`ImageNode::flip_x` for the other way, and turned 90° for tilt). Zoom, orbit and tilt move
+  smoothly for as long as a button is held, and a click moves a fixed step, which lets plans
+  drive the camera (the driver cannot drag, and its click is a press and an immediate release).
+  *After* C56. E[3]
+- **C58 Trunk below ground**, so a tree placed on a slope still meets the ground on its low side:
+  the stems start below the origin by their base radius times the tangent of the steepest slope
+  a tree stands on, a constant rather than a species field. At 45° the depth is the base radius.
+  *Gate:* trees on slopes in Panoply showing a gap.
+- **C27 Remove `Placeholder`** (`src/main.rs`). Every widget kind it stands in for has a real
+  customer in the species, but for the checkbox (`show_ground`, which C56 moves to the HUD) and
+  `Wrap`, which nothing in the species uses: delete `Wrap`, and keep the checkbox row unused
+  until a species field needs one. Plans read `Placeholder` because the driver reads components,
+  not the species resource (D12), so the plant entity carries a copy of the `Species` as a
+  component, inserted on each rebuild, and plans check species fields in its place
+  (`limbs[0].angle.shape`). *After* C56. E[2]
 - **C7 Undo and redo** (requirements, Authoring app). Take the `bevy_undo_redo` crate from the
   author's Bevy PR #23373 (never merged; branch `bevy_undo` in `../bevy`) as `src/undo.rs`, its
   API unchanged and its origin noted: an `UndoAction` trait (`apply` returns the inverse;
@@ -232,6 +297,9 @@ per-type hook, and is retained-mode.
   - Keys: Cmd+Z and Cmd+Shift+Z (Ctrl+Z and Ctrl+Y elsewhere), in `src/keys.rs` (D8).
 
   E[4]
+- **C54 Radiating foliage** (was X20, its gate C37 passed): cards radiating from a stem's tip or
+  the ground, for palms, rosettes and tufts (agave, grass, fern), with no limbs (growth model,
+  How the shapes are covered). E[3]
 
 ## Decisions
 
@@ -319,8 +387,9 @@ per-type hook, and is retained-mode.
 
 - **D11** The growth model is parametric per level, with a crown envelope that sets limb reach
   and foliage placement, limbs bending toward directions measured against world up, and cards
-  oriented apart from the branch tangent. A limb leaves its parent at an angle from the parent
-  (revised in C19 from an angle from world up). The design and the survey behind it are in
+  lying along their twigs (D27). A limb leaves its parent at an angle from the parent
+  (revised in C19 from an angle from world up; cards revised in C37 from oriented apart from the
+  branch tangent). The design and the survey behind it are in
   `docs/growth-model.md`.
 
 - **D12** The species is one resource, and any change to it rebuilds the whole plant: most
@@ -488,6 +557,16 @@ per-type hook, and is retained-mode.
   light, which near the crown's edge turns children inward; and full space colonization
   (X12), with limbs on different parents competing, which stays deferred.
 
+- **D27** A card is a sprig of leaves on a painted stem, lined up with a real twig, after
+  seedling (`docs/growth-model.md`, Foliage): its base on the twig, its axis along it, its face
+  as near world up as the axis allows. Seen edge-on, a card then loses leaves but never a twig.
+  Clusters grow on the last grown level only, where twigs are, at a density per crown radius of
+  twig within the shell; shell and card size are shares of the crown radius, so a scaled species
+  keeps its form (D21). A cluster's place and count come from a stream of the twig's own
+  (`FOLIAGE_STREAM`). Rejected: a free turn about the normal, which read as scattered leaves;
+  every level bearing clusters, which put leaves on boughs and stacked counts. Seedling put one
+  card at each leaf-bearing tip, scaled by the branch; spacing along the shell is ours.
+
 ## Deferred
 
 - **X1** The generator as its own library crate, beside the app: no Bevy dependency beyond
@@ -592,8 +671,6 @@ per-type hook, and is retained-mode.
 - **X19** Pendulous levels, for willows: a level whose limbs may hang below the envelope, the
   envelope guiding rather than clipping them (growth model, How the shapes are covered).
   *Gate:* a weeping preset (X18).
-- **X20** Foliage radiating from a stem's tip or the ground, for palms, rosettes and tufts
-  (agave, grass, fern), with no limbs. *Gate:* C37 (foliage placement).
 - **X21** Find out why `bevy_immediate`'s `.text()` on the subpane headers, called every frame
   with an unchanged string, stopped clicks on the bark's color swatch from opening its picker
   (`plans/bark.py` failed three runs in three), and report it to the fork. The headers use
@@ -619,6 +696,11 @@ per-type hook, and is retained-mode.
   sympodial growth zigzags (oak, hawthorn). Nodes are laid out after a limb is traced, so this
   means laying them out first. *Gate:* C50's kinks, spaced by the internode but not placed at
   the nodes, read as too random.
+
+- **X24** Cards that include their stem and stand in for the finest twigs, those under the
+  meshed radius (D22), one card per unmeshed twig along it, rather than leaves lined up with
+  meshed twigs (D27). Seen edge-on the twig vanishes, so it needs crossed cards (twice the
+  triangles) or facing kept away from edge-on. *Gate:* C45, to compare the two at game scale.
 
 ## Notes
 
