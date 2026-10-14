@@ -228,8 +228,9 @@ impl NumberField for i64 {
     }
 }
 
-/// Text shown after an item's caption in its subpane header ("Limbs 1 · 8"), keyed by the item's
-/// name (`limbs[0]`): figures about the item that the panel's owner knows and the item does not.
+/// Text shown in parentheses after an item's caption in its subpane header ("Limbs 1 (8)"), keyed
+/// by the item's name (`limbs[0]`): figures about the item that the panel's owner knows and the
+/// item does not.
 pub type HeaderNotes = HashMap<String, String>;
 
 /// Adds a row for each field of `value`, which must be a struct, editing the fields in place.
@@ -348,7 +349,7 @@ fn shown_items(
         };
         let item_name = format!("{name}[{index}]");
         let header = match notes.get(&item_name) {
-            Some(note) => format!("{caption} {} · {note}", index + 1),
+            Some(note) => format!("{caption} {} ({note})", index + 1),
             None => format!("{caption} {}", index + 1),
         };
         let pane = ui

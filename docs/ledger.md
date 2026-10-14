@@ -44,7 +44,8 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `705dc9a` | C51 Children placed by competition and facing, with a skew per limb (D26), in place of the divergence; `plans/facing.py`. |
 | `9123c76` | C50 Wander as kinks about the course, for limbs and now the trunk (D17); lighter second and third levels by default; `plans/wander.py`. |
 | `0e52df1` | C37 Foliage placement (D27): sprig cards along the last level's twigs in the crown's shell, seedling's leaf texture as a placeholder (`assets/leaf-placeholder.png`); `plans/foliage.py`. |
-| (pending) | C61 Trunk as the source of truth (D23): the trunk's height in metres, and a "Crown" group (top and base measured against it) in place of the envelope's height and the leader. |
+| `528af7d` | C61 Trunk as the source of truth (D23): the trunk's height in metres, and a "Crown" group (top and base measured against it) in place of the envelope's height and the leader. |
+| (pending) | C53 Four plans in place of twelve: `smoke.py` (with the seed), `widgets.py` (fuzzy rows, selects, color), `levels.py` (with foliage), and `shapes.py`, a gallery of screenshots with no checks. C59 Header counts in parentheses ("Limbs 1 (8)"). |
 
 ## Next
 
@@ -92,7 +93,7 @@ per-type hook, and is retained-mode.
    tokens, so a 3 × 3 sheet near 900 px square is about 1,000, nine designs for the price of
    one screenshot. Uses: interactive selection (a sheet of variants, the author picks, the next
    sheet varies the pick), presets (X18), tuning twigs against C37's placeholder leaves, and
-   comparing card models (X24).
+   comparing card models (X24). The sheets replace `plans/shapes.py`'s gallery.
    Unattended exploration runs in a subagent, keeping the images out of the main conversation:
    sweeping parameters needs only writing sweep files and running the one command, so a narrow
    allowlist covers it; trying generator changes (a form, say) runs in a git worktree that is
@@ -185,8 +186,6 @@ per-type hook, and is retained-mode.
   miss in proportion to the distance along it, turning each ring's tangent to match: the zigzag
   stays and the tip lands where splay and lean put it, so the lean is the only tilt. Stems only;
   limbs keep their drift. E[2]
-- **C59 Header counts in parentheses**: "Limbs 1 (8)", not "Limbs 1 · 8", which reads as items 1
-  to 8 (`properties.rs`, the header's format and `HeaderNotes`' doc comment). E[1]
 - **C55 Angle by place**, seedling's `angleBias` (`MeshGenerator.ts:593`), for crowns bald on
   top: twigs radiate outward, their leaves with them (D27), and the top shell stays empty. A
   field per level, "Angle at tip", −90° to 90°: the change in angle from a node at the base of
@@ -196,13 +195,6 @@ per-type hook, and is retained-mode.
   toward a limb's tip. A new field under D25, since nothing yet varies with place along the
   parent. Default 0, so species are unchanged; the first level's default chosen by eye or by the
   share of the envelope's top (outward normal within 45° of up) under cards. E[2]
-- **C53 Fewer plans**, since each one launches the app: twelve become four. `smoke.py` takes
-  `growth.py`'s seed checks; `widgets.py` joins `fuzzy.py`, `envelope.py` and `bark.py`;
-  `levels.py` takes `foliage.py`'s checks; `shapes.py` joins the screenshot galleries (`bias.py`,
-  `wander.py`, `facing.py`, `stems.py`, `limbs.py`, the foliage shots), whose checks the
-  generator's unit tests already make, until C45's sheets replace it. `levels.py` failed once
-  in two runs at its foliage density edit (the edit did not apply) and passed with a screenshot
-  before Enter; watch for it in the merged plan. E[2]
 - **C42 Computed values are rounded where written**, from the first writer (Reset, Randomize,
   values derived from the generator): the number input never rounds what it shows, so round to
   the field's `Precision` in the units shown, as feathers' color input does
@@ -704,6 +696,8 @@ per-type hook, and is retained-mode.
 
 - Bevy source at the locked commit is in Cargo's git checkout,
   `~/.cargo/git/checkouts/bevy-*/c9c21c2`; the local `../bevy` is at a newer commit.
+- `plans/levels.py` once failed at its foliage density edit (the edit did not apply) and passed
+  with a screenshot before Enter; if it fails there again, look at that edit first.
 - The driver cannot drag or scroll, so the turntable's gestures (spin, tilt, zoom, the axis
   choice) are checked by hand, on a trackpad.
 - The first `Cargo.lock` was seeded from `bevy_remote_driver`'s, so Bevy resolved to the

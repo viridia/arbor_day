@@ -1,5 +1,6 @@
 """Limb levels: + shows the next level, growing on the limbs of the one before, and − hides the
-last. A hidden level keeps its parameters, so showing it again brings it back as it was."""
+last. A hidden level keeps its parameters, so showing it again brings it back as it was. Leaf cards
+grow in the crown's shell, and no foliage density leaves the tree bare."""
 
 from driver import Between
 
@@ -11,7 +12,9 @@ def run(driver):
     driver.present("Shell", ready=True)  # wait for the UI scene to finish spawning
     driver.present("Shell/Panel/limbs[0]/add")  # the immediate-mode panel has built its rows
     first = Between(9, 10)
-    driver.expect("Plant", STATS, {"limbs": first, "level_limbs": [first]})
+    driver.expect(
+        "Plant", STATS, {"limbs": first, "level_limbs": [first], "cards": Between(20, 150)}
+    )
     driver.click("Shell/Panel/limbs[0]/add")
     # Nodes of two on each of the first level's nine or ten, about three and a half per metre of
     # limbs 1 to 3 m long. Each level's count shows in its header.

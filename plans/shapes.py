@@ -1,0 +1,77 @@
+"""A gallery of shapes, for the person reading the run: compare the screenshots. The generator's
+unit tests check the counts, so this plan waits a few frames after each edit rather than checking
+the plant. A section that edits the first level puts it back, so later shots compare with the
+default.
+- node bias: the first level's nodes crowd toward the trunk's tip, then its base;
+- limbs per node and density: whorls, and a mix of one and two limbs to a node;
+- wander: the first level's limbs zigzag about their course at the most wander, 45°, and the
+  second level's twigs kink finer;
+- facing: the second level's limbs to the sides (the default), up, down and around, then skewed;
+- stems: three stems splayed from up, then a crown twice the trunk's height, which leaves the
+  stems in its narrow foot, bearing fewer limbs."""
+
+BIN = "arbor_day"
+
+
+def set_number(driver, path, text):
+    """Replaces a number input's text and lets the plant rebuild. A click places the cursor rather
+    than selecting, so clear what is there first."""
+    driver.click(f"Shell/Panel/{path}/input")
+    driver.key("End")
+    for _ in range(6):
+        driver.key("Backspace")
+    driver.type(text)
+    driver.key("Enter")
+    driver.frames(2)
+
+
+def pick_facing(driver, variant):
+    """Opens the second level's facing select, picks a variant, and lets the plant rebuild."""
+    driver.click("Shell/Panel/limbs[1]/facing/select")
+    driver.click(f"Shell/Panel/limbs[1]/facing/{variant}")
+    driver.frames(2)
+
+
+def run(driver):
+    driver.present("Shell", ready=True)  # wait for the UI scene to finish spawning
+    driver.present("Shell/Panel/limbs[0]/add")  # the immediate-mode panel has built its rows
+    driver.frames(2)
+    driver.screenshot("default")
+
+    set_number(driver, "limbs[0]/bias", "100")
+    driver.screenshot("bias_toward_tip")
+    set_number(driver, "limbs[0]/bias", "-100")
+    driver.screenshot("bias_toward_base")
+    set_number(driver, "limbs[0]/bias", "0")
+
+    set_number(driver, "limbs[0]/per_node", "3")
+    driver.screenshot("whorled")
+    set_number(driver, "limbs[0]/density", "2")
+    set_number(driver, "limbs[0]/per_node", "1.5")
+    driver.screenshot("mixed")
+    set_number(driver, "limbs[0]/density", "8")
+    set_number(driver, "limbs[0]/per_node", "1")
+
+    set_number(driver, "limbs[0]/wander", "45")
+    driver.screenshot("most_wander")
+    driver.click("Shell/Panel/limbs[0]/add")
+    driver.frames(2)
+    driver.screenshot("most_wander_twigs")
+    set_number(driver, "limbs[0]/wander", "10")
+
+    driver.screenshot("facing_sides")
+    for variant in ["Up", "Down", "Around"]:
+        pick_facing(driver, variant)
+        driver.screenshot(f"facing_{variant.lower()}")
+    # The most skew turns each limb up to 90° from where its facing put it.
+    set_number(driver, "limbs[1]/skew", "90")
+    driver.screenshot("skewed")
+    driver.click("Shell/Panel/limbs[1]/remove")
+    driver.frames(2)
+
+    set_number(driver, "trunk/stems", "3")
+    set_number(driver, "trunk/splay", "25")
+    driver.screenshot("three_stems")
+    set_number(driver, "crown/top", "200")
+    driver.screenshot("tall_crown")
+    driver.exit()

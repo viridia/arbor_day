@@ -1,6 +1,7 @@
 """The shell starts from default settings: the panel shows the trunk's parameters, the panel has
 its default width, the turntable camera frames the plant, the zoom and frame keys work, the
-property editor edits booleans and numbers within their limits, and an edit rebuilds the plant."""
+property editor edits booleans and numbers within their limits, an edit rebuilds the plant, and
+the seed reaches the plant, typed or picked by Random."""
 
 from driver import Between
 
@@ -17,7 +18,9 @@ def run(driver):
     driver.present("Shell/Panel/trunk/sides/input")  # the immediate-mode panel has built its rows
     driver.present("Shell/Panel/Scrollbar")
     # The default plant: one level of nine or ten limbs, in the low hundreds of triangles.
-    driver.expect("Plant", STATS, {"limbs": Between(9, 10), "triangles": Between(100, 1000)})
+    driver.expect(
+        "Plant", STATS, {"seed": 1, "limbs": Between(9, 10), "triangles": Between(100, 1000)}
+    )
     # The default width, whatever the developer last dragged it to: a run gets fresh settings.
     driver.expect("Shell/Panel", PANE, {"size": 320.0})
     # The view is never saved: every start frames the subject, from the front.
@@ -76,4 +79,16 @@ def run(driver):
     driver.click("Shell/Panel/Frame")
     driver.expect("SceneCamera", TURNTABLE, framed)
     driver.screenshot("taller_framed")
+    # The seed: a typed one reaches the plant, and Random picks another.
+    driver.click("Shell/Panel/seed/input")
+    driver.key("End")
+    for _ in range(8):
+        driver.key("Backspace")
+    driver.type("42")
+    driver.key("Enter")
+    driver.expect("Plant", STATS, {"seed": 42})
+    driver.screenshot("seed_42")
+    driver.click("Shell/Panel/seed/randomize")
+    driver.frames(2)
+    driver.screenshot("random_seed")
     driver.exit()
