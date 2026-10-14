@@ -1,10 +1,7 @@
 //! The plant in the view, rebuilt from the [`Species`] whenever it changes.
 
 use bevy::{
-    asset::RenderAssetUsages,
-    mesh::Indices,
-    prelude::*,
-    render::render_resource::PrimitiveTopology,
+    asset::RenderAssetUsages, mesh::Indices, prelude::*, render::render_resource::PrimitiveTopology,
 };
 
 use crate::{
@@ -132,7 +129,7 @@ fn build_envelope(
         if current.is_some() && !species.is_changed() {
             continue;
         }
-        let lines = generator::envelope_outline(&species.envelope);
+        let lines = generator::envelope_outline(&generator::Envelope::of(&species));
         let stats = EnvelopeStats {
             segments: (lines.len() / 2) as u32,
         };

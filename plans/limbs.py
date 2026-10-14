@@ -1,6 +1,6 @@
 """One level of limbs on the trunk, reaching toward the envelope: more limbs per node and fewer
-nodes rebuild the plant. The trunk inside the crown is about 1.25 crown radii, so the node count
-is about 1.25 times the density."""
+nodes rebuild the plant. The trunk inside the crown is about 1.2 crown radii, so the node count
+is about 1.2 times the density."""
 
 from driver import Between
 

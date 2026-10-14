@@ -21,10 +21,10 @@ pub struct Species {
     /// Where the plant's random numbers start: the same seed makes the same plant.
     #[reflect(@Caption("Seed"))]
     pub seed: Seed,
-    #[reflect(@Caption("Envelope"))]
-    pub envelope: Envelope,
     #[reflect(@Caption("Trunk"))]
     pub trunk: Trunk,
+    #[reflect(@Caption("Crown"))]
+    pub crown: Crown,
     /// How many of the limb levels grow, from the first. The rest keep their parameters, so a
     /// level hidden and shown again comes back as it was.
     #[reflect(@ValueRange::<i32>(1..=MAX_LIMB_LEVELS as i32))]
@@ -50,8 +50,8 @@ impl Default for Species {
     fn default() -> Self {
         Self {
             seed: Seed(1),
-            envelope: Envelope::default(),
             trunk: Trunk::default(),
+            crown: Crown::default(),
             limb_levels: 1,
             limbs: [
                 LimbLevel::default(),
@@ -88,33 +88,38 @@ impl Default for Species {
     }
 }
 
-/// The crown's outline: a surface of revolution about the vertical axis, between the crown base
-/// and the top. Limbs reach to it and foliage fills it.
+/// The crown's envelope: a surface of revolution about the vertical axis, between its base and
+/// its top, both measured against the trunk's height, so the crown moves without moving the
+/// trunk. Limbs reach to it and foliage fills it.
 #[derive(Reflect, Clone, PartialEq)]
-pub struct Envelope {
+pub struct Crown {
     pub profile: Profile,
-    /// The top of the crown above the ground, in meters.
-    #[reflect(@ValueRange::<f32>(0.5..=30.0), @Precision(1))]
-    pub height: f32,
-    /// Where the crown starts, as a fraction of its height.
+    /// The crown's top above the ground, as a multiple of the trunk's height: near 100% for a
+    /// tree whose leader runs to the top, more for one whose trunk stops short.
+    #[reflect(
+        @ValueRange::<f32>(1.0..=2.0),
+        @Precision(2),
+        @NumberInputUnits::new_static("ratio_percent"),
+    )]
+    pub top: f32,
+    /// Where the crown starts above the ground, as a share of the trunk's height.
     #[reflect(
         @ValueRange::<f32>(0.0..=0.95),
         @Precision(2),
         @NumberInputUnits::new_static("ratio_percent"),
-        @Caption("Crown base"),
     )]
-    pub crown_base: f32,
+    pub base: f32,
     /// The crown's radius where it is widest, in meters.
     #[reflect(@ValueRange::<f32>(0.1..=15.0), @Precision(1))]
     pub radius: f32,
 }
 
-impl Default for Envelope {
+impl Default for Crown {
     fn default() -> Self {
         Self {
             profile: Profile::Ellipsoid,
-            height: 6.25,
-            crown_base: 0.3,
+            top: 1.25,
+            base: 0.4,
             radius: 2.5,
         }
     }
@@ -147,13 +152,10 @@ pub struct Trunk {
         @NumberInputUnits::new_static("angle_degrees"),
     )]
     pub splay: f32,
-    /// Each stem's length along its axis, as a fraction of the envelope's height.
-    #[reflect(
-        @ValueRange::<f32>(0.1..=1.0),
-        @Precision(2),
-        @NumberInputUnits::new_static("ratio_percent"),
-    )]
-    pub leader: f32,
+    /// Each stem's length along its axis in meters, its height if upright: the plant's size, which
+    /// the crown is measured against.
+    #[reflect(@ValueRange::<f32>(0.1..=30.0), @Precision(2))]
+    pub height: f32,
     /// Radius at the base, in meters.
     #[reflect(@ValueRange::<f32>(0.02..=1.0), @Precision(2))]
     pub radius: f32,
@@ -391,7 +393,7 @@ impl Default for Trunk {
         Self {
             stems: 1,
             splay: 0.0,
-            leader: 0.8,
+            height: 5.0,
             radius: 0.2,
             taper: 0.6,
             sides: 6,

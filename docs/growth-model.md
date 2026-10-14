@@ -159,17 +159,18 @@ against world up, and cards placed and oriented independently of the branch tang
 ### Envelope
 
 A surface of revolution about the trunk axis: a profile (cone, ellipsoid, hemisphere, column,
-flame, and later a drawn curve) between a crown base and the top, scaled to a height and radius.
-The envelope is the crown's outline, and every other layer refers to it. Asymmetry is a bounded
-lean and squash of the envelope per seed.
+flame, and later a drawn curve) between a crown base and the top, both measured against the
+trunk's height, and a radius. The envelope is the crown's outline, and every other layer refers
+to it. Asymmetry is a bounded lean and squash of the envelope per seed.
 
 ### Stems and leader
 
 One or more stems rise from the origin (one for a tree, several for a shrub or crop), splayed
-from up by an authored angle. The main stem's leader runs to a fraction of the height: all the
-way for excurrent trees (pine, poplar), part way for decurrent ones, where it ends in a fork of
-a few limbs (oak, the "split" tree). That one fraction replaces seedling's monopodial and
-dichotomous modes; the fork parameters apply whenever the leader stops short.
+from up by an authored angle. The trunk's height sets the plant's size, and the crown's top
+stands at a multiple of it: near the trunk's top for excurrent trees (pine, poplar), well above
+it for decurrent ones, whose leader ends in a fork of a few limbs (oak, the "split" tree). That
+one ratio replaces seedling's monopodial and dichotomous modes; the fork parameters apply
+whenever the leader stops short.
 
 ### Limbs
 
@@ -250,8 +251,8 @@ stem's tip or the ground.
 
 For the species data model (C10), the groups follow the layers:
 
-- **Envelope:** profile, height, crown base, radius, lean, squash.
-- **Stems:** count, splay, leader extent, fork count and angle.
+- **Envelope:** profile, top and base (against the trunk's height), radius, lean, squash.
+- **Stems:** count, splay, height, fork count and angle.
 - **Limb levels**, a list: nodes, limbs per node, facing and skew, bias along the parent,
   angle and its limits, reach, tropism, wander, radius ratio.
 - **Bark:** base radius, pipe exponent, flare, color.

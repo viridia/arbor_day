@@ -786,7 +786,10 @@ mod tests {
     #[test]
     fn percentages_show_without_a_tail_and_read_back() {
         for (fraction, shown) in [(0.3, "30%"), (0.07, "7%"), (0.955, "95.5%"), (1.0, "100%")] {
-            assert_eq!(RatioPercent.format(NumericValue::F32(fraction), false), shown);
+            assert_eq!(
+                RatioPercent.format(NumericValue::F32(fraction), false),
+                shown
+            );
             for typed in [shown, shown.trim_end_matches('%'), &format!("{shown} ")] {
                 let read = RatioPercent.parse(typed.to_string(), NumericFormat::F32);
                 assert_eq!(read, Ok(NumericValue::F32(fraction)), "{typed:?}");

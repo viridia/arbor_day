@@ -43,7 +43,8 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `e64daa1` | C46 Node bias (D25) in place of the span, and nodes moved from their even places by a constant jitter; `plans/bias.py`. |
 | `705dc9a` | C51 Children placed by competition and facing, with a skew per limb (D26), in place of the divergence; `plans/facing.py`. |
 | `9123c76` | C50 Wander as kinks about the course, for limbs and now the trunk (D17); lighter second and third levels by default; `plans/wander.py`. |
-| (pending) | C37 Foliage placement (D27): sprig cards along the last level's twigs in the crown's shell, seedling's leaf texture as a placeholder (`assets/leaf-placeholder.png`); `plans/foliage.py`. |
+| `0e52df1` | C37 Foliage placement (D27): sprig cards along the last level's twigs in the crown's shell, seedling's leaf texture as a placeholder (`assets/leaf-placeholder.png`); `plans/foliage.py`. |
+| (pending) | C61 Trunk as the source of truth (D23): the trunk's height in metres, and a "Crown" group (top and base measured against it) in place of the envelope's height and the leader. |
 
 ## Next
 
@@ -60,13 +61,7 @@ per-type hook, and is retained-mode.
 
 ### Milestone: the first species exported to Panoply
 
-1. **C61 Trunk as the source of truth**, since raising the crown moves the trunk with it today.
-   The trunk's `height` in metres, the stem's length along its axis, scales the plant. The crown's
-   top is a multiple of it (100% to 200%: near 100% for an excurrent tree, more for a decurrent
-   one whose leader stops short), and its base a share of it, so raising the top leaves the base
-   alone. The crown's radius stays in metres. Revises D23 (the envelope as the plant's one size)
-   and D24. Ahead of C45, so the sheets sweep settled fields. E[3]
-2. **C63 Branch ends**: where a stem or limb ends and what grows there. Three changes, judged
+1. **C63 Branch ends**: where a stem or limb ends and what grows there. Three changes, judged
    together:
    - **Start in place of bias.** A share of the parent's part inside the crown, below which no
      nodes grow; nodes spread evenly from there to the tip, with the constant jitter. Bias
@@ -86,8 +81,8 @@ per-type hook, and is retained-mode.
      only). Stems bear none. Seedling's per-level leaf flag waits until a preset needs to turn
      this off.
 
-   Ahead of C45, as C61 is. E[3]
-3. **C45 Contact sheets**, so designs are explored in sweeps rather than one screenshot at a
+   Ahead of C45, so the sheets sweep settled fields. E[3]
+2. **C45 Contact sheets**, so designs are explored in sweeps rather than one screenshot at a
    time, by the author or by an agent. A second binary (`src/bin/sheet.rs`; the modules move
    behind a `src/lib.rs` so both binaries share them) reads a species file and a sweep (seeds,
    or one field's values by reflection path), grows each plant with the generator, lays them out
@@ -102,13 +97,13 @@ per-type hook, and is retained-mode.
    sweeping parameters needs only writing sweep files and running the one command, so a narrow
    allowlist covers it; trying generator changes (a form, say) runs in a git worktree that is
    thrown away afterwards, the findings written up and built properly. E[3]
-4. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's `genLeafTexture.ts` ported,
+3. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's `genLeafTexture.ts` ported,
    its leaf shape and color parameters, and the sprig's arrangement (`leafGroup`'s fan and
    pairs; growth model, Consequences), as species fields with streams of their own
    (requirements, Parameters, determinism, variants). The texture goes on C37's cards, replacing
    the placeholder, with mipmaps, since the placeholder's 128 px shimmers at game scale. A golden
    test on its pixels compares with a tolerance, since SIMD can move a channel by a level. E[3]
-5. **C39 Card shapes and facing**: crossed, cupped and creased cards chosen by weight (seedling's
+4. **C39 Card shapes and facing**: crossed, cupped and creased cards chosen by weight (seedling's
    `lateralDroop` folds a card about its midrib, `axialDroop` bends its far half down); the face
    target (D27) widened from world up to a blend of up and the envelope's outward normal, with a
    spread; crown softness for the shading normal (X13), built as a weight and judged in the
@@ -116,7 +111,7 @@ per-type hook, and is retained-mode.
    edge-on to the game's camera (45° down), to judge facing and folding by numbers as well as by
    eye. Card counts multiply with levels (the default with three: 525 cards, 1,050 triangles),
    so look at density against the budget too. E[3]
-6. **C30 Forks**, Weber and Penn's splits: at a point along a limb it ends, and copies of it
+5. **C30 Forks**, Weber and Penn's splits: at a point along a limb it ends, and copies of it
    carry on, turned apart by the fork angle. The copies are the same level as the limb, not its
    children, so they reach the envelope and bear children as it would; turning both by half the
    angle reads as the symmetric Y of a child deflecting its parent. Per level: forks per limb (0
@@ -124,10 +119,10 @@ per-type hook, and is retained-mode.
    the Y's plane lies, from level to upright. Each copy's radius follows the pipe model (D22):
    the limb's over the exponent's root of the copies, over √2 for two at exponent 2. Stems fork
    the same way, so a decurrent tree's leader stopping short (D23) ends in a fork (growth
-   model, Stems and leader). A stem's fork may lie below the crown base: the leader sets the
-   axis's length, the fork where it splits. After foliage, since a crown's
+   model, Stems and leader). A stem's fork may lie below the crown base: the trunk's height
+   sets the axis's length, the fork where it splits. After foliage, since a crown's
    look cannot be judged without leaves. E[3]
-7. **C10 Species data model**, its groups the layers of the growth model (D11;
+6. **C10 Species data model**, its groups the layers of the growth model (D11;
    `docs/growth-model.md`, Consequences), correcting seedling where the requirements say.
    Reflectable types with `Default` for initial values and attributes for the editor, after the
    fields settle, so saved files are not broken by every change. Serialized
@@ -146,15 +141,15 @@ per-type hook, and is retained-mode.
    levels with hidden ones stashed in the editor, the same in files but a larger change that
    undoes D15. Seedling's groups for reference: `trunk`; `branch[]`, one per level; the leaf as
    `leafGroup` (arrangement), `leafShape` and `leafColor`. E[4], split when started
-8. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
+7. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
    panel; the file browser is X2. The seed row moves in with them, in a feathers `group`
    (`containers/group.rs`, no header), so it lines up with the subpanes' rows rather than
    standing at the panel's edge. E[3]
-9. **C8 Working document in settings.** A settings group holding the working species and, once
+8. **C8 Working document in settings.** A settings group holding the working species and, once
    set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
    as seedling did. The document's name comes from the file name. Serialized by reflection, as
    `bevy_settings` does. E[3]
-10. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
+9. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
    as a JSON extra (C10), in the form Panoply loads (requirements, Output; "What Panoply does with the output"). Bevy writes no glTF,
    so this adds a dependency or a writer of our own; propose it before code. The command-line
    export is X1. Research so far (2026-10-12), the author also asking skein's author:
@@ -226,7 +221,8 @@ per-type hook, and is retained-mode.
   `NumberInputPrecision`, which would round in log units; the binding rounds to the field's
   `Precision` in metres as it writes. Feathers computes a drag from where it started, so the
   rounding should not fight it; check by hand that a drag snaps cleanly. First for the
-  envelope's height (0.5 to 30 m, where a herb lives in the first pixels) and radius. E[3]
+  trunk's height (0.1 to 30 m, where a herb lives in the first pixels) and the crown's radius.
+  E[3]
 - **C33 Sections within a level**, so the panel is not a wall of like sliders: arrangement
   (nodes, per node, facing, skew, bias), direction (angle, bend toward, bend), growth (reach,
   wander), bark (radius, sides). A field attribute, `@Group("Direction")`, names its section;
@@ -499,14 +495,16 @@ per-type hook, and is retained-mode.
   for thin levels, where it saves most and cannot be seen, and 4 or more for the trunk and the
   first level, as the defaults have it.
 
-- **D23** The leader is each stem's length along its axis as a fraction of the envelope's
-  height, so the envelope is the plant's one size and a fraction suits a herb as well as a
-  tree. Splay and lean bend a stem without lengthening it (D24). Several stems are spaced
+- **D23** The trunk's height, each stem's length along its axis in metres, is the plant's one
+  size, and the crown is measured against it: its top a multiple, its base a share, so a ratio
+  suits a herb as well as a tree, and moving the crown never moves the trunk. Revised in C61
+  from the stems' length as a share of the envelope's height, where raising the crown dragged
+  the trunk with it. Splay and lean bend a stem without lengthening it (D24). Several stems are spaced
   evenly around the base, each leaving the ground at the splay from up and turning by the lean
   as it rises, away from the middle; each has the trunk's radius and bears the first limb level,
   its stream forked from `branching` by its index. The first stem's compass heading is drawn
   from a `trunk` stream (D16), so neighbouring trees of one species lean different ways. The
-  panel group stays "Trunk".
+  panel group stays "Trunk", ahead of the "Crown" group measured against it.
 
 - **D24** The crown is the author's: each setting changes one thing, and the crown is never
   resized to fit the stems. A stem keeps its length whatever its splay and lean, so leaning

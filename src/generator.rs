@@ -8,8 +8,39 @@ use bevy::math::{Mat3, Quat, Vec2, Vec3};
 use crate::{
     fuzzy::Fuzzy,
     random::Rng,
-    species::{Envelope, Facing, Foliage, LimbLevel, Profile, Species},
+    species::{Facing, Foliage, LimbLevel, Profile, Species},
 };
+
+/// The crown's envelope in meters, as the species' crown and trunk height place it.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Envelope {
+    pub profile: Profile,
+    /// The heights of the crown's base and top above the ground.
+    pub base: f32,
+    pub top: f32,
+    /// The radius where the crown is widest.
+    pub radius: f32,
+}
+
+impl Envelope {
+    pub fn of(species: &Species) -> Self {
+        let (height, crown) = (species.trunk.height.max(0.01), &species.crown);
+        let top = height * crown.top.max(0.01);
+        Self {
+            profile: crown.profile,
+            base: (height * crown.base).clamp(0.0, top),
+            top,
+            radius: crown.radius,
+        }
+    }
+}
+
+#[cfg(test)]
+impl Default for Envelope {
+    fn default() -> Self {
+        Self::of(&Species::default())
+    }
+}
 
 /// The largest turn of a tube's axis between two rings, so rings are spaced by curvature: a
 /// straight tube is one segment, and a bent one gets a ring per this much turn.
@@ -170,7 +201,7 @@ pub fn plant(species: &Species) -> Grown {
     let twigs = limbs.iter().filter(|limb| limb.level + 1 == levels.len());
     Grown {
         bark,
-        leaves: foliage(&species.envelope, &species.foliage, twigs),
+        leaves: foliage(&Envelope::of(species), &species.foliage, twigs),
         level_limbs,
     }
 }
@@ -261,13 +292,13 @@ pub struct Stem {
 fn stems(species: &Species) -> Vec<Stem> {
     let trunk = &species.trunk;
     let count = trunk.stems.max(1) as u32;
-    let length = (trunk.leader * species.envelope.height).max(0.01);
+    let length = trunk.height.max(0.01);
     let lean = trunk.lean.min((FRAC_PI_2 - trunk.splay).max(0.0));
     let heading = species.seed.stream("trunk").unit() * TAU;
     let branching = species.seed.stream("branching");
     let top = trunk.radius * (1.0 - trunk.taper.clamp(0.0, 1.0));
     // A stem kinks by the internodes of the first limb level, which it bears.
-    let spacing = kink_spacing(&species.envelope, &species.limbs[0]);
+    let spacing = kink_spacing(&Envelope::of(species), &species.limbs[0]);
     (0..count)
         .map(|stem| {
             let rng = branching.fork(stem as u64);
@@ -383,8 +414,16 @@ impl Parent<'_> {
             }
             inner
         };
-        let start = if first > 0 { edge(at(first), at(first - 1)) } else { 0.0 };
-        let end = if last < steps { edge(at(last), at(last + 1)) } else { 1.0 };
+        let start = if first > 0 {
+            edge(at(first), at(first - 1))
+        } else {
+            0.0
+        };
+        let end = if last < steps {
+            edge(at(last), at(last + 1))
+        } else {
+            1.0
+        };
         Some((start, end))
     }
 }
@@ -401,7 +440,7 @@ impl Parent<'_> {
 /// parent's radius at its top: what its limbs leave it, or its base radius tapered if that is
 /// thinner, so the taper is the least a stem narrows.
 fn grow_level(species: &Species, level: usize, parent: Parent, grown: &mut Vec<Limb>) -> f32 {
-    let envelope = &species.envelope;
+    let envelope = &Envelope::of(species);
     let levels = species.grown_levels();
     let params = &levels[level];
     let taper = species.trunk.taper.clamp(0.0, 1.0);
@@ -585,7 +624,9 @@ fn node_azimuths(
     // The limbs from a first azimuth, `apart` between each, and the first of `candidates` whose
     // limbs cost least together.
     let group = |first: f32, apart: f32| -> Vec<f32> {
-        (0..per_node).map(|limb| first + apart * limb as f32).collect()
+        (0..per_node)
+            .map(|limb| first + apart * limb as f32)
+            .collect()
     };
     let least = |candidates: &mut dyn Iterator<Item = f32>, apart: f32| -> Vec<f32> {
         let mut best = (0.0, f32::INFINITY);
@@ -602,10 +643,7 @@ fn node_azimuths(
             &mut (0..AZIMUTH_CANDIDATES).map(|i| TAU * i as f32 / AZIMUTH_CANDIDATES as f32),
             TAU / per_node as f32,
         ),
-        Facing::Sides => least(
-            &mut [upper + FRAC_PI_2, upper - FRAC_PI_2].into_iter(),
-            PI,
-        ),
+        Facing::Sides => least(&mut [upper + FRAC_PI_2, upper - FRAC_PI_2].into_iter(), PI),
         Facing::Up => group(upper, 0.0),
         Facing::Down => group(upper + PI, 0.0),
     }
@@ -837,7 +875,7 @@ pub fn profile_width(profile: Profile, t: f32) -> f32 {
 /// The envelope drawn as lines: meridians closed across the base and the top, and rings around
 /// it. Pairs of points, a segment each.
 pub fn envelope_outline(envelope: &Envelope) -> Vec<Vec3> {
-    let (base, top) = crown_span(envelope);
+    let Envelope { base, top, .. } = *envelope;
     let profile: Vec<(f32, f32)> = (0..=OUTLINE_STEPS)
         .map(|step| {
             let t = step as f32 / OUTLINE_STEPS as f32;
@@ -877,7 +915,7 @@ pub fn envelope_outline(envelope: &Envelope) -> Vec<Vec3> {
 
 /// The envelope's radius at height `y`: 0 below the crown base and above the top.
 pub fn envelope_radius(envelope: &Envelope, y: f32) -> f32 {
-    let (base, top) = crown_span(envelope);
+    let Envelope { base, top, .. } = *envelope;
     if y < base || y > top || top <= base {
         return 0.0;
     }
@@ -893,7 +931,7 @@ pub fn distance_to_envelope(envelope: &Envelope, origin: Vec3, direction: Vec3) 
         return 0.0;
     }
     // Further than any two points of the envelope are apart.
-    let (mut near, mut far) = (0.0, 2.0 * (envelope.height.abs() + envelope.radius.abs()));
+    let (mut near, mut far) = (0.0, 2.0 * (envelope.top.abs() + envelope.radius.abs()));
     for _ in 0..ENVELOPE_BISECTIONS {
         let middle = (near + far) * 0.5;
         if inside(origin + direction * middle) {
@@ -918,7 +956,7 @@ fn depth_in_envelope(envelope: &Envelope, point: Vec3) -> Option<f32> {
     if !inside_envelope(envelope, point) {
         return None;
     }
-    let (base, top) = crown_span(envelope);
+    let Envelope { base, top, .. } = *envelope;
     let at = Vec2::new(point.x.hypot(point.z), point.y);
     let profile = (0..=DEPTH_STEPS).map(|step| {
         let t = step as f32 / DEPTH_STEPS as f32;
@@ -936,12 +974,6 @@ fn depth_in_envelope(envelope: &Envelope, point: Vec3) -> Option<f32> {
             at.distance(a + (b - a) * along.clamp(0.0, 1.0))
         })
         .reduce(f32::min)
-}
-
-/// The heights of the crown base and the top.
-fn crown_span(envelope: &Envelope) -> (f32, f32) {
-    let top = envelope.height.max(0.01);
-    (top * envelope.crown_base.clamp(0.0, 1.0), top)
 }
 
 /// The point and unit tangent at `t` (0 to 1) along an arc of length `length` that starts at the
@@ -1011,13 +1043,25 @@ mod tests {
     }
 
     #[test]
-    fn a_straight_stem_reaches_the_leader() {
+    fn a_straight_stem_reaches_its_height() {
         let mut species = regular();
         species.trunk.lean = 0.0;
-        species.trunk.leader = 0.5;
+        species.trunk.height = 3.0;
         let tip = stems(&species)[0].rings.last().unwrap().center;
-        let height = 0.5 * species.envelope.height;
-        assert!((tip - Vec3::Y * height).length() < 1e-5, "{tip}");
+        assert!((tip - Vec3::Y * 3.0).length() < 1e-5, "{tip}");
+    }
+
+    #[test]
+    fn the_crown_moves_without_the_trunk() {
+        let mut species = regular();
+        species.trunk.lean = 0.0;
+        let tip = |species: &Species| stems(species)[0].rings.last().unwrap().center;
+        let before = (tip(&species), Envelope::of(&species));
+        species.crown.top = 1.8;
+        let after = (tip(&species), Envelope::of(&species));
+        assert_eq!(before.0, after.0);
+        assert_eq!(before.1.base, after.1.base);
+        assert!((after.1.top - 1.8 * species.trunk.height).abs() < 1e-5);
     }
 
     #[test]
@@ -1039,7 +1083,10 @@ mod tests {
         };
         let upright = length(0.0, 0.0);
         for (splay, lean) in [(0.0, 45.0), (60.0, 0.0), (60.0, 90.0)] {
-            assert!((length(splay, lean) - upright).abs() < 1e-3, "{splay} {lean}");
+            assert!(
+                (length(splay, lean) - upright).abs() < 1e-3,
+                "{splay} {lean}"
+            );
         }
     }
 
@@ -1110,10 +1157,10 @@ mod tests {
     fn envelope_radius_is_zero_outside_the_crown() {
         let envelope = Envelope {
             profile: Profile::Column,
-            height: 6.0,
+            base: 1.8,
+            top: 6.0,
             ..Envelope::default()
         };
-        // Crown base at 1.8 m, top at 6 m.
         assert_eq!(envelope_radius(&envelope, 1.7), 0.0);
         assert_eq!(envelope_radius(&envelope, 3.0), envelope.radius);
         assert_eq!(envelope_radius(&envelope, 6.1), 0.0);
@@ -1123,7 +1170,8 @@ mod tests {
     fn rays_leave_the_envelope_at_its_surface() {
         let envelope = Envelope {
             profile: Profile::Column,
-            height: 6.0,
+            base: 1.8,
+            top: 6.0,
             ..Envelope::default()
         };
         let origin = Vec3::Y * 3.0;
@@ -1154,10 +1202,11 @@ mod tests {
     fn straight() -> Species {
         let mut species = regular();
         species.trunk.lean = 0.0;
-        species.trunk.leader = 0.84;
-        species.envelope.profile = Profile::Column;
-        species.envelope.crown_base = 0.2;
-        species.envelope.radius = 2.0;
+        species.trunk.height = 5.25;
+        species.crown.profile = Profile::Column;
+        species.crown.base = 1.25 / 5.25;
+        species.crown.top = 6.25 / 5.25;
+        species.crown.radius = 2.0;
         species
     }
 
@@ -1169,14 +1218,19 @@ mod tests {
             radius: stem.radii.0,
             rng: &stem.rng,
         };
-        let (start, end) = parent.inside_part(&species.envelope).expect("a stem inside the crown");
+        let (start, end) = parent
+            .inside_part(&Envelope::of(species))
+            .expect("a stem inside the crown");
         (parent.frame(start).point.y, parent.frame(end).point.y)
     }
 
     #[test]
     fn the_straight_stem_is_inside_where_it_says() {
         let (start, end) = inside_heights(&straight());
-        assert!((start - 1.25).abs() < 1e-4 && (end - 5.25).abs() < 1e-4, "{start} {end}");
+        assert!(
+            (start - 1.25).abs() < 1e-4 && (end - 5.25).abs() < 1e-4,
+            "{start} {end}"
+        );
     }
 
     #[test]
@@ -1187,7 +1241,7 @@ mod tests {
         for limb in &limbs {
             assert_eq!(limb.rings.len(), 2, "a straight limb is one segment");
             let tip = limb.origin() + limb.direction() * limb.length();
-            let rest = distance_to_envelope(&species.envelope, tip, limb.direction());
+            let rest = distance_to_envelope(&Envelope::of(&species), tip, limb.direction());
             let whole = limb.length() + rest;
             assert!((limb.length() - species.limbs[0].reach.center * whole).abs() < 1e-3);
         }
@@ -1232,7 +1286,8 @@ mod tests {
             "{angles:?}"
         );
         for limb in &limbs {
-            let whole = distance_to_envelope(&species.envelope, limb.origin(), limb.direction());
+            let whole =
+                distance_to_envelope(&Envelope::of(&species), limb.origin(), limb.direction());
             assert!(limb.length() <= whole + 1e-3);
         }
     }
@@ -1276,7 +1331,7 @@ mod tests {
         let mut species = regular();
         species.limbs[0].bend = 0.5;
         let target = species.limbs[0].bend_toward;
-        let crown = species.envelope.radius;
+        let crown = species.crown.radius;
         for limb in limbs(&species) {
             let tip = limb.rings[limb.rings.len() - 1].tangent;
             // Half the angle left is closed over each crown radius of length.
@@ -1382,7 +1437,12 @@ mod tests {
             species.limbs[1].density = density;
             limbs(&species).iter().map(|limb| limb.rings.len()).sum()
         };
-        assert!(rings(20.0) > rings(4.0) + 10, "{} {}", rings(20.0), rings(4.0));
+        assert!(
+            rings(20.0) > rings(4.0) + 10,
+            "{} {}",
+            rings(20.0),
+            rings(4.0)
+        );
     }
 
     #[test]
@@ -1393,7 +1453,10 @@ mod tests {
         };
         for limb in limbs(&species) {
             for ring in &limb.rings[1..] {
-                assert!(inside_envelope(&species.envelope, ring.center), "{ring:?}");
+                assert!(
+                    inside_envelope(&Envelope::of(&species), ring.center),
+                    "{ring:?}"
+                );
             }
         }
     }
@@ -1489,7 +1552,10 @@ mod tests {
         // One limb a node spirals by the golden angle, pairs cross, and whorls of three alternate.
         // A turn either way reads the same. With nodes unevenly spaced, a spiral's turns swing
         // about the golden angle, and are judged by their mean.
-        let spiral: Vec<f32> = node_turns(1.0).iter().map(|turn| turn.min(360.0 - turn)).collect();
+        let spiral: Vec<f32> = node_turns(1.0)
+            .iter()
+            .map(|turn| turn.min(360.0 - turn))
+            .collect();
         assert!((mean(&spiral) - 137.5).abs() < 8.0, "{spiral:?}");
         // Pairs cross at 90° and whorls of three alternate at 60°, the most a turn can be from
         // the last node's limbs, so they are judged by how far each turn is from it.
@@ -1540,7 +1606,9 @@ mod tests {
             let azimuth = |limb: &Limb| limb.direction().z.atan2(limb.direction().x).to_degrees();
             limbs(&species)
                 .chunks(2)
-                .map(|pair| ((azimuth(&pair[1]) - azimuth(&pair[0])).rem_euclid(360.0) - 180.0).abs())
+                .map(|pair| {
+                    ((azimuth(&pair[1]) - azimuth(&pair[0])).rem_euclid(360.0) - 180.0).abs()
+                })
                 .collect()
         };
         assert!(off_opposite(0.0).iter().all(|off| *off < 1e-3));
@@ -1637,7 +1705,10 @@ mod tests {
         // The trunk's top is what is left past both, unless the taper narrows it further.
         let left = (past_first.powi(2) - second.powi(2)).sqrt();
         let tapered = trunk * (1.0 - species.trunk.taper);
-        assert!((top - left.min(tapered)).abs() < 1e-6, "{top} {left} {tapered}");
+        assert!(
+            (top - left.min(tapered)).abs() < 1e-6,
+            "{top} {left} {tapered}"
+        );
         // A higher exponent narrows the trunk less.
         species.bark.pipe_exponent = 3.0;
         species.trunk.taper = 0.0;
@@ -1668,7 +1739,7 @@ mod tests {
         // The stem inside the crown is 4 m, two crown radii, then four.
         species.limbs[0].density = 1.0;
         assert_eq!(limbs(&species).len(), 2);
-        species.envelope.radius = 1.0;
+        species.crown.radius = 1.0;
         assert_eq!(limbs(&species).len(), 4);
     }
 
@@ -1689,11 +1760,17 @@ mod tests {
         let mean = |counts: &[usize]| counts.iter().sum::<usize>() as f32 / counts.len() as f32;
         // 2.5 nodes on the stem's two crown radii: two or three.
         let nodes = counts(1.25, 1.0);
-        assert!(nodes.iter().all(|count| (2..=3).contains(count)), "{nodes:?}");
+        assert!(
+            nodes.iter().all(|count| (2..=3).contains(count)),
+            "{nodes:?}"
+        );
         assert!((mean(&nodes) - 2.5).abs() < 0.1, "{}", mean(&nodes));
         // Eight nodes of one or two limbs.
         let limbs = counts(4.0, 1.5);
-        assert!(limbs.iter().all(|count| (8..=16).contains(count)), "{limbs:?}");
+        assert!(
+            limbs.iter().all(|count| (8..=16).contains(count)),
+            "{limbs:?}"
+        );
         assert!((mean(&limbs) - 12.0).abs() < 0.3, "{}", mean(&limbs));
     }
 
@@ -1727,8 +1804,8 @@ mod tests {
         // A column 2.5 m wide from 1.2 m to 6 m.
         let envelope = Envelope {
             profile: Profile::Column,
-            height: 6.0,
-            crown_base: 0.2,
+            base: 1.2,
+            top: 6.0,
             ..Envelope::default()
         };
         let depth = |x: f32, y: f32| depth_in_envelope(&envelope, Vec3::new(x, y, 0.0));
@@ -1772,10 +1849,13 @@ mod tests {
     #[test]
     fn clusters_follow_the_density() {
         let with = |density: f32| {
-            card_bases(2, Foliage {
-                density,
-                ..Foliage::default()
-            })
+            card_bases(
+                2,
+                Foliage {
+                    density,
+                    ..Foliage::default()
+                },
+            )
             .len()
         };
         assert_eq!(with(0.0), 0);

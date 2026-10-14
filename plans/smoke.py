@@ -55,7 +55,7 @@ def run(driver):
     driver.key("Enter")
     driver.expect("Placeholder", PLACEHOLDER, {"count": 10})
     driver.screenshot("numbers")
-    # Editing the species rebuilds the plant: four or five nodes on the trunk's 1.25 crown radii
+    # Editing the species rebuilds the plant: four or five nodes on the trunk's 1.2 crown radii
     # inside the crown.
     driver.click("Shell/Panel/limbs[0]/density/input")
     driver.key("End")
@@ -64,9 +64,9 @@ def run(driver):
     driver.key("Enter")
     driver.expect("Plant", STATS, {"limbs": Between(4, 5)})
     driver.screenshot("four_nodes")
-    # The camera does not follow the subject: a taller crown grows out of the frame (compare the
+    # The camera does not follow the subject: a taller tree grows out of the frame (compare the
     # screenshots), until Frame fits it again.
-    driver.click("Shell/Panel/envelope/height/input")
+    driver.click("Shell/Panel/trunk/height/input")
     driver.key("End")
     driver.key("Backspace")
     driver.type("12")
