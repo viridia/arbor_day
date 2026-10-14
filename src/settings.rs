@@ -1,4 +1,5 @@
-//! App state saved between runs with `bevy_settings`: the window, and the panel's width.
+//! App state saved between runs with `bevy_settings`: the window, the panel's width, and what the
+//! view shows.
 
 use std::time::Duration;
 
@@ -18,7 +19,7 @@ use crate::{PanelPane, ViewportSlot};
 /// Narrowest either pane may be, in logical pixels; the shell's panes use it as `min_size`.
 pub const MIN_PANE_WIDTH: f32 = 200.0;
 
-const SAVE_DELAY: Duration = Duration::from_millis(500);
+pub const SAVE_DELAY: Duration = Duration::from_millis(500);
 
 /// The window's position, size and fullscreen state.
 #[derive(Resource, SettingsGroup, Reflect, Default, Clone, PartialEq, Debug)]
@@ -43,6 +44,24 @@ pub struct LayoutSettings {
 impl Default for LayoutSettings {
     fn default() -> Self {
         Self { panel_width: 320.0 }
+    }
+}
+
+/// What the view shows besides the plant, toggled on the HUD.
+#[derive(Resource, SettingsGroup, Reflect, Clone, PartialEq, Debug)]
+#[reflect(Resource, SettingsGroup, Default)]
+#[settings_group(group = "view")]
+pub struct ViewSettings {
+    pub show_envelope: bool,
+    pub show_ground: bool,
+}
+
+impl Default for ViewSettings {
+    fn default() -> Self {
+        Self {
+            show_envelope: true,
+            show_ground: true,
+        }
     }
 }
 

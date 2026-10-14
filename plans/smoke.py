@@ -27,7 +27,7 @@ def run(driver):
     # The view is never saved: every start frames the subject, from the front.
     framed = {"frame_pending": False, "keep_framed": True}
     driver.expect("SceneCamera", TURNTABLE, {**framed, "azimuth": 0.0})
-    driver.click("Shell/Panel/Frame")
+    driver.click("Shell/View/frame")
     driver.expect("SceneCamera", TURNTABLE, framed)
     driver.screenshot("shell")
     # Zooming by key lets go of the framing; F takes it back.
@@ -36,6 +36,23 @@ def run(driver):
     driver.expect("SceneCamera", TURNTABLE, {"keep_framed": False})
     driver.screenshot("zoomed_out")
     driver.key("KeyF")
+    driver.expect("SceneCamera", TURNTABLE, framed)
+    # The HUD's camera buttons move the camera while held, by time, so only the direction is
+    # checked: each reverse button is held twice as long, to cross back past where it started.
+    # Orbit wraps at a full turn, and tilt keeps between 5° and 85°, from the game's 45° (0.785).
+    driver.click("Shell/View/orbit_left", hold=30)
+    driver.expect("SceneCamera", TURNTABLE, {"azimuth": Between(0.05, 3.0)})
+    driver.click("Shell/View/orbit_right", hold=60)
+    driver.expect("SceneCamera", TURNTABLE, {"azimuth": Between(3.3, 6.25)})
+    driver.click("Shell/View/tilt_up", hold=30)
+    driver.expect("SceneCamera", TURNTABLE, {"elevation": Between(0.8, 1.49)})
+    driver.click("Shell/View/tilt_down", hold=60)
+    driver.expect("SceneCamera", TURNTABLE, {"elevation": Between(0.087, 0.78)})
+    # Zooming lets go of the framing, as the keys do; Frame takes it back.
+    driver.click("Shell/View/zoom_in", hold=30)
+    driver.expect("SceneCamera", TURNTABLE, {"keep_framed": False})
+    driver.click("Shell/View/zoom_out", hold=30)
+    driver.click("Shell/View/frame")
     driver.expect("SceneCamera", TURNTABLE, framed)
     # The property editor: a checkbox per boolean field, a number input per number, a subpane of
     # rows per nested struct.
@@ -83,7 +100,7 @@ def run(driver):
     driver.key("Enter")
     driver.frames(2)
     driver.screenshot("taller")
-    driver.click("Shell/Panel/Frame")
+    driver.click("Shell/View/frame")
     driver.expect("SceneCamera", TURNTABLE, framed)
     driver.screenshot("taller_framed")
     # The seed: a typed one reaches the plant, and Random picks another.

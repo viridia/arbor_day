@@ -6,11 +6,11 @@ use bevy::{
     feathers::{
         FeathersPlugins,
         controls::{
-            FeathersButton, FeathersPane, FeathersScrollbar, FeathersSplitPane,
-            FeathersSplitPaneHandle, NumberInputUnits, ScrollbarGutter,
+            FeathersPane, FeathersScrollbar, FeathersSplitPane, FeathersSplitPaneHandle,
+            NumberInputUnits, ScrollbarGutter,
         },
         dark_theme::create_dark_theme,
-        theme::{ThemeBackgroundColor, ThemedText, UiTheme},
+        theme::{ThemeBackgroundColor, UiTheme},
         tokens,
     },
     light::{NotShadowCaster, NotShadowReceiver},
@@ -22,7 +22,6 @@ use bevy::{
 use bevy_immediate::{
     Imm,
     attach::{BevyImmediateAttachPlugin, ImmediateAttach},
-    ui::activated::ImmUiActivated,
 };
 use bevy_remote_driver::RemoteDriverPlugin;
 use fuzzy::{Distribution, Fuzzy};
@@ -326,7 +325,6 @@ fn shell_ui() -> impl Scene {
 struct PanelParams<'w, 's> {
     species: ResMut<'w, Species>,
     stats: Query<'w, 's, &'static PlantStats>,
-    cameras: Query<'w, 's, &'static mut TurntableCamera>,
     placeholders: Query<'w, 's, &'static mut Placeholder>,
 }
 
@@ -352,21 +350,6 @@ impl ImmediateAttach<CapsPanel> for ParamPanel {
             .unwrap_or_default();
         properties::edit_fields(ui, &mut edited, &notes);
         params.species.set_if_neq(edited);
-
-        properties::group(ui.ch(), "View", |ui| {
-            let framed = ui
-                .ch()
-                .on_spawn_apply_scene(|| {
-                    bsn! {
-                        @FeathersButton { @caption: bsn! { Text("Frame") ThemedText } }
-                        #Frame
-                    }
-                })
-                .activated();
-            if framed && let Ok(mut camera) = params.cameras.single_mut() {
-                camera.frame();
-            }
-        });
 
         let Ok(mut placeholder) = params.placeholders.single_mut() else {
             return;

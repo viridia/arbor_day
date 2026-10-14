@@ -46,7 +46,9 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `0e52df1` | C37 Foliage placement (D27): sprig cards along the last level's twigs in the crown's shell, seedling's leaf texture as a placeholder (`assets/leaf-placeholder.png`); `plans/foliage.py`. |
 | `528af7d` | C61 Trunk as the source of truth (D23): the trunk's height in metres, and a "Crown" group (top and base measured against it) in place of the envelope's height and the leader. |
 | `c53b181` | C53 Four plans in place of twelve: `smoke.py` (with the seed), `widgets.py` (fuzzy rows, selects, color), `levels.py` (with foliage), and `shapes.py`, a gallery of screenshots with no checks. C59 Header counts in parentheses ("Limbs 1 (8)"). |
-| (pending) | C56 A HUD over the view (D28), `src/hud.rs`: the triangle count, and toggles for the envelope and the ground, which leaves `Placeholder`. |
+| `dd130b3` | C56 A HUD over the view (D28), `src/hud.rs`: the triangle count, and toggles for the envelope and the ground, which leaves `Placeholder`. |
+| (pending) | C64 The HUD's toggles saved, as `ViewSettings` (D28). |
+| (pending) | C57 Camera buttons on the HUD (D28): orbit, zoom, tilt and Frame, moving while held; the panel's "View" group goes. Needs `bevy_remote_driver`'s press and hold. |
 
 ## Next
 
@@ -241,16 +243,6 @@ per-type hook, and is retained-mode.
   children attach along the kept rings, as now. One rule for curvature and kinks, so the kink
   ring's threshold goes. The tolerance is a constant, tuned against the triangle budget and
   screenshots; tied to Panoply's camera instead, the generator would depend on the game. E[2]
-- **C57 Camera buttons on the HUD** (C25 split, its second part): Frame, zoom, orbit and tilt,
-  as C56's HUD buttons (D28) in its grid. The Frame button leaves the panel, and its "View"
-  group with it. Proposed layout, after Google Maps, the author to confirm: an L
-  in the lower right, orbit along the bottom (spinning is horizontal), zoom and tilt up the right
-  side (vertical), Frame in the corner where they meet. Icons: `center_focus_strong` for Frame
-  (corner brackets: fit the subject to the view), `zoom_in` and `zoom_out`, `360` for orbit
-  (`ImageNode::flip_x` for the other way, and turned 90° for tilt). Zoom, orbit and tilt move
-  smoothly for as long as a button is held, and a click moves a fixed step, which lets plans
-  drive the camera (the driver cannot drag, and its click is a press and an immediate release).
-  E[3]
 - **C58 Trunk below ground**, so a tree placed on a slope still meets the ground on its low side:
   the stems start below the origin by their base radius times the tangent of the steepest slope
   a tree stands on, a constant rather than a species field. At 45° the depth is the base radius.
@@ -549,12 +541,20 @@ per-type hook, and is retained-mode.
 
 - **D28** The HUD (`src/hud.rs`) holds controls that change the preview rather than the species,
   over the view: a grid filling the view pane with the panel's spacing (8 px padding and gaps),
-  ignored by picking, so the view's drags and scrolls pass between its buttons. Its buttons are
+  ignored by picking, so the view's drags and scrolls pass between its buttons. Toggles in the
+  upper left; the camera's buttons in the upper right, an L with orbit along the top, zoom and
+  tilt down the side and Frame in the corner, after Google Maps' controls turned upside down;
+  the bottom row for status, the triangle count at its left. A camera button moves the camera
+  smoothly from the moment it is pressed until it is released (60° a second of orbit, 30° of
+  tilt, a factor of 2 in distance), and Frame acts on a click. A step on the press, then smooth
+  movement after a delay, was tried and felt wrong. Plans hold a button with the driver's
+  `click(…, hold=frames)`. Its buttons are
   our own, a `bevy_ui_widgets` `Button` the size of feathers' tool button, with fixed
   translucent grays rather than theme tokens: the theme is for a light and dark switch, which a
   HUD over the scene does not follow, so forking feathers' button and registering tokens would
-  buy nothing. A toggle keeps no state of its own; it flips its target's `Visibility` and dims
-  its icon while the target is hidden, so plans check the target. `Button` stops presses and
+  buy nothing. A toggle's state is a field of `ViewSettings` (D6), so it is saved, as the panel
+  width is and the camera is not (D7); the target's `Visibility` follows it, and plans check
+  that. The icon dims while the target is hidden. `Button` stops presses and
   clicks but not drags, so the grid stops `PointerDrag` bubbling up from a button, or a drag
   that starts on one would turn the camera. Icons are Material Symbols, chosen by the author,
   in `assets/icons/` (48 px white PNGs, under their Material names). The ground toggle outlives
