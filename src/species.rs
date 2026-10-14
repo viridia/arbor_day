@@ -57,10 +57,10 @@ impl Default for Species {
             limbs: [
                 LimbLevel::default(),
                 LimbLevel {
-                    density: 7.0,
+                    density: 3.5,
                     per_node: 1.7,
                     facing: Facing::Sides,
-                    bias: 0.3,
+                    start: 0.2,
                     angle: degrees(45.0, 10.0),
                     bend: 0.5,
                     wander: 15.0_f32.to_radians(),
@@ -70,10 +70,10 @@ impl Default for Species {
                     ..LimbLevel::default()
                 },
                 LimbLevel {
-                    density: 10.0,
+                    density: 4.0,
                     per_node: 2.0,
                     facing: Facing::Sides,
-                    bias: 0.4,
+                    start: 0.3,
                     angle: degrees(40.0, 10.0),
                     bend: 0.5,
                     wander: 20.0_f32.to_radians(),
@@ -210,14 +210,15 @@ pub struct LimbLevel {
         @NumberInputUnits::new_static("angle_degrees"),
     )]
     pub skew: f32,
-    /// Where nodes crowd along the part of the parent inside the crown: toward its base below 0,
-    /// as a shrub's do, toward its tip above, as a tree's do, evenly at 0.
+    /// Where nodes start along the part of the parent inside the crown, as a share of it: 0 from
+    /// its base, higher to keep the limbs toward its tip, as a tree's are. Nodes are spread evenly
+    /// from there to the tip, where one limb carries the parent on.
     #[reflect(
-        @ValueRange::<f32>(-1.0..=1.0),
+        @ValueRange::<f32>(0.0..=0.9),
         @Precision(2),
         @NumberInputUnits::new_static("ratio_percent"),
     )]
-    pub bias: f32,
+    pub start: f32,
     /// The angle from the parent's direction where the limb starts: 0 runs along it, 90° square
     /// to it. Drawn for each limb.
     #[reflect(
@@ -279,7 +280,7 @@ impl Default for LimbLevel {
             per_node: 1.0,
             facing: Facing::Around,
             skew: 20.0_f32.to_radians(),
-            bias: 0.0,
+            start: 0.0,
             angle: degrees(60.0, 10.0),
             bend_toward: 90.0_f32.to_radians(),
             bend: 0.4,
@@ -326,7 +327,7 @@ fn degrees(center: f32, spread: f32) -> Fuzzy {
     Fuzzy::new(center.to_radians(), spread.to_radians(), Distribution::Bell)
 }
 
-/// The bark, the same on every stem: its color, how stems narrow, and which are meshed.
+/// The bark, the same on every stem: its color, how stems narrow, and the least detail drawn.
 #[derive(Reflect, Clone, PartialEq)]
 pub struct Bark {
     /// The bark's color, written into the mesh as a vertex color, so trunks of different species
@@ -337,10 +338,11 @@ pub struct Bark {
     /// higher, it narrows less.
     #[reflect(@ValueRange::<f32>(2.0..=3.0), @Precision(1), @Caption("Pipe exponent"))]
     pub pipe_exponent: f32,
-    /// Limbs thinner than this at their base, in meters, are left to the foliage rather than
-    /// meshed, and so are their own limbs, which are thinner still.
-    #[reflect(@ValueRange::<f32>(0.001..=0.1), @Precision(3), @Caption("Thinnest meshed"))]
-    pub min_radius: f32,
+    /// The smallest detail drawn, in meters, about a pixel at the game's scale: no stem is drawn
+    /// narrower, so twigs still show. Only the drawing is thickened: limbs share their parents'
+    /// wood as their true radii have it.
+    #[reflect(@ValueRange::<f32>(0.002..=0.2), @Precision(3), @Caption("Detail threshold"))]
+    pub detail: f32,
 }
 
 impl Default for Bark {
@@ -348,17 +350,17 @@ impl Default for Bark {
         Self {
             color: Color::srgb(0.42, 0.33, 0.25),
             pipe_exponent: 2.0,
-            min_radius: 0.01,
+            detail: 0.02,
         }
     }
 }
 
-/// Leaf clusters on the last grown level's limbs, where they lie near the envelope, so the leaves
-/// follow the twigs and fill the crown's surface. Each cluster is a card facing up.
+/// Leaf clusters on every limb that bears none, where it lies near the envelope, so the leaves
+/// follow the branch ends and fill the crown's surface. Each cluster is a card facing up.
 #[derive(Reflect, Clone, PartialEq)]
 pub struct Foliage {
-    /// Clusters per crown radius of twig within the shell; 0 for a bare plant. Rounded at random
-    /// for each twig.
+    /// Clusters per crown radius of twig within the shell, beside the one at each twig's tip; 0
+    /// for a bare plant. Rounded at random for each twig.
     #[reflect(@ValueRange::<f32>(0.0..=40.0), @Precision(1), @Caption("Clusters per crown radius"))]
     pub density: f32,
     /// How far in from the envelope clusters grow, as a fraction of the crown's radius. The

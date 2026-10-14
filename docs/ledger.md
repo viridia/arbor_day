@@ -50,6 +50,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `86fa129` | C64 The HUD's toggles saved, as `ViewSettings` (D28). |
 | `86fa129` | C57 Camera buttons on the HUD (D28): orbit, zoom, tilt and Frame, moving while held; the panel's "View" group goes. Needs `bevy_remote_driver`'s press and hold. |
 | `51ce5ca` | C27 `Placeholder` removed, and `Wrap` with it (D9). The plant carries the species it was grown from (`GrownFrom`, D12), which plans read with the driver's `expect(…, at="limbs[0].angle")`; `PlantStats` drops the seed. The Bark group moves up under Trunk. X25 (`bevy::annotations`) and C65 (wireframe toggle) recorded. |
+| (pending) | C63 Branch ends: a level's nodes from a start in place of the bias (D25); a parent ends at its last node and one limb carries it on (D30); leaves on every branch end, one at each tip (D27); every stem drawn, none narrower than the bark's detail threshold, in place of the thinnest meshed (D22). Sparser defaults (D17). |
 
 ## Next
 
@@ -66,27 +67,27 @@ per-type hook, and is retained-mode.
 
 ### Milestone: the first species exported to Panoply
 
-1. **C63 Branch ends**: where a stem or limb ends and what grows there. Three changes, judged
-   together:
-   - **Start in place of bias.** A share of the parent's part inside the crown, below which no
-     nodes grow; nodes spread evenly from there to the tip, with the constant jitter. Bias
-     (D25) could not push every limb near the top: 4^−bias keeps both ends, so at 100% the
-     lowest node still sits halfway. A predictable range over a guessed curve, until a model is
-     worth exposing (X18, X22). No end: the next rule gives the tip its length.
-   - **A branch carries on as its next level.** A stem or limb with children ends at its last
-     node, and one limb of the next level carries on from there along it: at angle 0, no
-     skew, grown like the level's other limbs (bend, wander, reach to the envelope, children),
-     its radius what the pipe model leaves (D22). So the trunk turns into a branch rather than
-     ending in a post, as in decurrent trees and in an excurrent leader's last shoot, and a
-     limb's tip is a shoot like any other, as in sympodial growth; the pitchfork's middle tine
-     is a carrying-on limb. A fork of one, which C30 generalizes. Adds a limb for each limb with
-     children (about 10 on the default trunk, 64 on the default first level).
-   - **Leaves on every branch end.** Clusters grow on each limb's stretch past its last child,
-     the whole limb on the last level, in the shell as now (D27 revised from the last level
-     only). Stems bear none. Seedling's per-level leaf flag waits until a preset needs to turn
-     this off.
+1. **C52 Hinting by visible error**: rings, and kinks, only where the eye sees them at the
+   game's scale, as font hinting keeps only what a pixel shows. The eye reads a branch by where
+   it goes and by its corners, the changes of direction, far more than by smooth curvature or
+   exact place. Two changes:
+   - **Kinks at least every third of a limb**, or by the internode as now (D17) if that is
+     shorter, so wander shows on every limb whatever the densities. Since C63's sparser
+     defaults, most second-level limbs are shorter than one kink spacing (2 of 68 kink at three
+     levels), so its wander barely shows. Tried alone, it took three levels from 2,260 bark
+     triangles with no wander to 4,962, which the next change is to win back.
+   - **Rings by visible error**, an optimization in place of placing them by turn (15° of
+     curvature, 5° at a kink). A limb or stem is traced in full first, then simplified as
+     Ramer, Douglas and Peucker do: from its two ends, the traced point furthest from the chord
+     between them is kept if it lies further than the bark's detail threshold (D22), and each
+     half is simplified the same way. Corners that move the line by a pixel stay; gentle bends
+     and twigs' sub-pixel zigzags straighten into a segment or two, where the triangles are. A
+     kept point's ring faces halfway between its two chords, so the tube does not pinch;
+     children attach along the kept rings, as now. One rule for curvature and kinks, so the
+     kink ring's threshold goes. The tolerance is the threshold the drawn width uses, one
+     setting for what the game can show.
 
-   Ahead of C45, so the sheets sweep settled fields. E[3]
+   Judged by screenshots and the triangle count at the default densities. E[3]
 2. **C45 Contact sheets**, so designs are explored in sweeps rather than one screenshot at a
    time, by the author or by an agent. A second binary (`src/bin/sheet.rs`; the modules move
    behind a `src/lib.rs` so both binaries share them) reads a species file and a sweep (seeds,
@@ -121,7 +122,7 @@ per-type hook, and is retained-mode.
    spread; crown softness for the shading normal (X13), built as a weight and judged in the
    preview before it becomes an option or is fixed either way. Measure how far cards are from
    edge-on to the game's camera (45° down), to judge facing and folding by numbers as well as by
-   eye. Card counts multiply with levels (the default with three: 525 cards, 1,050 triangles),
+   eye. Card counts multiply with levels (the default with three: 479 cards, 958 triangles),
    so look at density against the budget too. E[3]
 6. **C30 Forks**, Weber and Penn's splits: at a point along a limb it ends, and copies of it
    carry on, turned apart by the fork angle. The copies are the same level as the limb, not its
@@ -214,6 +215,11 @@ per-type hook, and is retained-mode.
   (`scaled_number_input_value`), or with `NumberInputPrecision::round` once bevy#26158 lands.
   Defaults are written in the units shown
   (`15.0_f32.to_radians()`, not `0.3`). E[2]
+- **C68 End taper**: the trunk's taper moves to the Bark group as "End taper", the narrowing of
+  a stretch nothing branches from (branch ends, bare stems), so an author can keep ends blunt
+  (frangipani, sumac) or fine (birch). Stems bearing limbs narrow by the pipe model alone (D22):
+  the taper's minimum on a parent's narrowing goes, since at exponent 3 it overrode the exponent
+  (the default trunk's top 0.4 of its base, not the pipe's 0.64). E[2]
 - **C47 A sense of scale**: metre rings on the ground disc (`src/main.rs`, `Circle::new(4.0)`),
   since Frame fits any plant to the view and hides how big it is. Seedling never zoomed, so its
   plants showed their size. E[1]
@@ -233,7 +239,7 @@ per-type hook, and is retained-mode.
   trunk's height (0.1 to 30 m, where a herb lives in the first pixels) and the crown's radius.
   E[3]
 - **C33 Sections within a level**, so the panel is not a wall of like sliders: arrangement
-  (nodes, per node, facing, skew, bias), direction (angle, bend toward, bend), growth (reach,
+  (nodes, per node, facing, skew, start), direction (angle, bend toward, bend), growth (reach,
   wander), bark (radius, sides). A field attribute, `@Group("Direction")`, names its section;
   the property editor collates fields by group, ungrouped fields first, each group under a
   label. The grouping is the panel's alone: the data stays flat, so paths (`limbs[0].angle`),
@@ -247,16 +253,6 @@ per-type hook, and is retained-mode.
 - **C48 Arching stems**, for fountain shrubs: a lean past level, so a stem rises and then droops
   toward the ground, stopping above it. D24 stops the lean at level until a preset needs more
   (X18). E[2]
-- **C52 Rings by visible error** (D17), an optimization, in place of placing them by turn (15°
-  of curvature, 5° at a kink). A limb or stem is traced in full first, then simplified as
-  Ramer, Douglas and Peucker do: from its two ends, the traced point furthest from the chord
-  between them is kept if it lies further than half the tube's radius there, and each half is
-  simplified the same way. A path that stays within the tube's thickness cannot be seen, so
-  thick limbs keep their kinks and twigs straighten into a segment or two, where the triangles
-  are. A kept point's ring faces halfway between its two chords, so the tube does not pinch;
-  children attach along the kept rings, as now. One rule for curvature and kinks, so the kink
-  ring's threshold goes. The tolerance is a constant, tuned against the triangle budget and
-  screenshots; tied to Panoply's camera instead, the generator would depend on the game. E[2]
 - **C65 Wireframe toggle on the HUD** (D28), to see where the triangles go: rings along the bark
   (D17's spacing, C52), sides per level (D22), and each leaf card's quad, for card density and
   facing (C39). Bevy's `WireframePlugin` (`bevy_pbr`), drawing lines over the shaded mesh rather
@@ -436,9 +432,14 @@ per-type hook, and is retained-mode.
   steps, so the shape does not depend on the step. It stops at its reach or where it would
   leave the envelope. Rings go wherever it has turned 15° since the last, or at a kink turning
   it 5° at once, so a modest wander shows; a kink's ring is turned halfway between the
-  stretches meeting there so the tube does not pinch. Kinks roughly triple a tree's triangles,
-  so the defaults' second and third levels are sparser (7 and 10 nodes per crown radius), which
-  keeps three levels under 3,000. Each ring carries a side transported along the limb without
+  stretches meeting there so the tube does not pinch. A tube's tip takes the place of a ring
+  less than a step before it, since a tube turning between two rings that close folds over
+  itself where it is drawn thicker than the gap (D22). Kinks roughly double a tree's triangles,
+  so the defaults' second and third levels are sparse (3.5 and 4 nodes per crown radius,
+  revised in C63 from 7 and 10, the author judging the leaves too dense), which keeps three
+  levels under 3,000 with every stem drawn. An author tunes branching toward a leaf density, so
+  costs are judged at the densities that give it. At these, most second-level limbs are shorter
+  than a kink spacing and their wander barely shows (C52). Each ring carries a side transported along the limb without
   twisting, which sets the ring's roll and its children's azimuth zero. Each limb's stream
   forks from its parent's by its index
   (the trunk's is the seed's `branching` stream), so a limb's draws depend on where it sits,
@@ -459,7 +460,7 @@ per-type hook, and is retained-mode.
   trunk does not vary otherwise. Kept as `Fuzzy`: angle and reach per limb, the most visible
   variety; the skew is a turn either way of up to its value, per limb (D26). Not varied: bend toward and bend (wander already irregularizes),
   wander (itself the randomness), radius (the pipe model derives it, D22), sides (mesh detail),
-  bias (each node's jitter varies the places, D25). Counts are fractions rounded at random
+  start (each node's jitter varies the places, D25). Counts are fractions rounded at random
   (D21).
 
 - **D20** Leaf textures are painted on the CPU with `tiny-skia`, a pure-Rust port of part of
@@ -481,11 +482,16 @@ per-type hook, and is retained-mode.
   stem's radius raised to the bark's exponent (2 to 3) is shared among the limbs leaving it and
   what carries on, each limb taking its level's `radius` share of the stem's radius where it
   leaves. A stem's top is what its limbs leave it, or its base tapered if thinner, so the taper
-  is the least a stem narrows and childless limbs taper as before. Rejected: bottom-up from the
-  twigs, which makes the trunk's radius follow the limb count, so showing a third level thickened
-  the trunk about 2.4 times. Limbs under the bark's thinnest meshed radius are grown, for the
-  foliage (C37), but not meshed, nor their own limbs, which are thinner. At 1 cm the defaults
-  mesh 8, 62 of 84, and 142 of 538 limbs for one to three levels: 194, 866 and 1,862 triangles.
+  is the least a stem narrows and childless limbs taper as before; the limb carrying a stem on
+  (D30) starts at that radius. Rejected: bottom-up from the twigs, which makes the trunk's
+  radius follow the limb count, so showing a third level thickened the trunk about 2.4 times.
+  Every stem is drawn, none narrower than the bark's detail threshold (2 cm by default, about a
+  pixel at the game's scale), as font hinting keeps a stem a pixel wide: the aim is
+  verisimilitude, not realism. Only the drawing thickens; the radii, and with them the pipe
+  model, stay true. The defaults draw 240, 848 and 2,354 triangles for one to three levels.
+  Revised in C63 from a cutoff, below which limbs were grown for the foliage but not meshed:
+  their leaves floated off visible tips, and visible twigs with thinner children went bare. The
+  threshold is also C52's tolerance, one setting for what the game can show.
   Sides stay per level, for Panoply's inverted-hull outline (`src/materials/outline.wesl`,
   extruding along vertex normals): a face's middle moves out by width × cos(180° ÷ sides), so
   the line swells and thins with the view, 50% to 100% at 3 sides, 71% at 4, 87% at 6. Hence 3
@@ -515,14 +521,17 @@ per-type hook, and is retained-mode.
   lengthened splayed stems to several metres.
 
 - **D25** A new behaviour changes what a field means, or is derived, before it adds a field: a
-  level has many already. So the span's two fields become one bias, with a constant jitter
-  (C46); a facing and a skew replace the divergence, competition placing the children (C51,
-  D26); wander becomes kinks spaced by the internode, smooth curves being bend's (C50), rather
-  than gaining a smoothness and a spacing. A level keeps 12 fields. The bias pushes even
-  places toward the tip or the base by raising them to the power 4^−bias, keeping both ends and
-  the order; jitter moves a node up to 30% of the gap first. Left out until a preset needs
-  them: a jitter per level (a fir's even whorls), and a sharply bare stretch, such as a bare
-  leader tip. Sides stay a field, being plain to read.
+  level has many already. So the span's two fields become one start, with a constant jitter
+  (C46, C63); a facing and a skew replace the divergence, competition placing the children
+  (C51, D26); wander becomes kinks spaced by the internode, smooth curves being bend's (C50),
+  rather than gaining a smoothness and a spacing. A level keeps 12 fields. The start is a share
+  of the parent's part inside the crown below which no nodes grow; nodes spread evenly from
+  there to the tip, jitter moving each up to 30% of the gap. No end: the limb carrying the
+  parent on (D30) gives the tip its length. Revised in C63 from a bias, which raised even
+  places to the power 4^−bias: it kept both ends, so at 100% the lowest node still sat halfway.
+  A predictable range over a guessed curve, until a model is worth exposing (X18, X22). Left
+  out until a preset needs them: a jitter per level (a fir's even whorls), and a sharply bare
+  stretch, such as a bare leader tip. Sides stay a field, being plain to read.
 
 - **D26** Children are placed where they compete least, not by a fixed divergence: a simple
   form of space colonization's competition for light, kept to siblings on one parent. It is
@@ -555,11 +564,15 @@ per-type hook, and is retained-mode.
 - **D27** A card is a sprig of leaves on a painted stem, lined up with a real twig, after
   seedling (`docs/growth-model.md`, Foliage): its base on the twig, its axis along it, its face
   as near world up as the axis allows. Seen edge-on, a card then loses leaves but never a twig.
-  Clusters grow on the last grown level only, where twigs are, at a density per crown radius of
+  Clusters grow on every branch end, the limbs that bear none, whatever their level: one at the
+  tip, wherever it ends, so no visible end is bare, and more at a density per crown radius of
   twig within the shell; shell and card size are shares of the crown radius, so a scaled species
-  keeps its form (D21). A cluster's place and count come from a stream of the twig's own
-  (`FOLIAGE_STREAM`). Rejected: a free turn about the normal, which read as scattered leaves;
-  every level bearing clusters, which put leaves on boughs and stacked counts. Seedling put one
+  keeps its form (D21). Stems bear none. Revised in C63 from the last grown level only, which
+  left an earlier level's childless limbs bare, and from the shell alone, which left bare the
+  twigs ending deeper in the crown. A cluster's place and count come from a stream of the
+  twig's own (`FOLIAGE_STREAM`). Seedling's per-level leaf flag waits until a preset needs to
+  turn leaves off a level. Rejected: a free turn about the normal, which read as scattered
+  leaves; every limb bearing clusters, which put leaves on boughs and stacked counts. Seedling put one
   card at each leaf-bearing tip, scaled by the branch; spacing along the shell is ours.
 
 - **D28** The HUD (`src/hud.rs`) holds controls that change the preview rather than the species,
@@ -612,6 +625,17 @@ per-type hook, and is retained-mode.
 
   The fan's angle still sets the pairs', until a preset needs them apart. The droops shape the
   card, not the texture (C39). Seedling's 47 models used every field, jitter least (3).
+
+- **D30** A stem or limb bearing limbs ends at its last node, and one more limb of its
+  children's level carries it on from there: along it (angle 0, no skew), otherwise grown as
+  its siblings are (bend, wander, reach to the envelope, its own limbs). So the trunk turns
+  into a branch rather than ending in a post, as in decurrent trees and an excurrent leader's
+  last shoot, and a limb's tip is a shoot like any other, as in sympodial growth; a fork of
+  one, which C30 generalizes. It draws from a stream of its own (`CARRY_ON_STREAM`, D18), so
+  its siblings' count leaves it alone. The two are separate tubes meeting cleanly: the parent's
+  last ring is the new limb's first, at the parent's top radius (D22), and the parent is left
+  open there. Where their sides differ the silhouette shows a shoulder, and the normals crease
+  (X27). If the new limb would be no longer than it is thick, the parent keeps its full length.
 
 ## Deferred
 
@@ -743,9 +767,9 @@ per-type hook, and is retained-mode.
   means laying them out first. *Gate:* C50's kinks, spaced by the internode but not placed at
   the nodes, read as too random.
 
-- **X24** Cards that include their stem and stand in for the finest twigs, those under the
-  meshed radius (D22), one card per unmeshed twig along it, rather than leaves lined up with
-  meshed twigs (D27). Seen edge-on the twig vanishes, so it needs crossed cards (twice the
+- **X24** Cards that include their stem and stand in for the finest twigs, one card per twig
+  of the last level in place of its tube, rather than leaves lined up with meshed twigs (D27),
+  saving the triangles those twigs cost now that every stem is drawn (D22). Seen edge-on the twig vanishes, so it needs crossed cards (twice the
   triangles) or facing kept away from edge-on. *Gate:* C45, to compare the two at game scale.
 
 - **X25** The property editor's attributes from `bevy::annotations` (bevy#26164, open): its
@@ -770,12 +794,20 @@ per-type hook, and is retained-mode.
   need tabs serve that C45's sheets do not (editing variants one at a time, against comparing
   them side by side). *Gate:* C8 and C40 landed, and an author working on variants.
 
+- **X27** One continuous tube for a stem and the limbs carrying it on (D30), sharing the ring
+  at each join, so normals and the outline run unbroken. Keeping the first tube's sides out to
+  the twigs costs the triangles D22's per-level sides save; dropping sides at a join needs a
+  ring stitching, say, 6 to 4. *Gate:* the shoulder or crease at a join showing in screenshots
+  at game scale or in Panoply's outline.
+
 ## Notes
 
 - Bevy source at the locked commit is in Cargo's git checkout,
   `~/.cargo/git/checkouts/bevy-*/c9c21c2`; the local `../bevy` is at a newer commit.
 - `plans/levels.py` once failed at its foliage density edit (the edit did not apply) and passed
   with a screenshot before Enter; if it fails there again, look at that edit first.
+- `plans/smoke.py` once failed at its first orbit hold (`orbit_left`, azimuth still 0) and
+  passed on the next run; if it fails there again, look at the driver's press and hold.
 - The driver cannot drag or scroll, so the turntable's gestures (spin, tilt, zoom, the axis
   choice) are checked by hand, on a trackpad.
 - The first `Cargo.lock` was seeded from `bevy_remote_driver`'s, so Bevy resolved to the

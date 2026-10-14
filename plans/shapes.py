@@ -2,7 +2,7 @@
 unit tests check the counts, so this plan waits a few frames after each edit rather than checking
 the plant. A section that edits the first level puts it back, so later shots compare with the
 default.
-- node bias: the first level's nodes crowd toward the trunk's tip, then its base;
+- node start: the first level's nodes in the upper half of the trunk inside the crown;
 - limbs per node and density: whorls, and a mix of one and two limbs to a node;
 - wander: the first level's limbs zigzag about their course at the most wander, 45°, and the
   second level's twigs kink finer;
@@ -38,11 +38,9 @@ def run(driver):
     driver.frames(2)
     driver.screenshot("default")
 
-    set_number(driver, "limbs[0]/bias", "100")
-    driver.screenshot("bias_toward_tip")
-    set_number(driver, "limbs[0]/bias", "-100")
-    driver.screenshot("bias_toward_base")
-    set_number(driver, "limbs[0]/bias", "0")
+    set_number(driver, "limbs[0]/start", "50")
+    driver.screenshot("start_halfway")
+    set_number(driver, "limbs[0]/start", "0")
 
     set_number(driver, "limbs[0]/per_node", "3")
     driver.screenshot("whorled")

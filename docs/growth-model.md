@@ -175,7 +175,9 @@ whenever the leader stops short.
 ### Limbs
 
 One to three levels. Each level places children in nodes along the part of the parent inside the
-crown, with bounded jitter on each angle. Phyllotaxis is limbs per node and a facing (ledger
+crown, spread evenly from a start (a share of that part) to the tip, with bounded jitter on each
+angle. A parent with children ends at its last node, and one more child carries it on from there
+along it, grown like the others (ledger D30), so no stem ends in a post. Phyllotaxis is limbs per node and a facing (ledger
 D26). Facing around, each node turns to where the limbs below crowd it least, which gives a
 spiral of about 137.5° for one per node, opposite pairs crossing for two, and alternating whorls
 for more. Facing sides, limbs alternate flank to flank; up or down, they leave from the parent's
@@ -206,15 +208,15 @@ tropism moves the tip, and longer limbs bend further; because it is per crown ra
 and a tree with the same settings bend alike.
 
 Radii follow the pipe model: a parent's radius raised to an exponent equals the sum of its
-children's radii raised to it, with one exponent per species. Meshing then decides what is
-geometry: limbs below a radius are dropped and painted, ring sides follow radius and ring
-spacing follows curvature, within the triangle budget.
+children's radii raised to it, with one exponent per species. Meshing draws every stem, none
+narrower than a detail threshold, about a pixel at the game's scale (ledger D22): what is drawn
+is chosen by what the eye reads at that size, not by botany.
 
 ### Foliage
 
-Clusters are seeded along the parts of the last level's limbs that lie within a shell depth of
-the envelope, at a spacing set by the author, so cards follow the twigs and fill the crown's
-surface. Bare trees set no foliage. Each cluster is a card shape (crossed, cupped, creased) chosen
+Clusters grow on every branch end, the limbs that bear none: one at each tip, and more along the
+parts that lie within a shell depth of the envelope, at a spacing set by the author, so cards
+follow the twigs and fill the crown's surface. Bare trees set no foliage. Each cluster is a card shape (crossed, cupped, creased) chosen
 by weight.
 
 A card is a sprig: several leaves on a short stem, painted. Its base sits on the twig and its axis
@@ -253,7 +255,7 @@ For the species data model (C10), the groups follow the layers:
 
 - **Envelope:** profile, top and base (against the trunk's height), radius, lean, squash.
 - **Stems:** count, splay, height, fork count and angle.
-- **Limb levels**, a list: nodes, limbs per node, facing and skew, bias along the parent,
+- **Limb levels**, a list: nodes, limbs per node, facing and skew, start along the parent,
   angle and its limits, reach, tropism, wander, radius ratio.
 - **Bark:** base radius, pipe exponent, flare, color.
 - **Foliage:** spacing, shell depth, card shapes and weights, size, facing (up-to-outward blend,

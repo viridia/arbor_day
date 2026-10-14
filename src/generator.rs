@@ -63,6 +63,8 @@ const OWN_VALUES_STREAM: u64 = u64::MAX - 1;
 const LAYOUT_STREAM: u64 = u64::MAX - 2;
 /// A limb's leaf clusters: their count, and each one's place and turn.
 const FOLIAGE_STREAM: u64 = u64::MAX - 3;
+/// The limb carrying a stem on past its last node.
+const CARRY_ON_STREAM: u64 = u64::MAX - 4;
 
 /// The most a node moves from its even place, as a share of the gap between places, so nodes are
 /// not spaced like rungs. Under half, so neighbours never swap.
@@ -138,6 +140,24 @@ pub struct Limb {
     pub radii: (f32, f32),
     /// The limb's own random stream, before any draw; its children's streams fork from it.
     rng: Rng,
+    /// Whether it bears limbs; if not, it bears leaves.
+    children: bool,
+    /// Whether a limb carries it on past its tip.
+    carried_on: bool,
+}
+
+impl Limb {
+    /// A limb before its own limbs have grown.
+    fn new(level: usize, rings: Vec<Ring>, radii: (f32, f32), rng: Rng) -> Self {
+        Self {
+            level,
+            rings,
+            radii,
+            rng,
+            children: false,
+            carried_on: false,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -172,44 +192,47 @@ pub struct Grown {
     pub bark: Geometry,
     /// One card for each leaf cluster, textured with the leaf.
     pub leaves: Geometry,
-    /// Limbs grown on each grown level, meshed or not.
+    /// Limbs grown on each grown level.
     pub level_limbs: Vec<usize>,
 }
 
-/// The whole plant: the stems and their limbs, less limbs thinner at their base than the bark's
-/// thinnest meshed radius, which are left to the foliage, and the foliage (`foliage`). Each stem is
-/// a tube closed at the top by a fan and left open at the base, since it stands in the ground.
+/// The whole plant: the stems and their limbs, none drawn narrower than the bark's detail
+/// threshold, and the foliage (`foliage`). Each stem is a tube left open at the base, since it
+/// stands in the ground. A tube is closed at the top by a fan, unless a limb carries it on: that
+/// limb starts on its top ring, at its top radius.
 pub fn plant(species: &Species) -> Grown {
     let (stems, limbs) = grow(species);
+    let min_radius = species.bark.detail * 0.5;
+    let drawn = |(base, top): (f32, f32)| (base.max(min_radius), top.max(min_radius));
     let mut bark = Geometry::default();
     let trunk_sides = species.trunk.sides.max(3) as u32;
     for stem in &stems {
-        tube(&mut bark, &stem.rings, stem.radii, trunk_sides);
+        let radii = drawn(stem.radii);
+        tube(&mut bark, &stem.rings, radii, trunk_sides, !stem.carried_on);
     }
     let levels = species.grown_levels();
-    for limb in limbs
-        .iter()
-        .filter(|limb| limb.radii.0 >= species.bark.min_radius)
-    {
+    for limb in &limbs {
         let sides = levels[limb.level].sides.max(3) as u32;
-        tube(&mut bark, &limb.rings, limb.radii, sides);
+        let radii = drawn(limb.radii);
+        tube(&mut bark, &limb.rings, radii, sides, !limb.carried_on);
     }
     let mut level_limbs = vec![0; levels.len()];
     for limb in &limbs {
         level_limbs[limb.level] += 1;
     }
-    let twigs = limbs.iter().filter(|limb| limb.level + 1 == levels.len());
+    let ends = limbs.iter().filter(|limb| !limb.children);
     Grown {
         bark,
-        leaves: foliage(&Envelope::of(species), &species.foliage, twigs),
+        leaves: foliage(&Envelope::of(species), &species.foliage, ends),
         level_limbs,
     }
 }
 
-/// Leaf clusters on `twigs`, the last grown level's limbs, along the parts of them within the
-/// foliage's shell of the envelope: as many as its density gives for that length, each placed as
-/// `node_place` places nodes, so they are spread evenly but not like rungs. Each is a card (`card`)
-/// whose sprig grows from its place along the twig.
+/// Leaf clusters on `twigs`, the limbs bearing none: one at each twig's tip, wherever it ends, so no
+/// branch end is bare, and more along the parts of it within the foliage's shell of the envelope,
+/// as many as its density gives for that length, each placed as `node_place` places nodes, so they
+/// are spread evenly but not like rungs. Each is a card (`card`) whose sprig grows from its place
+/// along the twig. No density leaves the plant bare.
 fn foliage<'a>(
     envelope: &Envelope,
     foliage: &Foliage,
@@ -219,12 +242,16 @@ fn foliage<'a>(
     let shell = foliage.shell * crown;
     let size = foliage.size * crown;
     let mut leaves = Geometry::default();
+    if foliage.density <= 0.0 {
+        return leaves;
+    }
     for twig in twigs {
         let parent = Parent {
             rings: &twig.rings,
             radius: twig.radii.0,
             rng: &twig.rng,
         };
+        card(&mut leaves, &parent.frame(1.0), size);
         let length = twig.rings[twig.rings.len() - 1].at;
         let steps = ((length / TRACE_STEP).ceil() as u32).max(1);
         // Places a trace step apart in the shell, each standing for a step of the twig.
@@ -283,6 +310,8 @@ pub struct Stem {
     pub radii: (f32, f32),
     /// The stem's own random stream; its limbs' streams fork from it.
     rng: Rng,
+    /// Whether a limb carries it on past its tip.
+    carried_on: bool,
 }
 
 /// The stems: `stems` of them from the origin, spaced evenly around, each leaving the ground at
@@ -313,6 +342,7 @@ fn stems(species: &Species) -> Vec<Stem> {
                 ),
                 radii: (trunk.radius, top),
                 rng,
+                carried_on: false,
             }
         })
         .collect()
@@ -325,29 +355,33 @@ pub fn limbs(species: &Species) -> Vec<Limb> {
 }
 
 /// The stems, and their limbs level by level, each level on the limbs of the one before and the
-/// first on the stems, in level order. A stem's radius at its top is what its limbs leave it
-/// (`grow_level`), so it is set once the level after has grown.
+/// first on the stems, in level order. A stem's top, its radius there and where it ends, is what
+/// its limbs leave it (`grow_level`), so it is set once the level after has grown.
 fn grow(species: &Species) -> (Vec<Stem>, Vec<Limb>) {
     let mut stems = stems(species);
     let mut grown: Vec<Limb> = Vec::new();
     for level in 0..species.grown_levels().len() {
         let mut children = Vec::new();
-        let mut grow_on = |parent| grow_level(species, level, parent, &mut children);
         if level == 0 {
             for stem in &mut stems {
-                stem.radii.1 = grow_on(Parent {
+                let parent = Parent {
                     rings: &stem.rings,
                     radius: stem.radii.0,
                     rng: &stem.rng,
-                });
+                };
+                let bearing = grow_level(species, level, parent, &mut children);
+                stem.carried_on = bearing.end(&mut stem.rings, &mut stem.radii);
             }
         }
         for limb in grown.iter_mut().filter(|limb| limb.level + 1 == level) {
-            limb.radii.1 = grow_on(Parent {
+            let parent = Parent {
                 rings: &limb.rings,
                 radius: limb.radii.0,
                 rng: &limb.rng,
-            });
+            };
+            let bearing = grow_level(species, level, parent, &mut children);
+            limb.children = bearing.children;
+            limb.carried_on = bearing.end(&mut limb.rings, &mut limb.radii);
         }
         grown.extend(children);
     }
@@ -434,12 +468,15 @@ impl Parent<'_> {
 /// from the parent and then grown (`grow_limb`). A limb whose start lies outside the crown, or
 /// that would be no longer than it is thick, is left out.
 ///
+/// A parent with limbs ends at its last node, and one more limb of the level carries it on from
+/// there, along it: at angle 0, with no skew, but otherwise grown as the others are.
+///
 /// Radii follow the pipe model: a stem's radius raised to the bark's exponent is shared among the
 /// limbs leaving it and what carries on past them. Each limb's radius is the level's share of the
-/// parent's radius where it leaves, and the parent is that much thinner past it. Returns the
-/// parent's radius at its top: what its limbs leave it, or its base radius tapered if that is
-/// thinner, so the taper is the least a stem narrows.
-fn grow_level(species: &Species, level: usize, parent: Parent, grown: &mut Vec<Limb>) -> f32 {
+/// parent's radius where it leaves, and the parent is that much thinner past it. The parent's
+/// radius at its top is what its limbs leave it, or its base radius tapered if that is thinner, so
+/// the taper is the least a stem narrows; the limb carrying it on starts at that radius.
+fn grow_level(species: &Species, level: usize, parent: Parent, grown: &mut Vec<Limb>) -> Bearing {
     let envelope = &Envelope::of(species);
     let levels = species.grown_levels();
     let params = &levels[level];
@@ -452,8 +489,15 @@ fn grow_level(species: &Species, level: usize, parent: Parent, grown: &mut Vec<L
     let mut section = parent.radius.powf(exponent);
     let tapered = parent.radius * (1.0 - taper);
     let Some((inside_start, inside_end)) = parent.inside_part(envelope) else {
-        return tapered;
+        return Bearing {
+            top: tapered,
+            children: false,
+            tip: None,
+        };
     };
+    let first_child = grown.len();
+    // Where along the parent the last limb grown leaves it.
+    let mut last_node = 0.0;
     // The node count and each node's turn, limb count and place are the parent's, drawn from a
     // stream of its own beside its limbs'.
     let mut layout = parent.rng.fork(LAYOUT_STREAM);
@@ -467,7 +511,7 @@ fn grow_level(species: &Species, level: usize, parent: Parent, grown: &mut Vec<L
     let mut index = 0;
     for node in 0..nodes {
         let per_node = layout.round(params.per_node).max(1);
-        let place = node_place(node, nodes, params.bias, layout.unit());
+        let place = node_place(node, nodes, params.start, layout.unit());
         let t = inside_start + inside * place;
         let frame = parent.frame(t);
         let across = frame.side.cross(frame.tangent);
@@ -501,17 +545,72 @@ fn grow_level(species: &Species, level: usize, parent: Parent, grown: &mut Vec<L
             let rings = grow_limb(envelope, params, start, reach, kinks);
             if rings.len() >= 2 && rings[rings.len() - 1].at > base_radius {
                 section = (section - base_radius.powf(exponent)).max(0.0);
-                grown.push(Limb {
+                last_node = t;
+                grown.push(Limb::new(
                     level,
                     rings,
-                    radii: (base_radius, base_radius * (1.0 - taper)),
+                    (base_radius, base_radius * (1.0 - taper)),
                     rng,
-                });
+                ));
             }
         }
     }
     // The limbs' narrowing, or at least the taper's.
-    section.powf(exponent.recip()).min(tapered)
+    let top = section.powf(exponent.recip()).min(tapered);
+    let children = grown.len() > first_child;
+    if !children {
+        return Bearing {
+            top,
+            children,
+            tip: None,
+        };
+    }
+    // The limb carrying the parent on, from a stream of its own, so the limbs before it leave its
+    // draws alone. It starts on the parent's new tip, turned as that is, so the two tubes meet.
+    let frame = parent.frame(last_node);
+    let tip = Ring {
+        center: frame.point,
+        tangent: frame.tangent,
+        side: frame.side,
+        at: last_node * length,
+    };
+    let rng = parent.rng.fork(CARRY_ON_STREAM);
+    let reach = draw(&params.reach, "reach", &mut rng.fork(OWN_VALUES_STREAM))
+        * distance_to_envelope(envelope, frame.point, frame.tangent);
+    let kinks = Kinks::new(spacing, params.wander, rng.fork(WANDER_STREAM));
+    let rings = grow_limb(envelope, params, Ring { at: 0.0, ..tip }, reach, kinks);
+    let carried_on = rings.len() >= 2 && rings[rings.len() - 1].at > top;
+    if carried_on {
+        grown.push(Limb::new(level, rings, (top, top * (1.0 - taper)), rng));
+    }
+    Bearing {
+        top,
+        children,
+        tip: carried_on.then_some(tip),
+    }
+}
+
+/// What a parent's limbs leave it.
+struct Bearing {
+    /// Its radius at its top.
+    top: f32,
+    /// Whether it bears limbs.
+    children: bool,
+    /// Its new tip, at its last node, if a limb carries it on from there.
+    tip: Option<Ring>,
+}
+
+impl Bearing {
+    /// Ends the parent with these rings and radii as its limbs leave it: narrowed to its top, and
+    /// cut at its new tip if it has one. Returns whether a limb carries it on.
+    fn end(&self, rings: &mut Vec<Ring>, radii: &mut (f32, f32)) -> bool {
+        radii.1 = self.top;
+        let Some(tip) = self.tip else {
+            return false;
+        };
+        end_at(rings, tip);
+        true
+    }
 }
 
 /// A limb's rings, from `start` for up to `length` along it. Its course is traced in short steps
@@ -563,13 +662,13 @@ fn grow_limb(
 }
 
 /// Where node `node` of `nodes` sits, as a fraction of the stretch bearing them: centred in its
-/// equal share, moved by up to `NODE_JITTER` of a share by `unit` (0 to 1), then pushed toward
-/// the tip by a positive `bias` or the base by a negative one. The push raises the place to the
-/// power 4^−bias, which keeps the ends where they are and the nodes in order.
-fn node_place(node: u32, nodes: u32, bias: f32, unit: f32) -> f32 {
+/// equal share of the stretch past `start`, moved by up to `NODE_JITTER` of a share by `unit` (0
+/// to 1).
+fn node_place(node: u32, nodes: u32, start: f32, unit: f32) -> f32 {
     let jitter = (unit * 2.0 - 1.0) * NODE_JITTER;
     let even = (node as f32 + 0.5 + jitter) / nodes as f32;
-    even.powf(4.0_f32.powf(-bias.clamp(-1.0, 1.0)))
+    let start = start.clamp(0.0, 1.0);
+    start + (1.0 - start) * even
 }
 
 /// The limbs already on a parent, as a node about to be placed at `at` metres along it sees them.
@@ -804,19 +903,27 @@ impl Rings {
         next
     }
 
-    /// The rings, with `tip` added if past the last.
+    /// The rings, ending at `tip`.
     fn finish(mut self, tip: Ring) -> Vec<Ring> {
-        if tip.at > self.rings[self.rings.len() - 1].at {
-            self.rings.push(tip);
-        }
+        end_at(&mut self.rings, tip);
         self.rings
     }
 }
 
+/// Ends a tube's rings at `tip`, a ring along it. Rings past it go, and so do rings less than a
+/// trace step before it, but never the base: a tube turning between two rings that close folds
+/// over itself where it is drawn thicker than the gap.
+fn end_at(rings: &mut Vec<Ring>, tip: Ring) {
+    rings.retain(|ring| ring.at == 0.0 || ring.at < tip.at - TRACE_STEP);
+    if tip.at > rings[rings.len() - 1].at {
+        rings.push(tip);
+    }
+}
+
 /// Adds a tube through `rings`, each turned to its ring's side, so the tube rolls only as the
-/// sides do. Radii go from `radii.0` at the start to `radii.1` at the end, which a fan closes. The
-/// start is left open.
-fn tube(geometry: &mut Geometry, rings: &[Ring], radii: (f32, f32), sides: u32) {
+/// sides do. Radii go from `radii.0` at the start to `radii.1` at the end, which a fan closes if
+/// `cap` is set. The start is left open.
+fn tube(geometry: &mut Geometry, rings: &[Ring], radii: (f32, f32), sides: u32, cap: bool) {
     let first = geometry.positions.len() as u32;
     let (base_radius, top_radius) = radii;
     let length = rings[rings.len() - 1].at;
@@ -844,6 +951,9 @@ fn tube(geometry: &mut Geometry, rings: &[Ring], radii: (f32, f32), sides: u32) 
             let (c, d) = (a + sides, b + sides);
             geometry.indices.extend([a, c, d, a, d, b]);
         }
+    }
+    if !cap {
+        return;
     }
 
     let end = rings[rings.len() - 1];
@@ -996,7 +1106,11 @@ fn arc(length: f32, start: f32, bend: f32, t: f32) -> (Vec3, Vec3) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{fuzzy::Distribution, random::Seed, species::Trunk};
+    use crate::{
+        fuzzy::Distribution,
+        random::Seed,
+        species::{Bark, Trunk},
+    };
     use bevy::math::Vec3Swizzles;
 
     /// A lone 5 m stem, standing straight up and leaning toward +X, with no wander.
@@ -1004,7 +1118,7 @@ mod tests {
         let mut geometry = Geometry::default();
         let kinks = Kinks::new(1.0, 0.0, Rng::stream(0, "test"));
         let rings = stem_rings(5.0, 0.0, lean_degrees.to_radians(), 0.0, kinks);
-        tube(&mut geometry, &rings, (0.2, 0.1), sides);
+        tube(&mut geometry, &rings, (0.2, 0.1), sides, true);
         geometry
     }
 
@@ -1210,6 +1324,33 @@ mod tests {
         species
     }
 
+    /// The limbs leaving their parents' sides, and those carrying their parents on, each starting
+    /// on a parent's tip, turned as it is.
+    fn sides_and_carriers(species: &Species) -> (Vec<Limb>, Vec<Limb>) {
+        let (stems, limbs) = grow(species);
+        let tips: Vec<Ring> = stems
+            .iter()
+            .filter(|stem| stem.carried_on)
+            .map(|stem| &stem.rings)
+            .chain(
+                limbs
+                    .iter()
+                    .filter(|limb| limb.carried_on)
+                    .map(|limb| &limb.rings),
+            )
+            .map(|rings| rings[rings.len() - 1])
+            .collect();
+        limbs.into_iter().partition(|limb| {
+            !tips
+                .iter()
+                .any(|tip| tip.center == limb.origin() && tip.tangent == limb.direction())
+        })
+    }
+
+    fn side_limbs(species: &Species) -> Vec<Limb> {
+        sides_and_carriers(species).0
+    }
+
     /// A stem's inside part, as heights.
     fn inside_heights(species: &Species) -> (f32, f32) {
         let stem = &stems(species)[0];
@@ -1237,7 +1378,8 @@ mod tests {
     fn limbs_reach_their_share_of_the_way_to_the_envelope() {
         let species = straight();
         let limbs = limbs(&species);
-        assert_eq!(limbs.len(), 16);
+        // Sixteen, and the one carrying the stem on, which reaches the same way.
+        assert_eq!(limbs.len(), 17);
         for limb in &limbs {
             assert_eq!(limb.rings.len(), 2, "a straight limb is one segment");
             let tip = limb.origin() + limb.direction() * limb.length();
@@ -1252,7 +1394,7 @@ mod tests {
         // At the default lean the trunk is one straight segment, base to tip.
         let species = regular();
         let tip = stems(&species)[0].rings.last().unwrap().center;
-        for limb in limbs(&species) {
+        for limb in side_limbs(&species) {
             let angle = limb.direction().angle_between(tip);
             assert!(
                 (angle - species.limbs[0].angle.center).abs() < 1e-5,
@@ -1272,7 +1414,7 @@ mod tests {
         // Reaching past the envelope is clamped to reaching it.
         species.limbs[0].reach = Fuzzy::new(0.95, 0.2, Distribution::Uniform);
         let tip = stems(&species)[0].rings.last().unwrap().center;
-        let limbs = limbs(&species);
+        let limbs = side_limbs(&species);
         let angles: Vec<f32> = limbs
             .iter()
             .map(|limb| limb.direction().angle_between(tip).to_degrees())
@@ -1298,18 +1440,21 @@ mod tests {
         let first = limbs(&species);
         species.limb_levels = 2;
         let both = limbs(&species);
-        // The first level is unchanged but for its tips, which its limbs narrow, and the second
-        // follows it.
-        let shape = |limbs: &[Limb]| -> Vec<(Vec<Ring>, f32)> {
-            limbs
-                .iter()
-                .map(|limb| (limb.rings.clone(), limb.radii.0))
-                .collect()
-        };
-        assert_eq!(shape(&both[..first.len()]), shape(&first));
-        let second = &both[first.len()..];
+        // The first level is unchanged but for its tips, which its limbs narrow and cut short at
+        // the last of them, and the second follows it.
+        for (before, after) in first.iter().zip(&both) {
+            assert_eq!(
+                (before.rings[0], before.radii.0),
+                (after.rings[0], after.radii.0)
+            );
+            assert!(after.length() <= before.length());
+        }
+        let second: Vec<Limb> = side_limbs(&species)
+            .into_iter()
+            .filter(|limb| limb.level == 1)
+            .collect();
         assert!(!second.is_empty());
-        for limb in second {
+        for limb in &second {
             assert_eq!(limb.level, 1);
             // Starts on a first-level limb, at the level's angle from it.
             let parent = first
@@ -1370,8 +1515,8 @@ mod tests {
 
     #[test]
     fn default_plants_stay_within_budget() {
-        // Orders of magnitude, not counts: the low hundreds for one level, and for three, under
-        // seedling's trees (about 2,500), since most of the third level is left to the foliage.
+        // Orders of magnitude, not counts: the low hundreds for one level, and for three, near
+        // seedling's trees (about 2,500), every twig drawn.
         let triangles = |limb_levels| {
             let species = Species {
                 limb_levels,
@@ -1416,7 +1561,9 @@ mod tests {
     fn wander_zigzags_about_the_course() {
         // With no bend the course is the limb's start, and every internode stays within the
         // wander of it, however many kinks there are: the offsets do not add up.
-        let species = level_limbs(45.0);
+        let mut species = level_limbs(45.0);
+        // Kinks every 30 cm, an internode of the second level.
+        species.limbs[1].density = 10.0;
         let limbs = limbs(&species);
         for limb in &limbs {
             let course = limb.direction();
@@ -1512,7 +1659,7 @@ mod tests {
         // Two nodes on the stem's two crown radii.
         species.limbs[0].density = 1.0;
         species.limbs[0].per_node = 3.0;
-        let limbs = limbs(&species);
+        let limbs = side_limbs(&species);
         assert_eq!(limbs.len(), 6);
         // A node's limbs share an origin and stand a third of a turn apart.
         assert_eq!(limbs[0].origin(), limbs[2].origin());
@@ -1528,7 +1675,7 @@ mod tests {
         let mut species = straight();
         species.limbs[0].density = 8.0;
         species.limbs[0].per_node = per_node;
-        let limbs = limbs(&species);
+        let limbs = side_limbs(&species);
         let per_node = per_node as usize;
         assert_eq!(limbs.len(), 16 * per_node);
         let azimuth = |limb: &Limb| limb.direction().z.atan2(limb.direction().x).to_degrees();
@@ -1604,7 +1751,7 @@ mod tests {
             species.limbs[0].per_node = 2.0;
             species.limbs[0].skew = skew.to_radians();
             let azimuth = |limb: &Limb| limb.direction().z.atan2(limb.direction().x).to_degrees();
-            limbs(&species)
+            side_limbs(&species)
                 .chunks(2)
                 .map(|pair| {
                     ((azimuth(&pair[1]) - azimuth(&pair[0])).rem_euclid(360.0) - 180.0).abs()
@@ -1641,7 +1788,10 @@ mod tests {
         // Five nodes along the stem's two crown radii inside the crown, each within 30% of the
         // 0.8 m gap of 1.65, 2.45, 3.25, 4.05 and 4.85 m.
         species.limbs[0].density = 2.5;
-        let heights: Vec<f32> = limbs(&species).iter().map(|limb| limb.origin().y).collect();
+        let heights: Vec<f32> = side_limbs(&species)
+            .iter()
+            .map(|limb| limb.origin().y)
+            .collect();
         assert_eq!(heights.len(), 5);
         for (height, expected) in heights.iter().zip([1.65, 2.45, 3.25, 4.05, 4.85]) {
             assert!((height - expected).abs() <= 0.24 + 1e-3, "{heights:?}");
@@ -1654,34 +1804,32 @@ mod tests {
     }
 
     #[test]
-    fn the_bias_crowds_nodes_toward_the_tip_or_the_base() {
-        let mean_height = |bias: f32| {
-            let mut species = straight();
-            species.limbs[0].density = 2.5;
-            species.limbs[0].bias = bias;
-            let heights: Vec<f32> = limbs(&species).iter().map(|limb| limb.origin().y).collect();
-            assert_eq!(heights.len(), 5);
-            assert!(heights.iter().all(|height| (1.25..=5.25).contains(height)));
-            assert!(heights.is_sorted(), "{heights:?}");
-            heights.iter().sum::<f32>() / 5.0
-        };
-        // The stem inside the crown is 1.25 to 5.25 m, its middle 3.25 m.
-        assert!(mean_height(1.0) > 4.0);
-        assert!(mean_height(-1.0) < 2.5);
-        assert!(mean_height(0.5) > mean_height(0.0));
-        assert!(mean_height(-0.5) < mean_height(0.0));
+    fn nodes_spread_from_their_start_to_the_tip() {
+        let mut species = straight();
+        species.limbs[0].density = 2.5;
+        species.limbs[0].start = 0.5;
+        // The stem inside the crown is 1.25 to 5.25 m, so nodes start at 3.25 m: five in its
+        // upper 2 m, each within 30% of the 0.4 m gap of 3.45, 3.85, 4.25, 4.65 and 5.05 m.
+        let heights: Vec<f32> = side_limbs(&species)
+            .iter()
+            .map(|limb| limb.origin().y)
+            .collect();
+        assert_eq!(heights.len(), 5);
+        for (height, expected) in heights.iter().zip([3.45, 3.85, 4.25, 4.65, 5.05]) {
+            assert!((height - expected).abs() <= 0.12 + 1e-3, "{heights:?}");
+        }
     }
 
     #[test]
     fn node_places_keep_their_ends_and_order() {
-        for bias in [-1.0, -0.3, 0.0, 0.3, 1.0] {
+        for start in [0.0, 0.3, 0.9] {
             // Pushed as far as jitter goes, the first node down and the last up.
-            let first = node_place(0, 4, bias, 0.0);
-            let last = node_place(3, 4, bias, 1.0);
-            assert!(first > 0.0 && last < 1.0, "{bias}: {first} {last}");
+            let first = node_place(0, 4, start, 0.0);
+            let last = node_place(3, 4, start, 1.0);
+            assert!(first > start && last < 1.0, "{start}: {first} {last}");
             // Neighbours pushed toward each other stay in order.
             for node in 0..3 {
-                assert!(node_place(node, 4, bias, 1.0) < node_place(node + 1, 4, bias, 0.0));
+                assert!(node_place(node, 4, start, 1.0) < node_place(node + 1, 4, start, 0.0));
             }
         }
     }
@@ -1695,7 +1843,8 @@ mod tests {
         let trunk = species.trunk.radius;
         let (stems, limbs) = grow(&species);
         let top = stems[0].radii.1;
-        assert_eq!(limbs.len(), 2);
+        // Two, and the one carrying the trunk on.
+        assert_eq!(limbs.len(), 3);
         // The first takes its share of the whole trunk; the second, of what is left past it.
         let first = 0.6 * trunk;
         let past_first = (trunk.powi(2) - first.powi(2)).sqrt();
@@ -1717,20 +1866,68 @@ mod tests {
     }
 
     #[test]
-    fn thin_limbs_are_grown_but_not_meshed() {
-        let mut species = Species {
+    fn a_limb_carries_its_parent_on_from_its_last_node() {
+        let mut species = straight();
+        species.limb_levels = 2;
+        let (stems, limbs) = grow(&species);
+        let (sides, carriers) = sides_and_carriers(&species);
+        // The trunk ends where its last limb leaves it.
+        let trunk = &stems[0];
+        let tip = trunk.rings[trunk.rings.len() - 1];
+        let last = sides.iter().rfind(|limb| limb.level == 0).unwrap();
+        assert!(trunk.carried_on);
+        assert_eq!(tip.center, last.origin());
+        // One limb carries on each parent bearing limbs: the trunk, and each first-level limb
+        // that does.
+        let bearing = limbs.iter().filter(|limb| limb.children).count();
+        assert_eq!(carriers.len(), 1 + bearing);
+        // The trunk's starts on its tip, along it, at its top radius.
+        let carrier = &carriers[0];
+        assert_eq!((carrier.level, carrier.rings[0].side), (0, tip.side));
+        assert_eq!(carrier.radii.0, trunk.radii.1);
+    }
+
+    #[test]
+    fn a_tube_carried_on_is_left_open() {
+        let mut species = straight();
+        species.limbs[0].density = 1.0;
+        // The trunk's six quads, open at the top, and three straight limbs of four quads and a cap.
+        assert_eq!(plant(&species).bark.triangles(), 6 * 2 + 3 * (4 * 2 + 4));
+    }
+
+    #[test]
+    fn thin_limbs_are_drawn_as_wide_as_the_detail_threshold() {
+        let species = Species {
             limb_levels: 3,
             ..regular()
         };
-        let all = plant(&species);
-        species.bark.min_radius = 1.0;
-        let bare = plant(&species);
-        assert_eq!(bare.level_limbs, all.level_limbs);
-        // The trunk alone: at the default lean, one segment of 6 quads and a 6-triangle cap.
-        assert_eq!(bare.bark.triangles(), 6 * 2 + 6);
-        assert!(all.bark.triangles() > bare.bark.triangles());
-        // Unmeshed twigs still bear the leaves.
-        assert_eq!(bare.leaves.positions, all.leaves.positions);
+        let thick = Species {
+            bark: Bark {
+                detail: 0.1,
+                ..species.bark.clone()
+            },
+            ..species.clone()
+        };
+        let (thin, thick) = (plant(&species), plant(&thick));
+        // Only the drawing thickens: the same limbs, tubes and leaves.
+        assert_eq!(thick.level_limbs, thin.level_limbs);
+        assert_eq!(thick.bark.indices, thin.bark.indices);
+        assert_ne!(thick.bark.positions, thin.bark.positions);
+        assert_eq!(thick.leaves.positions, thin.leaves.positions);
+        // The thinnest tube is drawn 10 cm wide: some ring vertex lies 5 cm off its tip.
+        let tip = |limb: &Limb| limb.rings[limb.rings.len() - 1].center;
+        let thinnest = limbs(&species)
+            .into_iter()
+            .min_by(|a, b| a.radii.1.total_cmp(&b.radii.1))
+            .unwrap();
+        assert!(thinnest.radii.1 < 0.05);
+        assert!(
+            thick
+                .bark
+                .positions
+                .iter()
+                .any(|p| ((*p - tip(&thinnest)).length() - 0.05).abs() < 1e-4)
+        );
     }
 
     #[test]
@@ -1738,9 +1935,9 @@ mod tests {
         let mut species = straight();
         // The stem inside the crown is 4 m, two crown radii, then four.
         species.limbs[0].density = 1.0;
-        assert_eq!(limbs(&species).len(), 2);
+        assert_eq!(side_limbs(&species).len(), 2);
         species.crown.radius = 1.0;
-        assert_eq!(limbs(&species).len(), 4);
+        assert_eq!(side_limbs(&species).len(), 4);
     }
 
     #[test]
@@ -1753,7 +1950,7 @@ mod tests {
                     species.seed = Seed(seed);
                     species.limbs[0].density = density;
                     species.limbs[0].per_node = per_node;
-                    limbs(&species).len()
+                    side_limbs(&species).len()
                 })
                 .collect()
         };
@@ -1838,12 +2035,24 @@ mod tests {
         let foliage = Foliage::default();
         let envelope = Envelope::default();
         let bases = card_bases(1, foliage.clone());
-        // Around 60 for the default one-level tree, not hundreds.
+        // Around 40 for the default one-level tree, not hundreds.
         assert!((20..150).contains(&bases.len()), "{}", bases.len());
+        // One at each limb's tip, wherever it ends; the rest in the shell.
+        let tips: Vec<Vec3> = limbs(&Species::default())
+            .iter()
+            .map(|limb| limb.rings[limb.rings.len() - 1].center)
+            .collect();
         for base in &bases {
+            if tips.iter().any(|tip| (*tip - *base).length() < 1e-4) {
+                continue;
+            }
             let depth = depth_in_envelope(&envelope, *base).expect("inside the envelope");
             assert!(depth < foliage.shell * envelope.radius + 1e-3, "{depth}");
         }
+        assert!(
+            tips.iter()
+                .all(|tip| bases.iter().any(|base| (*tip - *base).length() < 1e-4))
+        );
     }
 
     #[test]
@@ -1859,8 +2068,10 @@ mod tests {
             .len()
         };
         assert_eq!(with(0.0), 0);
-        let (some, more) = (with(5.0), with(20.0));
-        assert!(some > 0 && more > 3 * some, "{some} {more}");
+        // Beyond the one at each tip, which any density grows.
+        let tips = with(1e-6);
+        let (some, more) = (with(5.0) - tips, with(20.0) - tips);
+        assert!(some > 0 && more > 3 * some, "{tips} {some} {more}");
     }
 
     #[test]
@@ -1873,7 +2084,7 @@ mod tests {
             ..regular()
         };
         let limbs = limbs(&species);
-        let twigs: Vec<&Limb> = limbs.iter().filter(|limb| limb.level == 1).collect();
+        let twigs: Vec<&Limb> = limbs.iter().filter(|limb| !limb.children).collect();
         let leaves = plant(&species).leaves;
         assert!(!leaves.positions.is_empty());
         assert_eq!(leaves.uvs.len(), leaves.positions.len());
@@ -1897,5 +2108,20 @@ mod tests {
                 .expect("a twig under the card");
             assert!(axis.angle_between(twig.direction()) < 1e-3);
         }
+    }
+
+    #[test]
+    fn leaves_grow_on_every_limb_bearing_none() {
+        // A second level with no nodes leaves the first bearing the leaves, as if it were the last.
+        let mut species = Species {
+            limb_levels: 2,
+            ..Species::default()
+        };
+        species.limbs[1].density = 0.0;
+        let leaves = |species: &Species| plant(species).leaves.positions;
+        let bare_second = leaves(&species);
+        species.limb_levels = 1;
+        assert!(!bare_second.is_empty());
+        assert_eq!(bare_second, leaves(&species));
     }
 }
