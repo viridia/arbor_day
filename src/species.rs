@@ -376,7 +376,12 @@ impl Default for Wood {
 pub struct Foliage {
     /// Clusters per crown radius of twig within the shell, beside the one at each twig's tip; 0
     /// for a bare plant. Rounded at random for each twig.
-    #[reflect(@ValueRange::<f32>(0.0..=40.0), @Precision(1), @Caption("Clusters per crown radius"))]
+    #[reflect(
+        @ValueRange::<f32>(0.0..=40.0),
+        @Precision(1),
+        @Caption("Clusters per crown radius"),
+        @ControlGroup("Clusters"),
+    )]
     pub density: f32,
     /// How far in from the envelope clusters grow, as a fraction of the crown's radius. The
     /// crown's base is not part of its surface.
@@ -384,6 +389,7 @@ pub struct Foliage {
         @ValueRange::<f32>(0.05..=1.0),
         @Precision(2),
         @NumberInputUnits::new_static("ratio_percent"),
+        @ControlGroup("Clusters"),
     )]
     pub shell: f32,
     /// Each card's width, as a fraction of the crown's radius.
@@ -391,8 +397,27 @@ pub struct Foliage {
         @ValueRange::<f32>(0.02..=1.0),
         @Precision(2),
         @NumberInputUnits::new_static("ratio_percent"),
+        @ControlGroup("Card"),
     )]
     pub size: f32,
+    /// How far each half of a card turns down about its midrib, folding it along the sprig's
+    /// stem; negative turns the halves up, cupping it.
+    #[reflect(
+        @ValueRange::<f32>(-std::f32::consts::FRAC_PI_2..=std::f32::consts::FRAC_PI_2),
+        @NumberInputUnits::new_static("angle_degrees"),
+        @Caption("Lateral droop"),
+        @ControlGroup("Card"),
+    )]
+    pub lateral_droop: f32,
+    /// How far the far half of a card bends down about the line across its middle; negative
+    /// bends it up.
+    #[reflect(
+        @ValueRange::<f32>(-std::f32::consts::FRAC_PI_2..=std::f32::consts::FRAC_PI_2),
+        @NumberInputUnits::new_static("angle_degrees"),
+        @Caption("Axial droop"),
+        @ControlGroup("Card"),
+    )]
+    pub axial_droop: f32,
 }
 
 impl Default for Foliage {
@@ -401,6 +426,9 @@ impl Default for Foliage {
             density: 10.0,
             shell: 0.3,
             size: 0.25,
+            // Seedling's most common pair, on the shrubs and two hemlocks.
+            lateral_droop: (-16.0_f32).to_radians(),
+            axial_droop: 17.0_f32.to_radians(),
         }
     }
 }

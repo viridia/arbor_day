@@ -5,7 +5,7 @@ use bevy::{
 };
 
 use crate::{
-    generator::{self, Geometry},
+    generator::{self, CARD_CORNERS, Geometry},
     species::Species,
 };
 
@@ -24,7 +24,7 @@ impl Plugin for PlantPlugin {
 }
 
 /// The entity showing the plant's leaf cards, beside the [`Plant`]. Its mesh is added on the
-/// first build that grows any, and removed while none grow.
+/// first build that grows any, and hidden, not removed, while none grow.
 #[derive(Component, Default, Clone)]
 pub struct PlantLeaves;
 
@@ -81,7 +81,7 @@ fn build_plant(
         let stats = PlantStats {
             triangles: (grown.bark.triangles() + grown.leaves.triangles()) as u32,
             limbs: level_limbs.iter().sum::<usize>() as u32,
-            cards: (grown.leaves.positions.len() / 4) as u32,
+            cards: (grown.leaves.positions.len() / CARD_CORNERS) as u32,
             level_limbs: level_limbs.iter().map(|&count| count as u32).collect(),
             bark_color: color.to_srgba().to_hex(),
         };
@@ -94,10 +94,14 @@ fn build_plant(
             (!grown.leaves.indices.is_empty()).then(|| to_mesh(grown.leaves, Color::WHITE));
         for (entity, current) in &leaves {
             match &leaf_mesh {
-                Some(mesh) => set_mesh(&mut commands, &mut meshes, entity, current, mesh.clone()),
-                // An empty mesh has no bounds to cull by.
+                Some(mesh) => {
+                    set_mesh(&mut commands, &mut meshes, entity, current, mesh.clone());
+                    commands.entity(entity).insert(Visibility::Inherited);
+                }
+                // Hidden, keeping the last mesh: an empty mesh has no bounds to cull by, and a
+                // `Mesh3d` removed and inserted again was never drawn.
                 None => {
-                    commands.entity(entity).remove::<Mesh3d>();
+                    commands.entity(entity).insert(Visibility::Hidden);
                 }
             }
         }

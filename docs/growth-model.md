@@ -217,13 +217,14 @@ is chosen by what the eye reads at that size, not by botany.
 
 Clusters grow on every branch end, the limbs that bear none: one at each tip, and more along the
 parts that lie within a shell depth of the envelope, at a spacing set by the author, so cards
-follow the twigs and fill the crown's surface. Bare trees set no foliage. Each cluster is a card shape (crossed, cupped, creased) chosen
-by weight.
+follow the twigs and fill the crown's surface. Bare trees set no foliage. Each cluster is a card
+of two by two quads, folded about its midrib (lateral droop, cupped when negative) and across its
+middle (axial droop), as in seedling.
 
 A card is a sprig: several leaves on a short stem, painted. Its base sits on the twig and its axis
 follows the twig, so the painted stem lines up with the real one, as in seedling. Seen edge-on, a
 card loses some leaves but never a twig. The cost is that a sprig always follows its twig; folding
-the card (creased, cupped) gives some freedom back. The face normal is a target turned about the
+the card gives some freedom back. The face normal is a target turned about the
 card's axis as near as the axis allows: world up for now, as seedling has it, and later a blend,
 authored per species, of world up and the envelope's outward normal, with a bounded spread.
 
@@ -259,7 +260,7 @@ For the species data model (C10), the groups follow the layers:
 - **Limb levels**, a list: nodes, limbs per node, facing and skew, start along the parent,
   angle and its limits, reach, tropism, wander, radius ratio.
 - **Bark:** base radius, pipe exponent, flare, color.
-- **Foliage:** spacing, shell depth, card shapes and weights, size, facing (up-to-outward blend,
+- **Foliage:** spacing, shell depth, size, lateral and axial droop, facing (up-to-outward blend,
   spread), crown softness.
 - **Leaf sprig:** how the leaves are arranged on the card's stem (seedling's `leafGroup`: fan
   size and angle, pairs along the stem and their spacing, taper), painted into the texture.

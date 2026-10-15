@@ -80,6 +80,13 @@ const CROWDING_SHARPNESS: i32 = 4;
 /// against crowding of 1 for a limb at the same azimuth one gap away.
 const OUTWARD_WEIGHT: f32 = 1.0;
 
+/// Corners in one card: four quads of four, since each has its own normal (`card`).
+pub const CARD_CORNERS: usize = 16;
+
+/// Where a card's axial droop bends it, as a share of its length from the base. Halfway, as
+/// seedling's grid has it, until the painted leaf (C38) can say where its sprig parts.
+const AXIAL_FOLD: f32 = 0.5;
+
 /// Halvings in finding where a ray leaves the envelope: the largest envelope's 90 m bound to under
 /// a tenth of a millimetre.
 const ENVELOPE_BISECTIONS: u32 = 20;
@@ -244,7 +251,7 @@ pub fn plant(species: &Species) -> Grown {
 }
 
 /// Leaf clusters on `twigs`, the limbs bearing none: one at each twig's tip, wherever it ends, so no
-/// branch end is bare, and more along the parts of it within the foliage's shell of the envelope,
+/// branch end is bare, its fold at the tip, and more along the parts of it within the foliage's shell of the envelope,
 /// as many as its density gives for that length, each placed as `node_place` places nodes, so they
 /// are spread evenly but not like rungs. Each is a card (`card`) whose sprig grows from its place
 /// along the twig. No density leaves the plant bare.
@@ -266,8 +273,16 @@ fn foliage<'a>(
             radius: twig.radii.0,
             rng: &twig.rng,
         };
-        card(&mut leaves, &parent.frame(1.0), size);
         let length = twig.rings[twig.rings.len() - 1].at;
+        // The tip's card reaches back along the twig, its fold at the tip, so the sprig's stem
+        // overlaps the twig's end, as seedling's did; on a twig shorter than that, from its base.
+        let back = (AXIAL_FOLD * size).min(length);
+        card(
+            &mut leaves,
+            &parent.frame(1.0 - back / length.max(f32::EPSILON)),
+            size,
+            foliage,
+        );
         let steps = ((length / TRACE_STEP).ceil() as u32).max(1);
         // Places a trace step apart in the shell, each standing for a step of the twig.
         let in_shell: Vec<Frame> = (0..steps)
@@ -285,7 +300,7 @@ fn foliage<'a>(
         for cluster in 0..clusters {
             let place = node_place(cluster, clusters, 0.0, rng.unit());
             let index = ((place * in_shell.len() as f32) as usize).min(in_shell.len() - 1);
-            card(&mut leaves, &in_shell[index], size);
+            card(&mut leaves, &in_shell[index], size, foliage);
         }
     }
     leaves
@@ -295,26 +310,45 @@ fn foliage<'a>(
 /// axis along the twig, so the sprig's painted stem lines up with it, and its face toward the
 /// twig's upper side, world up made square to the twig, so it is turned as near up as the twig
 /// allows. The texture's bottom is the base.
-fn card(geometry: &mut Geometry, frame: &Frame, size: f32) {
-    let first = geometry.positions.len() as u32;
+///
+/// The card is two by two quads, after seedling, folded twice: each half turns down about the
+/// midrib by the lateral droop (up, cupping, if negative), and the far half bends down about the
+/// line across at `AXIAL_FOLD` by the axial droop. The folds shape the outline but not the
+/// shading: every quad keeps the flat card's normal, so a facet turned from the light is not cut
+/// dark against its neighbours. The corners go near quads before far, left before right, each
+/// quad's counter-clockwise from its face starting at its corner nearest the base on the left.
+fn card(geometry: &mut Geometry, frame: &Frame, size: f32, foliage: &Foliage) {
     let axis = frame.tangent;
     let normal = upper_side(axis, frame.side);
-    // Square to both, so the corners run counter-clockwise seen from the face.
-    let half_across = axis.cross(normal) * (0.5 * size);
-    let along = axis * size;
-    for (corner, uv) in [
-        (-half_across, Vec2::new(0.0, 1.0)),
-        (half_across, Vec2::new(1.0, 1.0)),
-        (half_across + along, Vec2::new(1.0, 0.0)),
-        (-half_across + along, Vec2::new(0.0, 0.0)),
-    ] {
-        geometry.positions.push(frame.point + corner);
-        geometry.normals.push(normal);
-        geometry.uvs.push(uv);
+    // Square to both, so corners run counter-clockwise seen from the face.
+    let across = axis.cross(normal);
+    let (lateral_sin, lateral_cos) = foliage.lateral_droop.sin_cos();
+    let (axial_sin, axial_cos) = foliage.axial_droop.sin_cos();
+    // A point on the flat card, `u` across from the midrib and `v` along from the base, both in
+    // card widths, folded and placed.
+    let fold = |u: f32, v: f32| {
+        let mut out = Vec3::new(u * lateral_cos, -u.abs() * lateral_sin, v);
+        if v > AXIAL_FOLD {
+            let beyond = Vec2::new(out.z - AXIAL_FOLD, out.y);
+            out.z = AXIAL_FOLD + beyond.x * axial_cos + beyond.y * axial_sin;
+            out.y = beyond.y * axial_cos - beyond.x * axial_sin;
+        }
+        frame.point + (across * out.x + normal * out.y + axis * out.z) * size
+    };
+    for (v0, v1) in [(0.0, AXIAL_FOLD), (AXIAL_FOLD, 1.0)] {
+        for (u0, u1) in [(-0.5, 0.0), (0.0, 0.5)] {
+            let first = geometry.positions.len() as u32;
+            let corners = [(u0, v0), (u1, v0), (u1, v1), (u0, v1)].map(|(u, v)| (u, v, fold(u, v)));
+            for (u, v, position) in corners {
+                geometry.positions.push(position);
+                geometry.normals.push(normal);
+                geometry.uvs.push(Vec2::new(u + 0.5, 1.0 - v));
+            }
+            geometry
+                .indices
+                .extend([first, first + 1, first + 2, first, first + 2, first + 3]);
+        }
     }
-    geometry
-        .indices
-        .extend([first, first + 1, first + 2, first, first + 2, first + 3]);
 }
 
 /// A stem rising from the ground, as grown, before meshing.
@@ -2249,6 +2283,14 @@ mod tests {
         assert_eq!(depth(0.0, 1.0), None);
     }
 
+    /// In a card's corners: the middle of its base, its base's left and right ends, the middle of
+    /// its axial fold, and the middle of its tip.
+    const BASE: usize = 1;
+    const FOLD: usize = 2;
+    const BASE_LEFT: usize = 0;
+    const BASE_RIGHT: usize = 5;
+    const TIP: usize = 10;
+
     /// Where the default plant's cards meet their twigs, with `limb_levels` levels and the foliage
     /// as given: the middle of each card's base.
     fn card_bases(limb_levels: i32, foliage: Foliage) -> Vec<Vec3> {
@@ -2260,8 +2302,8 @@ mod tests {
         plant(&species)
             .leaves
             .positions
-            .chunks(4)
-            .map(|corners| (corners[0] + corners[1]) * 0.5)
+            .chunks(CARD_CORNERS)
+            .map(|corners| corners[BASE])
             .collect()
     }
 
@@ -2269,24 +2311,28 @@ mod tests {
     fn clusters_grow_in_the_shell() {
         let foliage = Foliage::default();
         let envelope = Envelope::default();
-        let bases = card_bases(1, foliage.clone());
+        let leaves = plant(&Species::default()).leaves;
+        let cards: Vec<&[Vec3]> = leaves.positions.chunks(CARD_CORNERS).collect();
         // Around 40 for the default one-level tree, not hundreds.
-        assert!((20..150).contains(&bases.len()), "{}", bases.len());
-        // One at each limb's tip, wherever it ends; the rest in the shell.
+        assert!((20..150).contains(&cards.len()), "{}", cards.len());
+        // One at each limb's tip, wherever it ends, its fold there; the rest in the shell.
         let tips: Vec<Vec3> = limbs(&Species::default())
             .iter()
             .map(|limb| limb.rings[limb.rings.len() - 1].center)
             .collect();
-        for base in &bases {
-            if tips.iter().any(|tip| (*tip - *base).length() < 1e-4) {
+        // A tip between a card's base and fold: at its fold, or short of it on a short twig.
+        let spans =
+            |card: &[Vec3], tip: Vec3| distance_to_segment(tip, card[BASE], card[FOLD]) < 1e-4;
+        for card in &cards {
+            if tips.iter().any(|tip| spans(card, *tip)) {
                 continue;
             }
-            let depth = depth_in_envelope(&envelope, *base).expect("inside the envelope");
+            let depth = depth_in_envelope(&envelope, card[BASE]).expect("inside the envelope");
             assert!(depth < foliage.shell * envelope.radius + 1e-3, "{depth}");
         }
         assert!(
             tips.iter()
-                .all(|tip| bases.iter().any(|base| (*tip - *base).length() < 1e-4))
+                .all(|tip| cards.iter().any(|card| spans(card, *tip)))
         );
     }
 
@@ -2311,7 +2357,11 @@ mod tests {
 
     #[test]
     fn cards_lie_along_their_twigs_facing_up() {
-        let foliage = Foliage::default();
+        let foliage = Foliage {
+            lateral_droop: 0.0,
+            axial_droop: 0.0,
+            ..Foliage::default()
+        };
         let side = foliage.size * Envelope::default().radius;
         let species = Species {
             foliage,
@@ -2323,25 +2373,65 @@ mod tests {
         let leaves = plant(&species).leaves;
         assert!(!leaves.positions.is_empty());
         assert_eq!(leaves.uvs.len(), leaves.positions.len());
-        for (corners, normals) in leaves.positions.chunks(4).zip(leaves.normals.chunks(4)) {
-            let base = (corners[0] + corners[1]) * 0.5;
-            let axis = (corners[3] - corners[0]) / side;
-            let across = (corners[1] - corners[0]) / side;
+        let cards = leaves.positions.chunks(CARD_CORNERS);
+        for (corners, normals) in cards.zip(leaves.normals.chunks(CARD_CORNERS)) {
+            let base = corners[BASE];
+            let axis = (corners[TIP] - base) / side;
+            let across = (corners[BASE_RIGHT] - corners[BASE_LEFT]) / side;
+            // Flat, so every quad faces the same way.
             let normal = normals[0];
+            assert!(normals.iter().all(|n| (*n - normal).length() < 1e-4));
             assert!((across.length() - 1.0).abs() < 1e-4 && (axis.length() - 1.0).abs() < 1e-4);
             // Level across, facing as near up as the axis allows.
             assert!(across.y.abs() < 1e-4, "{across}");
             assert!(normal.dot(axis).abs() < 1e-4 && normal.y >= 0.0, "{normal}");
             assert!((normal - Vec3::Y.reject_from(axis).normalize()).length() < 1e-3);
-            // The base on a twig, which the axis follows: straight twigs, so their direction.
-            let twig = twigs
-                .iter()
-                .find(|twig| {
-                    let from = base - twig.origin();
-                    from.cross(twig.direction()).length() < 1e-3
-                })
-                .expect("a twig under the card");
-            assert!(axis.angle_between(twig.direction()) < 1e-3);
+            // The base on a twig, which the axis follows: straight twigs, so their direction. A
+            // short twig's tip card starts at its base, where its parent and siblings meet too.
+            assert!(twigs.iter().any(|twig| {
+                let from = base - twig.origin();
+                from.cross(twig.direction()).length() < 1e-3
+                    && axis.angle_between(twig.direction()) < 1e-3
+            }));
+        }
+    }
+
+    #[test]
+    fn cards_fold_at_the_midrib_and_across_the_middle() {
+        let frame = Frame {
+            point: Vec3::ZERO,
+            tangent: Vec3::X,
+            side: Vec3::Z,
+        };
+        let folded = |lateral: f32, axial: f32| {
+            let mut geometry = Geometry::default();
+            let foliage = Foliage {
+                lateral_droop: lateral.to_radians(),
+                axial_droop: axial.to_radians(),
+                ..Foliage::default()
+            };
+            card(&mut geometry, &frame, 2.0, &foliage);
+            geometry
+        };
+        // A level twig along x, so the card faces up and its left edge lies toward −z.
+        let flat = folded(0.0, 0.0);
+        assert!((flat.positions[TIP] - Vec3::new(2.0, 0.0, 0.0)).length() < 1e-5);
+        // Drooped 30°, each edge drops half a width times sin 30°, and draws in; negative cups.
+        let drooped = folded(30.0, 0.0);
+        let edge = Vec3::new(0.0, -0.5, -30_f32.to_radians().cos());
+        assert!((drooped.positions[BASE_LEFT] - edge).length() < 1e-5);
+        assert!((folded(-30.0, 0.0).positions[BASE_LEFT].y - 0.5).abs() < 1e-5);
+        // The midrib stays on the twig to the fold, and the far half turns down 30° from it.
+        let bent = folded(0.0, 30.0);
+        assert_eq!(bent.positions[BASE], Vec3::ZERO);
+        let (sin, cos) = 30_f32.to_radians().sin_cos();
+        assert!((bent.positions[TIP] - Vec3::new(1.0 + cos, -sin, 0.0)).length() < 1e-5);
+        // Every quad keeps the flat card's normal, and its winding faces the same side.
+        for geometry in [&drooped, &bent, &folded(-30.0, -30.0)] {
+            assert!(geometry.normals.iter().all(|n| *n == Vec3::Y));
+            for quad in geometry.positions.chunks(4) {
+                assert!((quad[1] - quad[0]).cross(quad[3] - quad[0]).y > 0.0);
+            }
         }
     }
 

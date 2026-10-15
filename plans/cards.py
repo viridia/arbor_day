@@ -1,0 +1,44 @@
+"""Card folds: the lateral droop turns each half of a card down about its midrib, or up, cupping
+it, when negative; the axial droop bends its far half down. Checked by value, and by eye in the
+screenshots."""
+
+from driver import Between
+
+BIN = "arbor_day"
+STATS = "arbor_day::plant::PlantStats"
+GROWN_FROM = "arbor_day::plant::GrownFrom"
+
+
+def set_number(driver, path, text):
+    """Replaces a number input's text. A click places the cursor rather than selecting, so clear
+    what is there first."""
+    driver.click(f"Shell/Panel/{path}/input")
+    driver.key("End")
+    for _ in range(8):
+        driver.key("Backspace")
+    driver.type(text)
+    driver.key("Enter")
+
+
+def run(driver):
+    driver.present("Shell", ready=True)  # wait for the UI scene to finish spawning
+    driver.present("Shell/Panel/limbs[0]/add")  # the immediate-mode panel has built its rows
+    # Eight triangles a card.
+    driver.expect("Plant", STATS, {"cards": Between(20, 150), "triangles": Between(300, 2000)})
+    driver.screenshot("default_folds")
+
+    set_number(driver, "lateral_droop", "45")
+    driver.expect("Plant", GROWN_FROM, Between(0.785, 0.786), at="foliage.lateral_droop")
+    set_number(driver, "axial_droop", "0")
+    driver.expect("Plant", GROWN_FROM, 0.0, at="foliage.axial_droop")
+    driver.screenshot("drooped")
+
+    set_number(driver, "lateral_droop", "-45")
+    driver.expect("Plant", GROWN_FROM, Between(-0.786, -0.785), at="foliage.lateral_droop")
+    driver.screenshot("cupped")
+
+    set_number(driver, "lateral_droop", "0")
+    set_number(driver, "axial_droop", "60")
+    driver.expect("Plant", GROWN_FROM, Between(1.047, 1.048), at="foliage.axial_droop")
+    driver.screenshot("bent")
+    driver.exit()
