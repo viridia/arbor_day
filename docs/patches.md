@@ -75,11 +75,47 @@ Composition:
 - `shear_to_course`: moves a path's tip back to where its course ends (C62), stems only.
 
 Whole plant:
-- `pipe`: radii top-down from the stems (D22), each axis taking its `share` attribute.
+- `pipe`: radii top-down from the stems (D22), each axis taking its `share` attribute, in
+  place of the taper.
 - `clusters`: a card at the tip of each axis `on` (usually `ends`) (D27).
 
 The current generator fuses some of these: a limb is traced, kinked and clipped in one loop. As
 operators they run in sequence, which moves some tips slightly (X15's version covers it).
+
+## Stacks
+
+A stage before formulas, after Blender's modifier stack: the operators shown as panels, their
+inputs plain values, with no controls layer. The panel is the pipeline.
+
+Each level (the trunk, then each limb level) has a fixed frame and a stack. The frame is
+placement and growth, which every level needs: for the trunk its stems and height, for a limb
+level its nodes and `grow`'s fields. The stack holds the operators between growing a level's axes
+and placing the next level's nodes on them (`wander`, `shear_to_course`, and later angle by place
+and forks), so any order the panel allows is a valid one. Levels grow in turn: frame, stack, then
+the next level up.
+
+- An "Add" select at the foot of a level's stack inserts an operator, its panel a subpane like a
+  level's. Its header has ▲ and ▼ to reorder, ✕ to remove, and an enable toggle, which keeps the
+  operator's values while it is off, as a hidden level keeps its own (D15). Drag and drop can
+  replace the arrows later.
+- An operator a level does not use shows no rows: a twig level without wander has no wander
+  field. A new behaviour can be a new operator rather than a field on every level, which eases
+  D25.
+- The stack is a list of enums with data. The property editor gains a widget for one (D13's
+  select chooses the variant), and C10 serializes it; so settle stacks before C10.
+
+Some operators need the whole skeleton and run after every level has grown, whatever their place
+in a stack, which then says which levels they apply to rather than when they run. The pipe model
+is one: in a level's stack it narrows that level's axes by the wood their children take (D22),
+top-down, in place of their own taper (C73). Levels without it keep the taper.
+
+The crown is fixed at the head. Foliage is a module like the rest, in the stack of the level that
+bears it, on branch ends by default; a second module with its own leaf texture gives interior
+leaves (X30). Each texture is a material in Panoply, which would split its merged flora meshes, so
+the modules paint regions of one texture (requirements, Foliage), a constraint on C38's painter.
+
+Formulas then come as a later stage: any input may become a formula, and the stacks become the
+patch's steps, with controls added above them.
 
 ## Formulas
 
@@ -112,22 +148,26 @@ An input is a number or a string formula:
     "top": "1.2"
   },
   "steps": [
-    { "op": "stems", "tag": "trunk", "count": 1, "splay": "0°" },
-    { "op": "grow", "on": "trunk", "length": "height", "bend_toward": "15°", "bend": "0.3" },
-    { "op": "wander", "on": "trunk", "angle": "8°" },
-    { "op": "nodes", "on": "trunk", "tag": "bough",
-      "density": "lerp(2, 6, fullness)", "start": "0.2", "facing": "around" },
-    { "op": "grow", "on": "bough",
-      "angle": "bell(lerp(50°, 80°, droop) - 20° * t, 10°)",
-      "reach": "bell(0.9, 0.1)",
-      "bend_toward": "lerp(80°, 130°, droop)", "bend": "0.4" },
-    { "op": "wander", "on": "bough", "angle": "10°" },
-    { "op": "carry_on", "on": "trunk" },
-    { "op": "pipe", "exponent": 2.5, "share": "if(depth == 0, 1, 0.5)" },
-    { "op": "clusters", "on": "ends" }
+    { "stems": { "tag": "trunk", "count": 1, "splay": "0°" } },
+    { "grow": { "on": "trunk", "length": "height", "bend_toward": "15°", "bend": "0.3" } },
+    { "wander": { "on": "trunk", "angle": "8°" } },
+    { "nodes": { "on": "trunk", "tag": "bough",
+                 "density": "lerp(2, 6, fullness)", "start": "0.2", "facing": "around" } },
+    { "grow": { "on": "bough",
+                "angle": "bell(lerp(50°, 80°, droop) - 20° * t, 10°)",
+                "reach": "bell(0.9, 0.1)",
+                "bend_toward": "lerp(80°, 130°, droop)", "bend": "0.4" } },
+    { "wander": { "on": "bough", "angle": "10°" } },
+    { "carry_on": { "on": "trunk" } },
+    { "pipe": { "exponent": 2.5, "share": "if(depth == 0, 1, 0.5)" } },
+    { "clusters": { "on": "ends" } }
   ]
 }
 ```
+
+Each step is an object with one key, the operator, as a MongoDB pipeline stage is. This is how
+`bevy_reflect` and serde write an enum by default, so a stack saved by reflection (C10) and a
+patch's steps take the same form.
 
 A species is then a patch, the controls' values and a seed: the glTF extra (C10) holds those, and
 the patch's name and version (X15).
@@ -146,7 +186,11 @@ second form is a second file.
   grammar generator such as `peg` earns its keep only if the patch becomes a language of its
   own rather than formulas in JSON or TOML. The evaluator is ours, so evaluation stays
   deterministic, and errors name the step and input. Expression crates (`evalexpr`,
-  `fasteval`) were the other option. A new dependency; confirm when step 2 starts.
+  `fasteval`) were the other option. A new dependency; confirm when step 3 starts.
+- **Expressions as strings**, not as JSON trees in MongoDB's style
+  (`{ "$add": [ "$height", 2 ] }`): that form suits expressions that programs write and people
+  seldom read, and an angle such as `bell(lerp(50°, 80°, droop) - 20° * t, 10°)` would nest four
+  objects deep.
 - **Editing**: a patch is a Bevy asset, hot-reloaded, edited in a text editor while the preview
   follows; the panel shows the controls only. A developer view listing the steps can come later.
 - **Today's species**: becomes the default patch, its controls one to one with today's fields,
@@ -157,5 +201,7 @@ second form is a second file.
 1. The generator split into operators over the abstract plant and a realization library, in Rust,
    driven by today's `Species` through a fixed pipeline. No language yet; golden tests (X15)
    hold the output, apart from the fused loop's tips. Useful alone: it is most of X1.
-2. Formulas, controls and the patch file; the default patch reproduces step 1's plant.
-3. A second form written as a patch (X18's first preset that dials cannot reach).
+2. Stacks (X31): the operators as panels, today's per-level fields split between the frames and
+   default stacks, so the default species grows as before.
+3. Formulas, controls and the patch file; the default patch reproduces step 2's plant.
+4. A second form written as a patch (X18's first preset that dials cannot reach).

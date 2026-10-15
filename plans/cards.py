@@ -23,8 +23,8 @@ def set_number(driver, path, text):
 def run(driver):
     driver.present("Shell", ready=True)  # wait for the UI scene to finish spawning
     driver.present("Shell/Panel/limbs[0]/add")  # the immediate-mode panel has built its rows
-    # Eight triangles a card.
-    driver.expect("Plant", STATS, {"cards": Between(20, 150), "triangles": Between(300, 2000)})
+    # One card at each of the ten or eleven limbs' tips, eight triangles each.
+    driver.expect("Plant", STATS, {"cards": Between(10, 11), "triangles": Between(300, 2000)})
     driver.screenshot("default_folds")
 
     set_number(driver, "lateral_droop", "45")

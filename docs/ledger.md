@@ -81,9 +81,9 @@ per-type hook, and is retained-mode.
    leaves, so raising a level's radius thickens that level and nothing else (requirements:
    each parameter changes one visible thing). Under the pipe model the radius divides a fixed
    amount of wood, so raising it thinned the trunk past each node and every later limb, and a
-   stem kept its base radius below its first limb. The pipe exponent goes. Lost: the trunk
-   narrowing more where many limbs leave it, which can return as a weight on the stem's taper
-   if missed. C68's end taper is reconsidered with it. E[3]
+   stem kept its base radius below its first limb. The pipe exponent goes; the pipe model
+   returns as a stack operator (X31). Lost until then: the trunk narrowing more where many
+   limbs leave it. C68's end taper is reconsidered with it. E[3]
 3. **C30 Forks**, Weber and Penn's splits: at a point along a limb it ends, and copies of it
    carry on, turned apart by the fork angle. The copies are the same level as the limb, not its
    children, so they reach the envelope and bear children as it would; turning both by half the
@@ -823,8 +823,15 @@ per-type hook, and is retained-mode.
   card, with no shell. Removed in C74, where they came from the shell (C37). Interior leaves
   that stand apart from any stem would want a texture of their own, without the painted stem
   (requirements, Foliage: more than one leaf texture region), and a second texture's fields
-  would crowd the panel, so they wait for patches (X22). *Gate:* a preset (X18) that another
-  limb level cannot make dense enough.
+  would crowd the panel, so they wait for a second foliage module (X31). *Gate:* a preset
+  (X18) that another limb level cannot make dense enough.
+
+- **X31** Operator stacks (`docs/patches.md`, Stacks), the stage between the fixed panel and
+  formulas (X22): each level a fixed frame of placement and growth, then a stack of operator
+  panels the author adds, reorders and toggles (wander, foliage modules, the pipe model, which
+  runs after growth wherever it sits). Fewer rows, since an unused operator shows none. Needs
+  X22's first step, the generator split into operators, and a property editor widget for a
+  list of enums with data. E[4] *Gate:* C73 landed, and settled before C10's file format.
 
 ## Notes
 
