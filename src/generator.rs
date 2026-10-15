@@ -61,6 +61,8 @@ const OWN_VALUES_STREAM: u64 = u64::MAX - 1;
 const LAYOUT_STREAM: u64 = u64::MAX - 2;
 /// The limb carrying a stem on past its last node.
 const CARRY_ON_STREAM: u64 = u64::MAX - 4;
+/// A limb's fork: whether it forks, where and how widely, and its copies.
+const FORK_STREAM: u64 = u64::MAX - 5;
 
 /// The most a node moves from its even place, as a share of the gap between places, so nodes are
 /// not spaced like rungs. Under half, so neighbours never swap.
@@ -144,6 +146,10 @@ pub struct Limb {
     children: bool,
     /// Whether a limb carries it on past its tip.
     carried_on: bool,
+    /// Whether it ends in a fork, its copies carrying it on (`fork`).
+    forked: bool,
+    /// Whether it is a fork's copy, carrying a limb on.
+    copy: bool,
 }
 
 impl Limb {
@@ -156,6 +162,19 @@ impl Limb {
             rng,
             children: false,
             carried_on: false,
+            forked: false,
+            copy: false,
+        }
+    }
+
+    /// The limb as a parent of the level after.
+    fn parent(&self) -> Parent<'_> {
+        Parent {
+            rings: &self.rings,
+            radius: self.radii.0,
+            rng: &self.rng,
+            forked: self.forked,
+            copy: self.copy,
         }
     }
 }
@@ -220,7 +239,7 @@ pub fn plant(species: &Species) -> Grown {
     for limb in &limbs {
         level_limbs[limb.level] += 1;
     }
-    let ends = limbs.iter().filter(|limb| !limb.children);
+    let ends = limbs.iter().filter(|limb| !limb.children && !limb.forked);
     Grown {
         bark,
         leaves: foliage(Envelope::of(species).radius, &species.foliage, ends),
@@ -240,14 +259,9 @@ fn foliage<'a>(crown: f32, foliage: &Foliage, twigs: impl Iterator<Item = &'a Li
         return leaves;
     }
     for twig in twigs {
-        let parent = Parent {
-            rings: &twig.rings,
-            radius: twig.radii.0,
-            rng: &twig.rng,
-        };
         let tip = &twig.rings[twig.rings.len() - 1];
         let back = (AXIAL_FOLD * size).min(tip.at);
-        let frame = parent.frame(1.0 - back / tip.at.max(f32::EPSILON));
+        let frame = twig.parent().frame(1.0 - back / tip.at.max(f32::EPSILON));
         card(&mut leaves, &frame, size, foliage);
     }
     leaves
@@ -310,6 +324,19 @@ pub struct Stem {
     carried_on: bool,
 }
 
+impl Stem {
+    /// The stem as a parent of the first level.
+    fn parent(&self) -> Parent<'_> {
+        Parent {
+            rings: &self.rings,
+            radius: self.radii.0,
+            rng: &self.rng,
+            forked: false,
+            copy: false,
+        }
+    }
+}
+
 /// The stems: `stems` of them from the origin, spaced evenly around, each leaving the ground at
 /// the splay from up and turning by the lean as it rises, away from the middle, but never past
 /// level, where it would sink again, and kinking about that course by the trunk's wander. The
@@ -360,23 +387,12 @@ fn grow(species: &Species) -> (Vec<Stem>, Vec<Limb>) {
         let mut children = Vec::new();
         if level == 0 {
             for stem in &mut stems {
-                let parent = Parent {
-                    rings: &stem.rings,
-                    radius: stem.radii.0,
-                    rng: &stem.rng,
-                };
-                let bearing = grow_level(species, level, parent, &mut children);
-                stem.carried_on =
-                    bearing.end(&mut stem.rings, &mut stem.radii);
+                let bearing = grow_level(species, level, stem.parent(), &mut children);
+                stem.carried_on = bearing.end(&mut stem.rings, &mut stem.radii);
             }
         }
         for limb in grown.iter_mut().filter(|limb| limb.level + 1 == level) {
-            let parent = Parent {
-                rings: &limb.rings,
-                radius: limb.radii.0,
-                rng: &limb.rng,
-            };
-            let bearing = grow_level(species, level, parent, &mut children);
+            let bearing = grow_level(species, level, limb.parent(), &mut children);
             limb.children = bearing.children;
             limb.carried_on = bearing.end(&mut limb.rings, &mut limb.radii);
         }
@@ -392,6 +408,11 @@ struct Parent<'a> {
     /// Radius at the base.
     radius: f32,
     rng: &'a Rng,
+    /// Whether it ends in a fork, so no limb carries it on.
+    forked: bool,
+    /// Whether it is a fork's copy, so its limbs start from its base, it being partway along a
+    /// limb.
+    copy: bool,
 }
 
 impl Parent<'_> {
@@ -466,7 +487,9 @@ impl Parent<'_> {
 /// that would be no longer than it is thick, is left out.
 ///
 /// A parent with limbs ends at its last node, and one more limb of the level carries it on from
-/// there, along it: at angle 0, with no skew, but otherwise grown as the others are.
+/// there, along it: at angle 0, with no skew, but otherwise grown as the others are. A parent
+/// ending in a fork is carried on by its copies instead, and a copy's nodes start from its base.
+/// Each limb grown may fork (`fork`).
 ///
 /// Every stem narrows evenly by the plant's taper, from its base to its tip as grown, and each limb's
 /// base radius is the level's share of the parent's radius where it leaves, so a level's radius
@@ -485,6 +508,14 @@ fn grow_level(species: &Species, level: usize, parent: Parent, grown: &mut Vec<L
     let straight = AXIAL_FOLD * species.foliage.size * envelope.radius.max(0.01);
     // The parent's radius `t` (0 to 1) along it as grown.
     let radius_at = |t: f32| parent.radius * (1.0 - taper * t);
+    // A limb grown, added with its copies if it forks.
+    let add = |mut limb: Limb, grown: &mut Vec<Limb>| {
+        let copies = fork(
+            &mut limb, params, envelope, taper, spacing, straight, tolerance,
+        );
+        grown.push(limb);
+        grown.extend(copies);
+    };
     let Some((inside_start, inside_end)) = parent.inside_part(envelope) else {
         return Bearing {
             children: false,
@@ -507,7 +538,8 @@ fn grow_level(species: &Species, level: usize, parent: Parent, grown: &mut Vec<L
     let mut index = 0;
     for node in 0..nodes {
         let per_node = layout.round(params.per_node).max(1);
-        let place = node_place(node, nodes, params.start, layout.unit());
+        let start = if parent.copy { 0.0 } else { params.start };
+        let place = node_place(node, nodes, start, layout.unit());
         let t = inside_start + inside * place;
         let frame = parent.frame(t);
         let across = frame.side.cross(frame.tangent);
@@ -548,17 +580,13 @@ fn grow_level(species: &Species, level: usize, parent: Parent, grown: &mut Vec<L
             );
             if rings.len() >= 2 && rings[rings.len() - 1].at > base_radius {
                 last_node = t;
-                grown.push(Limb::new(
-                    level,
-                    rings,
-                    (base_radius, base_radius * (1.0 - taper)),
-                    rng,
-                ));
+                let radii = (base_radius, base_radius * (1.0 - taper));
+                add(Limb::new(level, rings, radii, rng), grown);
             }
         }
     }
     let children = grown.len() > first_child;
-    if !children {
+    if !children || parent.forked {
         return Bearing {
             children,
             tip: None,
@@ -589,12 +617,80 @@ fn grow_level(species: &Species, level: usize, parent: Parent, grown: &mut Vec<L
     );
     let carried_on = rings.len() >= 2 && rings[rings.len() - 1].at > top;
     if carried_on {
-        grown.push(Limb::new(level, rings, (top, top * (1.0 - taper)), rng));
+        add(
+            Limb::new(level, rings, (top, top * (1.0 - taper)), rng),
+            grown,
+        );
     }
     Bearing {
         children,
         tip: carried_on.then_some((tip, top)),
     }
+}
+
+/// Forks `limb` with the chance its level gives, returning the copies carrying it on, or none. It
+/// ends at the fork, at its radius there, and the copies leave from there, spread evenly around
+/// its direction, each turned from it by half the fork angle, the first toward its flank turned
+/// up by the fork roll: so two copies make a Y lying level at no roll and upright at 90°. Each
+/// copy starts at the limb's radius at the fork and is grown as a limb of its level is, reaching
+/// toward the envelope. A copy that would be no longer than it is thick is left out, and with no
+/// copies the limb does not fork.
+fn fork(
+    limb: &mut Limb,
+    params: &LimbLevel,
+    envelope: &Envelope,
+    taper: f32,
+    kink_spacing: f32,
+    straight: f32,
+    tolerance: f32,
+) -> Vec<Limb> {
+    let streams = limb.rng.fork(FORK_STREAM);
+    let mut draws = streams.fork(OWN_VALUES_STREAM);
+    if draws.unit() >= params.fork_chance {
+        return Vec::new();
+    }
+    let at = draw(&params.fork_at, "fork_at", &mut draws);
+    let (half_sin, half_cos) = (draw(&params.fork_angle, "fork_angle", &mut draws) * 0.5).sin_cos();
+    let frame = limb.parent().frame(at);
+    let radius = limb.radii.0 + (limb.radii.1 - limb.radii.0) * at;
+    let upper = upper_side(frame.tangent, frame.side);
+    let (roll_sin, roll_cos) = params.fork_roll.sin_cos();
+    let first = frame.tangent.cross(upper) * roll_cos + upper * roll_sin;
+    let count = params.fork_copies.max(2) as u32;
+    let copies: Vec<Limb> = (0..count)
+        .filter_map(|copy| {
+            let rng = streams.fork(copy as u64);
+            let around = Quat::from_axis_angle(frame.tangent, TAU * copy as f32 / count as f32);
+            let direction = frame.tangent * half_cos + around * first * half_sin;
+            let reach = draw(&params.reach, "reach", &mut rng.fork(OWN_VALUES_STREAM))
+                * distance_to_envelope(envelope, frame.point, direction);
+            let start = Ring {
+                center: frame.point,
+                tangent: direction,
+                side: upper_side(direction, frame.side),
+                at: 0.0,
+            };
+            let kinks = Kinks::new(kink_spacing, params.wander, rng.fork(WANDER_STREAM));
+            let rings = grow_limb(envelope, params, start, reach, kinks, straight, tolerance);
+            (rings.len() >= 2 && rings[rings.len() - 1].at > radius).then(|| Limb {
+                copy: true,
+                ..Limb::new(limb.level, rings, (radius, radius * (1.0 - taper)), rng)
+            })
+        })
+        .collect();
+    if !copies.is_empty() {
+        let length = limb.rings[limb.rings.len() - 1].at;
+        let tip = Ring {
+            center: frame.point,
+            tangent: frame.tangent,
+            side: frame.side,
+            at: at * length,
+        };
+        end_at(&mut limb.rings, tip);
+        limb.radii.1 = radius;
+        limb.forked = true;
+    }
+    copies
 }
 
 /// What a parent's limbs leave it.
@@ -1410,7 +1506,12 @@ mod tests {
             level.bend = 0.0;
             level.wander = 0.0;
             level.skew = 0.0;
-            for fuzzy in [&mut level.angle, &mut level.reach] {
+            for fuzzy in [
+                &mut level.angle,
+                &mut level.reach,
+                &mut level.fork_at,
+                &mut level.fork_angle,
+            ] {
                 fuzzy.spread = 0.0;
             }
         }
@@ -1460,11 +1561,7 @@ mod tests {
     /// A stem's inside part, as heights.
     fn inside_heights(species: &Species) -> (f32, f32) {
         let stem = &stems(species)[0];
-        let parent = Parent {
-            rings: &stem.rings,
-            radius: stem.radii.0,
-            rng: &stem.rng,
-        };
+        let parent = stem.parent();
         let (start, end) = parent
             .inside_part(&Envelope::of(species))
             .expect("a stem inside the crown");
@@ -2054,6 +2151,87 @@ mod tests {
         let carrier = &carriers[0];
         assert_eq!((carrier.level, carrier.rings[0].side), (0, tip.side));
         assert_eq!(carrier.radii.0, trunk.radii.1);
+    }
+
+    /// `straight`'s first level, every limb forking halfway into `copies` at 60° across, the Y's
+    /// plane turned by `roll` in degrees.
+    fn forking(copies: i32, roll: f32) -> Species {
+        let mut species = straight();
+        let level = &mut species.limbs[0];
+        level.density = 1.0;
+        level.fork_chance = 1.0;
+        level.fork_at.center = 0.5;
+        level.fork_copies = copies;
+        level.fork_angle.center = 60.0_f32.to_radians();
+        level.fork_roll = roll.to_radians();
+        species
+    }
+
+    /// Each forked limb, and the copies following it.
+    fn forks(limbs: &[Limb]) -> Vec<(&Limb, &[Limb])> {
+        limbs
+            .iter()
+            .enumerate()
+            .filter(|(_, limb)| limb.forked)
+            .map(|(i, limb)| {
+                let copies = limbs[i + 1..].iter().take_while(|limb| limb.copy).count();
+                (limb, &limbs[i + 1..i + 1 + copies])
+            })
+            .collect()
+    }
+
+    #[test]
+    fn a_fork_spreads_its_copies_from_its_tip() {
+        for (copies, roll) in [(2, 0.0), (2, 90.0), (3, 0.0)] {
+            let limbs = limbs(&forking(copies, roll));
+            let forks = forks(&limbs);
+            assert!(!forks.is_empty());
+            for (limb, copies) in forks {
+                let tip = limb.rings[limb.rings.len() - 1];
+                let upper = upper_side(tip.tangent, tip.side);
+                let mut spread = Vec3::ZERO;
+                for copy in copies {
+                    // On the tip, at its radius, turned half the fork angle from it.
+                    assert!((copy.origin() - tip.center).length() < 1e-5);
+                    assert_eq!(copy.radii.0, limb.radii.1);
+                    let angle = copy.direction().angle_between(tip.tangent).to_degrees();
+                    assert!((angle - 30.0).abs() < 1e-2, "{angle}");
+                    spread += copy.direction().reject_from_normalized(tip.tangent);
+                }
+                // Spread evenly around it.
+                assert!(spread.length() < 1e-4, "{spread}");
+                if copies.len() == 2 {
+                    // Two lie level side by side at no roll, and one above the other at 90°.
+                    let apart = (copies[0].direction() - copies[1].direction()).normalize();
+                    let along_upper = apart.dot(upper).abs();
+                    let expected = if roll == 0.0 { 0.0 } else { 1.0 };
+                    assert!(
+                        (along_upper - expected).abs() < 1e-3,
+                        "{roll}: {along_upper}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn a_forked_limb_is_carried_on_by_its_copies_alone() {
+        // No leaves at a fork: one card at each tip of the first level, forks left out.
+        let mut species = forking(2, 0.0);
+        let tips = limbs(&species).iter().filter(|limb| !limb.forked).count();
+        assert_eq!(plant(&species).leaves.positions.len(), tips * CARD_CORNERS);
+        // Carried on are the trunk and each unforked first-level limb bearing limbs, but no
+        // forked one.
+        species.limb_levels = 2;
+        let limbs = limbs(&species);
+        let bearing = |forked| {
+            limbs
+                .iter()
+                .filter(|limb| limb.children && limb.forked == forked)
+                .count()
+        };
+        assert!(bearing(true) > 0);
+        assert_eq!(sides_and_carriers(&species).1.len(), 1 + bearing(false));
     }
 
     #[test]

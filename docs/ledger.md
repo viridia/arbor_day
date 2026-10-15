@@ -56,6 +56,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C33   | Control groups: a `ControlGroup` field attribute gathers a struct's rows under a bold heading where its first field is declared, or into a subpane of its own at the panel's top level, so panes never nest boxes; the data stays flat, so paths are unchanged within a struct. A limb level's rows in Arrangement, Direction (with wander) and Shape (reach, radius, sides). A Plant group at the top: the seed and the detail threshold, now `Species::detail`. `Bark` becomes `Wood` ("Bark color", pipe exponent). `plans/groups.py`, screenshots only. A pattern for Panoply's editor (D3). |
 | C74   | Leaves at branch ends only (D27): one card at each limb's tip that bears none, and none along the twigs. A "Leaves" checkbox, the first species `bool`, replaces the cluster density; the density, the shell and `depth_in_envelope` go. No limb kinks in its last stretch under a tip's card (D17), so the card lies along the twig and its fold on the tip; a kink there had turned the fold up to 10 cm off the tip, which the cards along twigs had hidden from C39's test. The Foliage requirement is rewritten. `plans/levels.py` toggles Leaves. |
 | C73   | Radii by taper (D22): every stem and limb narrows evenly by one taper, now in the Plant group, beside the bark color, in place of the trunk's taper and the pipe exponent; the Wood group goes, and a limb starts at its level's share of the parent's radius where it leaves. C68 (end taper) folded in. C30 scoped (one fork point, 2 to 4 copies), stem forks split off as C75; X32, X33 recorded. |
+| C30   | Forks (D31): a limb of a level with a fork chance ends partway along, and 2 to 4 copies of it carry it on, spread around it by the fork angle and roll; a Fork group per level. `plans/shapes.py` screenshots a level Y, an upright Y and a three-way fork. |
 
 ## Next
 
@@ -77,24 +78,13 @@ per-type hook, and is retained-mode.
    game's camera (45° down), a figure in `PlantStats`, to judge facing and folds by numbers as
    well as by eye. Card counts multiply with levels, eight triangles each since C39, so look at
    density against the budget too. E[3]
-2. **C30 Forks**, Weber and Penn's splits, for limbs: at one point along a limb it ends, and
-   copies of it carry on, spread evenly around its axis, each at the fork angle from it, the
-   ring turned by the fork roll; two copies make a Y in the roll's plane, from level to
-   upright. The copies are the same level as the limb, not its children, so they reach the
-   envelope (each drawing its own reach) and bear children as it would, from their base, since
-   the level's start is a limb's bare base. Each copy starts at the limb's radius at the fork
-   (D22). The limb is capped there, bears its children up to the fork, and is not carried on
-   (D30), nor does it bear a leaf there. Copies do not fork again. Each copy's children compete
-   among themselves alone; a level-roll Y with sides facing then puts some on the inner flanks,
-   into the crotch, which a plan screenshots (X33). Per level: fork chance, fork at (`Fuzzy`, a
-   fraction of the limb), copies (2 to 4), fork angle (`Fuzzy`) and fork roll. Stems follow in
-   C75. E[3]
-3. **C75 Stem forks**, C30's forks on stems, so a decurrent tree's leader stopping short (D23)
-   ends in a fork (growth model, Stems and leader). A stem's fork may lie below the crown base:
+2. **C75 Stem forks**, forks (D31) on stems, at any point along them. A decurrent tree's
+   leader stopping short (D23) already ends in a fork when the first level forks, its top
+   being a limb of that level (D30), so what is left is a stem splitting below its crown. A stem's fork may lie below the crown base:
    the trunk's height sets the axis's length, the fork where it splits. A three-way fork low on
    one stem stands in for several splayed stems, so stems and splay may become a fork at the
    ground, its copies and angle (D25), in place of fork fields beside them. E[3]
-4. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's leaf, as D29 has it, its
+3. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's leaf, as D29 has it, its
    fields in a "Sprig" and a "Leaf" group under Foliage, and the `Interval` type (D10) for its
    variations. The painter takes the outline as an
    argument, a width in texture pixels or none, which C38 fixes at a constant until C66 makes it
@@ -105,13 +95,13 @@ per-type hook, and is retained-mode.
    with a tolerance, since SIMD can move a channel by a level. The card's axial fold
    (`generator::AXIAL_FOLD`, halfway) moves to where the painted sprig's fan starts, as
    seedling's did. E[3]
-5. **C66 Outlines**, a switch for the whole plant (requirements, Foliage): in the Plant group
+4. **C66 Outlines**, a switch for the whole plant (requirements, Foliage): in the Plant group
    (C33), the switch, the bark's width as the game reads it, and the leaf stroke's in texture
    pixels (growth model, Consequences). On, the leaf texture is painted with its strokes (D29),
    the preview draws the bark with an inverted hull after Panoply's `src/materials/outline.wesl`,
    and the export writes the `"outline"` material extra (C41). Off, none of these; whether the
    translucent strokes between leaves stay is judged then. E[3]
-6. **C10 Species data model**, its groups the layers of the growth model (D11;
+5. **C10 Species data model**, its groups the layers of the growth model (D11;
    `docs/growth-model.md`, Consequences), correcting seedling where the requirements say.
    Reflectable types with `Default` for initial values and attributes for the editor, after the
    fields settle, so saved files are not broken by every change. Serialized
@@ -130,15 +120,15 @@ per-type hook, and is retained-mode.
    levels with hidden ones stashed in the editor, the same in files but a larger change that
    undoes D15. Seedling's groups for reference: `trunk`; `branch[]`, one per level; the leaf as
    `leafGroup` (arrangement), `leafShape` and `leafColor`. E[4], split when started
-7. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
+6. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
    panel, above the Plant group (C33); the file browser is X2. File commands act on the active document, so that tabs (X26)
    need not change them. E[3]
-8. **C8 Working document in settings.** A settings group holding the working species and, once
+7. **C8 Working document in settings.** A settings group holding the working species and, once
    set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
    as seedling did. The document's name comes from the file name. Serialized by reflection, as
    `bevy_settings` does. Stored as a list of open documents holding one, and the active one's
    index, so several (X26) need no change of format. E[3]
-9. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
+8. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
    as a JSON extra (C10), written from the generator's output (`generator::plant`), never from
    the preview's entities, whose leaf mesh is only hidden while none grow, in the form Panoply loads (requirements, Output; "What Panoply does with the output"). Bevy writes no glTF,
    so this adds a dependency or a writer of our own; propose it before code. The command-line
@@ -631,6 +621,20 @@ per-type hook, and is retained-mode.
   open there. Where their sides differ the silhouette shows a shoulder, and the normals crease
   (X27). If the new limb would be no longer than it is thick, the parent keeps its full length.
 
+- **D31** Forks, after Weber and Penn's splits: a limb forks with its level's chance at one
+  point, a share of its length, and ends there, capped, at its radius there (D22); copies of
+  it carry it on, the same level as it, not its children, so they reach the envelope and bear
+  limbs as it would. They are spread evenly around its direction, each turned half the fork
+  angle from it, the first toward its flank turned up by the roll, so two make a Y from level
+  (0°) to upright (90°), and three or four a ring, as a shrub's low split. Each copy starts at
+  the limb's radius at the fork and draws its own reach, wander and limbs from a stream of the
+  fork's (`FORK_STREAM`, D18). A forked limb bears limbs up to the fork and neither a limb
+  carrying it on (D30) nor a leaf there; a copy's nodes start from its base, the level's start
+  being a limb's bare base, and copies do not fork again. The limb carrying a parent on is a
+  limb of its level, so it forks too: a trunk's top forks when its first level does. A copy's
+  limbs compete among themselves alone (D26; X33). Five fields in a Fork group, chance, at,
+  copies (2 to 4), angle and roll, all inert at the default chance of 0.
+
 ## Deferred
 
 - **X1** The generator as its own library crate, beside the app: no Bevy dependency beyond
@@ -834,6 +838,11 @@ per-type hook, and is retained-mode.
   each copy's first child goes to its outer flank, away from the crotch; alternation still puts
   later ones inside, as in real amphitonic forks. E[2] *Gate:* C30's screenshot of a level-roll
   Y with sides facing shows the crotch crowded.
+
+- **X34** No stacked captions (revising C13): number inputs carry their label inside the field,
+  and enum selects put theirs on the same row, as color and boolean rows do, so every widget
+  is one row. The panel is reorganized with it. E[3] *Gate:* feathers' number input gains an
+  interior label.
 
 ## Notes
 

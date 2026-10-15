@@ -296,6 +296,46 @@ pub struct LimbLevel {
     /// Sides of each ring.
     #[reflect(@ValueRange::<i32>(3..=8), @Spinbox, @ControlGroup("Shape"))]
     pub sides: i32,
+    /// The chance that a limb forks: it ends partway along, and copies of it carry on from there,
+    /// of its level, so they reach the envelope and bear limbs as it would.
+    #[reflect(
+        @ValueRange::<f32>(0.0..=1.0),
+        @Precision(2),
+        @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("Chance"),
+        @ControlGroup("Fork"),
+    )]
+    pub fork_chance: f32,
+    /// Where along a limb it forks, as a share of its length. Drawn for each limb.
+    #[reflect(
+        @ValueRange::<f32>(0.05..=0.95),
+        @Precision(2),
+        @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("At"),
+        @ControlGroup("Fork"),
+    )]
+    pub fork_at: Fuzzy,
+    /// Copies carrying a forked limb on, spread evenly around its direction.
+    #[reflect(@ValueRange::<i32>(2..=4), @Spinbox, @Caption("Copies"), @ControlGroup("Fork"))]
+    pub fork_copies: i32,
+    /// The angle across a fork: each copy turns half of it from the limb's direction. Drawn for
+    /// each fork.
+    #[reflect(
+        @ValueRange::<f32>(0.0..=std::f32::consts::PI),
+        @NumberInputUnits::new_static("angle_degrees"),
+        @Caption("Angle"),
+        @ControlGroup("Fork"),
+    )]
+    pub fork_angle: Fuzzy,
+    /// Where the copies lie around the limb: at 0, two copies spread level, side by side; at 90°,
+    /// one above the other.
+    #[reflect(
+        @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_2),
+        @NumberInputUnits::new_static("angle_degrees"),
+        @Caption("Roll"),
+        @ControlGroup("Fork"),
+    )]
+    pub fork_roll: f32,
 }
 
 impl Default for LimbLevel {
@@ -313,6 +353,11 @@ impl Default for LimbLevel {
             reach: Fuzzy::new(0.9, 0.1, Distribution::Bell),
             radius: 0.5,
             sides: 4,
+            fork_chance: 0.0,
+            fork_at: Fuzzy::new(0.5, 0.1, Distribution::Bell),
+            fork_copies: 2,
+            fork_angle: degrees(40.0, 10.0),
+            fork_roll: 0.0,
         }
     }
 }

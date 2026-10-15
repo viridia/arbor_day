@@ -7,6 +7,8 @@ default.
 - wander: the first level's limbs zigzag about their course at the most wander, 45°, and the
   second level's shorter twigs kink once or not at all;
 - facing: the second level's limbs to the sides (the default), up, down and around, then skewed;
+- forks: every first-level limb forking, the Y level, then upright, then three ways, the second
+  level to the sides, so the level Y shows whether twigs crowd its crotch (ledger X33);
 - stems: three stems splayed from up, then a crown twice the trunk's height, which leaves the
   stems in its narrow foot, bearing fewer limbs."""
 
@@ -64,6 +66,19 @@ def run(driver):
     # The most skew turns each limb up to 90° from where its facing put it.
     set_number(driver, "limbs[1]/skew", "90")
     driver.screenshot("skewed")
+    set_number(driver, "limbs[1]/skew", "20")
+    pick_facing(driver, "Sides")
+
+    # Every first-level limb forks: level, upright, then three ways.
+    set_number(driver, "limbs[0]/fork_chance", "100")
+    driver.screenshot("forked")
+    set_number(driver, "limbs[0]/fork_roll", "90")
+    driver.screenshot("forked_upright")
+    set_number(driver, "limbs[0]/fork_roll", "0")
+    set_number(driver, "limbs[0]/fork_copies", "3")
+    driver.screenshot("forked_three")
+    set_number(driver, "limbs[0]/fork_copies", "2")
+    set_number(driver, "limbs[0]/fork_chance", "0")
     driver.click("Shell/Panel/limbs[1]/remove")
     driver.frames(2)
 
