@@ -4,12 +4,14 @@
 //! select, nested structs a subpane of rows of their own, an array with a [`ShownCount`] a subpane
 //! per shown item, and every other field a label giving its name and type. A row's caption sits
 //! above its inputs, so they get the panel's full width. Field attributes (below) set a row's
-//! caption and a number's limits, precision, step and units.
+//! caption, its control group, and a number's limits, precision, step and units.
 
 use std::{collections::HashMap, ops::RangeInclusive};
 
 use bevy::{
+    app::PropagateOver,
     feathers::{
+        constants::{fonts, size},
         containers::{subpane, subpane_body, subpane_header},
         controls::{
             ButtonVariant, ColorInputValue, FeathersCheckbox, FeathersColorInput, FeathersListRow,
@@ -18,15 +20,18 @@ use bevy::{
             UnitsFormat, UnitsRegistry,
         },
         display::{caption as option_caption, icon, label, label_small},
-        theme::ThemedText,
+        theme::{ThemeTextColor, ThemedText},
+        tokens,
     },
     prelude::*,
     reflect::{
-        FromReflect, GetTypeRegistration, ReflectMut, ReflectRef, TypeInfo, Typed,
+        FromReflect, GetTypeRegistration, NamedField, ReflectMut, ReflectRef, TypeInfo, Typed,
         array::Array,
         attributes::CustomAttributes,
         enums::{DynamicEnum, DynamicVariant, VariantInfo},
+        structs::Struct,
     },
+    text::FontSourceTemplate,
     ui::Selected,
     ui_widgets::{NumericFormat, NumericRange, NumericValue, SetSelected, ValueChange},
 };
@@ -132,6 +137,13 @@ pub struct Step<T>(pub T);
 #[derive(Debug, Clone, Reflect)]
 pub struct Caption(pub &'static str);
 
+/// The control group a field's row sits in: the rows of a struct's fields naming the same group
+/// are gathered under its name, where the first of them would be. In a subpane the name is a
+/// heading over the rows; at the panel's top level the group is a subpane of its own. The
+/// grouping is the panel's alone: the fields stay where they are in the struct.
+#[derive(Debug, Clone, Reflect)]
+pub struct ControlGroup(pub &'static str);
+
 /// A number in a [`ValueRange`] shown without the slider fill, as a spinbox with step arrows.
 #[derive(Debug, Clone, Reflect)]
 pub struct Spinbox;
@@ -230,6 +242,17 @@ pub type HeaderNotes = HashMap<String, String>;
 
 /// Adds a row for each field of `value`, which must be a struct, editing the fields in place.
 pub fn edit_fields(ui: &mut Imm<CapsPanel>, value: &mut dyn PartialReflect, notes: &HeaderNotes) {
+    edit_struct(ui, value, notes, false);
+}
+
+/// The rows of `value`'s fields. A [`ControlGroup`] is a subpane at the panel's top level and, in a
+/// subpane (`in_pane`), a heading over its rows, so panes do not nest boxes in boxes.
+fn edit_struct(
+    ui: &mut Imm<CapsPanel>,
+    value: &mut dyn PartialReflect,
+    notes: &HeaderNotes,
+    in_pane: bool,
+) {
     // Attributes belong to the type, so read them from its info, not the value.
     let Some(TypeInfo::Struct(info)) = value.get_represented_type_info() else {
         return;
@@ -252,64 +275,54 @@ pub fn edit_fields(ui: &mut Imm<CapsPanel>, value: &mut dyn PartialReflect, note
         })
         .collect();
     let mut new_counts = Vec::new();
+    let group_of = |index: usize| {
+        info.field_at(index)
+            .and_then(|field| field.custom_attributes().get::<ControlGroup>())
+            .map(|group| group.0)
+    };
     for index in 0..fields.field_len() {
-        let (Some(field_info), Some(field)) = (info.field_at(index), fields.field_at_mut(index))
-        else {
+        let Some(field_info) = info.field_at(index) else {
             continue;
         };
-        let name = field_info.name();
-        let attrs = field_info.custom_attributes();
-        let caption = attrs.get::<Caption>().map_or(name, |caption| caption.0);
-        if counts.iter().any(|(count, ..)| *count == name) {
-            continue;
-        }
-        if let Some(shown) = attrs.get::<ShownCount>()
-            && let Some((_, count, range)) = counts.iter().find(|(count, ..)| *count == shown.0)
-            && let ReflectMut::Array(items) = field.reflect_mut()
-        {
-            let new_count = shown_items(ui, name, caption, items, *count, range.clone(), notes);
-            if new_count != *count {
-                new_counts.push((shown.0, new_count));
-            }
-            continue;
-        }
-        // Rows are keyed by field name, so they keep their entities from frame to frame.
-        let row = ui.ch_id(name);
-
-        if let Some(flag) = field.try_downcast_mut::<bool>() {
-            row.on_spawn_apply_scene(move || {
-                bsn! { @FeathersCheckbox { @caption: bsn! { Text(caption) ThemedText } } }
-            })
-            .on_spawn_insert(move || Name::new(name))
-            .checked(flag);
-        } else if let Some(fuzzy) = field.try_downcast_mut::<Fuzzy>() {
-            fuzzy_row(row, name, caption, attrs, fuzzy);
-        } else if let Some(seed) = field.try_downcast_mut::<Seed>() {
-            seed_row(row, name, caption, seed);
-        } else if let Some(number) = field.try_downcast_mut::<f32>() {
-            number_row(row, name, caption, attrs, number);
-        } else if let Some(number) = field.try_downcast_mut::<f64>() {
-            number_row(row, name, caption, attrs, number);
-        } else if let Some(number) = field.try_downcast_mut::<i32>() {
-            number_row(row, name, caption, attrs, number);
-        } else if let Some(number) = field.try_downcast_mut::<i64>() {
-            number_row(row, name, caption, attrs, number);
-        } else if let Some(color) = field.try_downcast_mut::<Color>() {
-            color_row(row, name, caption, color);
-        } else if let Some(variants) = unit_variants(field) {
-            enum_row(row, name, caption, variants, field);
-        } else if let Some(TypeInfo::Struct(_)) = field.get_represented_type_info() {
-            group(
-                row.on_spawn_insert(move || Name::new(name)),
-                caption,
-                |ui| {
-                    edit_fields(ui, field, notes);
-                },
+        let Some(caption) = group_of(index) else {
+            field_row(
+                ui,
+                field_info,
+                fields,
+                index,
+                &counts,
+                &mut new_counts,
+                notes,
             );
+            continue;
+        };
+        if (0..index).any(|earlier| group_of(earlier) == Some(caption)) {
+            continue;
+        }
+        let members: Vec<usize> = (index..fields.field_len())
+            .filter(|&member| group_of(member) == Some(caption))
+            .collect();
+        let rows = |ui: &mut Imm<CapsPanel>| {
+            for member in members {
+                if let Some(member_info) = info.field_at(member) {
+                    field_row(
+                        ui,
+                        member_info,
+                        fields,
+                        member,
+                        &counts,
+                        &mut new_counts,
+                        notes,
+                    );
+                }
+            }
+        };
+        if in_pane {
+            ui.ch_id(caption)
+                .on_spawn_apply_scene(move || group_heading(caption));
+            rows(ui);
         } else {
-            let text = format!("{caption}: {}", field.reflect_short_type_path());
-            row.on_spawn_apply_scene(move || label(text))
-                .on_spawn_insert(move || Name::new(name));
+            group(ui.ch_id(caption), caption, rows);
         }
     }
     for (count, value) in new_counts {
@@ -318,6 +331,76 @@ pub fn edit_fields(ui: &mut Imm<CapsPanel>, value: &mut dyn PartialReflect, note
         {
             *field = value;
         }
+    }
+}
+
+/// The row for field `index` of `fields`, described by `field_info`. A count field named by a
+/// [`ShownCount`] in `counts` gets none; the array it counts pushes its new count to `new_counts`.
+fn field_row(
+    ui: &mut Imm<CapsPanel>,
+    field_info: &NamedField,
+    fields: &mut dyn Struct,
+    index: usize,
+    counts: &[(&'static str, i32, RangeInclusive<i32>)],
+    new_counts: &mut Vec<(&'static str, i32)>,
+    notes: &HeaderNotes,
+) {
+    let Some(field) = fields.field_at_mut(index) else {
+        return;
+    };
+    let name = field_info.name();
+    let attrs = field_info.custom_attributes();
+    let caption = attrs.get::<Caption>().map_or(name, |caption| caption.0);
+    if counts.iter().any(|(count, ..)| *count == name) {
+        return;
+    }
+    if let Some(shown) = attrs.get::<ShownCount>()
+        && let Some((_, count, range)) = counts.iter().find(|(count, ..)| *count == shown.0)
+        && let ReflectMut::Array(items) = field.reflect_mut()
+    {
+        let new_count = shown_items(ui, name, caption, items, *count, range.clone(), notes);
+        if new_count != *count {
+            new_counts.push((shown.0, new_count));
+        }
+        return;
+    }
+    // Rows are keyed by field name, so they keep their entities from frame to frame.
+    let row = ui.ch_id(name);
+
+    if let Some(flag) = field.try_downcast_mut::<bool>() {
+        row.on_spawn_apply_scene(move || {
+            bsn! { @FeathersCheckbox { @caption: bsn! { Text(caption) ThemedText } } }
+        })
+        .on_spawn_insert(move || Name::new(name))
+        .checked(flag);
+    } else if let Some(fuzzy) = field.try_downcast_mut::<Fuzzy>() {
+        fuzzy_row(row, name, caption, attrs, fuzzy);
+    } else if let Some(seed) = field.try_downcast_mut::<Seed>() {
+        seed_row(row, name, caption, seed);
+    } else if let Some(number) = field.try_downcast_mut::<f32>() {
+        number_row(row, name, caption, attrs, number);
+    } else if let Some(number) = field.try_downcast_mut::<f64>() {
+        number_row(row, name, caption, attrs, number);
+    } else if let Some(number) = field.try_downcast_mut::<i32>() {
+        number_row(row, name, caption, attrs, number);
+    } else if let Some(number) = field.try_downcast_mut::<i64>() {
+        number_row(row, name, caption, attrs, number);
+    } else if let Some(color) = field.try_downcast_mut::<Color>() {
+        color_row(row, name, caption, color);
+    } else if let Some(variants) = unit_variants(field) {
+        enum_row(row, name, caption, variants, field);
+    } else if let Some(TypeInfo::Struct(_)) = field.get_represented_type_info() {
+        group(
+            row.on_spawn_insert(move || Name::new(name)),
+            caption,
+            |ui| {
+                edit_struct(ui, field, notes, true);
+            },
+        );
+    } else {
+        let text = format!("{caption}: {}", field.reflect_short_type_path());
+        row.on_spawn_apply_scene(move || label(text))
+            .on_spawn_insert(move || Name::new(name));
     }
 }
 
@@ -367,7 +450,7 @@ fn shown_items(
             }
         };
         group_with_tools(pane, header, tools, |ui| {
-            edit_fields(ui, item, notes);
+            edit_struct(ui, item, notes, true);
         });
     }
     new_count
@@ -446,6 +529,22 @@ fn row_node(name: &'static str) -> (Name, Node) {
             ..default()
         },
     )
+}
+
+/// A control group's heading in a subpane: bold and dimmed, so it reads apart from the row
+/// captions below it, with a gap above that sets it off from the rows before.
+fn group_heading(caption: &'static str) -> impl Scene {
+    bsn! {
+        Text(caption)
+        TextFont {
+            font: FontSourceTemplate::Handle(fonts::BOLD),
+            font_size: size::SMALL_FONT,
+            weight: FontWeight::BOLD,
+        }
+        PropagateOver<TextFont>
+        ThemeTextColor(tokens::TEXT_DIM)
+        Node { margin: UiRect::top(px(6)) }
+    }
 }
 
 /// The caption at the top of a row, in feathers' small label for field captions.

@@ -203,7 +203,7 @@ pub struct Grown {
 /// limb starts on its top ring, at its top radius.
 pub fn plant(species: &Species) -> Grown {
     let (stems, limbs) = grow(species);
-    let min_radius = species.bark.detail * 0.5;
+    let min_radius = species.detail * 0.5;
     let drawn = |(base, top): (f32, f32)| (base.max(min_radius), top.max(min_radius));
     let mut bark = Geometry::default();
     let trunk_sides = species.trunk.sides.max(3) as u32;
@@ -355,7 +355,7 @@ fn stems(species: &Species) -> Vec<Stem> {
                     lean,
                     heading + TAU * stem as f32 / count as f32,
                     kinks,
-                    species.bark.detail,
+                    species.detail,
                 ),
                 radii: (trunk.radius, top),
                 rng,
@@ -500,10 +500,10 @@ fn grow_level(species: &Species, level: usize, parent: Parent, grown: &mut Vec<L
     let levels = species.grown_levels();
     let params = &levels[level];
     let taper = species.trunk.taper.clamp(0.0, 1.0);
-    let exponent = species.bark.pipe_exponent.max(1.0);
+    let exponent = species.wood.pipe_exponent.max(1.0);
     let spacing = kink_spacing(envelope);
     let kinks = |rng: &Rng| Kinks::new(spacing, params.wander, rng.fork(WANDER_STREAM));
-    let tolerance = species.bark.detail;
+    let tolerance = species.detail;
     // The parent's radius raised to the exponent, which each limb leaving it takes its share of.
     let mut section = parent.radius.powf(exponent);
     let tapered = parent.radius * (1.0 - taper);
@@ -1227,11 +1227,7 @@ fn arc(length: f32, start: f32, bend: f32, t: f32) -> (Vec3, Vec3) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        fuzzy::Distribution,
-        random::Seed,
-        species::{Bark, Trunk},
-    };
+    use crate::{fuzzy::Distribution, random::Seed, species::Trunk};
     use bevy::math::Vec3Swizzles;
 
     /// A lone 5 m stem's rings, standing straight up and leaning toward +X, with no wander, kept
@@ -2035,7 +2031,7 @@ mod tests {
         let mut species = straight();
         species.limbs[0].density = 1.0;
         species.limbs[0].radius = 0.6;
-        species.bark.pipe_exponent = 2.0;
+        species.wood.pipe_exponent = 2.0;
         let trunk = species.trunk.radius;
         let (stems, limbs) = grow(&species);
         let top = stems[0].radii.1;
@@ -2055,7 +2051,7 @@ mod tests {
             "{top} {left} {tapered}"
         );
         // A higher exponent narrows the trunk less.
-        species.bark.pipe_exponent = 3.0;
+        species.wood.pipe_exponent = 3.0;
         species.trunk.taper = 0.0;
         let higher = grow(&species).0[0].radii.1;
         assert!(higher > left, "{higher} {left}");
@@ -2144,10 +2140,7 @@ mod tests {
         };
         species.trunk.lean = 0.0;
         let thick = Species {
-            bark: Bark {
-                detail: 0.1,
-                ..species.bark.clone()
-            },
+            detail: 0.1,
             ..species.clone()
         };
         let (thin, thick) = (plant(&species), plant(&thick));

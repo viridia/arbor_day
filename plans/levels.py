@@ -55,12 +55,12 @@ def run(driver):
     driver.key("Enter")
     driver.expect("Plant", STATS, {"cards": 0})
     # Bare, with every stem drawn at least 10 cm wide: the twigs thicken, the limbs stay.
-    driver.click("Shell/Panel/bark/detail/input")
+    driver.click("Shell/Panel/detail/input")
     driver.key("End")
     for _ in range(6):
         driver.key("Backspace")
     driver.type("0.1")
     driver.key("Enter")
-    driver.expect("Plant", GROWN_FROM, Between(0.099, 0.101), at="bark.detail")
+    driver.expect("Plant", GROWN_FROM, Between(0.099, 0.101), at="detail")
     driver.screenshot("thick_detail")
     driver.exit()

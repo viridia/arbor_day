@@ -51,7 +51,8 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `86fa129` | C57 Camera buttons on the HUD (D28): orbit, zoom, tilt and Frame, moving while held; the panel's "View" group goes. Needs `bevy_remote_driver`'s press and hold. |
 | `51ce5ca` | C27 `Placeholder` removed, and `Wrap` with it (D9). The plant carries the species it was grown from (`GrownFrom`, D12), which plans read with the driver's `expect(…, at="limbs[0].angle")`; `PlantStats` drops the seed. The Bark group moves up under Trunk. X25 (`bevy::annotations`) and C65 (wireframe toggle) recorded. |
 | `f6a4bfe` | C63 Branch ends: a level's nodes from a start in place of the bias (D25); a parent ends at its last node and one limb carries it on (D30); leaves on every branch end, one at each tip (D27); every stem drawn, none narrower than the bark's detail threshold, in place of the thinnest meshed (D22). Sparser defaults (D17). |
-| (pending) | C52 Hinting (D17): rings by visible error, the traced path simplified to the bark's detail threshold (Ramer–Douglas–Peucker); kinks at one spacing on every level, 0.15 crown radii on average, each stretch varied by up to 40%. A limb's radius is a share of the stem past it, so 100% is an even fork (D22); a stem keeps its radius to its first limb. The budget test allows 2,500 bark triangles for two levels and 3,500 for three. |
+| `d9155cf` | C52 Hinting (D17): rings by visible error, the traced path simplified to the bark's detail threshold (Ramer–Douglas–Peucker); kinks at one spacing on every level, 0.15 crown radii on average, each stretch varied by up to 40%. A limb's radius is a share of the stem past it, so 100% is an even fork (D22); a stem keeps its radius to its first limb. The budget test allows 2,500 bark triangles for two levels and 3,500 for three. |
+| (pending) | C33 Control groups: a `ControlGroup` field attribute gathers a struct's rows under a bold heading where its first field is declared, or into a subpane of its own at the panel's top level, so panes never nest boxes; the data stays flat, so paths are unchanged within a struct. A limb level's rows in Arrangement, Direction (with wander) and Shape (reach, radius, sides). A Plant group at the top: the seed and the detail threshold, now `Species::detail`. `Bark` becomes `Wood` ("Bark color", pipe exponent). `plans/groups.py`, screenshots only. A pattern for Panoply's editor (D3). |
 
 ## Next
 
@@ -68,35 +69,7 @@ per-type hook, and is retained-mode.
 
 ### Milestone: the first species exported to Panoply
 
-1. **C45 Contact sheets**, so designs are explored in sweeps rather than one screenshot at a
-   time, by the author or by an agent. A second binary (`src/bin/sheet.rs`; the modules move
-   behind a `src/lib.rs` so both binaries share them) reads a species file and a sweep (seeds,
-   or one field's values by reflection path), grows each plant with the generator, lays them out
-   in a grid at game scale (150 to 300 px a plant, the size they are in Panoply), saves one PNG
-   and exits; no panel, no driver. Species files are read by reflection, the part of C10's
-   serialization this needs, pulled forward. Costs: an image is about width × height ÷ 750
-   tokens, so a 3 × 3 sheet near 900 px square is about 1,000, nine designs for the price of
-   one screenshot. Uses: interactive selection (a sheet of variants, the author picks, the next
-   sheet varies the pick), presets (X18), tuning twigs against C37's placeholder leaves, and
-   comparing card models (X24). The sheets replace `plans/shapes.py`'s gallery.
-   Unattended exploration runs in a subagent, keeping the images out of the main conversation:
-   sweeping parameters needs only writing sweep files and running the one command, so a narrow
-   allowlist covers it; trying generator changes (a form, say) runs in a git worktree that is
-   thrown away afterwards, the findings written up and built properly. E[3]
-2. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's leaf, as D29 has it, its
-   fields in a "Sprig" and a "Leaf" group under Foliage, and the `Interval` type (D10) for its
-   variations. The painter takes the outline as an
-   argument, a width in texture pixels or none, which C38 fixes at a constant until C66 makes it
-   the species'. The texture goes on C37's cards, replacing the placeholder, with mipmaps, since
-   the placeholder's 128 px shimmers at game scale. A golden test on its pixels compares with a
-   tolerance, since SIMD can move a channel by a level. E[3]
-3. **C66 Outlines**, a switch for the whole plant (requirements, Foliage): an "Outline" group
-   with the switch, the bark's width as the game reads it, and the leaf stroke's in texture
-   pixels (growth model, Consequences). On, the leaf texture is painted with its strokes (D29),
-   the preview draws the bark with an inverted hull after Panoply's `src/materials/outline.wesl`,
-   and the export writes the `"outline"` material extra (C41). Off, none of these; whether the
-   translucent strokes between leaves stay is judged then. E[3]
-4. **C39 Card shapes and facing**: crossed, cupped and creased cards chosen by weight (seedling's
+1. **C39 Card shapes and facing**: crossed, cupped and creased cards chosen by weight (seedling's
    `lateralDroop` folds a card about its midrib, `axialDroop` bends its far half down); the face
    target (D27) widened from world up to a blend of up and the envelope's outward normal, with a
    spread; crown softness for the shading normal (X13), built as a weight and judged in the
@@ -104,7 +77,7 @@ per-type hook, and is retained-mode.
    edge-on to the game's camera (45° down), to judge facing and folding by numbers as well as by
    eye. Card counts multiply with levels (the default with three: 479 cards, 958 triangles),
    so look at density against the budget too. E[3]
-5. **C30 Forks**, Weber and Penn's splits: at a point along a limb it ends, and copies of it
+2. **C30 Forks**, Weber and Penn's splits: at a point along a limb it ends, and copies of it
    carry on, turned apart by the fork angle. The copies are the same level as the limb, not its
    children, so they reach the envelope and bear children as it would; turning both by half the
    angle reads as the symmetric Y of a child deflecting its parent. Per level: forks per limb (0
@@ -115,7 +88,22 @@ per-type hook, and is retained-mode.
    model, Stems and leader). A stem's fork may lie below the crown base: the trunk's height
    sets the axis's length, the fork where it splits. After foliage, since a crown's
    look cannot be judged without leaves. E[3]
-6. **C10 Species data model**, its groups the layers of the growth model (D11;
+3. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's leaf, as D29 has it, its
+   fields in a "Sprig" and a "Leaf" group under Foliage, and the `Interval` type (D10) for its
+   variations. The painter takes the outline as an
+   argument, a width in texture pixels or none, which C38 fixes at a constant until C66 makes it
+   the species'. The texture goes on C37's cards, replacing the placeholder, with mipmaps, since
+   the placeholder's 128 px shimmers at game scale. The defaults paint seedling's leaf, so a new
+   species previews well with no leaf fields touched, as the placeholder does. If they fall
+   short, the placeholder stays as a choice until they do. A golden test on its pixels compares
+   with a tolerance, since SIMD can move a channel by a level. E[3]
+4. **C66 Outlines**, a switch for the whole plant (requirements, Foliage): in the Plant group
+   (C33), the switch, the bark's width as the game reads it, and the leaf stroke's in texture
+   pixels (growth model, Consequences). On, the leaf texture is painted with its strokes (D29),
+   the preview draws the bark with an inverted hull after Panoply's `src/materials/outline.wesl`,
+   and the export writes the `"outline"` material extra (C41). Off, none of these; whether the
+   translucent strokes between leaves stay is judged then. E[3]
+5. **C10 Species data model**, its groups the layers of the growth model (D11;
    `docs/growth-model.md`, Consequences), correcting seedling where the requirements say.
    Reflectable types with `Default` for initial values and attributes for the editor, after the
    fields settle, so saved files are not broken by every change. Serialized
@@ -134,17 +122,15 @@ per-type hook, and is retained-mode.
    levels with hidden ones stashed in the editor, the same in files but a larger change that
    undoes D15. Seedling's groups for reference: `trunk`; `branch[]`, one per level; the leaf as
    `leafGroup` (arrangement), `leafShape` and `leafColor`. E[4], split when started
-7. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
-   panel; the file browser is X2. The seed row moves in with them, in a feathers `group`
-   (`containers/group.rs`, no header), so it lines up with the subpanes' rows rather than
-   standing at the panel's edge. File commands act on the active document, so that tabs (X26)
+6. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
+   panel, above the Plant group (C33); the file browser is X2. File commands act on the active document, so that tabs (X26)
    need not change them. E[3]
-8. **C8 Working document in settings.** A settings group holding the working species and, once
+7. **C8 Working document in settings.** A settings group holding the working species and, once
    set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
    as seedling did. The document's name comes from the file name. Serialized by reflection, as
    `bevy_settings` does. Stored as a list of open documents holding one, and the active one's
    index, so several (X26) need no change of format. E[3]
-9. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
+8. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
    as a JSON extra (C10), in the form Panoply loads (requirements, Output; "What Panoply does with the output"). Bevy writes no glTF,
    so this adds a dependency or a writer of our own; propose it before code. The command-line
    export is X1. Research so far (2026-10-12), the author also asking skein's author:
@@ -195,7 +181,7 @@ per-type hook, and is retained-mode.
   (`scaled_number_input_value`), or with `NumberInputPrecision::round` once bevy#26158 lands.
   Defaults are written in the units shown
   (`15.0_f32.to_radians()`, not `0.3`). E[2]
-- **C68 End taper**: the trunk's taper moves to the Bark group as "End taper", the narrowing of
+- **C68 End taper**: the trunk's taper moves to the Wood group, beside the pipe exponent, as "End taper", the narrowing of
   a stretch nothing branches from (branch ends, bare stems), so an author can keep ends blunt
   (frangipani, sumac) or fine (birch). Stems bearing limbs narrow by the pipe model alone (D22):
   the taper's minimum on a parent's narrowing goes, since at exponent 3 it overrode the exponent
@@ -218,16 +204,10 @@ per-type hook, and is retained-mode.
   rounding should not fight it; check by hand that a drag snaps cleanly. First for the
   trunk's height (0.1 to 30 m, where a herb lives in the first pixels) and the crown's radius.
   E[3]
-- **C33 Sections within a level**, so the panel is not a wall of like sliders: arrangement
-  (nodes, per node, facing, skew, start), direction (angle, bend toward, bend), growth (reach,
-  wander), bark (radius, sides). A field attribute, `@Group("Direction")`, names its section;
-  the property editor collates fields by group, ungrouped fields first, each group under a
-  label. The grouping is the panel's alone: the data stays flat, so paths (`limbs[0].angle`),
-  undo records (C7), saved files and the generator are untouched, and regrouping for looks
-  breaks nothing (X15). Fields are still declared in their groups, so panel and source read in
-  the same order. A sub-struct only where the group is a concept of its own: the arrangement
-  is phyllotaxis, which foliage will need too, so it may become a `Phyllotaxis` type; a nested
-  struct inside a level then shows as a labelled group like the rest, not a full subpane. E[3]
+- **C69 A color per limb level**, so the Limbs 1 to 3 subpanes are told apart at a glance: a
+  thin stripe on each level's header or left edge, its color set on the node, since feathers'
+  contextual theming cannot shade a subtree. *Gate:* C33's groups and X16's denser rows still
+  leaving the levels hard to tell apart. E[1]
 - **C43 A varied color** (`Fuzzy<Color>`, D10) with the leaf color, for its hue and lightness
   shifts. E[3]
 - **C48 Arching stems**, for fountain shrubs: a lean past level, so a stem rises and then droops
@@ -758,7 +738,7 @@ per-type hook, and is retained-mode.
 - **X24** Cards that include their stem and stand in for the finest twigs, one card per twig
   of the last level in place of its tube, rather than leaves lined up with meshed twigs (D27),
   saving the triangles those twigs cost now that every stem is drawn (D22). Seen edge-on the twig vanishes, so it needs crossed cards (twice the
-  triangles) or facing kept away from edge-on. *Gate:* C45, to compare the two at game scale.
+  triangles) or facing kept away from edge-on. *Gate:* X28, to compare the two at game scale.
 
 - **X25** The property editor's attributes from `bevy::annotations` (bevy#26164, open): its
   `ValueRange` (an `f64` range, read with `ValueRange::from_attributes`), `Step` and
@@ -779,7 +759,7 @@ per-type hook, and is retained-mode.
   there is only one document: C8 stores a list, C40 acts on the active document, C7 keeps a
   history per document. Open: closing a tab with unsaved changes, whether a new document starts
   from defaults or a copy of the active one, and which
-  need tabs serve that C45's sheets do not (editing variants one at a time, against comparing
+  need tabs serve that X28's sheets would not (editing variants one at a time, against comparing
   them side by side). *Gate:* C8 and C40 landed, and an author working on variants.
 
 - **X27** One continuous tube for a stem and the limbs carrying it on (D30), sharing the ring
@@ -787,6 +767,24 @@ per-type hook, and is retained-mode.
   the twigs costs the triangles D22's per-level sides save; dropping sides at a join needs a
   ring stitching, say, 6 to 4. *Gate:* the shoulder or crease at a join showing in screenshots
   at game scale or in Panoply's outline.
+
+- **X28** Contact sheets (was C45), so designs are explored in sweeps rather than one
+  screenshot at a time, by the author or by an agent. A second binary (`src/bin/sheet.rs`; the
+  modules move behind a `src/lib.rs` so both binaries share them) reads a species file and a
+  sweep (seeds, or one field's values by reflection path), grows each plant with the generator,
+  lays them out in a grid at game scale (150 to 300 px a plant, the size they are in Panoply),
+  saves one PNG and exits; no panel, no driver. Species files are read by reflection, the part
+  of C10's serialization this needs, pulled forward. Costs: an image is about width × height ÷
+  750 tokens, so a 3 × 3 sheet near 900 px square is about 1,000, nine designs for the price of
+  one screenshot. Uses: interactive selection (a sheet of variants, the author picks, the next
+  sheet varies the pick), presets (X18), and comparing card models (X24). The sheets would
+  replace `plans/shapes.py`'s gallery. Unattended exploration runs in a subagent, keeping the
+  images out of the main conversation: sweeping parameters needs only writing sweep files and
+  running the one command, so a narrow allowlist covers it; trying generator changes (a form,
+  say) runs in a git worktree that is thrown away afterwards, the findings written up and built
+  properly. Deferred as a large, disruptive change (the crate split) whose payoff is unproven.
+  E[3] *Gate:* tuning in the editor proving too slow to compare designs at game scale, or
+  presets (X18) begun.
 
 ## Notes
 

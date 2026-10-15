@@ -76,7 +76,7 @@ fn build_plant(
             continue;
         }
         let grown = generator::plant(&species);
-        let color = species.bark.color;
+        let color = species.wood.color;
         let level_limbs = &grown.level_limbs;
         let stats = PlantStats {
             triangles: (grown.bark.triangles() + grown.leaves.triangles()) as u32,

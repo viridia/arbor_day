@@ -10,7 +10,7 @@ STATS = "arbor_day::plant::PlantStats"
 ENVELOPE = "arbor_day::plant::EnvelopeStats"
 GROWN_FROM = "arbor_day::plant::GrownFrom"
 LIMBS = "Shell/Panel/limbs[0]"
-COLOR = "Shell/Panel/bark/color/input"
+COLOR = "Shell/Panel/wood/color/input"
 
 
 def pick(driver, field, variant):
@@ -61,7 +61,7 @@ def run(driver):
     driver.expect("Plant", GROWN_FROM, "Up", at="limbs[0].facing")
     driver.screenshot("picked_variant")
 
-    # The bark's color.
+    # The bark's color, under Wood.
     driver.expect("Plant", STATS, {"bark_color": "#6B5440"})
     driver.click(COLOR)
     driver.present(f"{COLOR}/wheel")

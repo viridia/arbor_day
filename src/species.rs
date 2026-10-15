@@ -6,7 +6,7 @@ use std::ops::RangeInclusive;
 
 use crate::{
     fuzzy::{Distribution, Fuzzy},
-    properties::{Caption, Precision, ShownCount, Spinbox, ValueRange},
+    properties::{Caption, ControlGroup, Precision, ShownCount, Spinbox, ValueRange},
     random::Seed,
 };
 
@@ -19,12 +19,22 @@ pub const MAX_LIMB_LEVELS: usize = 3;
 #[reflect(Resource)]
 pub struct Species {
     /// Where the plant's random numbers start: the same seed makes the same plant.
-    #[reflect(@Caption("Seed"))]
+    #[reflect(@Caption("Seed"), @ControlGroup("Plant"))]
     pub seed: Seed,
+    /// The smallest detail drawn, in meters, about a pixel at the game's scale: no stem is drawn
+    /// narrower, so twigs still show. Only the drawing is thickened: limbs share their parents'
+    /// wood as their true radii have it.
+    #[reflect(
+        @ValueRange::<f32>(0.002..=0.2),
+        @Precision(3),
+        @Caption("Detail threshold"),
+        @ControlGroup("Plant"),
+    )]
+    pub detail: f32,
     #[reflect(@Caption("Trunk"))]
     pub trunk: Trunk,
-    #[reflect(@Caption("Bark"))]
-    pub bark: Bark,
+    #[reflect(@Caption("Wood"))]
+    pub wood: Wood,
     #[reflect(@Caption("Crown"))]
     pub crown: Crown,
     /// How many of the limb levels grow, from the first. The rest keep their parameters, so a
@@ -50,8 +60,9 @@ impl Default for Species {
     fn default() -> Self {
         Self {
             seed: Seed(1),
+            detail: 0.02,
             trunk: Trunk::default(),
-            bark: Bark::default(),
+            wood: Wood::default(),
             crown: Crown::default(),
             limb_levels: 1,
             limbs: [
@@ -195,19 +206,21 @@ pub struct LimbLevel {
     /// bears more than a short one. Measured against the crown, so a shrub and a tree with the
     /// same settings branch alike. A parent's count is rounded up or down at random, up with the
     /// chance of its fraction.
-    #[reflect(@ValueRange::<f32>(0.0..=40.0), @Precision(1), @Caption("Nodes per crown radius"))]
+    #[reflect(@ValueRange::<f32>(0.0..=40.0), @Precision(1), @Caption("Nodes per crown radius"), @ControlGroup("Arrangement"))]
     pub density: f32,
     /// Limbs at each node: 1 for a spiral, 2 for opposite pairs, more for a whorl. Rounded at
     /// random for each node, so 1.5 makes half the nodes opposite.
-    #[reflect(@ValueRange::<f32>(1.0..=6.0), @Precision(1), @Caption("Per node"))]
+    #[reflect(@ValueRange::<f32>(1.0..=6.0), @Precision(1), @Caption("Per node"), @ControlGroup("Arrangement"))]
     pub per_node: f32,
     /// Which way around the parent its limbs leave.
+    #[reflect(@ControlGroup("Arrangement"))]
     pub facing: Facing,
     /// The most each limb turns about the parent at random, away from where its facing puts it.
     /// Drawn for each limb.
     #[reflect(
         @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_2),
         @NumberInputUnits::new_static("angle_degrees"),
+        @ControlGroup("Arrangement"),
     )]
     pub skew: f32,
     /// Where nodes start along the part of the parent inside the crown, as a share of it: 0 from
@@ -217,6 +230,7 @@ pub struct LimbLevel {
         @ValueRange::<f32>(0.0..=0.9),
         @Precision(2),
         @NumberInputUnits::new_static("ratio_percent"),
+        @ControlGroup("Arrangement"),
     )]
     pub start: f32,
     /// The angle from the parent's direction where the limb starts: 0 runs along it, 90° square
@@ -224,6 +238,7 @@ pub struct LimbLevel {
     #[reflect(
         @ValueRange::<f32>(0.0..=std::f32::consts::PI),
         @NumberInputUnits::new_static("angle_degrees"),
+        @ControlGroup("Direction"),
     )]
     pub angle: Fuzzy,
     /// The angle from world up the limb bends toward, keeping its compass heading: 0 up, as a
@@ -232,6 +247,7 @@ pub struct LimbLevel {
         @ValueRange::<f32>(0.0..=std::f32::consts::PI),
         @NumberInputUnits::new_static("angle_degrees"),
         @Caption("Bend toward"),
+        @ControlGroup("Direction"),
     )]
     pub bend_toward: f32,
     /// How much of the angle left to its bend the limb turns through over a length equal to the
@@ -242,6 +258,7 @@ pub struct LimbLevel {
         @ValueRange::<f32>(0.0..=0.99),
         @Precision(2),
         @NumberInputUnits::new_static("ratio_percent"),
+        @ControlGroup("Direction"),
     )]
     pub bend: f32,
     /// The most each stretch points off the limb's course, which the angle and bend set, so the
@@ -250,6 +267,7 @@ pub struct LimbLevel {
     #[reflect(
         @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_4),
         @NumberInputUnits::new_static("angle_degrees"),
+        @ControlGroup("Direction"),
     )]
     pub wander: f32,
     /// Length as a fraction of the distance from the limb's start to the envelope along its
@@ -258,6 +276,7 @@ pub struct LimbLevel {
         @ValueRange::<f32>(0.0..=1.0),
         @Precision(2),
         @NumberInputUnits::new_static("ratio_percent"),
+        @ControlGroup("Shape"),
     )]
     pub reach: Fuzzy,
     /// Radius at the base, as a share of the parent's radius past where the limb leaves it: 100% is
@@ -266,10 +285,11 @@ pub struct LimbLevel {
         @ValueRange::<f32>(0.05..=1.0),
         @Precision(2),
         @NumberInputUnits::new_static("ratio_percent"),
+        @ControlGroup("Shape"),
     )]
     pub radius: f32,
     /// Sides of each ring.
-    #[reflect(@ValueRange::<i32>(3..=8), @Spinbox)]
+    #[reflect(@ValueRange::<i32>(3..=8), @Spinbox, @ControlGroup("Shape"))]
     pub sides: i32,
 }
 
@@ -327,30 +347,25 @@ fn degrees(center: f32, spread: f32) -> Fuzzy {
     Fuzzy::new(center.to_radians(), spread.to_radians(), Distribution::Bell)
 }
 
-/// The bark, the same on every stem: its color, how stems narrow, and the least detail drawn.
+/// The wood, the same on every stem: its bark's color and how stems narrow.
 #[derive(Reflect, Clone, PartialEq)]
-pub struct Bark {
+pub struct Wood {
     /// The bark's color, written into the mesh as a vertex color, so trunks of different species
     /// can merge into one mesh in the game.
+    #[reflect(@Caption("Bark color"))]
     pub color: Color,
     /// The pipe model's exponent: a stem's radius raised to it is shared among the limbs leaving
     /// it and what carries on past them. 2 keeps the wood's cross-section, so a stem narrows most;
     /// higher, it narrows less.
     #[reflect(@ValueRange::<f32>(2.0..=3.0), @Precision(1), @Caption("Pipe exponent"))]
     pub pipe_exponent: f32,
-    /// The smallest detail drawn, in meters, about a pixel at the game's scale: no stem is drawn
-    /// narrower, so twigs still show. Only the drawing is thickened: limbs share their parents'
-    /// wood as their true radii have it.
-    #[reflect(@ValueRange::<f32>(0.002..=0.2), @Precision(3), @Caption("Detail threshold"))]
-    pub detail: f32,
 }
 
-impl Default for Bark {
+impl Default for Wood {
     fn default() -> Self {
         Self {
             color: Color::srgb(0.42, 0.33, 0.25),
             pipe_exponent: 2.0,
-            detail: 0.02,
         }
     }
 }
