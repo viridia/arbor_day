@@ -59,8 +59,6 @@ const WANDER_STREAM: u64 = u64::MAX;
 const OWN_VALUES_STREAM: u64 = u64::MAX - 1;
 /// The layout of a stem's children: their count, and each node's turn, limb count and place.
 const LAYOUT_STREAM: u64 = u64::MAX - 2;
-/// A limb's leaf clusters: their count, and each one's place and turn.
-const FOLIAGE_STREAM: u64 = u64::MAX - 3;
 /// The limb carrying a stem on past its last node.
 const CARRY_ON_STREAM: u64 = u64::MAX - 4;
 
@@ -99,9 +97,6 @@ const OUTLINE_MERIDIANS: u32 = 8;
 const OUTLINE_RING_EVERY: u32 = 2;
 /// Segments in each ring of the outline.
 const OUTLINE_RING_SIDES: u32 = 24;
-
-/// Segments of the envelope's profile, base to top, in measuring how deep a point lies.
-const DEPTH_STEPS: u32 = 32;
 
 /// Triangles with one normal per vertex. Every triangle meeting at a vertex shares it, so normals
 /// are continuous across the surface and the outline shell has no gaps.
@@ -245,26 +240,20 @@ pub fn plant(species: &Species) -> Grown {
     let ends = limbs.iter().filter(|limb| !limb.children);
     Grown {
         bark,
-        leaves: foliage(&Envelope::of(species), &species.foliage, ends),
+        leaves: foliage(Envelope::of(species).radius, &species.foliage, ends),
         level_limbs,
     }
 }
 
-/// Leaf clusters on `twigs`, the limbs bearing none: one at each twig's tip, wherever it ends, so no
-/// branch end is bare, its fold at the tip, and more along the parts of it within the foliage's shell of the envelope,
-/// as many as its density gives for that length, each placed as `node_place` places nodes, so they
-/// are spread evenly but not like rungs. Each is a card (`card`) whose sprig grows from its place
-/// along the twig. No density leaves the plant bare.
-fn foliage<'a>(
-    envelope: &Envelope,
-    foliage: &Foliage,
-    twigs: impl Iterator<Item = &'a Limb>,
-) -> Geometry {
-    let crown = envelope.radius.max(0.01);
-    let shell = foliage.shell * crown;
-    let size = foliage.size * crown;
+/// Leaf clusters on `twigs`, the limbs bearing none: one card (`card`) at each twig's tip,
+/// wherever it ends, so no branch end is bare. It reaches back along the twig, its fold at the
+/// tip, so the sprig's stem overlaps the twig's end, as seedling's did; on a twig shorter than
+/// that, from its base. The twig runs straight there (`grow_limb`), so the card lies along it.
+/// Its size is a share of `crown`, the crown's radius.
+fn foliage<'a>(crown: f32, foliage: &Foliage, twigs: impl Iterator<Item = &'a Limb>) -> Geometry {
+    let size = foliage.size * crown.max(0.01);
     let mut leaves = Geometry::default();
-    if foliage.density <= 0.0 {
+    if !foliage.leaves {
         return leaves;
     }
     for twig in twigs {
@@ -273,35 +262,10 @@ fn foliage<'a>(
             radius: twig.radii.0,
             rng: &twig.rng,
         };
-        let length = twig.rings[twig.rings.len() - 1].at;
-        // The tip's card reaches back along the twig, its fold at the tip, so the sprig's stem
-        // overlaps the twig's end, as seedling's did; on a twig shorter than that, from its base.
-        let back = (AXIAL_FOLD * size).min(length);
-        card(
-            &mut leaves,
-            &parent.frame(1.0 - back / length.max(f32::EPSILON)),
-            size,
-            foliage,
-        );
-        let steps = ((length / TRACE_STEP).ceil() as u32).max(1);
-        // Places a trace step apart in the shell, each standing for a step of the twig.
-        let in_shell: Vec<Frame> = (0..steps)
-            .map(|step| parent.frame((step as f32 + 0.5) / steps as f32))
-            .filter(|frame| {
-                depth_in_envelope(envelope, frame.point).is_some_and(|depth| depth < shell)
-            })
-            .collect();
-        if in_shell.is_empty() {
-            continue;
-        }
-        let mut rng = twig.rng.fork(FOLIAGE_STREAM);
-        let shell_length = in_shell.len() as f32 * length / steps as f32;
-        let clusters = rng.round(foliage.density * shell_length / crown);
-        for cluster in 0..clusters {
-            let place = node_place(cluster, clusters, 0.0, rng.unit());
-            let index = ((place * in_shell.len() as f32) as usize).min(in_shell.len() - 1);
-            card(&mut leaves, &in_shell[index], size, foliage);
-        }
+        let tip = &twig.rings[twig.rings.len() - 1];
+        let back = (AXIAL_FOLD * size).min(tip.at);
+        let frame = parent.frame(1.0 - back / tip.at.max(f32::EPSILON));
+        card(&mut leaves, &frame, size, foliage);
     }
     leaves
 }
@@ -538,6 +502,9 @@ fn grow_level(species: &Species, level: usize, parent: Parent, grown: &mut Vec<L
     let spacing = kink_spacing(envelope);
     let kinks = |rng: &Rng| Kinks::new(spacing, params.wander, rng.fork(WANDER_STREAM));
     let tolerance = species.detail;
+    // Where a tip's card lies, from its base to its fold, whether or not leaves grow, so turning
+    // them off leaves the branches alone.
+    let straight = AXIAL_FOLD * species.foliage.size * envelope.radius.max(0.01);
     // The parent's radius raised to the exponent, which each limb leaving it takes its share of.
     let mut section = parent.radius.powf(exponent);
     let tapered = parent.radius * (1.0 - taper);
@@ -599,7 +566,15 @@ fn grow_level(species: &Species, level: usize, parent: Parent, grown: &mut Vec<L
                 side: upper_side(direction, frame.side),
                 at: 0.0,
             };
-            let rings = grow_limb(envelope, params, start, reach, kinks(&rng), tolerance);
+            let rings = grow_limb(
+                envelope,
+                params,
+                start,
+                reach,
+                kinks(&rng),
+                straight,
+                tolerance,
+            );
             if rings.len() >= 2 && rings[rings.len() - 1].at > base_radius {
                 section = (section - base_radius.powf(exponent)).max(0.0);
                 first_node.get_or_insert(t);
@@ -637,7 +612,15 @@ fn grow_level(species: &Species, level: usize, parent: Parent, grown: &mut Vec<L
     let reach = draw(&params.reach, "reach", &mut rng.fork(OWN_VALUES_STREAM))
         * distance_to_envelope(envelope, frame.point, frame.tangent);
     let start = Ring { at: 0.0, ..tip };
-    let rings = grow_limb(envelope, params, start, reach, kinks(&rng), tolerance);
+    let rings = grow_limb(
+        envelope,
+        params,
+        start,
+        reach,
+        kinks(&rng),
+        straight,
+        tolerance,
+    );
     let carried_on = rings.len() >= 2 && rings[rings.len() - 1].at > top;
     if carried_on {
         grown.push(Limb::new(level, rings, (top, top * (1.0 - taper)), rng));
@@ -699,16 +682,38 @@ impl Bearing {
 
 /// A limb's rings, from `start` for up to `length` along it, kept to `tolerance`
 /// (`Trace::finish`). Its course is traced in short steps from its start, turning toward the
-/// level's bend, and the limb kinks about its course (`Kinks`). It stops early where it would
-/// leave the envelope.
+/// level's bend, and the limb kinks about its course (`Kinks`), but not in its last `straight`,
+/// where a tip's card lies (`foliage`). It stops early where it would leave the envelope, and is
+/// then traced again to there, so its last stretch is straight wherever it ends.
 fn grow_limb(
     envelope: &Envelope,
     params: &LimbLevel,
     start: Ring,
     length: f32,
-    mut kinks: Kinks,
+    kinks: Kinks,
+    straight: f32,
     tolerance: f32,
 ) -> Vec<Ring> {
+    let trace = |length: f32, kinks: Kinks| {
+        trace_limb(envelope, params, start, length, length - straight, kinks)
+    };
+    let (mut traced, stopped) = trace(length, kinks.clone());
+    if let Some(at) = stopped {
+        traced = trace(at, kinks).0;
+    }
+    traced.finish(tolerance)
+}
+
+/// A limb traced as `grow_limb` describes, with no kinks from `end` on, and where it left the
+/// envelope, if it did.
+fn trace_limb(
+    envelope: &Envelope,
+    params: &LimbLevel,
+    start: Ring,
+    length: f32,
+    end: f32,
+    mut kinks: Kinks,
+) -> (Trace, Option<f32>) {
     let (bend_sin, bend_cos) = params.bend_toward.sin_cos();
     // The share of the angle left to the bend that one step closes. Shares compound, so a run of
     // steps closes the same share whatever the step.
@@ -724,7 +729,7 @@ fn grow_limb(
         let step = kinks.step(at, TRACE_STEP.min(length - at));
         let next = center + tangent * step;
         if !inside_envelope(envelope, next) {
-            break;
+            return (trace, Some(at));
         }
         center = next;
         at += step;
@@ -742,10 +747,10 @@ fn grow_limb(
                 .normalize_or(course_side);
             course = turned;
         }
-        tangent = kinks.direction(at, length, course, course_side);
+        tangent = kinks.direction(at, end, course, course_side);
         trace.push(center, at, tangent);
     }
-    trace.finish(tolerance)
+    (trace, None)
 }
 
 /// Where node `node` of `nodes` sits, as a fraction of the stretch bearing them: centred in its
@@ -915,6 +920,7 @@ fn kink_spacing(envelope: &Envelope) -> f32 {
 /// course. Each stretch is `spacing` long on average, give or take `KINK_JITTER` of it, so kinks
 /// fall unevenly. The first stretch follows the course. Offsets are from the course, not from the
 /// stretch before, so the limb zigzags about its course rather than curling away from it.
+#[derive(Clone)]
 struct Kinks {
     spacing: f32,
     wander: f32,
@@ -947,14 +953,20 @@ impl Kinks {
         step.min(self.next - at)
     }
 
-    /// The direction at `at`, `length` being where the limb ends, given its course there and a
-    /// side square to the course. A kink falling there draws the next offset.
-    fn direction(&mut self, at: f32, length: f32, course: Vec3, side: Vec3) -> Vec3 {
-        if at >= self.next - 1e-5 && at < length {
-            self.next += self.stretch();
-            let tilt = self.rng.unit() * self.wander;
-            let around = self.rng.unit() * TAU;
-            self.offset = Quat::from_axis_angle(Vec3::new(around.cos(), around.sin(), 0.0), tilt);
+    /// The direction at `at`, given the course there and a side square to the course. A kink
+    /// falling there draws the next offset, unless it falls at or past `end`, from which the
+    /// stretch it is on carries on to the tip.
+    fn direction(&mut self, at: f32, end: f32, course: Vec3, side: Vec3) -> Vec3 {
+        if at >= self.next - 1e-5 {
+            if at < end {
+                self.next += self.stretch();
+                let tilt = self.rng.unit() * self.wander;
+                let around = self.rng.unit() * TAU;
+                self.offset =
+                    Quat::from_axis_angle(Vec3::new(around.cos(), around.sin(), 0.0), tilt);
+            } else {
+                self.next = f32::INFINITY;
+            }
         }
         let frame = Quat::from_mat3(&Mat3::from_cols(side, course.cross(side), course));
         (frame * self.offset * Vec3::Z).normalize()
@@ -1211,34 +1223,6 @@ pub fn distance_to_envelope(envelope: &Envelope, origin: Vec3, direction: Vec3) 
 /// Whether `point` lies inside the envelope.
 fn inside_envelope(envelope: &Envelope, point: Vec3) -> bool {
     point.x.hypot(point.z) < envelope_radius(envelope, point.y)
-}
-
-/// How far `point` lies in from the envelope's side and top, or `None` outside it. The crown's
-/// base is not counted as surface, so a point just above it is as deep as the side makes it. The
-/// distance is to the profile in the point's meridian plane, as a line through `DEPTH_STEPS` points
-/// and across the top to the axis, which a flat top needs.
-fn depth_in_envelope(envelope: &Envelope, point: Vec3) -> Option<f32> {
-    if !inside_envelope(envelope, point) {
-        return None;
-    }
-    let Envelope { base, top, .. } = *envelope;
-    let at = Vec2::new(point.x.hypot(point.z), point.y);
-    let profile = (0..=DEPTH_STEPS).map(|step| {
-        let t = step as f32 / DEPTH_STEPS as f32;
-        Vec2::new(
-            envelope.radius * profile_width(envelope.profile, t),
-            base + (top - base) * t,
-        )
-    });
-    let outline: Vec<Vec2> = profile.chain([Vec2::new(0.0, top)]).collect();
-    outline
-        .windows(2)
-        .map(|pair| {
-            let (a, b) = (pair[0], pair[1]);
-            let along = (at - a).dot(b - a) / (b - a).length_squared().max(1e-12);
-            at.distance(a + (b - a) * along.clamp(0.0, 1.0))
-        })
-        .reduce(f32::min)
 }
 
 /// The point and unit tangent at `t` (0 to 1) along an arc of length `length` that starts at the
@@ -1818,6 +1802,28 @@ mod tests {
     }
 
     #[test]
+    fn branch_ends_run_straight_under_their_cards() {
+        // With no bend, a stretch with no kinks keeps no rings, so a branch end's last ring
+        // before its tip lies before the stretch its card covers.
+        let species = level_limbs(45.0);
+        let straight = AXIAL_FOLD * species.foliage.size * Envelope::of(&species).radius;
+        let limbs = limbs(&species);
+        let ends: Vec<&Limb> = limbs.iter().filter(|limb| !limb.children).collect();
+        assert!(ends.iter().any(|limb| limb.rings.len() > 2));
+        for limb in ends {
+            let [.., before, tip] = limb.rings[..] else {
+                unreachable!()
+            };
+            assert!(
+                before.at <= tip.at - straight + 1e-3,
+                "{} {}",
+                before.at,
+                tip.at
+            );
+        }
+    }
+
+    #[test]
     fn limbs_stay_inside_the_envelope() {
         let species = Species {
             limb_levels: 3,
@@ -2265,24 +2271,6 @@ mod tests {
         }
     }
 
-    #[test]
-    fn depth_is_measured_from_the_side_and_top() {
-        // A column 2.5 m wide from 1.2 m to 6 m.
-        let envelope = Envelope {
-            profile: Profile::Column,
-            base: 1.2,
-            top: 6.0,
-            ..Envelope::default()
-        };
-        let depth = |x: f32, y: f32| depth_in_envelope(&envelope, Vec3::new(x, y, 0.0));
-        assert!((depth(2.0, 3.0).unwrap() - 0.5).abs() < 1e-4);
-        assert!((depth(0.0, 5.5).unwrap() - 0.5).abs() < 1e-4);
-        // Just above the base, as deep as the side makes it.
-        assert!((depth(0.0, 1.3).unwrap() - 2.5).abs() < 1e-4);
-        assert_eq!(depth(3.0, 3.0), None);
-        assert_eq!(depth(0.0, 1.0), None);
-    }
-
     /// In a card's corners: the middle of its base, its base's left and right ends, the middle of
     /// its axial fold, and the middle of its tip.
     const BASE: usize = 1;
@@ -2291,68 +2279,30 @@ mod tests {
     const BASE_RIGHT: usize = 5;
     const TIP: usize = 10;
 
-    /// Where the default plant's cards meet their twigs, with `limb_levels` levels and the foliage
-    /// as given: the middle of each card's base.
-    fn card_bases(limb_levels: i32, foliage: Foliage) -> Vec<Vec3> {
-        let species = Species {
-            limb_levels,
-            foliage,
+    #[test]
+    fn a_card_at_every_branch_end() {
+        // Two levels, whose twigs kink near their tips.
+        let mut species = Species {
+            limb_levels: 2,
             ..Species::default()
         };
-        plant(&species)
-            .leaves
-            .positions
-            .chunks(CARD_CORNERS)
-            .map(|corners| corners[BASE])
-            .collect()
-    }
-
-    #[test]
-    fn clusters_grow_in_the_shell() {
-        let foliage = Foliage::default();
-        let envelope = Envelope::default();
-        let leaves = plant(&Species::default()).leaves;
+        let leaves = plant(&species).leaves;
         let cards: Vec<&[Vec3]> = leaves.positions.chunks(CARD_CORNERS).collect();
-        // Around 40 for the default one-level tree, not hundreds.
-        assert!((20..150).contains(&cards.len()), "{}", cards.len());
-        // One at each limb's tip, wherever it ends, its fold there; the rest in the shell.
-        let tips: Vec<Vec3> = limbs(&Species::default())
+        let tips: Vec<Vec3> = limbs(&species)
             .iter()
+            .filter(|limb| !limb.children)
             .map(|limb| limb.rings[limb.rings.len() - 1].center)
             .collect();
-        // A tip between a card's base and fold: at its fold, or short of it on a short twig.
+        assert_eq!(cards.len(), tips.len());
+        // Each tip between a card's base and fold: at its fold, or short of it on a short twig.
         let spans =
             |card: &[Vec3], tip: Vec3| distance_to_segment(tip, card[BASE], card[FOLD]) < 1e-4;
-        for card in &cards {
-            if tips.iter().any(|tip| spans(card, *tip)) {
-                continue;
-            }
-            let depth = depth_in_envelope(&envelope, card[BASE]).expect("inside the envelope");
-            assert!(depth < foliage.shell * envelope.radius + 1e-3, "{depth}");
-        }
         assert!(
             tips.iter()
                 .all(|tip| cards.iter().any(|card| spans(card, *tip)))
         );
-    }
-
-    #[test]
-    fn clusters_follow_the_density() {
-        let with = |density: f32| {
-            card_bases(
-                2,
-                Foliage {
-                    density,
-                    ..Foliage::default()
-                },
-            )
-            .len()
-        };
-        assert_eq!(with(0.0), 0);
-        // Beyond the one at each tip, which any density grows.
-        let tips = with(1e-6);
-        let (some, more) = (with(5.0) - tips, with(20.0) - tips);
-        assert!(some > 0 && more > 3 * some, "{tips} {some} {more}");
+        species.foliage.leaves = false;
+        assert!(plant(&species).leaves.positions.is_empty());
     }
 
     #[test]

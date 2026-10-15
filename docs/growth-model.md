@@ -215,9 +215,8 @@ is chosen by what the eye reads at that size, not by botany.
 
 ### Foliage
 
-Clusters grow on every branch end, the limbs that bear none: one at each tip, and more along the
-parts that lie within a shell depth of the envelope, at a spacing set by the author, so cards
-follow the twigs and fill the crown's surface. Bare trees set no foliage. Each cluster is a card
+A cluster grows at the tip of every branch end, the limbs that bear none, so cards follow the
+twigs, and a crown is filled by its branching. Bare trees turn leaves off. Each cluster is a card
 of two by two quads, folded about its midrib (lateral droop, cupped when negative) and across its
 middle (axial droop), as in seedling.
 
@@ -236,13 +235,13 @@ the card keeps its own normal, as today. Above 0 both faces share it; see Conseq
 
 | Shape | Envelope | Leader | Limbs | Foliage |
 | ----- | -------- | ------ | ----- | ------- |
-| Broad crown (temperate) | ellipsoid or hemisphere | ends in a fork | 2 levels, spiral, tropism level to slightly up | clusters on the shell |
-| Column (poplar, juniper) | column or flame | full height | 1 to 2 levels, steep, tropism up | clusters on the shell |
+| Broad crown (temperate) | ellipsoid or hemisphere | ends in a fork | 2 levels, spiral, tropism level to slightly up | a cluster at each branch end |
+| Column (poplar, juniper) | column or flame | full height | 1 to 2 levels, steep, tropism up | a cluster at each branch end |
 | Cone (pine, hemlock) | cone | full height | whorled, level, tropism down for drooping forms | clusters along the limbs |
 | Bare, dead | any | either | 2 to 3 levels, more of the budget | none |
-| Shrub | hemisphere | several stems | 1 level | clusters on the shell |
+| Shrub | hemisphere | several stems | 1 level | a cluster at each branch end |
 | Crop | column | several stems | none or 1 level, opposite or spiral | cards along the stems |
-| Spreading (live oak) | wide hemisphere, low base | short, ends in a fork | 1 to 2 levels, heavy wander, tropism level | clusters on the shell |
+| Spreading (live oak) | wide hemisphere, low base | short, ends in a fork | 1 to 2 levels, heavy wander, tropism level | a cluster at each branch end |
 | Weeping (willow) | ellipsoid | ends in a fork | last level pendulous, hanging below the crown | cards along the hanging twigs |
 | Palm | small sphere atop a bare stem | full height, no limbs | none | fronds radiating from the tip |
 | Rosette or tuft (agave, grass, fern) | hemisphere at the ground | none | none | cards radiating from the base |
@@ -260,7 +259,7 @@ For the species data model (C10), the groups follow the layers:
 - **Limb levels**, a list: nodes, limbs per node, facing and skew, start along the parent,
   angle and its limits, reach, tropism, wander, radius ratio.
 - **Bark:** base radius, pipe exponent, flare, color.
-- **Foliage:** spacing, shell depth, size, lateral and axial droop, facing (up-to-outward blend,
+- **Foliage:** leaves on or off, size, lateral and axial droop, facing (up-to-outward blend,
   spread), crown softness.
 - **Leaf sprig:** how the leaves are arranged on the card's stem (seedling's `leafGroup`: fan
   size and angle, pairs along the stem and their spacing, taper), painted into the texture.

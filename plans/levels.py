@@ -1,7 +1,7 @@
 """Limb levels: + shows the next level, growing on the limbs of the one before, and − hides the
-last. A hidden level keeps its parameters, so showing it again brings it back as it was. Leaf cards
-grow at branch ends and in the crown's shell, and no foliage density leaves the tree bare until
-the density rises again."""
+last. A hidden level keeps its parameters, so showing it again brings it back as it was. A leaf
+card grows at each branch end, and unchecking Leaves leaves the tree bare until it is checked
+again."""
 
 from driver import Between
 
@@ -14,11 +14,9 @@ VISIBILITY = "bevy_camera::visibility::Visibility"
 def run(driver):
     driver.present("Shell", ready=True)  # wait for the UI scene to finish spawning
     driver.present("Shell/Panel/limbs[0]/add")  # the immediate-mode panel has built its rows
-    # Nine or ten, and the one carrying the trunk on.
+    # Nine or ten, and the one carrying the trunk on, each bearing a card at its tip.
     first = Between(10, 11)
-    driver.expect(
-        "Plant", STATS, {"limbs": first, "level_limbs": [first], "cards": Between(20, 150)}
-    )
+    driver.expect("Plant", STATS, {"limbs": first, "level_limbs": [first], "cards": first})
     driver.click("Shell/Panel/limbs[0]/add")
     # One to six nodes of one or two on each of the first level's ten or eleven limbs, 1 to 3 m
     # long, and one carrying each on. Each level's count shows in its header.
@@ -49,12 +47,7 @@ def run(driver):
     driver.expect("Plant", STATS, {"limbs": Between(10 + 5 + 1, 11 + 55 + 55 * (2 * 4 + 1))})
     driver.screenshot("three_levels")
 
-    driver.click("Shell/Panel/foliage/density/input")
-    driver.key("End")
-    for _ in range(6):
-        driver.key("Backspace")
-    driver.type("0")
-    driver.key("Enter")
+    driver.click("Shell/Panel/foliage/leaves")
     driver.expect("Plant", STATS, {"cards": 0})
     driver.expect("Leaves", VISIBILITY, "Hidden")
     # Bare, with every stem drawn at least 10 cm wide: the twigs thicken, the limbs stay.
@@ -67,13 +60,8 @@ def run(driver):
     driver.expect("Plant", GROWN_FROM, Between(0.099, 0.101), at="detail")
     driver.screenshot("thick_detail")
 
-    # Leaves come back, and show, when the density rises again.
-    driver.click("Shell/Panel/foliage/density/input")
-    driver.key("End")
-    for _ in range(6):
-        driver.key("Backspace")
-    driver.type("10")
-    driver.key("Enter")
+    # Leaves come back, and show, when checked again.
+    driver.click("Shell/Panel/foliage/leaves")
     driver.expect("Plant", STATS, {"cards": Between(20, 1000)})
     driver.expect("Leaves", VISIBILITY, "Inherited")
     driver.screenshot("leaves_again")

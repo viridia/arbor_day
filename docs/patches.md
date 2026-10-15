@@ -50,7 +50,7 @@ same struct but for a level, and `Parent` reads either.
   attachment it grew from, its depth, its random stream, and named attributes later operators
   read (a radius share, sides). Its children are attachments on it.
 - **Crown**: the envelope (D11), a field operators read: reach to it, clip to it, the part of a
-  parent inside it, the foliage shell.
+  parent inside it.
 - **Cards**: leaf clusters placed on axes.
 
 Every random draw comes from the element's stream forked by the operator's id and the input's
@@ -76,7 +76,7 @@ Composition:
 
 Whole plant:
 - `pipe`: radii top-down from the stems (D22), each axis taking its `share` attribute.
-- `clusters`: cards on the axes `on` (usually `ends`), at a density in the crown's shell (D27).
+- `clusters`: a card at the tip of each axis `on` (usually `ends`) (D27).
 
 The current generator fuses some of these: a limb is traced, kinked and clipped in one loop. As
 operators they run in sequence, which moves some tips slightly (X15's version covers it).
@@ -124,7 +124,7 @@ An input is a number or a string formula:
     { "op": "wander", "on": "bough", "angle": "10°" },
     { "op": "carry_on", "on": "trunk" },
     { "op": "pipe", "exponent": 2.5, "share": "if(depth == 0, 1, 0.5)" },
-    { "op": "clusters", "on": "ends", "density": "lerp(6, 14, fullness)", "shell": "0.3" }
+    { "op": "clusters", "on": "ends" }
   ]
 }
 ```

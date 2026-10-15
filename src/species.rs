@@ -370,28 +370,13 @@ impl Default for Wood {
     }
 }
 
-/// Leaf clusters on every limb that bears none, where it lies near the envelope, so the leaves
-/// follow the branch ends and fill the crown's surface. Each cluster is a card facing up.
+/// A leaf cluster at the tip of every limb that bears none, so the leaves follow the branch ends.
+/// Each cluster is a card facing up.
 #[derive(Reflect, Clone, PartialEq)]
 pub struct Foliage {
-    /// Clusters per crown radius of twig within the shell, beside the one at each twig's tip; 0
-    /// for a bare plant. Rounded at random for each twig.
-    #[reflect(
-        @ValueRange::<f32>(0.0..=40.0),
-        @Precision(1),
-        @Caption("Clusters per crown radius"),
-        @ControlGroup("Clusters"),
-    )]
-    pub density: f32,
-    /// How far in from the envelope clusters grow, as a fraction of the crown's radius. The
-    /// crown's base is not part of its surface.
-    #[reflect(
-        @ValueRange::<f32>(0.05..=1.0),
-        @Precision(2),
-        @NumberInputUnits::new_static("ratio_percent"),
-        @ControlGroup("Clusters"),
-    )]
-    pub shell: f32,
+    /// Whether leaves grow; off for a bare plant.
+    #[reflect(@Caption("Leaves"))]
+    pub leaves: bool,
     /// Each card's width, as a fraction of the crown's radius.
     #[reflect(
         @ValueRange::<f32>(0.02..=1.0),
@@ -423,8 +408,7 @@ pub struct Foliage {
 impl Default for Foliage {
     fn default() -> Self {
         Self {
-            density: 10.0,
-            shell: 0.3,
+            leaves: true,
             size: 0.25,
             // Seedling's most common pair, on the shrubs and two hemlocks.
             lateral_droop: (-16.0_f32).to_radians(),

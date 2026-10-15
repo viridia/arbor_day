@@ -125,8 +125,8 @@ Priority: **M** must, **S** should, **C** could.
 
 ### Foliage
 
-- **M** Foliage cards placed by the growth model, not only one per branch tip: clusters along
-  the outer branches sized to fill the crown envelope.
+- **M** A foliage card at every branch end, so no visible tip is bare. Denser foliage comes from
+  more limbs, not more cards per limb.
 - **M** Card shapes beyond the current creased quad: at least crossed cards and cupped cards,
   chosen so the crown reads as a mass from any angle (plants are rotated randomly).
 - **M** Outlines are a per-species switch covering bark and leaves. When on, leaf textures are
