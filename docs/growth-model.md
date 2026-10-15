@@ -208,8 +208,8 @@ reach or the envelope, whichever comes first. Neither depends on ring spacing. B
 tropism moves the tip, and longer limbs bend further; because it is per crown radius, a shrub
 and a tree with the same settings bend alike.
 
-Radii follow the pipe model: a parent's radius raised to an exponent equals the sum of its
-children's radii raised to it, with one exponent per species. Meshing draws every stem, none
+Every stem and limb narrows evenly by one taper per species, and a limb starts at its level's
+share of the parent's radius where it leaves (ledger D22). Meshing draws every stem, none
 narrower than a detail threshold, about a pixel at the game's scale (ledger D22): what is drawn
 is chosen by what the eye reads at that size, not by botany.
 
@@ -258,7 +258,7 @@ For the species data model (C10), the groups follow the layers:
 - **Stems:** count, splay, height, fork count and angle.
 - **Limb levels**, a list: nodes, limbs per node, facing and skew, start along the parent,
   angle and its limits, reach, tropism, wander, radius ratio.
-- **Bark:** base radius, pipe exponent, flare, color.
+- **Bark:** base radius, taper, flare, color.
 - **Foliage:** leaves on or off, size, lateral and axial droop, facing (up-to-outward blend,
   spread), crown softness.
 - **Leaf sprig:** how the leaves are arranged on the card's stem (seedling's `leafGroup`: fan

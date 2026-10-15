@@ -22,8 +22,8 @@ pub struct Species {
     #[reflect(@Caption("Seed"), @ControlGroup("Plant"))]
     pub seed: Seed,
     /// The smallest detail drawn, in meters, about a pixel at the game's scale: no stem is drawn
-    /// narrower, so twigs still show. Only the drawing is thickened: limbs share their parents'
-    /// wood as their true radii have it.
+    /// narrower, so twigs still show. Only the drawing is thickened: limbs take their share of
+    /// their parents' true radii.
     #[reflect(
         @ValueRange::<f32>(0.002..=0.2),
         @Precision(3),
@@ -31,10 +31,21 @@ pub struct Species {
         @ControlGroup("Plant"),
     )]
     pub detail: f32,
+    /// The bark's color, written into the mesh as a vertex color, so trunks of different species
+    /// can merge into one mesh in the game.
+    #[reflect(@Caption("Bark color"), @ControlGroup("Plant"))]
+    pub bark_color: Color,
+    /// How much narrower each stem and limb is at its tip than at its base, narrowing evenly: 0
+    /// keeps the radius, 1 closes to a point.
+    #[reflect(
+        @ValueRange::<f32>(0.0..=1.0),
+        @Precision(2),
+        @NumberInputUnits::new_static("ratio_percent"),
+        @ControlGroup("Plant"),
+    )]
+    pub taper: f32,
     #[reflect(@Caption("Trunk"))]
     pub trunk: Trunk,
-    #[reflect(@Caption("Wood"))]
-    pub wood: Wood,
     #[reflect(@Caption("Crown"))]
     pub crown: Crown,
     /// How many of the limb levels grow, from the first. The rest keep their parameters, so a
@@ -61,8 +72,9 @@ impl Default for Species {
         Self {
             seed: Seed(1),
             detail: 0.02,
+            bark_color: Color::srgb(0.42, 0.33, 0.25),
+            taper: 0.6,
             trunk: Trunk::default(),
-            wood: Wood::default(),
             crown: Crown::default(),
             limb_levels: 1,
             limbs: [
@@ -170,13 +182,6 @@ pub struct Trunk {
     /// Radius at the base, in meters.
     #[reflect(@ValueRange::<f32>(0.02..=1.0), @Precision(2))]
     pub radius: f32,
-    /// How much narrower the top is than the base: 0 keeps the radius, 1 closes to a point.
-    #[reflect(
-        @ValueRange::<f32>(0.0..=1.0),
-        @Precision(2),
-        @NumberInputUnits::new_static("ratio_percent"),
-    )]
-    pub taper: f32,
     /// Sides of each ring.
     #[reflect(@ValueRange::<i32>(3..=8), @Spinbox)]
     pub sides: i32,
@@ -279,8 +284,8 @@ pub struct LimbLevel {
         @ControlGroup("Shape"),
     )]
     pub reach: Fuzzy,
-    /// Radius at the base, as a share of the parent's radius past where the limb leaves it: 100% is
-    /// an even fork. The two share the parent's wood, so the parent narrows past each limb.
+    /// Radius at the base, as a share of the parent's radius where the limb leaves it: 100% is as
+    /// thick as the parent there.
     #[reflect(
         @ValueRange::<f32>(0.05..=1.0),
         @Precision(2),
@@ -347,29 +352,6 @@ fn degrees(center: f32, spread: f32) -> Fuzzy {
     Fuzzy::new(center.to_radians(), spread.to_radians(), Distribution::Bell)
 }
 
-/// The wood, the same on every stem: its bark's color and how stems narrow.
-#[derive(Reflect, Clone, PartialEq)]
-pub struct Wood {
-    /// The bark's color, written into the mesh as a vertex color, so trunks of different species
-    /// can merge into one mesh in the game.
-    #[reflect(@Caption("Bark color"))]
-    pub color: Color,
-    /// The pipe model's exponent: a stem's radius raised to it is shared among the limbs leaving
-    /// it and what carries on past them. 2 keeps the wood's cross-section, so a stem narrows most;
-    /// higher, it narrows less.
-    #[reflect(@ValueRange::<f32>(2.0..=3.0), @Precision(1), @Caption("Pipe exponent"))]
-    pub pipe_exponent: f32,
-}
-
-impl Default for Wood {
-    fn default() -> Self {
-        Self {
-            color: Color::srgb(0.42, 0.33, 0.25),
-            pipe_exponent: 2.0,
-        }
-    }
-}
-
 /// A leaf cluster at the tip of every limb that bears none, so the leaves follow the branch ends.
 /// Each cluster is a card facing up.
 #[derive(Reflect, Clone, PartialEq)]
@@ -424,7 +406,6 @@ impl Default for Trunk {
             splay: 0.0,
             height: 5.0,
             radius: 0.2,
-            taper: 0.6,
             sides: 6,
             lean: 15.0_f32.to_radians(),
             wander: 8.0_f32.to_radians(),

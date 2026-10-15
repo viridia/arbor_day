@@ -55,6 +55,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C39   | Card folds: each card two by two quads, after seedling, its halves turned about the midrib by a lateral droop (negative cups) and its far half bent across the middle by an axial droop, plain angles per species, defaulting to seedling's most common pair (−16°, 17°). Every quad keeps the flat card's normal, so folds shape the outline but not the shading. The tip's card reaches back along the twig to its fold (D27). Leaves with no density are hidden rather than their mesh removed, since a `Mesh3d` inserted again was never drawn; `plans/levels.py` checks they come back. Facing went to C70, crown softness to C71, crossed cards to C72. Foliage's rows in Clusters and Card groups. `plans/cards.py`. |
 | C33   | Control groups: a `ControlGroup` field attribute gathers a struct's rows under a bold heading where its first field is declared, or into a subpane of its own at the panel's top level, so panes never nest boxes; the data stays flat, so paths are unchanged within a struct. A limb level's rows in Arrangement, Direction (with wander) and Shape (reach, radius, sides). A Plant group at the top: the seed and the detail threshold, now `Species::detail`. `Bark` becomes `Wood` ("Bark color", pipe exponent). `plans/groups.py`, screenshots only. A pattern for Panoply's editor (D3). |
 | C74   | Leaves at branch ends only (D27): one card at each limb's tip that bears none, and none along the twigs. A "Leaves" checkbox, the first species `bool`, replaces the cluster density; the density, the shell and `depth_in_envelope` go. No limb kinks in its last stretch under a tip's card (D17), so the card lies along the twig and its fold on the tip; a kink there had turned the fold up to 10 cm off the tip, which the cards along twigs had hidden from C39's test. The Foliage requirement is rewritten. `plans/levels.py` toggles Leaves. |
+| C73   | Radii by taper (D22): every stem and limb narrows evenly by one taper, now in the Plant group, beside the bark color, in place of the trunk's taper and the pipe exponent; the Wood group goes, and a limb starts at its level's share of the parent's radius where it leaves. C68 (end taper) folded in. C30 scoped (one fork point, 2 to 4 copies), stem forks split off as C75; X32, X33 recorded. |
 
 ## Next
 
@@ -76,25 +77,23 @@ per-type hook, and is retained-mode.
    game's camera (45° down), a figure in `PlantStats`, to judge facing and folds by numbers as
    well as by eye. Card counts multiply with levels, eight triangles each since C39, so look at
    density against the budget too. E[3]
-2. **C73 Radii by taper**, revising D22: each stem and limb narrows by its own taper from base
-   to top, and a limb's base radius is its level's share of the parent's radius where it
-   leaves, so raising a level's radius thickens that level and nothing else (requirements:
-   each parameter changes one visible thing). Under the pipe model the radius divides a fixed
-   amount of wood, so raising it thinned the trunk past each node and every later limb, and a
-   stem kept its base radius below its first limb. The pipe exponent goes; the pipe model
-   returns as a stack operator (X31). Lost until then: the trunk narrowing more where many
-   limbs leave it. C68's end taper is reconsidered with it. E[3]
-3. **C30 Forks**, Weber and Penn's splits: at a point along a limb it ends, and copies of it
-   carry on, turned apart by the fork angle. The copies are the same level as the limb, not its
-   children, so they reach the envelope and bear children as it would; turning both by half the
-   angle reads as the symmetric Y of a child deflecting its parent. Per level: forks per limb (0
-   to 2), fork at (`Fuzzy`, a fraction of the limb), fork angle (`Fuzzy`), and fork roll, where
-   the Y's plane lies, from level to upright. Each copy's radius follows the pipe model (D22):
-   the limb's over the exponent's root of the copies, over √2 for two at exponent 2. Stems fork
-   the same way, so a decurrent tree's leader stopping short (D23) ends in a fork (growth
-   model, Stems and leader). A stem's fork may lie below the crown base: the trunk's height
-   sets the axis's length, the fork where it splits. After foliage, since a crown's
-   look cannot be judged without leaves. E[3]
+2. **C30 Forks**, Weber and Penn's splits, for limbs: at one point along a limb it ends, and
+   copies of it carry on, spread evenly around its axis, each at the fork angle from it, the
+   ring turned by the fork roll; two copies make a Y in the roll's plane, from level to
+   upright. The copies are the same level as the limb, not its children, so they reach the
+   envelope (each drawing its own reach) and bear children as it would, from their base, since
+   the level's start is a limb's bare base. Each copy starts at the limb's radius at the fork
+   (D22). The limb is capped there, bears its children up to the fork, and is not carried on
+   (D30), nor does it bear a leaf there. Copies do not fork again. Each copy's children compete
+   among themselves alone; a level-roll Y with sides facing then puts some on the inner flanks,
+   into the crotch, which a plan screenshots (X33). Per level: fork chance, fork at (`Fuzzy`, a
+   fraction of the limb), copies (2 to 4), fork angle (`Fuzzy`) and fork roll. Stems follow in
+   C75. E[3]
+3. **C75 Stem forks**, C30's forks on stems, so a decurrent tree's leader stopping short (D23)
+   ends in a fork (growth model, Stems and leader). A stem's fork may lie below the crown base:
+   the trunk's height sets the axis's length, the fork where it splits. A three-way fork low on
+   one stem stands in for several splayed stems, so stems and splay may become a fork at the
+   ground, its copies and angle (D25), in place of fork fields beside them. E[3]
 4. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's leaf, as D29 has it, its
    fields in a "Sprig" and a "Leaf" group under Foliage, and the `Interval` type (D10) for its
    variations. The painter takes the outline as an
@@ -191,11 +190,6 @@ per-type hook, and is retained-mode.
   (`scaled_number_input_value`), or with `NumberInputPrecision::round` once bevy#26158 lands.
   Defaults are written in the units shown
   (`15.0_f32.to_radians()`, not `0.3`). E[2]
-- **C68 End taper**: the trunk's taper moves to the Wood group, beside the pipe exponent, as "End taper", the narrowing of
-  a stretch nothing branches from (branch ends, bare stems), so an author can keep ends blunt
-  (frangipani, sumac) or fine (birch). Stems bearing limbs narrow by the pipe model alone (D22):
-  the taper's minimum on a parent's narrowing goes, since at exponent 3 it overrode the exponent
-  (the default trunk's top 0.4 of its base, not the pipe's 0.64). E[2]
 - **C47 A sense of scale**: metre rings on the ground disc (`src/main.rs`, `Circle::new(4.0)`),
   since Frame fits any plant to the view and hides how big it is. Seedling never zoomed, so its
   plants showed their size. E[1]
@@ -450,7 +444,7 @@ per-type hook, and is retained-mode.
   species should differ (the envelope's lean and squash, the trunk's lean direction). The
   trunk does not vary otherwise. Kept as `Fuzzy`: angle and reach per limb, the most visible
   variety; the skew is a turn either way of up to its value, per limb (D26). Not varied: bend toward and bend (wander already irregularizes),
-  wander (itself the randomness), radius (the pipe model derives it, D22), sides (mesh detail),
+  wander (itself the randomness), radius (a share of the parent's, D22), sides (mesh detail),
   start (each node's jitter varies the places, D25). Counts are fractions rounded at random
   (D21).
 
@@ -469,24 +463,24 @@ per-type hook, and is retained-mode.
   draw), from the parent's layout stream; limbs take stream indices in order, whatever each
   node's count. The parent is measured over its part inside the crown (D24).
 
-- **D22** Radii follow the pipe model top-down, from the trunk's radius, which the author sets: a
-  stem's radius raised to the bark's exponent (2 to 3) is shared among the limbs leaving it and
-  what carries on: each limb's radius is its level's `radius` share of the stem's radius past
-  it, so at 100% a limb and the stem past it are an even fork, each √½ of the stem at exponent
-  2, and no setting uses a stem up. Revised in C52 from a share of the stem's radius where the
-  limb leaves, under which a limb at 100% took all the wood and left every limb above it, and
-  the stem's top, at nothing. A stem's top is what its limbs leave it, or its base tapered if
-  thinner, so the taper is the least a stem narrows and childless limbs taper as before; the
-  limb carrying a stem on (D30) starts at that radius. No wood leaves a stem below its first
-  limb, so it keeps its base radius to there and narrows past it, with a ring at the first
-  limb where narrowing all the way would move its outline by more than the detail threshold
-  (the trunk below the crown; rarely a limb, whose first child is near its base). Rejected:
+- **D22** Radii by taper, top-down from the trunk's radius, which the author sets: every stem and
+  limb narrows evenly by the plant's one taper, from its base to its tip as grown, and a limb's
+  base radius is its level's `radius` share of the parent's radius where it leaves. A parent cut
+  at its last node (D30) keeps the radius it has there, and the limb carrying it on starts at
+  it, so a carried-on chain narrows step by step. So each parameter changes one visible thing:
+  a level's radius thickens that level alone (requirements). One taper for all wood, as
+  seedling had, which served well. Revised in C73 from the pipe model, a stem's radius raised
+  to an exponent (2 to 3) shared among the limbs leaving it and what carried on: raising a
+  level's radius thinned the trunk past each node and every later limb, a stem kept its base
+  radius to its first limb, and the taper was only the least a stem narrowed. Lost until the
+  pipe model returns as a stack operator (X31): the trunk narrowing more where many limbs leave
+  it. A taper per level is X32. Rejected:
   bottom-up from the twigs, which makes the trunk's radius follow the limb count, so showing a
   third level thickened the trunk about 2.4 times.
   Every stem is drawn, none narrower than the bark's detail threshold (2 cm by default, about a
   pixel at the game's scale), as font hinting keeps a stem a pixel wide: the aim is
-  verisimilitude, not realism. Only the drawing thickens; the radii, and with them the pipe
-  model, stay true. Revised in C63 from a cutoff, below which limbs were grown for the foliage but not meshed:
+  verisimilitude, not realism. Only the drawing thickens; the radii stay true. Revised in C63
+  from a cutoff, below which limbs were grown for the foliage but not meshed:
   their leaves floated off visible tips, and visible twigs with thinner children went bare. The
   threshold is also the rings' tolerance (D17), one setting for what the game can show.
   Sides stay per level, for Panoply's inverted-hull outline (`src/materials/outline.wesl`,
@@ -831,7 +825,15 @@ per-type hook, and is retained-mode.
   panels the author adds, reorders and toggles (wander, foliage modules, the pipe model, which
   runs after growth wherever it sits). Fewer rows, since an unused operator shows none. Needs
   X22's first step, the generator split into operators, and a property editor widget for a
-  list of enums with data. E[4] *Gate:* C73 landed, and settled before C10's file format.
+  list of enums with data. E[4] *Gate:* settled before C10's file format.
+
+- **X32** A taper per limb level, in place of the plant's one (D22). *Gate:* a preset (X18) whose
+  twigs taper unlike its limbs.
+
+- **X33** A fork's copies (C30) competing as one parent for their children's places (D26), so
+  each copy's first child goes to its outer flank, away from the crotch; alternation still puts
+  later ones inside, as in real amphitonic forks. E[2] *Gate:* C30's screenshot of a level-roll
+  Y with sides facing shows the crotch crowded.
 
 ## Notes
 
