@@ -177,8 +177,8 @@ pub struct Trunk {
         @NumberInputUnits::new_static("angle_degrees"),
     )]
     pub lean: f32,
-    /// The most each internode of a stem points off its course, which the splay and lean set, so
-    /// it zigzags about it as a limb does. A kink falls every internode of the first limb level.
+    /// The most each stretch of a stem points off its course, which the splay and lean set, so it
+    /// zigzags about it as a limb does, kinking as often.
     #[reflect(
         @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_4),
         @NumberInputUnits::new_static("angle_degrees"),
@@ -244,9 +244,9 @@ pub struct LimbLevel {
         @NumberInputUnits::new_static("ratio_percent"),
     )]
     pub bend: f32,
-    /// The most each internode points off the limb's course, which the angle and bend set, so the
-    /// limb zigzags about it rather than running smooth. A kink falls every internode, a crown
-    /// radius over the next level's density, so twigs kink finer than limbs.
+    /// The most each stretch points off the limb's course, which the angle and bend set, so the
+    /// limb zigzags about it rather than running smooth. Kinks fall at one spacing on every
+    /// level, so long limbs kink several times and short twigs once or not at all.
     #[reflect(
         @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_4),
         @NumberInputUnits::new_static("angle_degrees"),
@@ -260,8 +260,8 @@ pub struct LimbLevel {
         @NumberInputUnits::new_static("ratio_percent"),
     )]
     pub reach: Fuzzy,
-    /// Radius at the base, as a fraction of the parent's radius where the limb starts. Limbs taper
-    /// as the trunk does.
+    /// Radius at the base, as a share of the parent's radius past where the limb leaves it: 100% is
+    /// an even fork. The two share the parent's wood, so the parent narrows past each limb.
     #[reflect(
         @ValueRange::<f32>(0.05..=1.0),
         @Precision(2),

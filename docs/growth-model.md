@@ -202,7 +202,8 @@ Each limb then grows as a curve integrated by arc length: its direction blends t
 tropism, an angle from world up (up for poplars, level for oaks, down for weeping and drooping
 forms), closing a set share of the angle left to it over each crown radius of length. That is
 its course: the limb kinks about it, each stretch between kinks pointing off it by up to the
-wander, kinks falling by the internodes of the level it bears (ledger D17). It stops at its
+wander, kinks falling at one spacing on every level, so long limbs zigzag and short twigs
+hardly do, and rings kept only where they move the line by about a pixel (ledger D17). It stops at its
 reach or the envelope, whichever comes first. Neither depends on ring spacing. Because the share is of the angle left, every
 tropism moves the tip, and longer limbs bend further; because it is per crown radius, a shrub
 and a tree with the same settings bend alike.

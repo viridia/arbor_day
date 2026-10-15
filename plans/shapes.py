@@ -5,7 +5,7 @@ default.
 - node start: the first level's nodes in the upper half of the trunk inside the crown;
 - limbs per node and density: whorls, and a mix of one and two limbs to a node;
 - wander: the first level's limbs zigzag about their course at the most wander, 45°, and the
-  second level's twigs kink finer;
+  second level's shorter twigs kink once or not at all;
 - facing: the second level's limbs to the sides (the default), up, down and around, then skewed;
 - stems: three stems splayed from up, then a crown twice the trunk's height, which leaves the
   stems in its narrow foot, bearing fewer limbs."""

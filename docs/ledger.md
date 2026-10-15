@@ -50,7 +50,8 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | `86fa129` | C64 The HUD's toggles saved, as `ViewSettings` (D28). |
 | `86fa129` | C57 Camera buttons on the HUD (D28): orbit, zoom, tilt and Frame, moving while held; the panel's "View" group goes. Needs `bevy_remote_driver`'s press and hold. |
 | `51ce5ca` | C27 `Placeholder` removed, and `Wrap` with it (D9). The plant carries the species it was grown from (`GrownFrom`, D12), which plans read with the driver's `expect(…, at="limbs[0].angle")`; `PlantStats` drops the seed. The Bark group moves up under Trunk. X25 (`bevy::annotations`) and C65 (wireframe toggle) recorded. |
-| (pending) | C63 Branch ends: a level's nodes from a start in place of the bias (D25); a parent ends at its last node and one limb carries it on (D30); leaves on every branch end, one at each tip (D27); every stem drawn, none narrower than the bark's detail threshold, in place of the thinnest meshed (D22). Sparser defaults (D17). |
+| `f6a4bfe` | C63 Branch ends: a level's nodes from a start in place of the bias (D25); a parent ends at its last node and one limb carries it on (D30); leaves on every branch end, one at each tip (D27); every stem drawn, none narrower than the bark's detail threshold, in place of the thinnest meshed (D22). Sparser defaults (D17). |
+| (pending) | C52 Hinting (D17): rings by visible error, the traced path simplified to the bark's detail threshold (Ramer–Douglas–Peucker); kinks at one spacing on every level, 0.15 crown radii on average, each stretch varied by up to 40%. A limb's radius is a share of the stem past it, so 100% is an even fork (D22); a stem keeps its radius to its first limb. The budget test allows 2,500 bark triangles for two levels and 3,500 for three. |
 
 ## Next
 
@@ -67,28 +68,7 @@ per-type hook, and is retained-mode.
 
 ### Milestone: the first species exported to Panoply
 
-1. **C52 Hinting by visible error**: rings, and kinks, only where the eye sees them at the
-   game's scale, as font hinting keeps only what a pixel shows. The eye reads a branch by where
-   it goes and by its corners, the changes of direction, far more than by smooth curvature or
-   exact place. Two changes:
-   - **Kinks at least every third of a limb**, or by the internode as now (D17) if that is
-     shorter, so wander shows on every limb whatever the densities. Since C63's sparser
-     defaults, most second-level limbs are shorter than one kink spacing (2 of 68 kink at three
-     levels), so its wander barely shows. Tried alone, it took three levels from 2,260 bark
-     triangles with no wander to 4,962, which the next change is to win back.
-   - **Rings by visible error**, an optimization in place of placing them by turn (15° of
-     curvature, 5° at a kink). A limb or stem is traced in full first, then simplified as
-     Ramer, Douglas and Peucker do: from its two ends, the traced point furthest from the chord
-     between them is kept if it lies further than the bark's detail threshold (D22), and each
-     half is simplified the same way. Corners that move the line by a pixel stay; gentle bends
-     and twigs' sub-pixel zigzags straighten into a segment or two, where the triangles are. A
-     kept point's ring faces halfway between its two chords, so the tube does not pinch;
-     children attach along the kept rings, as now. One rule for curvature and kinks, so the
-     kink ring's threshold goes. The tolerance is the threshold the drawn width uses, one
-     setting for what the game can show.
-
-   Judged by screenshots and the triangle count at the default densities. E[3]
-2. **C45 Contact sheets**, so designs are explored in sweeps rather than one screenshot at a
+1. **C45 Contact sheets**, so designs are explored in sweeps rather than one screenshot at a
    time, by the author or by an agent. A second binary (`src/bin/sheet.rs`; the modules move
    behind a `src/lib.rs` so both binaries share them) reads a species file and a sweep (seeds,
    or one field's values by reflection path), grows each plant with the generator, lays them out
@@ -103,20 +83,20 @@ per-type hook, and is retained-mode.
    sweeping parameters needs only writing sweep files and running the one command, so a narrow
    allowlist covers it; trying generator changes (a form, say) runs in a git worktree that is
    thrown away afterwards, the findings written up and built properly. E[3]
-3. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's leaf, as D29 has it, its
+2. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's leaf, as D29 has it, its
    fields in a "Sprig" and a "Leaf" group under Foliage, and the `Interval` type (D10) for its
    variations. The painter takes the outline as an
    argument, a width in texture pixels or none, which C38 fixes at a constant until C66 makes it
    the species'. The texture goes on C37's cards, replacing the placeholder, with mipmaps, since
    the placeholder's 128 px shimmers at game scale. A golden test on its pixels compares with a
    tolerance, since SIMD can move a channel by a level. E[3]
-4. **C66 Outlines**, a switch for the whole plant (requirements, Foliage): an "Outline" group
+3. **C66 Outlines**, a switch for the whole plant (requirements, Foliage): an "Outline" group
    with the switch, the bark's width as the game reads it, and the leaf stroke's in texture
    pixels (growth model, Consequences). On, the leaf texture is painted with its strokes (D29),
    the preview draws the bark with an inverted hull after Panoply's `src/materials/outline.wesl`,
    and the export writes the `"outline"` material extra (C41). Off, none of these; whether the
    translucent strokes between leaves stay is judged then. E[3]
-5. **C39 Card shapes and facing**: crossed, cupped and creased cards chosen by weight (seedling's
+4. **C39 Card shapes and facing**: crossed, cupped and creased cards chosen by weight (seedling's
    `lateralDroop` folds a card about its midrib, `axialDroop` bends its far half down); the face
    target (D27) widened from world up to a blend of up and the envelope's outward normal, with a
    spread; crown softness for the shading normal (X13), built as a weight and judged in the
@@ -124,7 +104,7 @@ per-type hook, and is retained-mode.
    edge-on to the game's camera (45° down), to judge facing and folding by numbers as well as by
    eye. Card counts multiply with levels (the default with three: 479 cards, 958 triangles),
    so look at density against the budget too. E[3]
-6. **C30 Forks**, Weber and Penn's splits: at a point along a limb it ends, and copies of it
+5. **C30 Forks**, Weber and Penn's splits: at a point along a limb it ends, and copies of it
    carry on, turned apart by the fork angle. The copies are the same level as the limb, not its
    children, so they reach the envelope and bear children as it would; turning both by half the
    angle reads as the symmetric Y of a child deflecting its parent. Per level: forks per limb (0
@@ -135,7 +115,7 @@ per-type hook, and is retained-mode.
    model, Stems and leader). A stem's fork may lie below the crown base: the trunk's height
    sets the axis's length, the fork where it splits. After foliage, since a crown's
    look cannot be judged without leaves. E[3]
-7. **C10 Species data model**, its groups the layers of the growth model (D11;
+6. **C10 Species data model**, its groups the layers of the growth model (D11;
    `docs/growth-model.md`, Consequences), correcting seedling where the requirements say.
    Reflectable types with `Default` for initial values and attributes for the editor, after the
    fields settle, so saved files are not broken by every change. Serialized
@@ -154,17 +134,17 @@ per-type hook, and is retained-mode.
    levels with hidden ones stashed in the editor, the same in files but a larger change that
    undoes D15. Seedling's groups for reference: `trunk`; `branch[]`, one per level; the leaf as
    `leafGroup` (arrangement), `leafShape` and `leafColor`. E[4], split when started
-8. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
+7. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
    panel; the file browser is X2. The seed row moves in with them, in a feathers `group`
    (`containers/group.rs`, no header), so it lines up with the subpanes' rows rather than
    standing at the panel's edge. File commands act on the active document, so that tabs (X26)
    need not change them. E[3]
-9. **C8 Working document in settings.** A settings group holding the working species and, once
+8. **C8 Working document in settings.** A settings group holding the working species and, once
    set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
    as seedling did. The document's name comes from the file name. Serialized by reflection, as
    `bevy_settings` does. Stored as a list of open documents holding one, and the active one's
    index, so several (X26) need no change of format. E[3]
-10. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
+9. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
    as a JSON extra (C10), in the form Panoply loads (requirements, Output; "What Panoply does with the output"). Bevy writes no glTF,
    so this adds a dependency or a writer of our own; propose it before code. The command-line
    export is X1. Research so far (2026-10-12), the author also asking skein's author:
@@ -254,7 +234,7 @@ per-type hook, and is retained-mode.
   toward the ground, stopping above it. D24 stops the lean at level until a preset needs more
   (X18). E[2]
 - **C65 Wireframe toggle on the HUD** (D28), to see where the triangles go: rings along the bark
-  (D17's spacing, C52), sides per level (D22), and each leaf card's quad, for card density and
+  (D17's hinting), sides per level (D22), and each leaf card's quad, for card density and
   facing (C39). Bevy's `WireframePlugin` (`bevy_pbr`), drawing lines over the shaded mesh rather
   than in its place; it needs the `POLYGON_MODE_LINE` and `IMMEDIATES` GPU features, requested
   through `RenderPlugin`'s `WgpuSettings`, so first confirm Metal has both. A `Wireframe`
@@ -420,27 +400,36 @@ per-type hook, and is retained-mode.
 
 - **D17** A limb's course is traced in 2 cm steps, turning toward its level's bend (an angle
   from world up, keeping its compass heading), closing a share of the angle left over each
-  crown radius (revised in C31 from a fixed turn per metre). The limb kinks every 1.5
-  internodes of the level it bears (an internode is a crown radius over that level's density,
-  shown or not, so showing a level leaves its parents alone; the last level's own): each
+  crown radius (revised in C31 from a fixed turn per metre). The limb kinks every 0.15 crown
+  radii on average, on every level and on stems alike, each stretch longer or shorter by up to
+  40%, drawn from the wander's stream, so kinks fall unevenly but never run together: each
   stretch points off the course by a random angle up to the wander, about a random axis, and
-  holds that offset as the course turns. Offsets are from the course, not from the stretch
-  before, so a limb zigzags about a steady line, as sympodial growth does, and twigs kink finer
-  than limbs. Stems kink the same way about their arc, by the trunk's own wander, every 1.5
-  internodes of the first level. Revised in C50 from turns drawn a metre apart, blended
-  smoothly, whose turns added up, so at high wander limbs hooked and coiled. Kinks fall on
-  steps, so the shape does not depend on the step. It stops at its reach or where it would
-  leave the envelope. Rings go wherever it has turned 15° since the last, or at a kink turning
-  it 5° at once, so a modest wander shows; a kink's ring is turned halfway between the
-  stretches meeting there so the tube does not pinch. A tube's tip takes the place of a ring
-  less than a step before it, since a tube turning between two rings that close folds over
-  itself where it is drawn thicker than the gap (D22). Kinks roughly double a tree's triangles,
-  so the defaults' second and third levels are sparse (3.5 and 4 nodes per crown radius,
-  revised in C63 from 7 and 10, the author judging the leaves too dense), which keeps three
-  levels under 3,000 with every stem drawn. An author tunes branching toward a leaf density, so
-  costs are judged at the densities that give it. At these, most second-level limbs are shorter
-  than a kink spacing and their wander barely shows (C52). Each ring carries a side transported along the limb without
-  twisting, which sets the ring's roll and its children's azimuth zero. Each limb's stream
+  holds that offset as the course turns.
+  Offsets are from the course, not from the stretch before, so a limb zigzags about a steady
+  line, as sympodial growth does. A zigzag reads by its period, so a first-level limb kinks
+  four to six times and a twig once or not at all. Revised in C52 from 1.5 internodes of the
+  level a limb bears, which tied the wander to a density: with sparser levels it vanished.
+  Revised in C50 from turns drawn a metre apart, blended smoothly, whose turns added up, so at
+  high wander limbs hooked and coiled. Kinks fall on steps, so the shape does not depend on the
+  step. It stops at its reach or where it would leave the envelope.
+
+  Rings are hinted, as font hinting keeps only what a pixel shows (C52): the traced path is
+  simplified as Ramer, Douglas and Peucker do, keeping a point only where it lies further than
+  the bark's detail threshold (D22) from the chord between the points kept either side. The eye
+  reads a branch by where it goes and by its corners more than by gentle curvature, so kinks
+  that move the line by a pixel stay, and bends and twigs' sub-pixel zigzags straighten. Each
+  kept ring faces halfway between the chords meeting there, so the tube does not pinch; the
+  start ring stays as given, so a limb carrying its parent on still meets it (D30), and the tip
+  heads as the trace did. A kept point less than a step before the tip goes, since a tube
+  turning between two rings that close folds over itself where it is drawn thicker than the
+  gap. Revised in C52 from a ring at every 15° of turn and every kink of 5°, the same however
+  the tree is seen. The defaults draw 448, 1,252 and 3,106 bark triangles for one to three
+  levels (second and third at 3.5 and 4 nodes per crown radius, revised in C63 from 7 and 10,
+  the author judging the leaves too dense). Most trees are meant to have two levels; three are
+  the costly exception, their twig count the cost (X24). An author tunes branching toward a
+  leaf density, and makes a crown denser with larger leaves rather than more branches, so costs
+  are judged at the densities that give it. Each ring carries a side transported along the
+  limb without twisting, which sets the ring's roll and its children's azimuth zero. Each limb's stream
   forks from its parent's by its index
   (the trunk's is the seed's `branching` stream), so a limb's draws depend on where it sits,
   not on how many came before. The seed is a `Seed` in the species, saved with it; the panel
@@ -480,18 +469,24 @@ per-type hook, and is retained-mode.
 
 - **D22** Radii follow the pipe model top-down, from the trunk's radius, which the author sets: a
   stem's radius raised to the bark's exponent (2 to 3) is shared among the limbs leaving it and
-  what carries on, each limb taking its level's `radius` share of the stem's radius where it
-  leaves. A stem's top is what its limbs leave it, or its base tapered if thinner, so the taper
-  is the least a stem narrows and childless limbs taper as before; the limb carrying a stem on
-  (D30) starts at that radius. Rejected: bottom-up from the twigs, which makes the trunk's
-  radius follow the limb count, so showing a third level thickened the trunk about 2.4 times.
+  what carries on: each limb's radius is its level's `radius` share of the stem's radius past
+  it, so at 100% a limb and the stem past it are an even fork, each √½ of the stem at exponent
+  2, and no setting uses a stem up. Revised in C52 from a share of the stem's radius where the
+  limb leaves, under which a limb at 100% took all the wood and left every limb above it, and
+  the stem's top, at nothing. A stem's top is what its limbs leave it, or its base tapered if
+  thinner, so the taper is the least a stem narrows and childless limbs taper as before; the
+  limb carrying a stem on (D30) starts at that radius. No wood leaves a stem below its first
+  limb, so it keeps its base radius to there and narrows past it, with a ring at the first
+  limb where narrowing all the way would move its outline by more than the detail threshold
+  (the trunk below the crown; rarely a limb, whose first child is near its base). Rejected:
+  bottom-up from the twigs, which makes the trunk's radius follow the limb count, so showing a
+  third level thickened the trunk about 2.4 times.
   Every stem is drawn, none narrower than the bark's detail threshold (2 cm by default, about a
   pixel at the game's scale), as font hinting keeps a stem a pixel wide: the aim is
   verisimilitude, not realism. Only the drawing thickens; the radii, and with them the pipe
-  model, stay true. The defaults draw 240, 848 and 2,354 triangles for one to three levels.
-  Revised in C63 from a cutoff, below which limbs were grown for the foliage but not meshed:
+  model, stay true. Revised in C63 from a cutoff, below which limbs were grown for the foliage but not meshed:
   their leaves floated off visible tips, and visible twigs with thinner children went bare. The
-  threshold is also C52's tolerance, one setting for what the game can show.
+  threshold is also the rings' tolerance (D17), one setting for what the game can show.
   Sides stay per level, for Panoply's inverted-hull outline (`src/materials/outline.wesl`,
   extruding along vertex normals): a face's middle moves out by width × cos(180° ÷ sides), so
   the line swells and thins with the view, 50% to 100% at 3 sides, 71% at 4, 87% at 6. Hence 3
@@ -523,7 +518,7 @@ per-type hook, and is retained-mode.
 - **D25** A new behaviour changes what a field means, or is derived, before it adds a field: a
   level has many already. So the span's two fields become one start, with a constant jitter
   (C46, C63); a facing and a skew replace the divergence, competition placing the children
-  (C51, D26); wander becomes kinks spaced by the internode, smooth curves being bend's (C50),
+  (C51, D26); wander becomes kinks at a fixed spacing, smooth curves being bend's (C50, C52),
   rather than gaining a smoothness and a spacing. A level keeps 12 fields. The start is a share
   of the parent's part inside the crown below which no nodes grow; nodes spread evenly from
   there to the tip, jitter moving each up to 30% of the gap. No end: the limb carrying the
@@ -764,7 +759,7 @@ per-type hook, and is retained-mode.
   rigid.
 - **X23** Kinks at the nodes, the limb deflecting away from each child it gives off, as
   sympodial growth zigzags (oak, hawthorn). Nodes are laid out after a limb is traced, so this
-  means laying them out first. *Gate:* C50's kinks, spaced by the internode but not placed at
+  means laying them out first. *Gate:* D17's kinks, evenly spaced but not placed at
   the nodes, read as too random.
 
 - **X24** Cards that include their stem and stand in for the finest twigs, one card per twig
