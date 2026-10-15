@@ -777,7 +777,8 @@ per-type hook, and is retained-mode.
   toggles, plans selecting `Plant`) would need to skip them. If painting the leaf texture (C38)
   makes switching stutter, cache the texture per document. Until then, nothing may assume
   there is only one document: C8 stores a list, C40 acts on the active document, C7 keeps a
-  history per document. Open: closing a tab with unsaved changes, whether a new document starts
+  history per document. Plans that write the species past the panel (the driver's
+  `set_resource`) move to `set` on the active document's entity. Open: closing a tab with unsaved changes, whether a new document starts
   from defaults or a copy of the active one, and which
   need tabs serve that X28's sheets would not (editing variants one at a time, against comparing
   them side by side). *Gate:* C8 and C40 landed, and an author working on variants.
