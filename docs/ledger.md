@@ -742,21 +742,14 @@ per-type hook, and is retained-mode.
   `on_hash_change_text_fn`, which writes only when the text changes, and the plan passes. Until
   then, a panel binds changing text that way. *Gate:* Panoply's editor taking the panel
   patterns (D3).
-- **X22** Forms as patches, after Native Instruments' Reaktor, where an instrument is a graph of
-  low-level modules (oscillators, amplifiers) and some of them are front-panel controls wired to
-  their inputs. Here the engine's parameters would be the low-level inputs, and a form (X18)
-  would be a saved graph: a few panel controls ("branches per limb", "droop") feeding
-  operators (scale, map a range, split one value across levels) that set the engine's fields.
-  Forms would then be data that authors build and share, not code. Two depths. Above the
-  engine, the graph only computes the engine's fields, and its operators act on scalars (as
-  macro knobs do). As the engine, the graph would replace it: generators for a limb, for
-  children placed along a parent, and for leaves, as in Xfrog and SpeedTree. Its signal would be
-  a curve over the parent's length (0 to 1) rather than a scalar, as Reaktor's is a function of
-  time. Twig density would then be a distribution whose density is a curve, shaped by
-  primitives such as a window (the part inside the crown), a push toward one end (C46's bias)
-  and noise (its jitter). The hard part is that change: the engine would evaluate curves rather than read fields. Likely
-  more than this tool needs. E[5] *Gate:* forms written in code (X18) prove too many or too
-  rigid.
+- **X22** Forms as patches (`docs/patches.md`), after Reaktor's front panels and Blender's
+  geometry nodes: a file of operators over an abstract plant (axes and the attachments placing
+  them, so the trunk and limbs share every operator on composition), each input a formula over
+  the author's named controls, evaluated per plant or per element, never per vertex; a Rust
+  library realizes the result. Today's species becomes the default patch. First step, useful
+  alone: the generator split into operators and realization, in Rust, with no language. E[4],
+  split as the doc's order of work. *Gate:* the milestone's first species exported, and C10's
+  file leaving room for a species to name its patch.
 - **X23** Kinks at the nodes, the limb deflecting away from each child it gives off, as
   sympodial growth zigzags (oak, hawthorn). Nodes are laid out after a limb is traced, so this
   means laying them out first. *Gate:* D17's kinks, evenly spaced but not placed at
