@@ -181,9 +181,15 @@ their fixed order:
 
 Levels grow in turn: a level's frame and operators, then its scions' level.
 
-- A level's subpane header has an add button (a boxed plus) opening a menu of the operators the
-  level lacks; choosing one inserts it in its place. Each operator shows as a group in the level's
-  subpane (C33), its heading with a ✕ that removes it.
+- A level's header has an add button (a boxed plus) opening a menu of the operators the level
+  lacks; choosing one inserts it in its place, and a ✕ in an operator's header removes it.
+- No more than two boxes deep, in feathers' own order: each level a feathers pane, its frame's
+  rows in the pane's body and each operator a subpane in it. The pane's header is built for
+  tool buttons (the add button, and dividers between groups of them), and its body raises the
+  surface for subpanes. The other top-level groups (Plant, Crown, Foliage) become panes too,
+  so the panel is one column of panes. Should that prove heavy or repetitive, the fallback is
+  C33's lighter headings: each level stays a subpane and each operator a heading in it, the ✕
+  at the heading's right.
 - Scions replace the − and + on the levels' headers (D15): adding scions adds a level's subpane
   after this one, its placement fields first, as the Arrangement group shows them now. Removing
   scions hides the levels above, which keep their values, as D15's hidden levels do.

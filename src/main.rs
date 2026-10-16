@@ -36,6 +36,8 @@ use turntable::{
 
 mod fuzzy;
 mod generator;
+#[cfg(test)]
+mod golden;
 mod hud;
 mod keys;
 mod plant;
