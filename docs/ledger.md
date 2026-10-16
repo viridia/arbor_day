@@ -80,13 +80,23 @@ per-type hook, and is retained-mode.
    game's camera (45° down), a figure in `PlantStats`, to judge facing and folds by numbers as
    well as by eye. Card counts multiply with levels, eight triangles each since C39, so look at
    density against the budget too. E[3]
-2. **C75 Stem forks**, forks (D31) on stems, at any point along them. A decurrent tree's
+2. **C78 Golden meshes**, X15's first measure, so the skeleton's refactors (C79 to C84,
+   `docs/patches.md`, Order of work) prove they change nothing: a hash of the bark and leaf
+   meshes for a few species (the default, three levels, forks on, three stems), failing on any
+   change. A chunk that changes output on purpose updates the hashes and says why. E[1]
+3. **C79 One axis type**: `Stem` and `Limb` merged into `Axis` (`docs/patches.md`, The abstract
+   plant), with an `AxisKind` (stem, lateral, carry-on, fork copy) and scions in place of the
+   `children`, `carried_on`, `forked` and `copy` flags, in one list with parents by index.
+   `generator.rs` becomes a module directory (skeleton, trace, placement, fork, foliage,
+   mesh). Output unchanged (C78). Before C75, so a stem forks as any axis does. E[3]
+4. **C75 Stem forks**, forks (D31) on stems, at any point along them. A decurrent tree's
    leader stopping short (D23) already ends in a fork when the first level forks, its top
    being a limb of that level (D30), so what is left is a stem splitting below its crown. A stem's fork may lie below the crown base:
    the trunk's height sets the axis's length, the fork where it splits. A three-way fork low on
    one stem stands in for several splayed stems, so stems and splay may become a fork at the
-   ground, its copies and angle (D25), in place of fork fields beside them. E[3]
-3. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's leaf, as D29 has it, its
+   ground, its copies and angle (D25), in place of fork fields beside them. Under stacks (X31),
+   the Fork operator on the trunk. E[3]
+5. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's leaf, as D29 has it, its
    fields in a "Sprig" and a "Leaf" group under Foliage, and the `Interval` type (D10) for its
    variations. The painter takes the outline as an
    argument, a width in texture pixels or none, which C38 fixes at a constant until C66 makes it
@@ -97,13 +107,13 @@ per-type hook, and is retained-mode.
    with a tolerance, since SIMD can move a channel by a level. The card's axial fold
    (`generator::AXIAL_FOLD`, halfway) moves to where the painted sprig's fan starts, as
    seedling's did. E[3]
-4. **C66 Outlines**, a switch for the whole plant (requirements, Foliage): in the Plant group
+6. **C66 Outlines**, a switch for the whole plant (requirements, Foliage): in the Plant group
    (C33), the switch, the bark's width as the game reads it, and the leaf stroke's in texture
    pixels (growth model, Consequences). On, the leaf texture is painted with its strokes (D29),
    the preview draws the bark with an inverted hull after Panoply's `src/materials/outline.wesl`,
    and the export writes the `"outline"` material extra (C41). Off, none of these; whether the
    translucent strokes between leaves stay is judged then. E[3]
-5. **C10 Species data model**, its groups the layers of the growth model (D11;
+7. **C10 Species data model**, its groups the layers of the growth model (D11;
    `docs/growth-model.md`, Consequences), correcting seedling where the requirements say.
    Reflectable types with `Default` for initial values and attributes for the editor, after the
    fields settle, so saved files are not broken by every change. Serialized
@@ -122,36 +132,36 @@ per-type hook, and is retained-mode.
    levels with hidden ones stashed in the editor, the same in files but a larger change that
    undoes D15. Seedling's groups for reference: `trunk`; `branch[]`, one per level; the leaf as
    `leafGroup` (arrangement), `leafShape` and `leafColor`. E[4], split when started
-6. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
+8. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
    panel, above the Plant group (C33); the file browser is X2. File commands act on the active document, so that tabs (X26)
    need not change them. E[3]
-7. **C8 Working document in settings.** A settings group holding the working species and, once
+9. **C8 Working document in settings.** A settings group holding the working species and, once
    set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
    as seedling did. The document's name comes from the file name. Serialized by reflection, as
    `bevy_settings` does. Stored as a list of open documents holding one, and the active one's
    index, so several (X26) need no change of format. E[3]
-8. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
-   as a JSON extra (C10), written from the generator's output (`generator::plant`), never from
-   the preview's entities, whose leaf mesh is only hidden while none grow, in the form Panoply loads (requirements, Output; "What Panoply does with the output"). Bevy writes no glTF,
-   so this adds a dependency or a writer of our own; propose it before code. The command-line
-   export is X1. Research so far (2026-10-12), the author also asking skein's author:
-   - `gltf-json` (the `gltf` crate's JSON types, ~11M downloads), with the GLB framing (header,
-     JSON chunk, binary chunk) written here: every byte ours, and `extras` on every object
-     (behind a feature), which the species needs. Leading candidate. The leaf texture needs a PNG
-     encoder (the `png` crate; see whether Bevy already pulls it in).
-   - `mesh-tools` (0.4.0, ~7k downloads): a mesh generator first, with GLB export, vertex
-     colors, alpha mask and embedded images, but extras not shown; half of it duplicates ours.
-   - `gltforge` (0.0.6, ~400 downloads): a reader, exporting through a Unity plugin, too young.
-     Ruled out.
+10. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
+    as a JSON extra (C10), written from the generator's output (`generator::plant`), never from
+    the preview's entities, whose leaf mesh is only hidden while none grow, in the form Panoply loads (requirements, Output; "What Panoply does with the output"). Bevy writes no glTF,
+    so this adds a dependency or a writer of our own; propose it before code. The command-line
+    export is X1. Research so far (2026-10-12), the author also asking skein's author:
+    - `gltf-json` (the `gltf` crate's JSON types, ~11M downloads), with the GLB framing (header,
+      JSON chunk, binary chunk) written here: every byte ours, and `extras` on every object
+      (behind a feature), which the species needs. Leading candidate. The leaf texture needs a PNG
+      encoder (the `png` crate; see whether Bevy already pulls it in).
+    - `mesh-tools` (0.4.0, ~7k downloads): a mesh generator first, with GLB export, vertex
+      colors, alpha mask and embedded images, but extras not shown; half of it duplicates ours.
+    - `gltforge` (0.0.6, ~400 downloads): a reader, exporting through a Unity plugin, too young.
+      Ruled out.
 
-   The export writes `.gltf`, `.bin` and the leaf texture as a separate `.png` (requirements,
-   Output); the pipeline (overrun with gltf-transform) packs, mipmaps and converts. GLB written
-   here is optional. KTX2 in Bevy's glTF loader (`bevy_gltf/src/loader/mod.rs:1227`): any image
-   source goes through `Image::from_buffer` by mime type or extension, so KTX2 loads with
-   Bevy's `ktx2` feature, embedded or by path, and a path is loaded as its own asset, shared
-   across models. But Bevy does not read `KHR_texture_basisu` (`bevy_gltf/src/lib.rs:122`,
-   bevy#19104), which gltf-transform's KTX2 conversion writes; so the pipeline points the image
-   straight at the `.ktx2`, which Bevy accepts though the standard does not. E[2]
+    The export writes `.gltf`, `.bin` and the leaf texture as a separate `.png` (requirements,
+    Output); the pipeline (overrun with gltf-transform) packs, mipmaps and converts. GLB written
+    here is optional. KTX2 in Bevy's glTF loader (`bevy_gltf/src/loader/mod.rs:1227`): any image
+    source goes through `Image::from_buffer` by mime type or extension, so KTX2 loads with
+    Bevy's `ktx2` feature, embedded or by path, and a path is loaded as its own asset, shared
+    across models. But Bevy does not read `KHR_texture_basisu` (`bevy_gltf/src/lib.rs:122`,
+    bevy#19104), which gltf-transform's KTX2 conversion writes; so the pipeline points the image
+    straight at the `.ktx2`, which Bevy accepts though the standard does not. E[2]
 
 ### Quick wins
 
@@ -166,7 +176,7 @@ per-type hook, and is retained-mode.
   lean, and the lean cannot cancel it. Trace a stem as now, then shear it back by the tip's
   miss in proportion to the distance along it, turning each ring's tangent to match: the zigzag
   stays and the tip lands where splay and lean put it, so the lean is the only tilt. Stems only;
-  limbs keep their drift. E[2]
+  limbs keep their drift. Under stacks (X31), an option of Wander. E[2]
 - **C55 Angle by place**, seedling's `angleBias` (`MeshGenerator.ts:593`), for crowns bald on
   top: twigs radiate outward, their leaves with them (D27), and the envelope's top stays empty. A
   field per level, "Angle at tip", −90° to 90°: the change in angle from a node at the base of
@@ -175,7 +185,8 @@ per-type hook, and is retained-mode.
   becomes "Angle at base". Every level, not only the trunk's as in seedling, so sprays narrow
   toward a limb's tip. A new field under D25, since nothing yet varies with place along the
   parent. Default 0, so species are unchanged; the first level's default chosen by eye or by the
-  share of the envelope's top (outward normal within 45° of up) under cards. E[2]
+  share of the envelope's top (outward normal within 45° of up) under cards. Under stacks (X31)
+  an operator, "Angle bias", rather than a field. E[2]
 - **C42 Computed values are rounded where written**, from the first writer (Reset, Randomize,
   values derived from the generator): the number input never rounds what it shows, so round to
   the field's `Precision` in the units shown, as a drag does: through the unit's
@@ -217,7 +228,7 @@ per-type hook, and is retained-mode.
   shifts. E[3]
 - **C48 Arching stems**, for fountain shrubs: a lean past level, so a stem rises and then droops
   toward the ground, stopping above it. D24 stops the lean at level until a preset needs more
-  (X18). E[2]
+  (X18). Under stacks (X31), the Weep operator on the trunk. E[2]
 - **C65 Wireframe toggle on the HUD** (D28), to see where the triangles go: rings along the bark
   (D17's hinting), sides per level (D22), and each leaf card's quad, for card density and
   facing (C39). Bevy's `WireframePlugin` (`bevy_pbr`), drawing lines over the shaded mesh rather
@@ -247,7 +258,22 @@ per-type hook, and is retained-mode.
   E[4]
 - **C54 Radiating foliage** (was X20, its gate C37 passed): cards radiating from a stem's tip or
   the ground, for palms, rosettes and tufts (agave, grass, fern), with no limbs (growth model,
-  How the shapes are covered). E[3]
+  How the shapes are covered). A kind of the plant's foliage (`docs/patches.md`, Stacks). E[3]
+- **The skeleton** (`docs/patches.md`, The abstract plant), after C79, in order, before X31's
+  panel. C80 to C82 leave output unchanged (C78); C83 and C84 change it, each judged by
+  screenshots and given new hashes. None touches the panel, the species or the plans.
+  - **C80 Skeleton, then meshes**: `grow` returns a `Skeleton`, and `plant` meshes it; foliage
+    yields `Card`s, meshed as quads. Rings stay simplified at trace time, since scions attach
+    to the path as meshed. E[2]
+  - **C81 A radius per vertex**, written by the taper, in place of an axis's base and top
+    radii; `tube` reads them. So the pipe model can return as an operator writing radii. E[2]
+  - **C82 Operators as functions**: each stage of the level loop (place scions, trace, fork,
+    carry on, foliage, taper) a function over `&mut Skeleton` and a level, called in the fixed
+    order. Wander stays inside the trace. E[3]
+  - **C83 Hinting at meshing**: the skeleton keeps the full trace, simplified only when meshed
+    (D17), so scions attach to the true path. E[2]
+  - **C84 Wander as a displacement** of the traced course, out of the trace loop, clipping at
+    the envelope again; tips move, since wander now comes before the clip. E[3]
 
 ## Decisions
 
@@ -688,8 +714,8 @@ per-type hook, and is retained-mode.
   `PinchGesture`, not as a pointer event, so it needs its own path to the view. *Gate:* scroll
   zoom proves awkward on a trackpad.
 - **X12** Space colonization (`docs/growth-model.md`) choosing the directions of the last limb
-  level only, competing for points in the envelope's shell. *Gate:* crowns show holes or read
-  as too regular.
+  level only, competing for points in the envelope's shell. Under stacks (X31), a mode of
+  Scions or an operator excluding it. *Gate:* crowns show holes or read as too regular.
 - **X13** Panoply's leaf material keeps the exported normal on back faces: `cull_mode: None`
   with `double_sided: false`, set where flora loads, since Bevy flips a double-sided material's
   back-face normal (`prepare_world_normal`) and crown shading normals would then point inward.
@@ -700,7 +726,7 @@ per-type hook, and is retained-mode.
   export (X1) if the asset pipeline runs it. Rather than keeping every past generator (Cargo
   could depend on several versions under different names), three measures:
   (1) golden tests, species files with a hash of their meshes, so no output changes by
-  accident; (2) a generator version in the species file, raised only when output changes on
+  accident, pulled forward as C78; (2) a generator version in the species file, raised only when output changes on
   purpose, which the export can warn about; (3) an additive change defaults to the old output
   when the file lacks its field (no wander, say), so a new species' default and a missing
   field's default are different things. What remains (fixes, reordered draws) is re-exported
@@ -720,8 +746,8 @@ per-type hook, and is retained-mode.
   presets for the reference set tried: forms only if tuning presets is still too
   fiddly.
 - **X19** Pendulous levels, for willows: a level whose limbs may hang below the envelope, the
-  envelope guiding rather than clipping them (growth model, How the shapes are covered).
-  *Gate:* a weeping preset (X18).
+  envelope guiding rather than clipping them (growth model, How the shapes are covered). Under
+  stacks (X31), the Weep operator. *Gate:* a weeping preset (X18).
 - **X21** Find out why `bevy_immediate`'s `.text()` on the subpane headers, called every frame
   with an unchanged string, stopped clicks on the bark's color swatch from opening its picker
   (`plans/bark.py` failed three runs in three), and report it to the fork. The headers use
@@ -732,14 +758,14 @@ per-type hook, and is retained-mode.
   geometry nodes: a file of operators over an abstract plant (axes and the attachments placing
   them, so the trunk and limbs share every operator on composition), each input a formula over
   the author's named controls, evaluated per plant or per element, never per vertex; a Rust
-  library realizes the result. Today's species becomes the default patch. First step, useful
-  alone: the generator split into operators and realization, in Rust, with no language. E[4],
+  library realizes the result. Today's species becomes the default patch. After stacks (X31),
+  the generator split into operators and realization, in Rust, with no language. E[4],
   split as the doc's order of work. *Gate:* the milestone's first species exported, and C10's
   file leaving room for a species to name its patch.
 - **X23** Kinks at the nodes, the limb deflecting away from each child it gives off, as
   sympodial growth zigzags (oak, hawthorn). Nodes are laid out after a limb is traced, so this
-  means laying them out first. *Gate:* D17's kinks, evenly spaced but not placed at
-  the nodes, read as too random.
+  means laying them out first. Under stacks (X31), an option of Wander. *Gate:* D17's kinks,
+  evenly spaced but not placed at the nodes, read as too random.
 
 - **X24** Cards that include their stem and stand in for the finest twigs, one card per twig
   of the last level in place of its tube, rather than leaves lined up with meshed twigs (D27),
@@ -804,17 +830,20 @@ per-type hook, and is retained-mode.
   card, with no shell. Removed in C74, where they came from the shell (C37). Interior leaves
   that stand apart from any stem would want a texture of their own, without the painted stem
   (requirements, Foliage: more than one leaf texture region), and a second texture's fields
-  would crowd the panel, so they wait for a second foliage module (X31). *Gate:* a preset
+  would crowd the panel, so they wait for stacks (X31). *Gate:* a preset
   (X18) that another limb level cannot make dense enough.
 
 - **X31** Operator stacks (`docs/patches.md`, Stacks), the stage between the fixed panel and
-  formulas (X22): each level a fixed frame of placement and growth, then a stack of operator
-  panels the author adds, reorders and toggles (wander, foliage modules, the pipe model, which
-  runs after growth wherever it sits). Fewer rows, since an unused operator shows none. Needs
-  X22's first step, the generator split into operators, and a property editor widget for a
-  list of enums with data. E[4] *Gate:* settled before C10's file format.
+  formulas (X22): each level, the trunk included, a fixed frame and optional operators in a
+  fixed order (bend, wander, fork, scions and more; the doc lists them), added from a
+  menu on the level's header and removed by ✕. Scions add the next level, replacing the levels' − and +
+  (D15). Fewer rows, since a missing operator shows none. Each operator a `Toggle<T>` field,
+  its settings and whether it is on, so ✕ keeps its values for the session (D15). E[4], split: the operator group and add menu
+  with bend and wander; scions; angle bias (C55). *Gate:* the skeleton (C79 to C84) landed,
+  and settled before C10's file format.
 
-- **X32** A taper per limb level, in place of the plant's one (D22). *Gate:* a preset (X18) whose
+- **X32** A taper per limb level, in place of the plant's one (D22); under stacks (X31), the
+  Taper operator. *Gate:* a preset (X18) whose
   twigs taper unlike its limbs.
 
 - **X33** A fork's copies (C30) competing as one parent for their children's places (D26), so
@@ -826,6 +855,18 @@ per-type hook, and is retained-mode.
   keeps its editing text, so an angle shows `20d` rather than `20°`, beside its interior caption
   (C77). Its text is rewritten only when `NumericValue` changes; leaving edit mode should
   rewrite it in the display form. *Gate:* a fix in the Bevy we build against.
+
+- **X36** The trunk's lean split in two, revising D23: a tilt where the stem leaves the ground,
+  in the trunk's frame beside the splay, and the curve after it from Bend (`docs/patches.md`,
+  Stacks), which needs the heading the tilt gives. Bend toward up then gives a trunk leaning at
+  its base and recovering, as on slopes; past the tilt, today's bowing; past level, Weep (C48).
+  The heading may be fixed rather than drawn from the seed, since Panoply turns placed
+  instances anyway. Lean's use so far, steering back a stem the wander sent off course, goes
+  with C62. *Gate:* C62 landed, and an author wanting a leaning or recovering trunk.
+
+- **X37** Variety among the tips' leaves: several sprigs painted as regions of the one leaf
+  texture (requirements, Foliage), each tip's card drawing one from its foliage stream (D16).
+  *Gate:* C38 landed, and the crown's tips reading as one sprig repeated.
 
 ## Notes
 
