@@ -9,10 +9,10 @@ use crate::{
 
 /// Each species' name, and the hashes of its bark and its leaves.
 const GOLDEN: [(&str, u64, u64); 4] = [
-    ("default", 0x97d764fdae4015f4, 0x1fa1e381d18767ce),
-    ("three levels", 0xeb51bb0b61acd5c4, 0x225bc09cde40a116),
-    ("forks", 0xdecb3c844ef1ae33, 0xfcf0dcf0b8c6da72),
-    ("three stems", 0xe29e7abf02d0e977, 0x16020666669b0405),
+    ("default", 0xba327d888597dd04, 0x1fa1e381d18767ce),
+    ("three levels", 0x90024cafa7a239e8, 0x225bc09cde40a116),
+    ("forks", 0xa1b10fa7b49a5b57, 0xfcf0dcf0b8c6da72),
+    ("three stems", 0xeadae1d57d51dc16, 0x16020666669b0405),
 ];
 
 fn species(name: &str) -> Species {

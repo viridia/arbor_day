@@ -57,10 +57,8 @@ pub fn plant(species: &Species) -> Grown {
             0 => species.trunk.sides,
             level => levels[level - 1].sides,
         };
-        let (base, top) = axis.radii;
-        let radii = (base.max(min_radius), top.max(min_radius));
         let cap = !axis.bears(axes, AxisKind::CarryOn);
-        tube(&mut bark, &axis.rings, radii, sides.max(3) as u32, cap);
+        tube(&mut bark, &axis.rings, min_radius, sides.max(3) as u32, cap);
         if axis.level > 0 {
             level_limbs[axis.level - 1] += 1;
         }
@@ -124,25 +122,28 @@ pub(super) fn card(geometry: &mut Geometry, frame: &Frame, size: f32, foliage: &
 }
 
 /// Adds a tube through `rings`, each turned to its ring's side, so the tube rolls only as the
-/// sides do. The radius narrows evenly from `radii.0` at the start to `radii.1` at the end, which a
-/// fan closes if `cap` is set. The start is left open.
+/// sides do, and drawn at its ring's radius, but none narrower than `min_radius`. The end is closed
+/// by a fan if `cap` is set; the start is left open.
 pub(super) fn tube(
     geometry: &mut Geometry,
     rings: &[Ring],
-    radii: (f32, f32),
+    min_radius: f32,
     sides: u32,
     cap: bool,
 ) {
     let first = geometry.positions.len() as u32;
-    let (base_radius, top_radius) = radii;
-    let length = rings[rings.len() - 1].at.max(1e-4);
-    // A tapering tube's surface leans in toward the end, so its normals lean forward by the same
-    // angle.
-    let (lean_sin, lean_cos) = ((base_radius - top_radius) / length).atan().sin_cos();
-
-    for ring in rings {
+    let drawn = |ring: &Ring| ring.radius.max(min_radius);
+    for (i, ring) in rings.iter().enumerate() {
+        // A narrowing tube's surface leans in, so its normals lean forward by the same angle,
+        // measured between the rings either side.
+        let (before, after) = (
+            &rings[i.saturating_sub(1)],
+            &rings[(i + 1).min(rings.len() - 1)],
+        );
+        let slope = (drawn(before) - drawn(after)) / (after.at - before.at).max(1e-4);
+        let (lean_sin, lean_cos) = slope.atan().sin_cos();
         let across = ring.side.cross(ring.tangent);
-        let radius = base_radius + (top_radius - base_radius) * ring.at / length;
+        let radius = drawn(ring);
         for side in 0..sides {
             let (sin, cos) = (TAU * side as f32 / sides as f32).sin_cos();
             let outward = ring.side * cos + across * sin;

@@ -7,7 +7,10 @@ use bevy::math::Quat;
 use super::{
     envelope::{Envelope, distance_to_envelope},
     placement::draw,
-    skeleton::{Axis, AxisKind, FORK_STREAM, OWN_VALUES_STREAM, Ring, WANDER_STREAM, upper_side},
+    skeleton::{
+        Axis, AxisKind, FORK_STREAM, OWN_VALUES_STREAM, Ring, WANDER_STREAM, taper_rings,
+        upper_side,
+    },
     trace::{Kinks, end_at, grow_limb},
 };
 use crate::species::LimbLevel;
@@ -36,7 +39,7 @@ pub(super) fn fork(
     let at = draw(&params.fork_at, "fork_at", &mut draws);
     let (half_sin, half_cos) = (draw(&params.fork_angle, "fork_angle", &mut draws) * 0.5).sin_cos();
     let frame = limb.frame(at);
-    let radius = limb.radii.0 + (limb.radii.1 - limb.radii.0) * at;
+    let radius = frame.radius;
     let upper = upper_side(frame.tangent, frame.side);
     let (roll_sin, roll_cos) = params.fork_roll.sin_cos();
     let first = frame.tangent.cross(upper) * roll_cos + upper * roll_sin;
@@ -49,28 +52,21 @@ pub(super) fn fork(
             let reach = draw(&params.reach, "reach", &mut rng.fork(OWN_VALUES_STREAM))
                 * distance_to_envelope(envelope, frame.point, direction);
             let start = Ring {
-                center: frame.point,
                 tangent: direction,
                 side: upper_side(direction, frame.side),
-                at: 0.0,
+                ..frame.ring(0.0)
             };
             let kinks = Kinks::new(kink_spacing, params.wander, rng.fork(WANDER_STREAM));
-            let rings = grow_limb(envelope, params, start, reach, kinks, straight, tolerance);
-            let radii = (radius, radius * (1.0 - taper));
-            (rings.len() >= 2 && rings[rings.len() - 1].at > radius)
-                .then(|| Axis::new(limb.level, AxisKind::ForkCopy, rings, radii, rng))
+            let mut rings = grow_limb(envelope, params, start, reach, kinks, straight, tolerance);
+            (rings.len() >= 2 && rings[rings.len() - 1].at > radius).then(|| {
+                taper_rings(&mut rings, radius, taper);
+                Axis::new(limb.level, AxisKind::ForkCopy, rings, rng)
+            })
         })
         .collect();
     if !copies.is_empty() {
-        let length = limb.rings[limb.rings.len() - 1].at;
-        let tip = Ring {
-            center: frame.point,
-            tangent: frame.tangent,
-            side: frame.side,
-            at: at * length,
-        };
+        let tip = frame.ring(at * limb.length());
         end_at(&mut limb.rings, tip);
-        limb.radii.1 = radius;
     }
     copies
 }

@@ -35,6 +35,9 @@ pub struct Ring {
     pub side: Vec3,
     /// Distance along the axis from its base.
     pub at: f32,
+    /// The axis's radius there, as grown, before the drawing thickens it (`tube`). Written by the
+    /// taper (`taper_rings`) once the ring's axis is traced.
+    pub radius: f32,
 }
 
 /// An axis at one point along it: where its scions start and how they are oriented.
@@ -45,6 +48,22 @@ pub(super) struct Frame {
     pub tangent: Vec3,
     /// Unit vector square to the tangent, toward azimuth 0.
     pub side: Vec3,
+    /// The axis's radius there.
+    pub radius: f32,
+}
+
+impl Frame {
+    /// A ring here, `at` metres along the axis: where it is cut, or where an axis carrying it on
+    /// starts.
+    pub fn ring(&self, at: f32) -> Ring {
+        Ring {
+            center: self.point,
+            tangent: self.tangent,
+            side: self.side,
+            at,
+            radius: self.radius,
+        }
+    }
 }
 
 /// How an axis came to grow.
@@ -68,7 +87,6 @@ pub(super) struct Axis {
     pub kind: AxisKind,
     /// At least two, base to tip.
     pub rings: Vec<Ring>,
-    pub radii: (f32, f32),
     /// The axis's own random stream, before any draw; its scions' streams fork from it.
     pub rng: Rng,
     /// The axes growing from it, as indices in the plant's: its limbs and the one carrying it on,
@@ -78,18 +96,11 @@ pub(super) struct Axis {
 
 impl Axis {
     /// An axis before any scions have grown on it.
-    pub fn new(
-        level: usize,
-        kind: AxisKind,
-        rings: Vec<Ring>,
-        radii: (f32, f32),
-        rng: Rng,
-    ) -> Self {
+    pub fn new(level: usize, kind: AxisKind, rings: Vec<Ring>, rng: Rng) -> Self {
         Self {
             level,
             kind,
             rings,
-            radii,
             rng,
             scions: Vec::new(),
         }
@@ -133,6 +144,7 @@ impl Axis {
             point: a.center.lerp(b.center, along),
             tangent,
             side,
+            radius: a.radius + (b.radius - a.radius) * along,
         }
     }
 
@@ -182,6 +194,23 @@ impl Axis {
     pub fn direction(&self) -> Vec3 {
         self.rings[0].tangent
     }
+
+    /// The radii at the base and the tip.
+    pub fn radii(&self) -> (f32, f32) {
+        (
+            self.rings[0].radius,
+            self.rings[self.rings.len() - 1].radius,
+        )
+    }
+}
+
+/// Writes the plant's taper on `rings`: `base` at the start, narrowing evenly by `taper` of it
+/// over their length (D22).
+pub(super) fn taper_rings(rings: &mut [Ring], base: f32, taper: f32) {
+    let length = rings[rings.len() - 1].at.max(1e-4);
+    for ring in rings {
+        ring.radius = base * (1.0 - taper * ring.at / length);
+    }
 }
 
 /// A leaf cluster `at` metres along the axis `axis` (D27), where its card's base lies.
@@ -199,8 +228,8 @@ pub(super) struct Skeleton {
 }
 
 /// The stems, their limbs level by level, each level on the axes of the one before, and the leaf
-/// clusters (`clusters`). A parent's top, where it ends and its radius there, is where its last
-/// limb leaves it (`grow_level`), so it is set once the level after has grown.
+/// clusters (`clusters`). A parent's top, where it ends, is where its last limb leaves it
+/// (`grow_level`), so it is set once the level after has grown.
 pub(super) fn grow(species: &Species) -> Skeleton {
     let mut axes = stems(species);
     for level in 1..=species.grown_levels().len() {
@@ -219,9 +248,8 @@ pub(super) fn grow(species: &Species) -> Skeleton {
                 &mut grown,
             );
             let parent = &mut axes[parent];
-            if let Some((tip, top)) = bearing.tip {
+            if let Some(tip) = bearing.tip {
                 end_at(&mut parent.rings, tip);
-                parent.radii.1 = top;
             }
             parent.scions.extend(bearing.scions);
         }

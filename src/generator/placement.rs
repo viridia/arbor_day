@@ -11,7 +11,7 @@ use super::{
     fork::fork,
     skeleton::{
         Axis, AxisKind, CARRY_ON_STREAM, Frame, LAYOUT_STREAM, OWN_VALUES_STREAM, Ring,
-        WANDER_STREAM, upper_side,
+        WANDER_STREAM, taper_rings, upper_side,
     },
     trace::{Kinks, grow_limb, kink_spacing, stem_rings},
 };
@@ -48,13 +48,12 @@ pub(super) fn stems(species: &Species) -> Vec<Axis> {
     let lean = trunk.lean.min((FRAC_PI_2 - trunk.splay).max(0.0));
     let heading = species.seed.stream("trunk").unit() * TAU;
     let branching = species.seed.stream("branching");
-    let top = trunk.radius * (1.0 - species.taper.clamp(0.0, 1.0));
     let spacing = kink_spacing(&Envelope::of(species));
     (0..count)
         .map(|stem| {
             let rng = branching.fork(stem as u64);
             let kinks = Kinks::new(spacing, trunk.wander, rng.fork(WANDER_STREAM));
-            let rings = stem_rings(
+            let mut rings = stem_rings(
                 length,
                 trunk.splay,
                 lean,
@@ -62,7 +61,8 @@ pub(super) fn stems(species: &Species) -> Vec<Axis> {
                 kinks,
                 species.detail,
             );
-            Axis::new(0, AxisKind::Stem, rings, (trunk.radius, top), rng)
+            taper_rings(&mut rings, trunk.radius, species.taper.clamp(0.0, 1.0));
+            Axis::new(0, AxisKind::Stem, rings, rng)
         })
         .collect()
 }
@@ -71,8 +71,8 @@ pub(super) fn stems(species: &Species) -> Vec<Axis> {
 pub(super) struct Bearing {
     /// Its limbs, and the one carrying it on, as indices in the plant's axes.
     pub scions: Vec<usize>,
-    /// Its new tip, at its last node, and its radius there, if a limb carries it on from there.
-    pub tip: Option<(Ring, f32)>,
+    /// Its new tip, at its last node, if a limb carries it on from there.
+    pub tip: Option<Ring>,
 }
 
 /// Adds one parent's limbs of level `level` to `grown`, whose first lies at `first_id` among the
@@ -87,10 +87,10 @@ pub(super) struct Bearing {
 /// `forked` is carried on by its copies instead, and a copy's nodes start from its base. Each limb
 /// grown may fork (`fork`).
 ///
-/// Every axis narrows evenly by the plant's taper, from its base to its tip as grown, and each
-/// limb's base radius is the level's share of the parent's radius where it leaves, so a level's
-/// radius changes that level alone. A parent cut at its last node keeps the radius it has there,
-/// and the limb carrying it on starts at that radius.
+/// Every axis narrows evenly by the plant's taper (`taper_rings`), from its base to its tip as grown,
+/// and each limb's base radius is the level's share of the parent's radius where it leaves, so a
+/// level's radius changes that level alone. A parent cut at its last node keeps the radius it has
+/// there, and the limb carrying it on starts at that radius.
 pub(super) fn grow_level(
     species: &Species,
     level: usize,
@@ -108,8 +108,6 @@ pub(super) fn grow_level(
     // Where a tip's card lies, from its base to its fold, whether or not leaves grow, so turning
     // them off leaves the branches alone.
     let straight = AXIAL_FOLD * species.foliage.size * envelope.radius.max(0.01);
-    // The parent's radius `t` (0 to 1) along it as grown.
-    let radius_at = |t: f32| parent.radii.0 * (1.0 - taper * t);
     // A limb grown, added with its copies if it forks; returns its index.
     let add = |mut limb: Axis, grown: &mut Vec<Axis>| {
         let copies = fork(
@@ -158,7 +156,7 @@ pub(super) fn grow_level(
             placed: &placed,
         };
         let azimuths = node_azimuths(&frame, per_node, params.facing, &crowd, envelope);
-        let base_radius = params.radius * radius_at(t);
+        let base_radius = params.radius * frame.radius;
         for azimuth in azimuths {
             let rng = parent.rng.fork(index);
             index += 1;
@@ -173,12 +171,11 @@ pub(super) fn grow_level(
                 frame.tangent * angle_cos + (frame.side * cos + across * sin) * angle_sin;
             let reach = reach * distance_to_envelope(envelope, frame.point, direction);
             let start = Ring {
-                center: frame.point,
                 tangent: direction,
                 side: upper_side(direction, frame.side),
-                at: 0.0,
+                ..frame.ring(0.0)
             };
-            let rings = grow_limb(
+            let mut rings = grow_limb(
                 envelope,
                 params,
                 start,
@@ -189,8 +186,8 @@ pub(super) fn grow_level(
             );
             if rings.len() >= 2 && rings[rings.len() - 1].at > base_radius {
                 last_node = t;
-                let radii = (base_radius, base_radius * (1.0 - taper));
-                let limb = Axis::new(level, AxisKind::Lateral, rings, radii, rng);
+                taper_rings(&mut rings, base_radius, taper);
+                let limb = Axis::new(level, AxisKind::Lateral, rings, rng);
                 scions.push(add(limb, grown));
             }
         }
@@ -198,21 +195,15 @@ pub(super) fn grow_level(
     if scions.is_empty() || forked {
         return Bearing { scions, tip: None };
     }
-    let top = radius_at(last_node);
     // The limb carrying the parent on, from a stream of its own, so the limbs before it leave its
     // draws alone. It starts on the parent's new tip, turned as that is, so the two tubes meet.
     let frame = parent.frame(last_node);
-    let tip = Ring {
-        center: frame.point,
-        tangent: frame.tangent,
-        side: frame.side,
-        at: last_node * length,
-    };
+    let tip = frame.ring(last_node * length);
     let rng = parent.rng.fork(CARRY_ON_STREAM);
     let reach = draw(&params.reach, "reach", &mut rng.fork(OWN_VALUES_STREAM))
         * distance_to_envelope(envelope, frame.point, frame.tangent);
     let start = Ring { at: 0.0, ..tip };
-    let rings = grow_limb(
+    let mut rings = grow_limb(
         envelope,
         params,
         start,
@@ -221,15 +212,15 @@ pub(super) fn grow_level(
         straight,
         tolerance,
     );
-    let carried_on = rings.len() >= 2 && rings[rings.len() - 1].at > top;
+    let carried_on = rings.len() >= 2 && rings[rings.len() - 1].at > tip.radius;
     if carried_on {
-        let radii = (top, top * (1.0 - taper));
-        let limb = Axis::new(level, AxisKind::CarryOn, rings, radii, rng);
+        taper_rings(&mut rings, tip.radius, taper);
+        let limb = Axis::new(level, AxisKind::CarryOn, rings, rng);
         scions.push(add(limb, grown));
     }
     Bearing {
         scions,
-        tip: carried_on.then_some((tip, top)),
+        tip: carried_on.then_some(tip),
     }
 }
 

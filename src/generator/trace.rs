@@ -130,6 +130,7 @@ pub(super) fn stem_rings(
         tangent,
         side,
         at: 0.0,
+        radius: 0.0,
     });
     let (mut center, mut tangent, mut at) = (Vec3::ZERO, tangent, 0.0);
     while at < length {
@@ -260,6 +261,7 @@ impl Trace {
                 tangent,
                 side,
                 at,
+                radius: 0.0,
             });
         }
         rings

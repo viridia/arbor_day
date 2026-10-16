@@ -16,16 +16,12 @@ fn lone_stem(lean_degrees: f32, tolerance: f32) -> Vec<Ring> {
     stem_rings(5.0, 0.0, lean_degrees.to_radians(), 0.0, kinks, tolerance)
 }
 
-/// `lone_stem`'s mesh, kept to 2 cm.
+/// `lone_stem`'s mesh, kept to 2 cm, narrowing from 20 cm to 10 cm.
 fn stem_mesh(sides: u32, lean_degrees: f32) -> Geometry {
+    let mut rings = lone_stem(lean_degrees, 0.02);
+    taper_rings(&mut rings, 0.2, 0.5);
     let mut geometry = Geometry::default();
-    tube(
-        &mut geometry,
-        &lone_stem(lean_degrees, 0.02),
-        (0.2, 0.1),
-        sides,
-        true,
-    );
+    tube(&mut geometry, &rings, 0.0, sides, true);
     geometry
 }
 
@@ -375,8 +371,8 @@ fn deeper_levels_grow_on_the_level_before() {
     // the last of them, and the second follows it.
     for (before, after) in first.iter().zip(&both) {
         assert_eq!(
-            (before.rings[0], before.radii.0),
-            (after.rings[0], after.radii.0)
+            (before.rings[0], before.radii().0),
+            (after.rings[0], after.radii().0)
         );
         assert!(after.length() <= before.length());
     }
@@ -828,30 +824,32 @@ fn limbs_take_their_share_of_the_parent_where_they_leave() {
     let trunk_at = |y: f32| trunk * (1.0 - taper * y / height);
     for limb in &limbs[..2] {
         let expected = 0.6 * trunk_at(limb.origin().y);
-        assert!((limb.radii.0 - expected).abs() < 1e-5, "{limb:?}");
+        assert!((limb.radii().0 - expected).abs() < 1e-5, "{limb:?}");
     }
     // Cut at its last limb, the trunk keeps its radius there, and the limb carrying it on
     // starts at it.
     let tip = stems[0].rings[stems[0].rings.len() - 1].center;
-    assert!((stems[0].radii.1 - trunk_at(tip.y)).abs() < 1e-5);
-    assert_eq!(limbs[2].radii.0, stems[0].radii.1);
+    assert!((stems[0].radii().1 - trunk_at(tip.y)).abs() < 1e-5);
+    assert_eq!(limbs[2].radii().0, stems[0].radii().1);
     // A level's radius thickens that level and nothing else.
     species.limbs[0].radius = 1.0;
-    assert_eq!(grow(&species).axes[0].radii, stems[0].radii);
+    assert_eq!(grow(&species).axes[0].rings, stems[0].rings);
 }
 
 #[test]
-fn a_tube_narrows_evenly() {
+fn a_tube_is_drawn_at_its_rings_radii() {
     let species = straight();
     let trunk = &grow(&species).axes[0];
-    let length = trunk.rings[trunk.rings.len() - 1].at;
     let mut geometry = Geometry::default();
     let sides = 6;
-    tube(&mut geometry, &trunk.rings, trunk.radii, sides, false);
+    tube(&mut geometry, &trunk.rings, 0.0, sides, false);
+    // The upright trunk narrows evenly over its height as grown, though cut shorter.
+    let per_metre = species.trunk.radius * species.taper / species.trunk.height;
     for (i, ring) in trunk.rings.iter().enumerate() {
-        let radius = trunk.radii.0 + (trunk.radii.1 - trunk.radii.0) * ring.at / length;
+        let expected = species.trunk.radius - per_metre * ring.at;
+        assert!((ring.radius - expected).abs() < 1e-5, "{ring:?}");
         let vertex = geometry.positions[i * sides as usize];
-        assert!(((vertex - ring.center).length() - radius).abs() < 1e-5);
+        assert!(((vertex - ring.center).length() - ring.radius).abs() < 1e-5);
     }
 }
 
@@ -877,7 +875,7 @@ fn a_limb_carries_its_parent_on_from_its_last_node() {
     // The trunk's starts on its tip, along it, at its top radius.
     let carrier = &carriers[0];
     assert_eq!((carrier.level, carrier.rings[0].side), (1, tip.side));
-    assert_eq!(carrier.radii.0, trunk.radii.1);
+    assert_eq!(carrier.radii().0, trunk.radii().1);
 }
 
 /// `straight`'s first level, every limb forking halfway into `copies` at 60° across, the Y's
@@ -920,7 +918,7 @@ fn a_fork_spreads_its_copies_from_its_tip() {
             for copy in &copies {
                 // On the tip, at its radius, turned half the fork angle from it.
                 assert!((copy.origin() - tip.center).length() < 1e-5);
-                assert_eq!(copy.radii.0, limb.radii.1);
+                assert_eq!(copy.radii().0, limb.radii().1);
                 let angle = copy.direction().angle_between(tip.tangent).to_degrees();
                 assert!((angle - 30.0).abs() < 1e-2, "{angle}");
                 spread += copy.direction().reject_from_normalized(tip.tangent);
@@ -999,9 +997,9 @@ fn thin_limbs_are_drawn_as_wide_as_the_detail_threshold() {
     let tip = |limb: &Axis| limb.rings[limb.rings.len() - 1].center;
     let thinnest = limbs(&species)
         .into_iter()
-        .min_by(|a, b| a.radii.1.total_cmp(&b.radii.1))
+        .min_by(|a, b| a.radii().1.total_cmp(&b.radii().1))
         .unwrap();
-    assert!(thinnest.radii.1 < 0.05);
+    assert!(thinnest.radii().1 < 0.05);
     assert!(
         thick
             .bark
@@ -1157,6 +1155,7 @@ fn cards_fold_at_the_midrib_and_across_the_middle() {
         point: Vec3::ZERO,
         tangent: Vec3::X,
         side: Vec3::Z,
+        radius: 0.0,
     };
     let folded = |lateral: f32, axial: f32| {
         let mut geometry = Geometry::default();
