@@ -1,10 +1,11 @@
-//! App state saved between runs with `bevy_settings`: the window, the panel's width, and what the
-//! view shows.
+//! App state saved between runs with `bevy_settings`: the window, the panel's width, what the
+//! view shows, and feathers' color picker preferences.
 
 use std::time::Duration;
 
 use bevy::{
     ecs::system::NonSendMarker,
+    feathers::controls::ColorInputSettings,
     prelude::*,
     settings::{
         ReflectSettingsGroup, SaveSettingsDeferred, SaveSettingsSync, SettingsGroup, SettingsPlugin,
@@ -80,6 +81,7 @@ impl Plugin for AppSettingsPlugin {
                 update_window_settings,
                 exit_on_window_close,
                 fit_panel_width,
+                save_color_input_settings,
             ),
         )
         .add_systems(Last, save_on_exit);
@@ -195,6 +197,14 @@ pub fn save_panel_width(
     if layout.set_if_neq(LayoutSettings {
         panel_width: width.round(),
     }) {
+        commands.queue(SaveSettingsDeferred(SAVE_DELAY));
+    }
+}
+
+/// Saves feathers' color picker preferences (its mode and recent colors) when they change. Feathers
+/// only marks them changed, and Cmd+Q on macOS quits before an exit save could run.
+fn save_color_input_settings(settings: Res<ColorInputSettings>, mut commands: Commands) {
+    if settings.is_changed() && !settings.is_added() {
         commands.queue(SaveSettingsDeferred(SAVE_DELAY));
     }
 }

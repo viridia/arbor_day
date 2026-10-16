@@ -39,7 +39,7 @@ pub struct Species {
     /// keeps the radius, 1 closes to a point.
     #[reflect(
         @ValueRange::<f32>(0.0..=1.0),
-        @Precision(2),
+        @Precision(0),
         @NumberInputUnits::new_static("ratio_percent"),
         @ControlGroup("Plant"),
     )]
@@ -121,14 +121,14 @@ pub struct Crown {
     /// tree whose leader runs to the top, more for one whose trunk stops short.
     #[reflect(
         @ValueRange::<f32>(1.0..=2.0),
-        @Precision(2),
+        @Precision(0),
         @NumberInputUnits::new_static("ratio_percent"),
     )]
     pub top: f32,
     /// Where the crown starts above the ground, as a share of the trunk's height.
     #[reflect(
         @ValueRange::<f32>(0.0..=0.95),
-        @Precision(2),
+        @Precision(0),
         @NumberInputUnits::new_static("ratio_percent"),
     )]
     pub base: f32,
@@ -172,6 +172,7 @@ pub struct Trunk {
     /// The angle from up at which each stem leaves the ground.
     #[reflect(
         @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_3),
+        @Precision(1),
         @NumberInputUnits::new_static("angle_degrees"),
     )]
     pub splay: f32,
@@ -190,6 +191,7 @@ pub struct Trunk {
     /// neighbouring trees of one species lean different ways.
     #[reflect(
         @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_2),
+        @Precision(1),
         @NumberInputUnits::new_static("angle_degrees"),
     )]
     pub lean: f32,
@@ -197,6 +199,7 @@ pub struct Trunk {
     /// zigzags about it as a limb does, kinking as often.
     #[reflect(
         @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_4),
+        @Precision(1),
         @NumberInputUnits::new_static("angle_degrees"),
     )]
     pub wander: f32,
@@ -224,6 +227,7 @@ pub struct LimbLevel {
     /// Drawn for each limb.
     #[reflect(
         @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_2),
+        @Precision(1),
         @NumberInputUnits::new_static("angle_degrees"),
         @ControlGroup("Arrangement"),
     )]
@@ -233,7 +237,7 @@ pub struct LimbLevel {
     /// from there to the tip, where one limb carries the parent on.
     #[reflect(
         @ValueRange::<f32>(0.0..=0.9),
-        @Precision(2),
+        @Precision(0),
         @NumberInputUnits::new_static("ratio_percent"),
         @ControlGroup("Arrangement"),
     )]
@@ -242,6 +246,7 @@ pub struct LimbLevel {
     /// to it. Drawn for each limb.
     #[reflect(
         @ValueRange::<f32>(0.0..=std::f32::consts::PI),
+        @Precision(1),
         @NumberInputUnits::new_static("angle_degrees"),
         @ControlGroup("Direction"),
     )]
@@ -250,6 +255,7 @@ pub struct LimbLevel {
     /// poplar's, 90° level, as an oak's, 180° down, as a weeping tree's.
     #[reflect(
         @ValueRange::<f32>(0.0..=std::f32::consts::PI),
+        @Precision(1),
         @NumberInputUnits::new_static("angle_degrees"),
         @Caption("Bend toward"),
         @ControlGroup("Direction"),
@@ -261,7 +267,7 @@ pub struct LimbLevel {
     /// the tip, and longer limbs bend further.
     #[reflect(
         @ValueRange::<f32>(0.0..=0.99),
-        @Precision(2),
+        @Precision(0),
         @NumberInputUnits::new_static("ratio_percent"),
         @ControlGroup("Direction"),
     )]
@@ -271,6 +277,7 @@ pub struct LimbLevel {
     /// level, so long limbs kink several times and short twigs once or not at all.
     #[reflect(
         @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_4),
+        @Precision(1),
         @NumberInputUnits::new_static("angle_degrees"),
         @ControlGroup("Direction"),
     )]
@@ -279,7 +286,7 @@ pub struct LimbLevel {
     /// starting direction. A limb also stops where it leaves the envelope. Drawn for each limb.
     #[reflect(
         @ValueRange::<f32>(0.0..=1.0),
-        @Precision(2),
+        @Precision(0),
         @NumberInputUnits::new_static("ratio_percent"),
         @ControlGroup("Shape"),
     )]
@@ -288,7 +295,7 @@ pub struct LimbLevel {
     /// thick as the parent there.
     #[reflect(
         @ValueRange::<f32>(0.05..=1.0),
-        @Precision(2),
+        @Precision(0),
         @NumberInputUnits::new_static("ratio_percent"),
         @ControlGroup("Shape"),
     )]
@@ -300,7 +307,7 @@ pub struct LimbLevel {
     /// of its level, so they reach the envelope and bear limbs as it would.
     #[reflect(
         @ValueRange::<f32>(0.0..=1.0),
-        @Precision(2),
+        @Precision(0),
         @NumberInputUnits::new_static("ratio_percent"),
         @Caption("Chance"),
         @ControlGroup("Fork"),
@@ -309,7 +316,7 @@ pub struct LimbLevel {
     /// Where along a limb it forks, as a share of its length. Drawn for each limb.
     #[reflect(
         @ValueRange::<f32>(0.05..=0.95),
-        @Precision(2),
+        @Precision(0),
         @NumberInputUnits::new_static("ratio_percent"),
         @Caption("At"),
         @ControlGroup("Fork"),
@@ -322,6 +329,7 @@ pub struct LimbLevel {
     /// each fork.
     #[reflect(
         @ValueRange::<f32>(0.0..=std::f32::consts::PI),
+        @Precision(1),
         @NumberInputUnits::new_static("angle_degrees"),
         @Caption("Angle"),
         @ControlGroup("Fork"),
@@ -331,6 +339,7 @@ pub struct LimbLevel {
     /// one above the other.
     #[reflect(
         @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_2),
+        @Precision(1),
         @NumberInputUnits::new_static("angle_degrees"),
         @Caption("Roll"),
         @ControlGroup("Fork"),
@@ -407,7 +416,7 @@ pub struct Foliage {
     /// Each card's width, as a fraction of the crown's radius.
     #[reflect(
         @ValueRange::<f32>(0.02..=1.0),
-        @Precision(2),
+        @Precision(0),
         @NumberInputUnits::new_static("ratio_percent"),
         @ControlGroup("Card"),
     )]
@@ -416,6 +425,7 @@ pub struct Foliage {
     /// stem; negative turns the halves up, cupping it.
     #[reflect(
         @ValueRange::<f32>(-std::f32::consts::FRAC_PI_2..=std::f32::consts::FRAC_PI_2),
+        @Precision(1),
         @NumberInputUnits::new_static("angle_degrees"),
         @Caption("Lateral droop"),
         @ControlGroup("Card"),
@@ -425,6 +435,7 @@ pub struct Foliage {
     /// bends it up.
     #[reflect(
         @ValueRange::<f32>(-std::f32::consts::FRAC_PI_2..=std::f32::consts::FRAC_PI_2),
+        @Precision(1),
         @NumberInputUnits::new_static("angle_degrees"),
         @Caption("Axial droop"),
         @ControlGroup("Card"),

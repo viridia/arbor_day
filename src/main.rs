@@ -27,7 +27,7 @@ use bevy_remote_driver::RemoteDriverPlugin;
 use hud::{Ground, HudPlugin, hud};
 use keys::KeysPlugin;
 use plant::{Plant, PlantEnvelope, PlantLeaves, PlantPlugin, PlantStats};
-use properties::{CapsPanel, HeaderNotes, PropertiesPlugin};
+use properties::{CapsPanel, HeaderNotes};
 use settings::{AppSettingsPlugin, MIN_PANE_WIDTH, save_panel_width};
 use species::Species;
 use turntable::{
@@ -64,7 +64,6 @@ fn main() {
             }),
             AppSettingsPlugin,
             FeathersPlugins,
-            PropertiesPlugin,
             BevyImmediateAttachPlugin::<CapsPanel, ParamPanel>::new(),
             RemoteDriverPlugin,
             TurntablePlugin,

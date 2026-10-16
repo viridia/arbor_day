@@ -57,6 +57,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C74   | Leaves at branch ends only (D27): one card at each limb's tip that bears none, and none along the twigs. A "Leaves" checkbox, the first species `bool`, replaces the cluster density; the density, the shell and `depth_in_envelope` go. No limb kinks in its last stretch under a tip's card (D17), so the card lies along the twig and its fold on the tip; a kink there had turned the fold up to 10 cm off the tip, which the cards along twigs had hidden from C39's test. The Foliage requirement is rewritten. `plans/levels.py` toggles Leaves. |
 | C73   | Radii by taper (D22): every stem and limb narrows evenly by one taper, now in the Plant group, beside the bark color, in place of the trunk's taper and the pipe exponent; the Wood group goes, and a limb starts at its level's share of the parent's radius where it leaves. C68 (end taper) folded in. C30 scoped (one fork point, 2 to 4 copies), stem forks split off as C75; X32, X33 recorded. |
 | C30   | Forks (D31): a limb of a level with a fork chance ends partway along, and 2 to 4 copies of it carry it on, spread around it by the fork angle and roll; a Fork group per level. `plans/shapes.py` screenshots a level Y, an upright Y and a three-way fork. |
+| C76   | Bevy main bumped to `d41bb12` with the family (D1), bringing feathers' number-input chevrons, rounding in the units shown, and interior captions. Feathers' `ratio_percent` replaces ours (X17). `Precision` counts in the units shown: angles drag to a tenth of a degree, percentages to whole ones. The color picker's mode and recent colors are saved (X14), with a deferred save on change in `src/settings.rs`, since Cmd+Q skips the exit save (D6). |
 
 ## Next
 
@@ -176,8 +177,9 @@ per-type hook, and is retained-mode.
   share of the envelope's top (outward normal within 45° of up) under cards. E[2]
 - **C42 Computed values are rounded where written**, from the first writer (Reset, Randomize,
   values derived from the generator): the number input never rounds what it shows, so round to
-  the field's `Precision` in the units shown, as feathers' color input does
-  (`scaled_number_input_value`), or with `NumberInputPrecision::round` once bevy#26158 lands.
+  the field's `Precision` in the units shown, as a drag does: through the unit's
+  `canonical_to_display` and `display_to_canonical` (feathers' `NumberInputPrecision::round` is
+  private).
   Defaults are written in the units shown
   (`15.0_f32.to_radians()`, not `0.3`). E[2]
 - **C47 A sense of scale**: metre rings on the ground disc (`src/main.rs`, `Circle::new(4.0)`),
@@ -189,6 +191,10 @@ per-type hook, and is retained-mode.
 
 ### Later
 
+- **C77 No stacked captions** (was X34, revising C13): number inputs carry their caption inside
+  the field (feathers' `interior_label_text`, bevy#26159), and enum selects put theirs on the
+  same row, as color and boolean rows do, so every widget is one row, halving the panel's
+  height. The panel is reorganized with it. E[3]
 - **C32 Log scale** for sizes, with no change upstream: an `@LogScale` attribute. The species
   keeps metres; the panel's binding gives the number input ln(value) and a log range, and
   writes e^value back; a registered unit (`length_log_meters`) formats e^value in metres, to
@@ -200,7 +206,7 @@ per-type hook, and is retained-mode.
   E[3]
 - **C69 A color per limb level**, so the Limbs 1 to 3 subpanes are told apart at a glance: a
   thin stripe on each level's header or left edge, its color set on the node, since feathers'
-  contextual theming cannot shade a subtree. *Gate:* C33's groups and X16's denser rows still
+  contextual theming cannot shade a subtree. *Gate:* C33's groups and C77's denser rows still
   leaving the levels hard to tell apart. E[1]
 - **C71 Crown softness** (was part of C39): the cards' shading normal blended toward the
   envelope's outward normal by a weight (growth model, Foliage), so the crown shades as one
@@ -672,21 +678,11 @@ per-type hook, and is retained-mode.
   limits and units are inserted before the scene, so the first write is right, and the binding
   starts the frame after (`will_be_spawned`). Filed upstream as bevy#26123.
   *Gate:* a fix in the Bevy we build against; then drop the workaround.
-- **X10** Feathers number input gaps, upstream. (1) Its step chevrons show on hover but nothing
-  handles a click (no observer on `NumberInputDecrement` or `NumberInputIncrement`, at our commit
-  and on newer main), so a press falls through to the scrubber and drags. (2) A drag clamps to
-  the `SoftLimit` before applying `NumberInputWrap`, so a wrapping input with the slider look
-  never wraps when dragged (typing does); skip the soft clamp when wrapping. (3) A caption of its
-  own: `label_text` is the short sigil label (X, Y, Z), not a field caption. (4) A drag rounds
-  to `NumberInputPrecision` in the canonical units, not the units shown: an angle with precision
-  2 snaps to 0.01 rad, so a drag lands on values like 17.761973°; round through the
-  `UnitsFormat` instead. Without a `NumberInputPrecision` a drag does not round at all (tilt
-  drags to `86.90488°`), and a precision cannot help an angle, since `Precision(0)` snaps to whole
-  radians. Filed upstream as bevy#26124 (chevrons), bevy#26125 (wrap under a soft limit),
-  bevy#26126 (field captions) and bevy#26130 (rounding). The author has PRs open for all but the
-  wrap: bevy#26158 (rounding, and X17's unit), and the chevrons' and the captions' (X16). *Gate:*
-  fixes in the Bevy we build against; then rows may use the input's own caption, and angle drags
-  round in degrees.
+- **X10** A feathers number input's drag clamps to the `SoftLimit` before applying
+  `NumberInputWrap`, so a wrapping input with the slider look never wraps when dragged (typing
+  does); skip the soft clamp when wrapping. Filed upstream as bevy#26125. The other gaps filed
+  with it (chevrons, captions, rounding) are fixed (C76). *Gate:* a wrapping field, which no
+  species has (D9).
 - **X11** The spread strip's colour from the feathers theme rather than a fixed white at 80%. A
   gradient's stops take colours, not tokens, so it means reading `UiTheme` in the panel and
   redrawing on a theme change. *Gate:* a second theme, or the white reading poorly over a fill.
@@ -701,9 +697,6 @@ per-type hook, and is retained-mode.
   back-face normal (`prepare_world_normal`) and crown shading normals would then point inward.
   An item for Panoply's ledger. *Gate:* crown softness above 0 judged worth keeping, in the
   preview and in the game.
-- **X14** Feathers' color input should save its `ColorInputSettings` (the picker's mode and recent
-  colors) with the app's settings, but does not: a bug upstream, being fixed by someone else.
-  Nothing to do here but confirm it once fixed. *Gate:* the fix in the Bevy we build against.
 - **X15** Keeping old trees as they were when the generator changes. The game ships exported
   meshes, so a tree changes only when regenerated: edited again, or rebuilt by the command-line
   export (X1) if the asset pipeline runs it. Rather than keeping every past generator (Cargo
@@ -715,14 +708,6 @@ per-type hook, and is retained-mode.
   field's default are different things. What remains (fixes, reordered draws) is re-exported
   deliberately, the earlier export being the record. *Gate:* the first species used in
   Panoply.
-- **X16** Captions inside feathers' number input, upstream, by the author, for seedling's
-  density: caption left and value right while idle; while editing, the caption hidden and the
-  text right-aligned. The input's `label_text` would make slider widths ragged. PR open, fixing
-  bevy#26126. *Gate:* the change in the Bevy we build against; then rows drop their caption
-  line, halving their height.
-- **X17** Drop `properties::RatioPercent` for feathers' own, which bevy#26158 adds under the
-  same name and id (`ratio_percent`), so the two cannot both be registered. *Gate:* bevy#26158
-  in the Bevy we build against.
 - **X18** Forms and presets. The tool is for indie developers wanting the common Earth plant
   types (requirements, What it is for), so presets named after those types ("Fir", "Willow",
   "Live oak", "Clump"), each a saved species, are its starting points. Whether forms are needed
@@ -839,15 +824,10 @@ per-type hook, and is retained-mode.
   later ones inside, as in real amphitonic forks. E[2] *Gate:* C30's screenshot of a level-roll
   Y with sides facing shows the crotch crowded.
 
-- **X34** No stacked captions (revising C13): number inputs carry their label inside the field,
-  and enum selects put theirs on the same row, as color and boolean rows do, so every widget
-  is one row. The panel is reorganized with it. E[3] *Gate:* feathers' number input gains an
-  interior label.
-
 ## Notes
 
 - Bevy source at the locked commit is in Cargo's git checkout,
-  `~/.cargo/git/checkouts/bevy-*/c9c21c2`; the local `../bevy` is at a newer commit.
+  `~/.cargo/git/checkouts/bevy-*/d41bb12`; the local `../bevy` is at the same commit.
 - `plans/levels.py` once failed at its foliage density edit (the edit did not apply) and passed
   with a screenshot before Enter; if it fails there again, look at that edit first.
 - `plans/smoke.py` once failed at its first orbit hold (`orbit_left`, azimuth still 0) and
