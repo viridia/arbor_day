@@ -31,19 +31,20 @@ pub struct Species {
         @ControlGroup("Plant"),
     )]
     pub detail: f32,
-    /// The bark's color, written into the mesh as a vertex color, so trunks of different species
-    /// can merge into one mesh in the game.
-    #[reflect(@Caption("Bark color"), @ControlGroup("Plant"))]
-    pub bark_color: Color,
     /// How much narrower each stem and limb is at its tip than at its base, narrowing evenly: 0
     /// keeps the radius, 1 closes to a point.
     #[reflect(
         @ValueRange::<f32>(0.0..=1.0),
         @Precision(0),
         @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("Taper"),
         @ControlGroup("Plant"),
     )]
     pub taper: f32,
+    /// The bark's color, written into the mesh as a vertex color, so trunks of different species
+    /// can merge into one mesh in the game.
+    #[reflect(@Caption("Bark color"), @ControlGroup("Plant"))]
+    pub bark_color: Color,
     #[reflect(@Caption("Trunk"))]
     pub trunk: Trunk,
     #[reflect(@Caption("Crown"))]
@@ -116,6 +117,7 @@ impl Default for Species {
 /// trunk. Limbs reach to it and foliage fills it.
 #[derive(Reflect, Clone, PartialEq)]
 pub struct Crown {
+    #[reflect(@Caption("Profile"))]
     pub profile: Profile,
     /// The crown's top above the ground, as a multiple of the trunk's height: near 100% for a
     /// tree whose leader runs to the top, more for one whose trunk stops short.
@@ -123,6 +125,7 @@ pub struct Crown {
         @ValueRange::<f32>(1.0..=2.0),
         @Precision(0),
         @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("Top"),
     )]
     pub top: f32,
     /// Where the crown starts above the ground, as a share of the trunk's height.
@@ -130,10 +133,11 @@ pub struct Crown {
         @ValueRange::<f32>(0.0..=0.95),
         @Precision(0),
         @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("Base"),
     )]
     pub base: f32,
     /// The crown's radius where it is widest, in meters.
-    #[reflect(@ValueRange::<f32>(0.1..=15.0), @Precision(1))]
+    #[reflect(@ValueRange::<f32>(0.1..=15.0), @Precision(1), @Caption("Radius"))]
     pub radius: f32,
 }
 
@@ -167,24 +171,25 @@ pub enum Profile {
 #[derive(Reflect, Clone, PartialEq)]
 pub struct Trunk {
     /// Stems rising from the ground, spaced evenly around.
-    #[reflect(@ValueRange::<i32>(1..=5), @Spinbox)]
+    #[reflect(@ValueRange::<i32>(1..=5), @Spinbox, @Caption("Stems"))]
     pub stems: i32,
     /// The angle from up at which each stem leaves the ground.
     #[reflect(
         @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_3),
         @Precision(1),
         @NumberInputUnits::new_static("angle_degrees"),
+        @Caption("Splay"),
     )]
     pub splay: f32,
     /// Each stem's length along its axis in meters, its height if upright: the plant's size, which
     /// the crown is measured against.
-    #[reflect(@ValueRange::<f32>(0.1..=30.0), @Precision(2))]
+    #[reflect(@ValueRange::<f32>(0.1..=30.0), @Precision(2), @Caption("Height"))]
     pub height: f32,
     /// Radius at the base, in meters.
-    #[reflect(@ValueRange::<f32>(0.02..=1.0), @Precision(2))]
+    #[reflect(@ValueRange::<f32>(0.02..=1.0), @Precision(2), @Caption("Radius"))]
     pub radius: f32,
     /// Sides of each ring.
-    #[reflect(@ValueRange::<i32>(3..=8), @Spinbox)]
+    #[reflect(@ValueRange::<i32>(3..=8), @Spinbox, @Caption("Sides"))]
     pub sides: i32,
     /// How much further from up each stem's axis turns between the base and the top, away from
     /// the middle, but never past level. A tree's compass direction is drawn from the seed, so
@@ -193,6 +198,7 @@ pub struct Trunk {
         @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_2),
         @Precision(1),
         @NumberInputUnits::new_static("angle_degrees"),
+        @Caption("Lean"),
     )]
     pub lean: f32,
     /// The most each stretch of a stem points off its course, which the splay and lean set, so it
@@ -201,6 +207,7 @@ pub struct Trunk {
         @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_4),
         @Precision(1),
         @NumberInputUnits::new_static("angle_degrees"),
+        @Caption("Wander"),
     )]
     pub wander: f32,
 }
@@ -221,7 +228,7 @@ pub struct LimbLevel {
     #[reflect(@ValueRange::<f32>(1.0..=6.0), @Precision(1), @Caption("Per node"), @ControlGroup("Arrangement"))]
     pub per_node: f32,
     /// Which way around the parent its limbs leave.
-    #[reflect(@ControlGroup("Arrangement"))]
+    #[reflect(@Caption("Facing"), @ControlGroup("Arrangement"))]
     pub facing: Facing,
     /// The most each limb turns about the parent at random, away from where its facing puts it.
     /// Drawn for each limb.
@@ -229,6 +236,7 @@ pub struct LimbLevel {
         @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_2),
         @Precision(1),
         @NumberInputUnits::new_static("angle_degrees"),
+        @Caption("Skew"),
         @ControlGroup("Arrangement"),
     )]
     pub skew: f32,
@@ -239,6 +247,7 @@ pub struct LimbLevel {
         @ValueRange::<f32>(0.0..=0.9),
         @Precision(0),
         @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("Start"),
         @ControlGroup("Arrangement"),
     )]
     pub start: f32,
@@ -248,6 +257,7 @@ pub struct LimbLevel {
         @ValueRange::<f32>(0.0..=std::f32::consts::PI),
         @Precision(1),
         @NumberInputUnits::new_static("angle_degrees"),
+        @Caption("Angle"),
         @ControlGroup("Direction"),
     )]
     pub angle: Fuzzy,
@@ -269,6 +279,7 @@ pub struct LimbLevel {
         @ValueRange::<f32>(0.0..=0.99),
         @Precision(0),
         @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("Bend"),
         @ControlGroup("Direction"),
     )]
     pub bend: f32,
@@ -279,6 +290,7 @@ pub struct LimbLevel {
         @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_4),
         @Precision(1),
         @NumberInputUnits::new_static("angle_degrees"),
+        @Caption("Wander"),
         @ControlGroup("Direction"),
     )]
     pub wander: f32,
@@ -288,6 +300,7 @@ pub struct LimbLevel {
         @ValueRange::<f32>(0.0..=1.0),
         @Precision(0),
         @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("Reach"),
         @ControlGroup("Shape"),
     )]
     pub reach: Fuzzy,
@@ -297,11 +310,12 @@ pub struct LimbLevel {
         @ValueRange::<f32>(0.05..=1.0),
         @Precision(0),
         @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("Radius"),
         @ControlGroup("Shape"),
     )]
     pub radius: f32,
     /// Sides of each ring.
-    #[reflect(@ValueRange::<i32>(3..=8), @Spinbox, @ControlGroup("Shape"))]
+    #[reflect(@ValueRange::<i32>(3..=8), @Spinbox, @Caption("Sides"), @ControlGroup("Shape"))]
     pub sides: i32,
     /// The chance that a limb forks: it ends partway along, and copies of it carry on from there,
     /// of its level, so they reach the envelope and bear limbs as it would.
@@ -418,6 +432,7 @@ pub struct Foliage {
         @ValueRange::<f32>(0.02..=1.0),
         @Precision(0),
         @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("Size"),
         @ControlGroup("Card"),
     )]
     pub size: f32,

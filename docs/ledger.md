@@ -58,6 +58,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C73   | Radii by taper (D22): every stem and limb narrows evenly by one taper, now in the Plant group, beside the bark color, in place of the trunk's taper and the pipe exponent; the Wood group goes, and a limb starts at its level's share of the parent's radius where it leaves. C68 (end taper) folded in. C30 scoped (one fork point, 2 to 4 copies), stem forks split off as C75; X32, X33 recorded. |
 | C30   | Forks (D31): a limb of a level with a fork chance ends partway along, and 2 to 4 copies of it carry it on, spread around it by the fork angle and roll; a Fork group per level. `plans/shapes.py` screenshots a level Y, an upright Y and a three-way fork. |
 | C76   | Bevy main bumped to `d41bb12` with the family (D1), bringing feathers' number-input chevrons, rounding in the units shown, and interior captions. Feathers' `ratio_percent` replaces ours (X17). `Precision` counts in the units shown: angles drag to a tenth of a degree, percentages to whole ones. The color picker's mode and recent colors are saved (X14), with a deferred save on change in `src/settings.rs`, since Cmd+Q skips the exit save (D6). |
+| C77   | One line per row (was X34), in place of C13's stacked captions: number inputs carry their caption inside (feathers' `interior_label_text`), and enum selects sit right of theirs, as colors do. The panel is about half as tall. |
 
 ## Next
 
@@ -191,10 +192,6 @@ per-type hook, and is retained-mode.
 
 ### Later
 
-- **C77 No stacked captions** (was X34, revising C13): number inputs carry their caption inside
-  the field (feathers' `interior_label_text`, bevy#26159), and enum selects put theirs on the
-  same row, as color and boolean rows do, so every widget is one row, halving the panel's
-  height. The panel is reorganized with it. E[3]
 - **C32 Log scale** for sizes, with no change upstream: an `@LogScale` attribute. The species
   keeps metres; the panel's binding gives the number input ln(value) and a log range, and
   writes e^value back; a registered unit (`length_log_meters`) formats e^value in metres, to
@@ -312,7 +309,8 @@ per-type hook, and is retained-mode.
   (`../bevy_reactor_3/crates/bevy_reactor_prop_inspect/src/attribute.rs`), the design borrowed,
   not the code (it uses older feathers names): `ValueRange<T>`, `Precision(i32)`, `Step<T>`,
   written `#[reflect(@ValueRange::<f32>(0.0..=1.0), @Precision(2))]`, read from the type
-  (`StructInfo::field_at(i).custom_attributes()`), not the value. Added: `Caption` renames a row;
+  (`StructInfo::field_at(i).custom_attributes()`), not the value. Added: `Caption` names a row,
+  and every species field has one rather than showing its Rust name;
   `NumberInputUnits` is itself the units attribute (`angle_degrees` shows radians as degrees);
   `Spinbox`. A `Wrap` for an angle of a full turn went with the placeholder (C27), since every
   species angle clamps; feathers' `NumberInputWrap` remains should one be needed. A `bool` is a
@@ -748,14 +746,14 @@ per-type hook, and is retained-mode.
   saving the triangles those twigs cost now that every stem is drawn (D22). Seen edge-on the twig vanishes, so it needs crossed cards (twice the
   triangles) or facing kept away from edge-on. *Gate:* X28, to compare the two at game scale.
 
-- **X25** The property editor's attributes from `bevy::annotations` (bevy#26164, open): its
+- **X25** The property editor's attributes from `bevy::annotations` (bevy#26164, merged as `8550394`): its
   `ValueRange` (an `f64` range, read with `ValueRange::from_attributes`), `Step` and
   `DisplayName` in place of ours (`ValueRange<T>`, `Step<T>`, `Caption`), so a species reads
   the same in any Bevy inspector; `LimbLevel::limits` (D18) reads through `from_attributes`.
   `Tooltip` for the species' doc comments. Ours stay where it has none: `Precision` and
   `Spinbox` (its follow-ups), `ShownCount`, and units, since its `Unit` is a label while ours
-  names a feathers units format that also scales and parses. *Gate:* the PR in the Bevy we
-  build against.
+  names a feathers units format that also scales and parses. *Gate:* C77 committed; then the
+  family bumped to `8550394` in the same chunk.
 - **X26** Several open documents, as tabs above the panel (a feathers tab list), for an artist
   working on variants of one species. Each document an entity holding its species, file path
   and name, the species no longer one resource (D12). A new document is "Untitled" until its
@@ -823,6 +821,11 @@ per-type hook, and is retained-mode.
   each copy's first child goes to its outer flank, away from the crotch; alternation still puts
   later ones inside, as in real amphitonic forks. E[2] *Gate:* C30's screenshot of a level-roll
   Y with sides facing shows the crotch crowded.
+
+- **X35** Report upstream: a feathers number input left without a change (Enter, or focus lost)
+  keeps its editing text, so an angle shows `20d` rather than `20°`, beside its interior caption
+  (C77). Its text is rewritten only when `NumericValue` changes; leaving edit mode should
+  rewrite it in the display form. *Gate:* a fix in the Bevy we build against.
 
 ## Notes
 

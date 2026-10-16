@@ -2,8 +2,9 @@
 //! named after its field. Booleans get a checkbox, numbers a number input, fuzzy numbers a center,
 //! a spread and a shape toggle, colors a swatch that opens a picker, enums of unit variants a
 //! select, nested structs a subpane of rows of their own, an array with a [`ShownCount`] a subpane
-//! per shown item, and every other field a label giving its name and type. A row's caption sits
-//! above its inputs, so they get the panel's full width. Field attributes (below) set a row's
+//! per shown item, and every other field a label giving its name and type. Every row is one line:
+//! a number input carries its caption inside, and other widgets sit right of theirs. Field
+//! attributes (below) set a row's
 //! caption, its control group, and a number's limits, precision, step and units.
 
 use std::{collections::HashMap, ops::RangeInclusive};
@@ -18,7 +19,7 @@ use bevy::{
             FeathersNumberInput, FeathersSelect, FeathersToolButton, HardLimit,
             NumberInputPrecision, NumberInputStep, NumberInputUnits, OptionIndex, SoftLimit,
         },
-        display::{caption as option_caption, icon, label, label_small},
+        display::{caption as option_caption, icon, label},
         theme::{ThemeTextColor, ThemedText},
         tokens,
     },
@@ -481,14 +482,12 @@ impl NumberLook {
     }
 }
 
-/// A row node named after its field, its caption stacked above its widgets.
+/// A row node named after its field, holding widgets that carry their caption inside.
 fn row_node(name: &'static str) -> (Name, Node) {
     (
         Name::new(name),
         Node {
             flex_direction: FlexDirection::Column,
-            // Half the gap between rows, so a caption reads as its own field's.
-            row_gap: px(2),
             ..default()
         },
     )
@@ -510,12 +509,7 @@ fn group_heading(caption: &'static str) -> impl Scene {
     }
 }
 
-/// The caption at the top of a row, in feathers' small label for field captions.
-fn row_caption(ui: &mut Imm<CapsPanel>, caption: &'static str) {
-    ui.ch().on_spawn_apply_scene(move || label_small(caption));
-}
-
-/// Widgets laid out left to right under a row's caption.
+/// Widgets laid out left to right.
 fn widget_line() -> Node {
     Node {
         flex_direction: FlexDirection::Row,
@@ -526,7 +520,15 @@ fn widget_line() -> Node {
     }
 }
 
-/// A caption and a number input, the input named `input` so plans can read its value.
+/// A caption at the left end of a row and a widget at the right.
+fn caption_line() -> Node {
+    Node {
+        justify_content: JustifyContent::SpaceBetween,
+        ..widget_line()
+    }
+}
+
+/// A number input captioned inside, named `input` so plans can read its value.
 fn number_row<T: NumberField>(
     row: ImmEntity<CapsPanel>,
     name: &'static str,
@@ -536,16 +538,16 @@ fn number_row<T: NumberField>(
 ) {
     let look = NumberLook::from_attributes::<T>(attrs);
     row.on_spawn_insert(move || row_node(name)).add(|ui| {
-        row_caption(ui, caption);
-        number_input(ui.ch(), "input", look, percent(100), value);
+        number_input(ui.ch(), "input", Some(caption), look, percent(100), value);
     });
 }
 
-/// A number input named `name`, `width` wide, or taking a widget line's spare width if
-/// `Val::Auto`. Returns the input, for adding children of its own.
+/// A number input named `name`, its caption, if any, inside it, `width` wide, or taking a widget
+/// line's spare width if `Val::Auto`. Returns the input, for adding children of its own.
 fn number_input<'r, 'w, 's, T: NumberField>(
     input: ImmEntity<'r, 'w, 's, CapsPanel>,
     name: &'static str,
+    caption: Option<&'static str>,
     look: NumberLook,
     width: Val,
     value: &mut T,
@@ -575,9 +577,12 @@ fn number_input<'r, 'w, 's, T: NumberField>(
                 commands.insert(units);
             }
         })
-        .on_spawn_apply_scene(
-            move || bsn! { @FeathersNumberInput Node { flex_grow: {grow}, width: {width} } },
-        );
+        .on_spawn_apply_scene(move || {
+            bsn! {
+                @FeathersNumberInput { @interior_label_text: {caption} }
+                Node { flex_grow: {grow}, width: {width} }
+            }
+        });
     if input.will_be_spawned() {
         input
     } else {
@@ -596,9 +601,15 @@ fn seed_row(row: ImmEntity<CapsPanel>, name: &'static str, caption: &'static str
         units: None,
     };
     row.on_spawn_insert(move || row_node(name)).add(|ui| {
-        row_caption(ui, caption);
         ui.ch().on_spawn_insert(widget_line).add(|ui| {
-            number_input(ui.ch(), "input", look, Val::Auto, &mut seed.0);
+            number_input(
+                ui.ch(),
+                "input",
+                Some(caption),
+                look,
+                Val::Auto,
+                &mut seed.0,
+            );
             let mut button = ui.ch().on_spawn_apply_scene(|| {
                 bsn! {
                     @FeathersToolButton { @variant: {ButtonVariant::Plain} }
@@ -643,16 +654,29 @@ fn fuzzy_row(
         ..center_look.clone()
     };
     row.on_spawn_insert(move || row_node(name)).add(|ui| {
-        row_caption(ui, caption);
         ui.ch().on_spawn_insert(widget_line).add(|ui| {
-            let center = number_input(ui.ch(), "center", center_look, Val::Auto, &mut fuzzy.center);
+            let center = number_input(
+                ui.ch(),
+                "center",
+                Some(caption),
+                center_look,
+                Val::Auto,
+                &mut fuzzy.center,
+            );
             // Drawn from this frame's center and last frame's spread and shape, a frame behind
             // when they change.
             if let Some(range) = strip_range {
                 let drawn = *fuzzy;
                 center.add(|ui| spread_strip(ui, drawn, range));
             }
-            number_input(ui.ch(), "spread", spread_look, px(56), &mut fuzzy.spread);
+            number_input(
+                ui.ch(),
+                "spread",
+                None,
+                spread_look,
+                px(56),
+                &mut fuzzy.spread,
+            );
             let mut button = ui.ch().on_spawn_apply_scene(|| {
                 bsn! {
                     @FeathersToolButton { @variant: {ButtonVariant::Plain} }
@@ -688,11 +712,7 @@ fn color_row(
     caption: &'static str,
     color: &mut Color,
 ) {
-    let line = move || Node {
-        justify_content: JustifyContent::SpaceBetween,
-        ..widget_line()
-    };
-    row.on_spawn_insert(move || (Name::new(name), line()))
+    row.on_spawn_insert(move || (Name::new(name), caption_line()))
         .add(|ui| {
             ui.ch().on_spawn_apply_scene(move || label(caption));
             let initial = *color;
@@ -734,8 +754,8 @@ fn unit_variants(value: &dyn PartialReflect) -> Option<Vec<&'static str>> {
         .collect()
 }
 
-/// A caption and a select of the enum's variants, the select named `select` and each option
-/// after its variant, so plans can pick one.
+/// A caption with a select of the enum's variants at the row's right end, the select named
+/// `select` and each option after its variant, so plans can pick one.
 fn enum_row(
     row: ImmEntity<CapsPanel>,
     name: &'static str,
@@ -747,8 +767,9 @@ fn enum_row(
         return;
     };
     let index = current.variant_index();
-    row.on_spawn_insert(move || row_node(name)).add(|ui| {
-        row_caption(ui, caption);
+    row.on_spawn_insert(move || (Name::new(name), caption_line()))
+        .add(|ui| {
+        ui.ch().on_spawn_apply_scene(move || label(caption));
         let options = variants.clone();
         let mut select = ui
             .ch()
