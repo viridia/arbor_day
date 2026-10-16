@@ -42,8 +42,8 @@ A limb is two things. Its **placement** says where it starts and which way it le
 parent, at a place along it, an azimuth and an angle; or for a stem, on the ground, at a point and
 a direction. Its **composition** says what it is from there: its course, its length, its wander,
 its radius, its children. The trunk differs from a limb only in its placement, so every
-operator on composition serves both. The code already leans this way: `Stem` and `Limb` are the
-same struct but for a level, and `Parent` reads either.
+operator on composition serves both. The generator has one `Axis` for both
+(`src/generator/skeleton.rs`), its `kind` saying how it came to grow.
 
 ```rust
 pub struct Skeleton {

@@ -138,7 +138,7 @@ fn build_envelope(
         if current.is_some() && !species.is_changed() {
             continue;
         }
-        let lines = generator::envelope_outline(&generator::Envelope::of(&species));
+        let lines = generator::envelope_helper(&generator::Envelope::of(&species));
         let stats = EnvelopeStats {
             segments: (lines.len() / 2) as u32,
         };

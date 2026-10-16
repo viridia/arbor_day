@@ -60,6 +60,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C76   | Bevy main bumped to `d41bb12` with the family (D1), bringing feathers' number-input chevrons, rounding in the units shown, and interior captions. Feathers' `ratio_percent` replaces ours (X17). `Precision` counts in the units shown: angles drag to a tenth of a degree, percentages to whole ones. The color picker's mode and recent colors are saved (X14), with a deferred save on change in `src/settings.rs`, since Cmd+Q skips the exit save (D6). |
 | C77   | One line per row (was X34), in place of C13's stacked captions: number inputs carry their caption inside (feathers' `interior_label_text`), and enum selects sit right of theirs, as colors do. The panel is about half as tall. |
 | C78   | Golden meshes (X15), `src/golden.rs`: a hash of the bark and leaf meshes of four species (the default, three levels, forks, three stems), bit for bit, failing with the new table to paste when output changes. |
+| C79   | One axis type (`docs/patches.md`, The abstract plant): `Stem` and `Limb` become `Axis`, level 0 for stems and 1 to 3 for the limb levels, with an `AxisKind` (stem, lateral, carry-on, fork copy). The plant grows as one list, stems first, each axis naming its scions by index, in place of the `children`, `carried_on`, `forked` and `copy` flags; `Parent` goes. `src/generator/` in place of `generator.rs`: skeleton, placement, trace, fork, foliage, mesh, envelope, and the tests together in `tests.rs`. The envelope's preview lines are its helper (`envelope_helper`), so "outline" means only the ink outline (C66). Golden hashes unchanged. |
 
 ## Next
 
@@ -77,27 +78,22 @@ per-type hook, and is retained-mode.
 ### Milestone: the first species exported to Panoply
 
 The foundation first, the skeleton (`docs/patches.md`, The abstract plant), then leaf painting.
-C79 to C82 leave output unchanged (C78); C83 and C84 change it, each judged by screenshots and
+C80 to C82 leave output unchanged (C78); C83 and C84 change it, each judged by screenshots and
 given new hashes. None of them touches the panel, the species or the plans.
 
-1. **C79 One axis type**: `Stem` and `Limb` merged into `Axis` (`docs/patches.md`, The abstract
-   plant), with an `AxisKind` (stem, lateral, carry-on, fork copy) and scions in place of the
-   `children`, `carried_on`, `forked` and `copy` flags, in one list with parents by index.
-   `generator.rs` becomes a module directory (skeleton, trace, placement, fork, foliage,
-   mesh). Before C75, so a stem forks as any axis does. E[3]
-2. **C80 Skeleton, then meshes**: `grow` returns a `Skeleton`, and `plant` meshes it; foliage
+1. **C80 Skeleton, then meshes**: `grow` returns a `Skeleton`, and `plant` meshes it; foliage
    yields `Card`s, meshed as quads. Rings stay simplified at trace time, since scions attach to
    the path as meshed. E[2]
-3. **C81 A radius per vertex**, written by the taper, in place of an axis's base and top radii;
+2. **C81 A radius per vertex**, written by the taper, in place of an axis's base and top radii;
    `tube` reads them. So the pipe model can return as an operator writing radii. E[2]
-4. **C82 Operators as functions**: each stage of the level loop (place scions, trace, fork,
+3. **C82 Operators as functions**: each stage of the level loop (place scions, trace, fork,
    carry on, foliage, taper) a function over `&mut Skeleton` and a level, called in the fixed
    order. Wander stays inside the trace. E[3]
-5. **C83 Hinting at meshing**: the skeleton keeps the full trace, simplified only when meshed
+4. **C83 Hinting at meshing**: the skeleton keeps the full trace, simplified only when meshed
    (D17), so scions attach to the true path. E[2]
-6. **C84 Wander as a displacement** of the traced course, out of the trace loop, clipping at the
+5. **C84 Wander as a displacement** of the traced course, out of the trace loop, clipping at the
    envelope again; tips move, since wander now comes before the clip. E[3]
-7. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's leaf, as D29 has it, its
+6. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's leaf, as D29 has it, its
    fields in a "Sprig" and a "Leaf" group under Foliage, and the `Interval` type (D10) for its
    variations. The painter takes the outline as an
    argument, a width in texture pixels or none, which C38 fixes at a constant until C66 makes it
@@ -106,27 +102,27 @@ given new hashes. None of them touches the panel, the species or the plans.
    species previews well with no leaf fields touched, as the placeholder does. If they fall
    short, the placeholder stays as a choice until they do. A golden test on its pixels compares
    with a tolerance, since SIMD can move a channel by a level. The card's axial fold
-   (`generator::AXIAL_FOLD`, halfway) moves to where the painted sprig's fan starts, as
+   (`AXIAL_FOLD` in `src/generator/foliage.rs`, halfway) moves to where the painted sprig's fan starts, as
    seedling's did. E[3]
-8. **C75 Stem forks**, forks (D31) on stems, at any point along them. A decurrent tree's
+7. **C75 Stem forks**, forks (D31) on stems, at any point along them. A decurrent tree's
    leader stopping short (D23) already ends in a fork when the first level forks, its top
    being a limb of that level (D30), so what is left is a stem splitting below its crown. A stem's fork may lie below the crown base:
    the trunk's height sets the axis's length, the fork where it splits. A three-way fork low on
    one stem stands in for several splayed stems, so stems and splay may become a fork at the
    ground, its copies and angle (D25), in place of fork fields beside them. Under stacks (X31),
    the Fork operator on the trunk. E[3]
-9. **C70 Card facing**: the face target (D27) widened from world up to a blend of up and the
+8. **C70 Card facing**: the face target (D27) widened from world up to a blend of up and the
    envelope's outward normal, with a spread. Measure how far cards are from edge-on to the
    game's camera (45° down), a figure in `PlantStats`, to judge facing and folds by numbers as
    well as by eye. Card counts multiply with levels, eight triangles each since C39, so look at
    density against the budget too. E[3]
-10. **C66 Outlines**, a switch for the whole plant (requirements, Foliage): in the Plant group
-    (C33), the switch, the bark's width as the game reads it, and the leaf stroke's in texture
-    pixels (growth model, Consequences). On, the leaf texture is painted with its strokes (D29),
-    the preview draws the bark with an inverted hull after Panoply's `src/materials/outline.wesl`,
-    and the export writes the `"outline"` material extra (C41). Off, none of these; whether the
-    translucent strokes between leaves stay is judged then. E[3]
-11. **C10 Species data model**, its groups the layers of the growth model (D11;
+9. **C66 Outlines**, a switch for the whole plant (requirements, Foliage): in the Plant group
+   (C33), the switch, the bark's width as the game reads it, and the leaf stroke's in texture
+   pixels (growth model, Consequences). On, the leaf texture is painted with its strokes (D29),
+   the preview draws the bark with an inverted hull after Panoply's `src/materials/outline.wesl`,
+   and the export writes the `"outline"` material extra (C41). Off, none of these; whether the
+   translucent strokes between leaves stay is judged then. E[3]
+10. **C10 Species data model**, its groups the layers of the growth model (D11;
     `docs/growth-model.md`, Consequences), correcting seedling where the requirements say.
     Reflectable types with `Default` for initial values and attributes for the editor, after the
     fields settle, so saved files are not broken by every change. Serialized
@@ -145,15 +141,15 @@ given new hashes. None of them touches the panel, the species or the plans.
     levels with hidden ones stashed in the editor, the same in files but a larger change that
     undoes D15. Seedling's groups for reference: `trunk`; `branch[]`, one per level; the leaf as
     `leafGroup` (arrangement), `leafShape` and `leafColor`. E[4], split when started
-12. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
+11. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
     panel, above the Plant group (C33); the file browser is X2. File commands act on the active document, so that tabs (X26)
     need not change them. E[3]
-13. **C8 Working document in settings.** A settings group holding the working species and, once
+12. **C8 Working document in settings.** A settings group holding the working species and, once
     set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
     as seedling did. The document's name comes from the file name. Serialized by reflection, as
     `bevy_settings` does. Stored as a list of open documents holding one, and the active one's
     index, so several (X26) need no change of format. E[3]
-14. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
+13. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
     as a JSON extra (C10), written from the generator's output (`generator::plant`), never from
     the preview's entities, whose leaf mesh is only hidden while none grow, in the form Panoply loads (requirements, Output; "What Panoply does with the output"). Bevy writes no glTF,
     so this adds a dependency or a writer of our own; propose it before code. The command-line
@@ -668,7 +664,7 @@ given new hashes. None of them touches the panel, the species or the plans.
 - **X1** The generator as its own library crate, beside the app: no Bevy dependency beyond
   `bevy_math` (its `libm` feature gives the same float results on every platform), with the
   export command as a binary of that crate, so the asset pipeline and the determinism tests
-  build without the renderer. Until then the generator is `src/generator.rs`, on Bevy's math
+  build without the renderer. Until then the generator is `src/generator/`, on Bevy's math
   types with no ECS. The species types need `bevy_reflect` too, and their editor attributes
   (`ValueRange` and the rest, now in `src/properties.rs`) would move with them. *Gate:* the
   command-line export.

@@ -42,7 +42,9 @@ fn hash(geometry: &Geometry) -> u64 {
         .chain(&geometry.normals)
         .flat_map(|v| v.to_array())
         .chain(geometry.uvs.iter().flat_map(|v| v.to_array()));
-    let words = floats.map(f32::to_bits).chain(geometry.indices.iter().copied());
+    let words = floats
+        .map(f32::to_bits)
+        .chain(geometry.indices.iter().copied());
     words
         .flat_map(u32::to_le_bytes)
         .fold(0xcbf2_9ce4_8422_2325, |hash, byte| {
