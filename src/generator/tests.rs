@@ -271,7 +271,7 @@ fn straight() -> Species {
 
 /// The limbs: every axis but the stems.
 fn limbs(species: &Species) -> Vec<Axis> {
-    let axes = grow(species);
+    let axes = grow(species).axes;
     axes.into_iter().filter(|axis| axis.level > 0).collect()
 }
 
@@ -819,7 +819,7 @@ fn limbs_take_their_share_of_the_parent_where_they_leave() {
     species.limbs[0].radius = 0.6;
     let (trunk, taper) = (species.trunk.radius, species.taper);
     let height = species.trunk.height;
-    let axes = grow(&species);
+    let axes = grow(&species).axes;
     let (stems, limbs) = axes.split_at(1);
     // Two, and the one carrying the trunk on.
     assert_eq!(limbs.len(), 3);
@@ -837,13 +837,13 @@ fn limbs_take_their_share_of_the_parent_where_they_leave() {
     assert_eq!(limbs[2].radii.0, stems[0].radii.1);
     // A level's radius thickens that level and nothing else.
     species.limbs[0].radius = 1.0;
-    assert_eq!(grow(&species)[0].radii, stems[0].radii);
+    assert_eq!(grow(&species).axes[0].radii, stems[0].radii);
 }
 
 #[test]
 fn a_tube_narrows_evenly() {
     let species = straight();
-    let trunk = &grow(&species)[0];
+    let trunk = &grow(&species).axes[0];
     let length = trunk.rings[trunk.rings.len() - 1].at;
     let mut geometry = Geometry::default();
     let sides = 6;
@@ -859,7 +859,7 @@ fn a_tube_narrows_evenly() {
 fn a_limb_carries_its_parent_on_from_its_last_node() {
     let mut species = straight();
     species.limb_levels = 2;
-    let axes = grow(&species);
+    let axes = grow(&species).axes;
     let sides = side_limbs(&species);
     let carriers = limbs_of(&species, AxisKind::CarryOn);
     // The trunk ends where its last limb leaves it.
@@ -910,7 +910,7 @@ fn forks(axes: &[Axis]) -> Vec<(&Axis, Vec<&Axis>)> {
 #[test]
 fn a_fork_spreads_its_copies_from_its_tip() {
     for (copies, roll) in [(2, 0.0), (2, 90.0), (3, 0.0)] {
-        let axes = grow(&forking(copies, roll));
+        let axes = grow(&forking(copies, roll)).axes;
         let forks = forks(&axes);
         assert!(!forks.is_empty());
         for (limb, copies) in forks {
@@ -945,7 +945,7 @@ fn a_fork_spreads_its_copies_from_its_tip() {
 fn a_forked_limb_is_carried_on_by_its_copies_alone() {
     // No leaves at a fork: one card at each tip of the first level, forks left out.
     let mut species = forking(2, 0.0);
-    let axes = grow(&species);
+    let axes = grow(&species).axes;
     let tips = (axes[1..].iter())
         .filter(|limb| !limb.bears(&axes, AxisKind::ForkCopy))
         .count();
@@ -953,7 +953,7 @@ fn a_forked_limb_is_carried_on_by_its_copies_alone() {
     // Carried on are the trunk and each unforked first-level limb bearing limbs, but no
     // forked one.
     species.limb_levels = 2;
-    let axes = grow(&species);
+    let axes = grow(&species).axes;
     let bearing = |forked| {
         (axes[1..].iter())
             .filter(|limb| {

@@ -5,6 +5,7 @@ use bevy::math::Vec3;
 
 use super::{
     envelope::{ENVELOPE_BISECTIONS, Envelope, inside_envelope},
+    foliage::clusters,
     placement::{grow_level, stems},
     trace::{TRACE_STEP, end_at},
 };
@@ -99,12 +100,20 @@ impl Axis {
         self.scions.iter().any(|&scion| axes[scion].kind == kind)
     }
 
-    /// The axis at `t` (0 to 1) along it as meshed: on the straight chord between ring centers,
-    /// so scions start inside the bark, with that chord's direction.
+    /// Its length, the last ring's distance along it.
+    pub fn length(&self) -> f32 {
+        self.rings[self.rings.len() - 1].at
+    }
+
+    /// The axis at `t` (0 to 1) along it as meshed (`frame_at`).
     pub fn frame(&self, t: f32) -> Frame {
+        self.frame_at(t.clamp(0.0, 1.0) * self.length())
+    }
+
+    /// The axis `at` metres along it as meshed: on the straight chord between ring centers, so
+    /// scions start inside the bark, with that chord's direction.
+    pub fn frame_at(&self, at: f32) -> Frame {
         let rings = &self.rings;
-        let t = t.clamp(0.0, 1.0);
-        let at = t * rings[rings.len() - 1].at;
         let next = rings
             .partition_point(|ring| ring.at <= at)
             .clamp(1, rings.len() - 1);
@@ -131,7 +140,7 @@ impl Axis {
     /// fractions of its length; `None` if no point a trace step apart is inside. A limb lies
     /// wholly inside, so only a stem's part is shorter than the stem.
     pub fn inside_part(&self, crown: &Envelope) -> Option<(f32, f32)> {
-        let length = self.rings[self.rings.len() - 1].at;
+        let length = self.length();
         let steps = ((length / TRACE_STEP).ceil() as u32).max(1);
         let inside = |t: f32| inside_envelope(crown, self.frame(t).point);
         let at = |step: u32| step as f32 / steps as f32;
@@ -173,16 +182,26 @@ impl Axis {
     pub fn direction(&self) -> Vec3 {
         self.rings[0].tangent
     }
-
-    pub fn length(&self) -> f32 {
-        self.rings[self.rings.len() - 1].at
-    }
 }
 
-/// The stems, and their limbs level by level, each level on the axes of the one before, in level
-/// order. A parent's top, where it ends and its radius there, is where its last limb leaves it
-/// (`grow_level`), so it is set once the level after has grown.
-pub(super) fn grow(species: &Species) -> Vec<Axis> {
+/// A leaf cluster `at` metres along the axis `axis` (D27), where its card's base lies.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(super) struct Card {
+    pub axis: usize,
+    pub at: f32,
+}
+
+/// The plant as grown, before meshing.
+pub(super) struct Skeleton {
+    /// Stems first, then each level's limbs in turn.
+    pub axes: Vec<Axis>,
+    pub cards: Vec<Card>,
+}
+
+/// The stems, their limbs level by level, each level on the axes of the one before, and the leaf
+/// clusters (`clusters`). A parent's top, where it ends and its radius there, is where its last
+/// limb leaves it (`grow_level`), so it is set once the level after has grown.
+pub(super) fn grow(species: &Species) -> Skeleton {
     let mut axes = stems(species);
     for level in 1..=species.grown_levels().len() {
         let mut grown = Vec::new();
@@ -208,7 +227,8 @@ pub(super) fn grow(species: &Species) -> Vec<Axis> {
         }
         axes.extend(grown);
     }
-    axes
+    let cards = clusters(species, &axes);
+    Skeleton { axes, cards }
 }
 
 /// The unit vector square to `direction` nearest world up: a limb's upper side. A limb pointing

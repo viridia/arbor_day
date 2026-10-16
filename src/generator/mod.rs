@@ -13,5 +13,4 @@ mod trace;
 mod tests;
 
 pub use envelope::{Envelope, envelope_helper};
-pub use foliage::CARD_CORNERS;
-pub use mesh::{Geometry, plant};
+pub use mesh::{CARD_CORNERS, Geometry, plant};
