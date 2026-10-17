@@ -211,12 +211,16 @@ trace them (TD3.4), carry each parent bearing them on (TD3.6), wander (TD3.4), t
 
 ### 3.2 Stems
 
-`stems` makes `trunk.stems` of them from the origin, spaced evenly around, each the trunk's height
-long along its axis. Each leaves the ground at the splay from up and turns by the lean as it rises,
-away from the middle, but never past level; the first's compass heading is drawn from the `trunk`
-stream. Its course is an arc in one vertical plane, so its side never twists, and it wanders
-about the course as limbs do (TD3.4), its tip on the course. Each has the trunk's radius and bears the first level. The crown is
-measured against the trunk's height: its top a multiple, its base a share.
+`stems` makes the trunk from the origin, the trunk's height long along its axis. It leaves the
+ground upright and turns by the lean as it rises, but never past level, toward a compass heading
+drawn from the `trunk` stream. Its course is an arc in one vertical plane, so its side never
+twists, and it wanders about the course as limbs do (TD3.4), its tip on the course. With the
+trunk's Fork on, it forks as a limb does (TD3.7), but each copy is a stem: an arc from the fork,
+leaving at its own angle from up (none below level) toward its own heading and turning by the
+lean's share left past the fork, away from the middle, the rest of the height long, so every tip
+is the height from the ground along the stems. Forked at its base, its copies are stems rising
+from the ground, a clump. Every stem bears the first level. The crown is measured against the
+trunk's height: its top a multiple, its base a share.
 
 ### 3.3 Placing laterals
 
@@ -285,12 +289,15 @@ length.
 ### 3.7 Forks
 
 With Fork on, a level's axes fork with its chance (`fork.rs`), at a drawn share of their length, and end
-there. Copies carry the axis on, 2 to 4, of the same level: spread evenly around its
+there. Copies carry the axis on, 2 to 5, of the same level: spread evenly around its
 direction, each turned half the drawn fork angle from it, the first toward its flank turned up by
-the roll. Each copy starts at the axis's radius at the fork and draws its reach, wander and limbs
+the roll (`copy_directions`). Each copy starts at the axis's radius at the fork and draws its reach, wander and limbs
 from a stream of the fork's; it is traced and tapered as it is added. A copy no longer than it is
 thick is left out; with none the axis does not fork. A forked axis bears neither a carrier nor
 leaves at its tip, and copies do not fork again. A copy's limbs compete among themselves alone.
+A fork nearer the axis's base than its radius (`at_base`) leaves no stub: the copies take the
+axis's place, the first in its slot and kind, the rest as laterals beside it, all from the axis's
+parent where it left. Stems fork the same way (TD3.2).
 
 ### 3.8 Foliage
 

@@ -81,6 +81,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C99   | Scions (TD1.5): the last limb level's add menu ends, below a divider, with the next level ("Limbs 2"), and each level past the first has a ✕ hiding it and those after it, in place of D15's − and +. `plans/levels.py` and `plans/shapes.py` add levels through the menu; `levels.py` checks a middle level's ✕. Operator stacks (X31) steps 1 to 4 complete. |
 | C69   | A color per part (TD1.5): a `Stripe` attribute colors a stripe down a top-level subpane's left side, from bark brown to light green for Plant, Trunk, Limbs 1 to 3 and Foliage, grey for Crown. A pattern for Panoply's editor (D3). |
 | C95   | Forks along the chain (TD3.9): a forked limb's first copy continues its tube as a carry-on does, the shared ring an elbow, so the limb is no longer capped at the fork; the other copies are tubes of their own, open inside the chain. No fan on their bases, the geometry keeping their rims within the chain's surface. |
+| C75   | Stem forks (D31, TD3.2, TD3.7): the trunk's Fork operator, off by default, its copies stems following the lean's arc from the fork, so the trunk splits partway up (a vase elm) or, forked at its base, rises as a clump; this replaces the stem count and splay. A fork at any axis's base leaves no stub, its copies taking the axis's place. Fork's `at` from 0%, its copies up to five. `plans/shapes.py` screenshots a clump and a split trunk; `plans/smoke.py` checks the hard limit on the trunk's sides. Breaks files. |
 
 ## Next
 
@@ -97,24 +98,17 @@ per-type hook, and is retained-mode.
 
 The foundation, the skeleton (`docs/patches.md`, The abstract plant), tip rosettes, the species
 file (C10), operator stacks (X31's steps 1 to 4, C96 to C99) and colors by part (C69) have
-landed, and forks drawn along the chain (C95); forks on stems, and sag and rise next, then leaf
+landed, and forks drawn along the chain (C95) and on stems (C75); sag and rise next, then leaf
 painting.
 
-1. **C75 Stem forks**, forks (D31) on stems, at any point along them, as codominant trunks split
-   (a vase elm, an old oak). A decurrent tree's leader stopping short (D23) already ends in a fork
-   when the first level forks, its top being a limb of that level (D30), so what is left is a stem
-   splitting below its crown, perhaps below the crown base: the trunk's height sets the axis's
-   length, the fork where it splits. A fork at the ground is several splayed stems, so it is the
-   trunk's Fork operator, and stems and splay may become one (G1). C95's chain draws the
-   fork. E[3]
-2. **C94 Sag and rise as two bends**, revising D17's bend toward an angle, by which an upright
+1. **C94 Sag and rise as two bends**, revising D17's bend toward an angle, by which an upright
    limb, furthest from a level target, bends most, so the leader's carry-on tips over even with
    no lean (found in C60). Sag turns a limb down by its weight, each step's turn scaled by the sine
    of its angle from up, the share acting as a cantilever, so an upright limb does not sag; rise
    turns it up toward the light, an upright one having no angle left. Two operators, Sag and
    Rise, in place of Bend, their icons `sag.png` and `rise.png`. Changes every plant's limbs.
    E[3]
-3. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's leaf, as D29 has it, its
+2. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's leaf, as D29 has it, its
    fields in a "Sprig" and a "Leaf" group in the tip leaves (`TipLeaves`, C96), and the `Interval` type (D10) for its
    variations. The painter takes the outline as an
    argument, a width in texture pixels or none, which C38 fixes at a constant until C66 makes it
@@ -125,22 +119,22 @@ painting.
    with a tolerance, since SIMD can move a channel by a level. The card's axial fold
    (`AXIAL_FOLD` in `src/generator/foliage.rs`, halfway) moves to where the painted sprig's fan starts, as
    seedling's did. E[3]
-4. **C70 Card facing**: first measure how far cards are from edge-on to the game's camera (45°
+3. **C70 Card facing**: first measure how far cards are from edge-on to the game's camera (45°
    down), a figure in `PlantStats`, to judge facing and folds by numbers as well as by eye; C60's
    rosettes took the steepest cards off edge-on. Then, if the figure still calls for it, the face
    target (D27) widened from world up to a blend of up and the envelope's outward normal, with a
    spread. Card counts multiply with levels, eight triangles each since C39, so look at density
    against the budget too. E[3]
-5. **C66 Outlines**, a switch for the whole plant (requirements, Foliage): in the Plant group
+4. **C66 Outlines**, a switch for the whole plant (requirements, Foliage): in the Plant group
    (C33), the switch, the bark's width as the game reads it, and the leaf stroke's in texture
    pixels (growth model, Consequences). On, the leaf texture is painted with its strokes (D29),
    the preview draws the bark with an inverted hull after Panoply's `src/materials/outline.wesl`,
    and the export writes the `"outline"` material extra (C41). Off, none of these; whether the
    translucent strokes between leaves stay is judged then. E[3]
-6. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
+5. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
    panel, above the Plant group (C33); the file browser is X2. File commands act on the active document, so that tabs (X26)
    need not change them. E[3]
-7. **C8 Working document in settings.** A settings group holding the working species and, once
+6. **C8 Working document in settings.** A settings group holding the working species and, once
    set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
    as seedling did. The document's name comes from the file name. Serialized by reflection, as
    `bevy_settings` does. A working document from before a schema change is lost (D32), but not
@@ -148,7 +142,7 @@ painting.
    drops a field that fails to deserialize without a word (`load_properties`), so the species is
    read by C10's strict path and its error logged. Stored as a list of open documents holding
    one, and the active one's index, so several (X26) need no change of format. E[3]
-8. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
+7. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
     as a JSON extra (C10), written from the generator's output (`generator::plant`), never from
     the preview's entities, whose leaf mesh is only hidden while none grow, in the form Panoply loads (requirements, Output; "What Panoply does with the output"). Bark and leaf materials matte (roughness 1.0), as the preview's are. Bevy writes no glTF,
     so this adds a dependency or a writer of our own; propose it before code. The command-line
@@ -173,6 +167,9 @@ painting.
 
 ### Quick wins
 
+- **C100 Lean as a trunk operator**: `Toggle<Lean>` on the trunk, off by default, as C97 made
+  Wander one, since few species lean and the row takes room. Off, the stems grow straight, a
+  fork's stems too. Breaks files. E[1]
 - **C93 Typed values lost in plans** (was X29, its gate passed): find whether a click right after
   Enter lands before the panel has rebuilt, or the typing is lost. Three failures, each once of two
   runs: `plans/levels.py` (2026-10-14) at the second level's density typed as 1.5, the plant
@@ -467,8 +464,8 @@ painting.
   rewrite it in the display form. *Gate:* a fix in the Bevy we build against.
 
 - **X36** The trunk's lean split in two, revising D23: a tilt where the stem leaves the ground,
-  in the trunk's frame beside the splay, and the curve after it from the bends (C94), which need
-  the heading the tilt gives. Rise then gives a trunk leaning at its base and recovering, as on
+  in the Lean operator (C100), and the curve after it from the bends (C94), which need the
+  heading the tilt gives; a fork's stems (C75) turn by the curve past the fork. Rise then gives a trunk leaning at its base and recovering, as on
   slopes; sag, today's bowing; past level, Weep (C48). The heading may be fixed rather than drawn
   from the seed, since Panoply turns placed instances anyway. Lean's use so far, steering back a
   stem the wander sent off course, went with C84, whose wander leaves the tip on its course.
@@ -513,7 +510,7 @@ painting.
   trees) are not this: they want several envelopes, which the skeleton does not have. *Gate:* a
   preset (X18) needing one.
 
-- **X44** Many stems: bamboo groves, thickets and reed beds, past the trunk's five stems,
+- **X44** Many stems: bamboo groves, thickets and reed beds, past a ground fork's five stems,
   started over a disc of the clump's radius rather than from one point, and for bamboo its node
   rings as bands of bark color. Triangles grow with the count, so judge against the budget.
   *Gate:* a preset (X18) needing a clump the stems cannot make.

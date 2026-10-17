@@ -9,8 +9,11 @@ default.
 - facing: the second level's limbs to the sides (the default), up, down and around, then skewed;
 - forks: every first-level limb forking, the Y level, then upright, then three ways, the second
   level to the sides, so the level Y shows whether twigs crowd its crotch (ledger X33);
-- stems: three stems splayed from up, then a crown twice the trunk's height, which leaves the
-  stems in its narrow foot, bearing fewer limbs."""
+- stems: the trunk forked at the ground into three stems splayed from up, then a crown twice the
+  trunk's height, which leaves the stems in its narrow foot, bearing fewer limbs, then the trunk
+  split into two at 40% of its height, a codominant fork."""
+
+import math
 
 BIN = "arbor_day"
 SPECIES = "arbor_day::species::Species"
@@ -91,9 +94,19 @@ def run(driver):
     driver.click("Shell/Panel/levels[1]/remove")
     driver.frames(2)
 
-    set_number(driver, "trunk/stems", "3")
-    set_number(driver, "trunk/splay", "25")
+    # The trunk forked at the ground into three stems 25° from up, then a tall crown, then the
+    # trunk split into two partway up, under the default crown.
+    driver.set_resource(SPECIES, "On", at="trunk.fork.state")
+    driver.set_resource(SPECIES, 0.0, at="trunk.fork.settings.at.center")
+    driver.set_resource(SPECIES, 0.0, at="trunk.fork.settings.at.spread")
+    driver.set_resource(SPECIES, math.radians(50), at="trunk.fork.settings.angle.center")
+    driver.set_resource(SPECIES, 0.0, at="trunk.fork.settings.angle.spread")
+    set_number(driver, "trunk/fork/copies", "3")
     driver.screenshot("three_stems")
     set_number(driver, "crown/top", "200")
     driver.screenshot("tall_crown")
+    set_number(driver, "crown/top", "125")
+    driver.set_resource(SPECIES, 0.4, at="trunk.fork.settings.at.center")
+    set_number(driver, "trunk/fork/copies", "2")
+    driver.screenshot("split_trunk")
     driver.exit()

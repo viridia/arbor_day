@@ -7,8 +7,7 @@
 use std::any::TypeId;
 
 use bevy::reflect::{
-    FromReflect, PartialReflect, Reflect, ReflectMut, ReflectRef, TypeInfo, TypePath,
-    TypeRegistry,
+    FromReflect, PartialReflect, Reflect, ReflectMut, ReflectRef, TypeInfo, TypePath, TypeRegistry,
     serde::{
         DeserializeWithRegistry, ReflectDeserializeWithRegistry, ReflectSerializeWithRegistry,
         SerializeWithRegistry, TypedReflectDeserializer, TypedReflectSerializer,
@@ -176,7 +175,9 @@ impl<'de, T: FromReflect + TypePath> DeserializeWithRegistry<'de> for Toggle<T> 
             None | Some(serde_json::Value::Bool(true)) => OperatorState::On,
             Some(serde_json::Value::Bool(false)) => OperatorState::Disabled,
             Some(other) => {
-                return Err(de::Error::custom(format!("`{ENABLED}` is {other}, not a bool")));
+                return Err(de::Error::custom(format!(
+                    "`{ENABLED}` is {other}, not a bool"
+                )));
             }
         };
         let registration = registry

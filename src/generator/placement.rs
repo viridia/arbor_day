@@ -3,15 +3,19 @@
 
 use std::f32::consts::{FRAC_PI_2, PI, TAU};
 
-use bevy::{math::Vec3, reflect::Typed};
+use bevy::{
+    math::{Vec2, Vec3},
+    reflect::Typed,
+};
 
 use super::{
     envelope::{Envelope, distance_to_envelope},
+    fork::{at_base, copy_directions, draw_fork},
     skeleton::{
         Axis, AxisKind, Frame, LAYOUT_STREAM, Level, OWN_VALUES_STREAM, Ring, Skeleton,
         WANDER_STREAM, taper_rings, upper_side,
     },
-    trace::{kink_spacing, stem_rings},
+    trace::{end_at, kink_spacing, stem_rings},
     wander::displace,
 };
 use crate::{
@@ -36,32 +40,113 @@ const CROWDING_SHARPNESS: i32 = 4;
 /// against crowding of 1 for a limb at the same azimuth one gap away.
 const OUTWARD_WEIGHT: f32 = 1.0;
 
-/// The stems: `stems` of them from the origin, spaced evenly around, each leaving the ground at
-/// the splay from up and turning by the lean as it rises, away from the middle, but never past
-/// level, where it would sink again, and zigzagging about that course by the trunk's wander, if
-/// on (`displace`), its tip where the course ends. The
-/// first's compass heading is drawn from the seed. Each narrows by the plant's taper.
+/// The stems: the trunk from the origin, upright at the ground and turning by the lean as it
+/// rises toward a compass heading drawn from the seed (`stem_course`). With Fork on, it may fork
+/// (D31): it ends at the fork, and copies carry it on in their directions (`copy_directions`),
+/// each from the trunk's radius there and turning by what is left of the lean, away from the
+/// middle, the rest of the trunk's height long, so every tip is the height from the ground along
+/// the stems. Forked at its base, its copies take its place, several stems rising from the ground.
 pub(super) fn stems(species: &Species) -> Vec<Axis> {
     let trunk = &species.trunk;
-    let count = trunk.stems.max(1) as u32;
     let length = trunk.height.max(0.01);
-    let lean = trunk.lean.min((FRAC_PI_2 - trunk.splay).max(0.0));
     let heading = species.seed.stream("trunk").unit() * TAU;
-    let branching = species.seed.stream("branching");
-    let spacing = kink_spacing(&Envelope::of(species));
-    (0..count)
-        .map(|stem| {
-            let rng = branching.fork(stem as u64);
-            let turn = heading + TAU * stem as f32 / count as f32;
-            let mut rings = stem_rings(length, trunk.splay, lean, turn);
-            if let Some(wander) = trunk.wander.get() {
-                let stream = rng.fork(WANDER_STREAM);
-                displace(&mut rings, stream, wander.angle, spacing, length, None);
+    let rng = species.seed.stream("branching").fork(0);
+    let rings = stem_course(
+        species,
+        Vec3::ZERO,
+        0.0,
+        heading,
+        trunk.lean,
+        length,
+        trunk.radius,
+        &rng,
+    );
+    let mut stem = Axis::stem(rings, rng);
+    let Some(fork) = trunk.fork.get() else {
+        return vec![stem];
+    };
+    let Some(drawn) = draw_fork(fork, &stem.rng) else {
+        return vec![stem];
+    };
+    let frame = stem.frame(drawn.at);
+    let fork_at = drawn.at * stem.length();
+    let at_base = at_base(fork_at, frame.radius);
+    let lean = trunk.lean * (1.0 - drawn.at);
+    let copies: Vec<Axis> = (copy_directions(&frame, fork, drawn.half_angle).into_iter())
+        .enumerate()
+        .map(|(copy, direction)| {
+            let rng = drawn.copies.fork(copy as u64);
+            // Its heading and angle from up, never below level; straight up keeps the trunk's.
+            let across = Vec2::new(direction.x, -direction.z);
+            let heading = if across.length() > 1e-5 {
+                across.to_angle()
+            } else {
+                heading
+            };
+            let from_up = direction.angle_between(Vec3::Y).min(FRAC_PI_2);
+            let rest = length - fork_at;
+            let rings = stem_course(
+                species,
+                frame.point,
+                from_up,
+                heading,
+                lean,
+                rest,
+                frame.radius,
+                &rng,
+            );
+            if at_base {
+                Axis::stem(rings, rng)
+            } else {
+                let parent = (0, fork_at);
+                let mut copy = Axis::placed(0, AxisKind::ForkCopy, parent, rings[0], rest, rng);
+                copy.rings = rings;
+                copy
             }
-            taper_rings(&mut rings, trunk.radius, species.taper.clamp(0.0, 1.0));
-            Axis::stem(rings, rng)
         })
-        .collect()
+        .collect();
+    if at_base {
+        return copies;
+    }
+    end_at(&mut stem.rings, frame.ring(fork_at));
+    stem.scions.extend(1..=copies.len());
+    let mut stems = vec![stem];
+    stems.extend(copies);
+    stems
+}
+
+/// A stem's rings from `base`, `length` long: leaving `from_up` radians from up toward `heading`
+/// and turning toward it by `lean`, but never past level, where it would sink again, then
+/// zigzagging about that course by the trunk's wander, if on (`displace`), its tip where the
+/// course ends, and narrowing from `radius` by the plant's taper.
+fn stem_course(
+    species: &Species,
+    base: Vec3,
+    from_up: f32,
+    heading: f32,
+    lean: f32,
+    length: f32,
+    radius: f32,
+    rng: &Rng,
+) -> Vec<Ring> {
+    let lean = lean.min((FRAC_PI_2 - from_up).max(0.0));
+    let mut rings = stem_rings(length, from_up, lean, heading);
+    for ring in &mut rings {
+        ring.center += base;
+    }
+    if let Some(wander) = species.trunk.wander.get() {
+        let spacing = kink_spacing(&Envelope::of(species));
+        displace(
+            &mut rings,
+            rng.fork(WANDER_STREAM),
+            wander.angle,
+            spacing,
+            length,
+            None,
+        );
+    }
+    taper_rings(&mut rings, radius, species.taper.clamp(0.0, 1.0));
+    rings
 }
 
 /// Places the level's laterals on each axis of the level before (`place_on`), for

@@ -211,10 +211,10 @@ count.
 The trunk's height in metres is the plant's one size, and the crown is measured against it, its top
 a multiple and its base a share, so a ratio suits a herb as well as a tree, and moving the crown
 never moves the trunk. The stems' length as a share of the envelope's height made raising the crown
-drag the trunk with it. Several stems share the trunk's radius and each bears the first level,
-their headings drawn from a stream of their own, so neighbouring trees of one species lean
-different ways. The height is each stem's length along its course, which wander leaves alone, so an
-upright stem's tip reaches it at any wander. **Reversing it** changes every species' sizes.
+drag the trunk with it. The trunk's heading is drawn from a stream of its own, so neighbouring
+trees of one species lean different ways. The height is the length along the stems from the
+ground to each tip, through any fork (D31), which wander leaves alone, so an upright stem's tip
+reaches it at any wander. **Reversing it** changes every species' sizes.
 
 ### D24 — The crown is the author's
 
@@ -328,9 +328,12 @@ tube (TD3.9), so the silhouette and normals run unbroken where their sides diffe
 
 A limb forks with its level's chance at one point and ends there, and copies of it carry it on,
 the same level as it rather than its children, so they reach the envelope and bear limbs as it
-would (TD3.7): two make a Y from level to upright by the roll, three or four a ring, as a shrub's
-low split. Copies do not fork again. Five fields in a Fork group, all inert at the default chance of
-0. **Reversing it** removes the Y and the split shrub from the shapes a species can take.
+would (TD3.7): two make a Y from level to upright by the roll, three to five a ring, as a shrub's
+low split. Copies do not fork again. The trunk forks the same way, its copies stems (TD3.2): a
+codominant split partway up, or at its base a clump, which replaced the trunk's stem count and
+splay (G1), several splayed stems being a fork at the ground. A fork at an axis's base leaves no
+stub; its copies take its place. **Reversing it** removes the Y, the split trunk and the clump
+from the shapes a species can take.
 
 ### D32 — No file compatibility before the first species ships
 

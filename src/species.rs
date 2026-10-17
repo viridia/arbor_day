@@ -286,19 +286,8 @@ pub enum Profile {
 #[derive(Reflect, Clone, PartialEq)]
 #[reflect(SerializeWithRegistry)]
 pub struct Trunk {
-    /// Stems rising from the ground, spaced evenly around.
-    #[reflect(@ValueRange::<i32>(1..=5), @Spinbox, @Caption("Stems"))]
-    pub stems: i32,
-    /// The angle from up at which each stem leaves the ground.
-    #[reflect(
-        @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_3),
-        @Precision(1),
-        @NumberInputUnits::new_static("angle_degrees"),
-        @Caption("Splay"),
-    )]
-    pub splay: f32,
-    /// Each stem's length along its axis in meters, its height if upright: the plant's size, which
-    /// the crown is measured against.
+    /// Its length along its axis in meters, its height if upright, and each stem's length from the
+    /// ground to its tip where it forks: the plant's size, which the crown is measured against.
     #[reflect(@ValueRange::<f32>(0.1..=30.0), @Precision(2), @Caption("Height"))]
     pub height: f32,
     /// Radius at the base, in meters.
@@ -307,9 +296,9 @@ pub struct Trunk {
     /// Sides of each ring.
     #[reflect(@ValueRange::<i32>(3..=8), @Spinbox, @Caption("Sides"))]
     pub sides: i32,
-    /// How much further from up each stem's axis turns between the base and the top, away from
-    /// the middle, but never past level. A tree's compass direction is drawn from the seed, so
-    /// neighbouring trees of one species lean different ways.
+    /// How much further from up the trunk turns between the base and the top, but never past
+    /// level; a fork's stems turn by what is left, away from the middle. A tree's compass
+    /// direction is drawn from the seed, so neighbouring trees of one species lean different ways.
     #[reflect(
         @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_2),
         @Precision(1),
@@ -317,9 +306,13 @@ pub struct Trunk {
         @Caption("Lean"),
     )]
     pub lean: f32,
-    /// Each stem zigzagging about the course the splay and lean set, as a limb does.
+    /// Each stem zigzagging about the course the lean sets, as a limb does.
     #[reflect(@Caption("Wander"))]
     pub wander: Toggle<Wander>,
+    /// The trunk splitting into stems, as codominant trunks do (a vase elm, an old oak), or at the
+    /// ground into a clump.
+    #[reflect(@Caption("Fork"))]
+    pub fork: Toggle<Fork>,
 }
 
 impl SerializeWithRegistry for Trunk {
@@ -518,12 +511,12 @@ impl Wander {
     }
 }
 
-/// A limb ending partway along, and copies of it carrying it on from there, of its level, so they
-/// reach the envelope and bear limbs as it would.
+/// A stem or limb ending partway along, and copies of it carrying it on from there, of its level,
+/// so they grow and bear limbs as it would. Forked at its base, its copies take its place.
 #[derive(Reflect, Clone, PartialEq)]
 #[reflect(@Icon("icons/operators/fork.png"))]
 pub struct Fork {
-    /// The chance that a limb forks.
+    /// The chance that a stem or limb forks.
     #[reflect(
         @ValueRange::<f32>(0.0..=1.0),
         @Precision(0),
@@ -531,19 +524,20 @@ pub struct Fork {
         @Caption("Chance"),
     )]
     pub chance: f32,
-    /// Where along a limb it forks, as a share of its length. Drawn for each limb.
+    /// Where along a stem or limb it forks, as a share of its length: at 0, its base. Drawn for
+    /// each.
     #[reflect(
-        @ValueRange::<f32>(0.05..=0.95),
+        @ValueRange::<f32>(0.0..=0.95),
         @Precision(0),
         @NumberInputUnits::new_static("ratio_percent"),
         @Caption("At"),
     )]
     pub at: Fuzzy,
-    /// Copies carrying a forked limb on, spread evenly around its direction.
-    #[reflect(@ValueRange::<i32>(2..=4), @Spinbox, @Caption("Copies"))]
+    /// Copies carrying a forked stem or limb on, spread evenly around its direction.
+    #[reflect(@ValueRange::<i32>(2..=5), @Spinbox, @Caption("Copies"))]
     pub copies: i32,
-    /// The angle across a fork: each copy turns half of it from the limb's direction. Drawn for
-    /// each fork.
+    /// The angle across a fork: each copy turns half of it from the forked axis's direction.
+    /// Drawn for each fork.
     #[reflect(
         @ValueRange::<f32>(0.0..=std::f32::consts::PI),
         @Precision(1),
@@ -551,8 +545,8 @@ pub struct Fork {
         @Caption("Angle"),
     )]
     pub angle: Fuzzy,
-    /// Where the copies lie around the limb: at 0, two copies spread level, side by side; at 90°,
-    /// one above the other.
+    /// Where the copies lie around the forked axis: at 0, two copies spread level, side by side; at
+    /// 90°, one above the other.
     #[reflect(
         @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_2),
         @Precision(1),
@@ -678,13 +672,16 @@ impl Default for TipLeaves {
 impl Default for Trunk {
     fn default() -> Self {
         Self {
-            stems: 1,
-            splay: 0.0,
             height: 5.0,
             radius: 0.2,
             sides: 6,
             lean: 15.0_f32.to_radians(),
             wander: Toggle::on(Wander::degrees(8.0)),
+            // Turned on, a trunk splits: there is only one to fork.
+            fork: Toggle::off(Fork {
+                chance: 1.0,
+                ..Fork::default()
+            }),
         }
     }
 }

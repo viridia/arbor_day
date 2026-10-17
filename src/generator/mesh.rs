@@ -62,9 +62,8 @@ pub fn plant(species: &Species) -> Grown {
     let mut bark = Geometry::default();
     let mut level_limbs = vec![0; levels.len()];
     for (index, axis) in axes.iter().enumerate() {
-        let carried = (axis.parent).is_some_and(|(parent, _)| {
-            carrier(axes, &axes[parent]) == Some(index)
-        });
+        let carried =
+            (axis.parent).is_some_and(|(parent, _)| carrier(axes, &axes[parent]) == Some(index));
         if !carried {
             let (rings, sides) = chain(axes, axis, sides_of);
             tube(&mut bark, &rings, &sides, min_radius);

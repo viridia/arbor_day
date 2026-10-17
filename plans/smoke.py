@@ -75,12 +75,12 @@ def run(driver):
     driver.expect("Ground", VISIBILITY, "Inherited")
     driver.click("Shell/View/envelope")
     driver.expect("Envelope", VISIBILITY, "Inherited")
-    # Typing past the stems' range (1 to 5) stops at its hard limit.
-    set_number(driver, "trunk/stems", "42")
-    driver.expect("Plant", GROWN_FROM, 5, at="trunk.stems")
+    # Typing past the trunk's sides' range (3 to 8) stops at its hard limit.
+    set_number(driver, "trunk/sides", "42")
+    driver.expect("Plant", GROWN_FROM, 8, at="trunk.sides")
     driver.screenshot("numbers")
-    set_number(driver, "trunk/stems", "1")
-    driver.expect("Plant", GROWN_FROM, 1, at="trunk.stems")
+    set_number(driver, "trunk/sides", "6")
+    driver.expect("Plant", GROWN_FROM, 6, at="trunk.sides")
     # Editing the species rebuilds the plant: four or five nodes on the trunk's 1.2 crown radii
     # inside the crown, and the limb carrying it on.
     set_number(driver, "levels[0]/density", "4")

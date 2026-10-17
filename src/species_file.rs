@@ -211,7 +211,10 @@ mod tests {
     #[test]
     fn an_operator_is_read_whole() {
         let error = edited(&Species::default(), |file| {
-            file["limbs"][0]["wander"].as_object_mut().unwrap().remove("angle");
+            file["limbs"][0]["wander"]
+                .as_object_mut()
+                .unwrap()
+                .remove("angle");
         })
         .err()
         .unwrap();

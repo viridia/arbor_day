@@ -1,66 +1,131 @@
-//! Forks (D31): a limb ending partway, and copies of it carrying it on.
+//! Forks (D31): a stem or limb ending partway, and copies of it carrying it on.
 
 use std::f32::consts::TAU;
 
-use bevy::math::Quat;
+use bevy::math::{Quat, Vec3};
 
 use super::{
     envelope::distance_to_envelope,
     placement::draw,
     skeleton::{
-        Axis, AxisKind, FORK_STREAM, Level, OWN_VALUES_STREAM, Ring, Skeleton, taper_rings,
+        Axis, AxisKind, FORK_STREAM, Frame, Level, OWN_VALUES_STREAM, Ring, Skeleton, taper_rings,
         upper_side,
     },
     trace::{end_at, trace},
     wander::wander_axis,
 };
-use crate::species::{Fork, LimbLevel};
+use crate::{
+    random::Rng,
+    species::{Fork, LimbLevel},
+};
+
+/// A fork as drawn for one axis.
+pub(super) struct Drawn {
+    /// Where along the axis, as a share of its length.
+    pub at: f32,
+    /// Half the angle across the fork: each copy's turn from the axis.
+    pub half_angle: f32,
+    /// The stream each copy's own forks from, by its number.
+    pub copies: Rng,
+}
+
+/// Whether the axis whose stream is `rng` forks, with `fork`'s chance, and if so where and how
+/// widely, drawn from a stream of the fork's.
+pub(super) fn draw_fork(fork: &Fork, rng: &Rng) -> Option<Drawn> {
+    let copies = rng.fork(FORK_STREAM);
+    let mut draws = copies.fork(OWN_VALUES_STREAM);
+    if draws.unit() >= fork.chance {
+        return None;
+    }
+    let at = draw::<Fork>(&fork.at, "at", &mut draws);
+    let half_angle = draw::<Fork>(&fork.angle, "angle", &mut draws) * 0.5;
+    Some(Drawn {
+        at,
+        half_angle,
+        copies,
+    })
+}
+
+/// Whether a fork `at` metres along an axis, where its radius is `radius`, is at its base, so its
+/// copies take its place rather than carrying on a stub no longer than it is thick.
+pub(super) fn at_base(at: f32, radius: f32) -> bool {
+    at < radius
+}
+
+/// The directions of `fork`'s copies leaving `frame`: spread evenly around its tangent, each turned
+/// from it by `half_angle`, the first toward its flank turned up by the fork's roll, so two copies
+/// make a Y lying level at no roll and upright at 90°.
+pub(super) fn copy_directions(frame: &Frame, fork: &Fork, half_angle: f32) -> Vec<Vec3> {
+    let (half_sin, half_cos) = half_angle.sin_cos();
+    let upper = upper_side(frame.tangent, frame.side);
+    let (roll_sin, roll_cos) = fork.roll.sin_cos();
+    let first = frame.tangent.cross(upper) * roll_cos + upper * roll_sin;
+    let count = fork.copies.max(2) as u32;
+    (0..count)
+        .map(|copy| {
+            let around = Quat::from_axis_angle(frame.tangent, TAU * copy as f32 / count as f32);
+            frame.tangent * half_cos + around * first * half_sin
+        })
+        .collect()
+}
 
 /// Forks each of the level's axes with the chance its level gives (`fork_axis`), adding its
-/// copies as its scions. Copies do not fork again.
+/// copies as its scions; or, forked at its base, its copies take its place, the first in it and
+/// the rest as laterals beside it. Copies do not fork again.
 pub(super) fn fork(level: &Level, skeleton: &mut Skeleton) {
     let axes = &mut skeleton.axes;
     for index in 0..axes.len() {
         if axes[index].level != level.number {
             continue;
         }
-        let copies = fork_axis(level, index, &mut axes[index]);
+        let (copies, at_base) = fork_axis(level, index, &mut axes[index]);
         let first = axes.len();
-        axes[index].scions.extend(first..first + copies.len());
+        if !at_base {
+            axes[index].scions.extend(first..first + copies.len());
+            axes.extend(copies);
+            continue;
+        }
+        let (kind, parent) = (axes[index].kind, axes[index].parent);
+        let mut copies = copies.into_iter().map(|copy| Axis {
+            kind: AxisKind::Lateral,
+            parent,
+            ..copy
+        });
+        let Some(replacement) = copies.next() else {
+            continue;
+        };
+        axes[index] = Axis {
+            kind,
+            ..replacement
+        };
         axes.extend(copies);
+        let added = first..axes.len();
+        if let Some((parent, _)) = parent {
+            axes[parent].scions.extend(added);
+        }
     }
 }
 
 /// Forks `limb`, the axis at `index`, if its level's fork is on, with the chance it gives,
-/// returning the copies carrying it on, or none. It ends at the fork, at its radius there, and the
-/// copies leave from there, spread evenly around its direction, each turned from it by half the
-/// fork angle, the first toward its flank turned up by the fork roll: so two copies make a Y lying
-/// level at no roll and upright at 90°. Each copy starts at the limb's radius at the fork and is
-/// grown, wanders and is tapered as a limb of its level does, reaching toward the envelope. A copy
-/// that would be no longer than it is thick is left out, and with no copies the limb does not fork.
-fn fork_axis(level: &Level, index: usize, limb: &mut Axis) -> Vec<Axis> {
+/// returning the copies carrying it on, or none, and whether the fork is at its base (`at_base`).
+/// Unless it is, the limb ends at the fork, at its radius there. The copies leave from there in
+/// their directions (`copy_directions`), each starting at the limb's radius at the fork and grown,
+/// wandering and tapered as a limb of its level is, reaching toward the envelope. A copy that would
+/// be no longer than it is thick is left out, and with no copies the limb does not fork.
+fn fork_axis(level: &Level, index: usize, limb: &mut Axis) -> (Vec<Axis>, bool) {
     let params = level.params;
     let Some(fork) = params.fork.get() else {
-        return Vec::new();
+        return (Vec::new(), false);
     };
-    let streams = limb.rng.fork(FORK_STREAM);
-    let mut draws = streams.fork(OWN_VALUES_STREAM);
-    if draws.unit() >= fork.chance {
-        return Vec::new();
-    }
-    let at = draw::<Fork>(&fork.at, "at", &mut draws);
-    let (half_sin, half_cos) = (draw::<Fork>(&fork.angle, "angle", &mut draws) * 0.5).sin_cos();
-    let frame = limb.frame(at);
-    let fork_at = at * limb.length();
-    let upper = upper_side(frame.tangent, frame.side);
-    let (roll_sin, roll_cos) = fork.roll.sin_cos();
-    let first = frame.tangent.cross(upper) * roll_cos + upper * roll_sin;
-    let count = fork.copies.max(2) as u32;
-    let copies: Vec<Axis> = (0..count)
-        .filter_map(|copy| {
-            let rng = streams.fork(copy as u64);
-            let around = Quat::from_axis_angle(frame.tangent, TAU * copy as f32 / count as f32);
-            let direction = frame.tangent * half_cos + around * first * half_sin;
+    let Some(drawn) = draw_fork(fork, &limb.rng) else {
+        return (Vec::new(), false);
+    };
+    let frame = limb.frame(drawn.at);
+    let fork_at = drawn.at * limb.length();
+    let copies: Vec<Axis> = (copy_directions(&frame, fork, drawn.half_angle).into_iter())
+        .enumerate()
+        .filter_map(|(copy, direction)| {
+            let rng = drawn.copies.fork(copy as u64);
             let reach = draw::<LimbLevel>(&params.reach, "reach", &mut rng.fork(OWN_VALUES_STREAM))
                 * distance_to_envelope(&level.envelope, frame.point, direction);
             let start = Ring {
@@ -78,8 +143,9 @@ fn fork_axis(level: &Level, index: usize, limb: &mut Axis) -> Vec<Axis> {
             })
         })
         .collect();
-    if !copies.is_empty() {
+    let at_base = at_base(fork_at, frame.radius);
+    if !copies.is_empty() && !at_base {
         end_at(&mut limb.rings, frame.ring(fork_at));
     }
-    copies
+    (copies, at_base)
 }

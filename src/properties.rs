@@ -19,9 +19,9 @@ use bevy::{
         controls::{
             ButtonVariant, ColorInputValue, FeathersCheckbox, FeathersColorInput, FeathersListRow,
             FeathersMenu, FeathersMenuDivider, FeathersMenuItem, FeathersMenuPopup,
-            FeathersMenuToolButton,
-            FeathersNumberInput, FeathersSelect, FeathersToolButton, HardLimit,
-            NumberInputPrecision, NumberInputStep, NumberInputUnits, OptionIndex, SoftLimit,
+            FeathersMenuToolButton, FeathersNumberInput, FeathersSelect, FeathersToolButton,
+            HardLimit, NumberInputPrecision, NumberInputStep, NumberInputUnits, OptionIndex,
+            SoftLimit,
         },
         display::{caption as option_caption, icon, label},
         theme::{ThemeTextColor, ThemeToken, ThemedText},
@@ -360,7 +360,16 @@ fn field_row(
         && let Some((_, count, range)) = counts.iter().find(|(count, ..)| *count == shown.0)
         && let ReflectMut::Array(items) = field.reflect_mut()
     {
-        let new_count = shown_items(ui, name, caption, attrs, items, *count, range.clone(), notes);
+        let new_count = shown_items(
+            ui,
+            name,
+            caption,
+            attrs,
+            items,
+            *count,
+            range.clone(),
+            notes,
+        );
         if new_count != *count {
             new_counts.push((shown.0, new_count));
         }
@@ -515,7 +524,11 @@ fn toggles(value: &dyn PartialReflect) -> Vec<ToggleField> {
         .filter_map(|field| {
             let state = toggle_state(fields.field(field.name())?)?;
             let caption = field.custom_attributes().get::<Caption>();
-            Some((field.name(), caption.map_or(field.name(), |caption| caption.0), state))
+            Some((
+                field.name(),
+                caption.map_or(field.name(), |caption| caption.0),
+                state,
+            ))
         })
         .collect()
 }
@@ -644,7 +657,11 @@ fn operator(
                 .add(|ui| {
                     // Brighter while on; keyed by it, so the eye's click redraws it.
                     let on = state == OperatorState::On;
-                    let color = if on { tokens::TEXT_MAIN } else { tokens::TEXT_DIM };
+                    let color = if on {
+                        tokens::TEXT_MAIN
+                    } else {
+                        tokens::TEXT_DIM
+                    };
                     ui.ch_id(("title", on))
                         .on_spawn_insert(widget_line)
                         .add(|ui| {

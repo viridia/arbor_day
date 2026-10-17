@@ -30,6 +30,18 @@ fn stem_mesh(sides: u32, lean_degrees: f32) -> Geometry {
     geometry
 }
 
+/// `species`'s trunk forking `at` its length, a share, into `count` stems, each `splay` degrees
+/// from its direction: at 0, a clump from the ground.
+fn forked_trunk(mut species: Species, count: i32, splay: f32, at: f32) -> Species {
+    let fork = &mut species.trunk.fork;
+    fork.state = OperatorState::On;
+    fork.settings.chance = 1.0;
+    fork.settings.at = Fuzzy::new(at, 0.0, Distribution::Bell);
+    fork.settings.copies = count;
+    fork.settings.angle = Fuzzy::new((2.0 * splay).to_radians(), 0.0, Distribution::Bell);
+    species
+}
+
 fn trunk_with(sides: i32, lean_degrees: f32) -> Trunk {
     Trunk {
         sides,
@@ -128,18 +140,21 @@ fn the_crown_moves_without_the_trunk() {
 
 #[test]
 fn stems_never_turn_past_level() {
-    let mut species = regular();
-    species.trunk.splay = 50.0_f32.to_radians();
-    species.trunk.lean = 90.0_f32.to_radians();
-    let tip = stems(&species)[0].rings.last().unwrap().tangent;
-    assert!(tip.y > -1e-5, "{tip}");
+    // Forked at the ground, at partway up past level, and partway up from a leaning trunk.
+    for (splay, at) in [(50.0, 0.0), (120.0, 0.5)] {
+        let mut species = forked_trunk(regular(), 2, splay, at);
+        species.trunk.lean = 90.0_f32.to_radians();
+        for stem in stems(&species) {
+            let tip = stem.rings.last().unwrap().tangent;
+            assert!(tip.y > -1e-5, "{splay} {at}: {tip}");
+        }
+    }
 }
 
 #[test]
 fn slant_bends_a_stem_without_lengthening_it() {
     let length = |splay: f32, lean: f32| {
-        let mut species = regular();
-        species.trunk.splay = splay.to_radians();
+        let mut species = forked_trunk(regular(), 2, splay, 0.0);
         species.trunk.lean = lean.to_radians();
         stems(&species)[0].rings.last().unwrap().at
     };
@@ -153,13 +168,21 @@ fn slant_bends_a_stem_without_lengthening_it() {
 }
 
 #[test]
-fn stems_splay_evenly_around() {
-    let mut species = Species::default();
-    species.trunk.stems = 3;
-    species.trunk.splay = 30.0_f32.to_radians();
+fn a_trunk_forked_at_the_ground_is_a_clump() {
+    let mut species = forked_trunk(Species::default(), 3, 30.0, 0.0);
     species.trunk.lean = 0.0;
     let stems = stems(&species);
     assert_eq!(stems.len(), 3);
+    assert!(
+        stems
+            .iter()
+            .all(|stem| stem.kind == AxisKind::Stem && stem.parent.is_none())
+    );
+    assert!(
+        stems
+            .iter()
+            .all(|stem| stem.radii().0 == species.trunk.radius)
+    );
     let directions: Vec<Vec3> = stems.iter().map(|stem| stem.rings[0].tangent).collect();
     for direction in &directions {
         assert!((direction.angle_between(Vec3::Y).to_degrees() - 30.0).abs() < 1e-3);
@@ -169,6 +192,65 @@ fn stems_splay_evenly_around() {
         let apart = (heading(pair[0]) - heading(pair[1])).rem_euclid(TAU);
         assert!((apart - TAU / 3.0).abs() < 1e-4, "{}", apart.to_degrees());
     }
+}
+
+#[test]
+fn a_trunk_forked_partway_splits_into_stems() {
+    let mut species = forked_trunk(regular(), 2, 20.0, 0.4);
+    species.trunk.lean = 30.0_f32.to_radians();
+    let stems = stems(&species);
+    let (trunk, copies) = (&stems[0], &stems[1..]);
+    assert_eq!(copies.len(), 2);
+    assert_eq!(trunk.scions, [1, 2]);
+    // The trunk ends at 40% of its height, where the copies start at its radius.
+    let height = species.trunk.height;
+    let tip = trunk.rings[trunk.rings.len() - 1];
+    assert!((trunk.length() - 0.4 * height).abs() < 1e-4);
+    for copy in copies {
+        assert_eq!(
+            (copy.kind, copy.level, copy.parent),
+            (AxisKind::ForkCopy, 0, Some((0, tip.at)))
+        );
+        assert!((copy.origin() - tip.center).length() < 1e-5);
+        assert_eq!(copy.radii().0, tip.radius);
+        // 20° from the trunk, and the rest of the height long.
+        let angle = copy.direction().angle_between(tip.tangent).to_degrees();
+        assert!((angle - 20.0).abs() < 1e-2, "{angle}");
+        assert!((tip.at + copy.length() - height).abs() < 1e-4);
+        // Leaning on, away from the middle: further from up at the tip than at the fork.
+        let from_up = |direction: Vec3| direction.angle_between(Vec3::Y);
+        assert!(from_up(copy.rings[copy.rings.len() - 1].tangent) > from_up(copy.direction()));
+    }
+    // Grown, the limbs grow on the copies, and the trunk's tube runs on into the first.
+    let axes = grow(&species).axes;
+    assert!(
+        axes.iter()
+            .any(|limb| limb.parent.is_some_and(|(parent, _)| parent == 1))
+    );
+    assert!(!axes[0].bears(&axes, AxisKind::CarryOn));
+}
+
+#[test]
+fn a_limb_forked_at_its_base_is_several_limbs() {
+    let species = forking(3, 0.0);
+    let mut at_base = species.clone();
+    at_base.limbs.levels[0].fork.settings.at.center = 0.0;
+    let axes = grow(&at_base).axes;
+    // No forked limb and no copy: each forked limb is up to three from where it left, a copy too
+    // short to trace being left out.
+    assert!(forks(&axes).is_empty());
+    assert!(axes.iter().all(|axis| axis.kind != AxisKind::ForkCopy));
+    let forked = grow(&species).axes;
+    let limbs = (forked.iter()).filter(|axis| axis.level == 1 && axis.kind != AxisKind::ForkCopy);
+    let (limbs, after) = (limbs.count(), axes.len() - 1);
+    assert!(
+        (2 * limbs + 1..=3 * limbs).contains(&after),
+        "{limbs} {after}"
+    );
+    // Each listed once among its parent's scions.
+    let mut scions: Vec<usize> = axes.iter().flat_map(|axis| axis.scions.clone()).collect();
+    scions.sort();
+    assert_eq!(scions, (1..axes.len()).collect::<Vec<_>>());
 }
 
 #[test]
@@ -826,9 +908,7 @@ fn skew_turns_each_limb_on_its_own() {
 
 #[test]
 fn splayed_stems_send_their_limbs_outward() {
-    let mut species = regular();
-    species.trunk.stems = 3;
-    species.trunk.splay = 30.0_f32.to_radians();
+    let mut species = forked_trunk(regular(), 3, 30.0, 0.0);
     species.trunk.lean = 0.0;
     // How far each limb points out from the axis, horizontally.
     let outward: Vec<f32> = limbs(&species)
@@ -1089,9 +1169,7 @@ fn a_forked_limb_is_one_tube_with_its_first_copy() {
     // vertices per ring and its cap's center.
     let first_copies: Vec<&Axis> = forks.iter().map(|(_, copies)| copies[0]).collect();
     let vertices: usize = (axes.iter())
-        .filter(|&axis| {
-            axis.kind != AxisKind::CarryOn && !first_copies.contains(&axis)
-        })
+        .filter(|&axis| axis.kind != AxisKind::CarryOn && !first_copies.contains(&axis))
         .map(|axis| chain(&axes, axis, sides_of).1.iter().sum::<u32>() as usize + 1)
         .sum();
     assert_eq!(plant(&species).bark.positions.len(), vertices);

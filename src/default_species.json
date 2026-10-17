@@ -12,8 +12,6 @@
     }
   },
   "trunk": {
-    "stems": 1,
-    "splay": 0.0,
     "height": 5.0,
     "radius": 0.2,
     "sides": 6,

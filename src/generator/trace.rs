@@ -1,6 +1,6 @@
 //! Tracing (D17). To trace an axis is to walk its course from its start ring in steps of
 //! `TRACE_STEP`, recording a point at each: a limb's course turns toward its level's bend, and a
-//! stem's is an arc, from its splay and lean. A limb's walk stops at its reach, or before a step
+//! stem's is an arc, from its angle from up and its lean. A limb's walk stops at its reach, or before a step
 //! that would leave the envelope. Every point is kept as a ring, so the level's later stages work
 //! on the path as traced, until it is hinted (`hint`); the wander (`wander`) then displaces it.
 
@@ -102,9 +102,9 @@ fn turn_toward(from: Vec3, toward: Vec3, angle: f32) -> Vec3 {
 /// A stem's course (`Trace::finish`): an arc (`arc`) turned about the vertical to `heading`, which
 /// lies in one vertical plane, so a side square to it in that plane never twists: azimuth 0 is
 /// toward the heading.
-pub(super) fn stem_rings(length: f32, splay: f32, lean: f32, heading: f32) -> Vec<Ring> {
+pub(super) fn stem_rings(length: f32, from_up: f32, lean: f32, heading: f32) -> Vec<Ring> {
     let turn = Quat::from_rotation_y(heading);
-    let tangent = turn * arc(length, splay, lean, 0.0).1;
+    let tangent = turn * arc(length, from_up, lean, 0.0).1;
     let mut trace = Trace::new(Ring {
         center: Vec3::ZERO,
         tangent,
@@ -115,7 +115,7 @@ pub(super) fn stem_rings(length: f32, splay: f32, lean: f32, heading: f32) -> Ve
     let mut at = 0.0;
     while at < length {
         at += TRACE_STEP.min(length - at);
-        let (center, tangent) = arc(length, splay, lean, at / length);
+        let (center, tangent) = arc(length, from_up, lean, at / length);
         trace.push(turn * center, at, turn * tangent);
     }
     trace.finish()
