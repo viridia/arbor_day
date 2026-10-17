@@ -46,52 +46,74 @@ its radius, its children. The trunk differs from a limb only in its placement, s
 operator on composition serves both. The generator has one `Axis` for both
 (`src/generator/skeleton.rs`), its `kind` saying how it came to grow.
 
+The skeleton as built is TD3.1's. Under stacks, what each ornament places (Stacks, below) is a
+field of its own, as its slot is in the species, today's cards being the tip leaves':
+
 ```rust
 pub struct Skeleton {
     pub axes: Vec<Axis>,
-    pub cards: Vec<Card>,
+    /// Placed on the grown axes, after every level has grown: one field per ornament (X42).
+    pub tip_leaves: Vec<Card>,
+    pub twig_leaves: Vec<Card>,
+    pub radiating: Vec<Card>,
+    pub fruit: Vec<Placement>,
 }
-
-pub struct AxisId(u32);
 
 pub struct Axis {
     pub level: usize,
-    /// The parent and the distance along it where this axis leaves; none for a stem.
-    pub parent: Option<(AxisId, f32)>,
     pub kind: AxisKind,
+    /// The parent, by index, and the distance along it where this axis leaves; none for a stem.
+    pub parent: Option<(usize, f32)>,
+    /// Base to tip, a ring at every trace step until hinted (D17), at least two.
+    pub rings: Vec<Ring>,
+    /// How far it grows, as placed.
+    pub reach: f32,
     /// Before any draw; each operator forks its own stream from it (D16).
     pub rng: Rng,
-    /// Base to tip, at the trace's step (D17), at least two.
-    pub vertices: Vec<Vertex>,
-    pub scions: Vec<AxisId>,
+    /// By index: its limbs, the one carrying it on, or its fork's copies.
+    pub scions: Vec<usize>,
 }
 
 pub enum AxisKind { Stem, Lateral, CarryOn, ForkCopy }
 
-pub struct Vertex {
-    pub position: Vec3,
-    /// Distance along the axis from its base; the last is its length.
-    pub at: f32,
+pub struct Ring {
+    pub center: Vec3,
     pub tangent: Vec3,
-    /// Square to the tangent, carried along without twisting (`Ring::side`).
+    /// Square to the tangent, carried along without twisting.
     pub side: Vec3,
+    /// Distance along the axis from its base; the last ring's is its length.
+    pub at: f32,
     pub radius: f32,
 }
 
-/// A leaf cluster at a distance along an axis (D27).
+/// A leaf card whose base lies `at` metres along an axis, pointing `direction` (D27).
 pub struct Card {
-    pub axis: AxisId,
+    pub axis: usize,
     pub at: f32,
+    pub direction: Vec3,
+}
+
+/// The same for a mesh, such as a fruit, rather than a card.
+pub struct Placement {
+    pub axis: usize,
+    pub at: f32,
+    pub direction: Vec3,
+}
+
+// In the species, beside the levels: one slot per ornament, as a level's operators are.
+pub struct Ornaments {
+    pub tip_leaves: Toggle<TipLeaves>,
+    pub twig_leaves: Toggle<TwigLeaves>,
+    pub radiating: Toggle<Radiating>,
+    pub fruit: Toggle<Fruit>,
 }
 ```
 
-- The start is the first vertex and the length the last vertex's `at`, so neither is stored.
-  The start frame is the parent's frame at the attachment.
-- A radius on every vertex replaces the generator's base and top radii and the stretch kept at
-  the base radius: the taper and the pipe model (D22) each write radii.
+- The start is the first ring and the length the last ring's `at`, so neither is stored. The
+  start frame is the parent's frame at the attachment.
 - An axis keeps the full trace through its level's operators; hinting (D17) simplifies it as the
   level's last stage, before the next level is placed, so scions start on the bark as meshed.
-- Whether an axis bears scions, or leaves (`Card`s) at its tip, follows from its `scions`.
+- Whether an axis bears scions, or tip leaves, follows from its `scions`.
 - Size does not pass from parent to scion. A scion near its parent's tip is already shorter, its
   reach a share of the distance to the envelope, which narrows toward the top of most profiles,
   and thinner, its radius a share of the tapered parent's there. Where a form wants more, a size
@@ -102,8 +124,8 @@ Operators come in three kinds:
 - **Tracing**: the frame's growth traces an axis from its start, and bend and weep are read while
   it does, since changing the course changes where the envelope stops it. They cannot be laid
   over a finished path.
-- **Displacing**: wander moves vertices, then carries the sides along again, which the skeleton
-  provides as one function for every operator that moves vertices. Wander clips at the envelope
+- **Displacing**: wander moves rings, then carries the sides along again, which the skeleton
+  provides as one function for every operator that moves rings. Wander clips at the envelope
   again.
 - **Restructuring**: scions add axes, carry-on (D30) and fork (D31) cut an axis and add others.
   These grow the list while walking it, so axes are named by index, not borrowed.
@@ -163,7 +185,8 @@ their fixed order:
 1. **Angle bias**: the angle changing with the node's place along the parent (C55). **Size
    bias** beside it: the reach changing the same way, for a form whose envelope does not
    shorten its upper scions enough.
-2. **Bend**: bend toward and bend (D17's course). Without it the course is straight. On the
+2. **Bend**: bend toward and bend (D17's course); C94 would make it Sag and Rise. Without it the
+   course is straight. On the
    trunk it curves the stem after the tilt it leaves the ground at (the splay, and the lean's
    tilt, X36), which gives it the heading a bend keeps.
 3. **Weep**: the course allowed past level and below the envelope, for arching stems (C48) and
@@ -173,12 +196,15 @@ their fixed order:
    the fixed spacing every level has now. Its options: a roughness falling off at smaller
    scales, and kinks at the nodes (X23), which needs nodes laid out before the trace and so
    strains the order.
-5. **Fork**: D31's five fields; on the trunk, stem forks (C75).
-6. **Scions**: the next level, placed on this one's axes (density, per node, facing, skew,
-   start: the placement half of a limb). Not offered on the last of three limb levels (D15).
-   Space colonization (X12) would be a second way to place it, a mode of Scions or an operator
-   excluding it.
-7. **Taper**: the level's own taper in place of the plant's (X32).
+5. **Taper**: the level's own taper in place of the plant's (X32). Before Fork, since a fork's
+   copies start at the limb's radius at the fork (TD3.1).
+6. **Fork**: D31's five fields; on the trunk, stem forks (C75).
+7. **Scions**: the next level, placed on this one's axes. It has no settings of its own: how
+   the level is placed (density, per node, facing, skew, start: the placement half of a limb)
+   is that level's Arrangement, since an author tunes a level as one thing, as SpeedTree's
+   generators carry their own generation settings. It shows as the next level's pane, not as a
+   heading. Not offered on the last of three limb levels (D15). Space colonization (X12) would be
+   a second way to place a level, a mode of its Arrangement.
 8. **Pipe model**: the level's axes narrowed by the wood their children take (D22), in place of
    the taper (C73). It needs every level grown, so it runs after them.
 
@@ -193,9 +219,13 @@ Levels grow in turn: a level's frame and operators, then its scions' level.
   so the panel is one column of panes. Should that prove heavy or repetitive, the fallback is
   C33's lighter headings: each level stays a subpane and each operator a heading in it, the ✕
   at the heading's right.
-- Scions replace the − and + on the levels' headers (D15): adding scions adds a level's subpane
-  after this one, its placement fields first, as the Arrangement group shows them now. Removing
-  scions hides the levels above, which keep their values, as D15's hidden levels do.
+- Scions replace the − and + on the levels' headers (D15): below a divider in the last shown
+  level's add menu, after the operators, "Add level" shows the next level's pane, its
+  Arrangement rows first. Operators the level has are left out of the menu, or shown grayed,
+  judged when it is built. The ✕ on a limb
+  level's own header hides it and the levels after it, which keep their values, as D15's hidden
+  levels do; the level is what was added, so it is what is removed, and Scions has no heading
+  left empty but for its ✕.
 - An operator a level lacks shows no rows: a twig level without wander has no wander fields. A
   new behaviour can be a new operator rather than a field on every level, which eases G1.
 - Each operator is a field of its level, in the fixed order, so a level has at most one of each:
@@ -208,12 +238,83 @@ Levels grow in turn: a level's frame and operators, then its scions' level.
 - Levels stay D15's array of three and its count of those shown: a level's Scions are on while
   the count reaches past it, so paths stay `limbs[1].angle` and only D15's panel changes.
 
-The crown is fixed at the head and the foliage at the foot, both the plant's, not a level's:
-cards on every branch end, whatever its level (D27). More than one leaf texture serves two
-ends: leaves on interior stems, inside the crown (X30), and variety among the tips' leaves, each
-tip drawing one of several sprigs. Radiating cards (C54) are a kind of the foliage's too. Each
-texture is a material in Panoply, which would split its merged flora meshes, so the leaf
-textures are regions of one texture (requirements, Foliage), a constraint on C38's painter.
+The crown is fixed at the head, the plant's, not a level's. At the foot is a second stack, the
+**ornaments** (X42): what is placed on the grown skeleton without changing it, so its order
+never moves a limb. Like a level's operators, each ornament is a slot, one of each kind. The
+first is today's foliage, the tip leaves: cards on every branch end, whatever its level (D27),
+with its size, droops and upright tips; the Leaves switch is whether it is on. Others would be
+leaves along twigs (X30), radiating cards (C54) and fruit, each a placement (tips, along a
+level's twigs, at nodes, radiating) and what it draws. Cards draw from regions of one leaf
+texture, since each texture is a material in Panoply and would split its merged flora meshes
+(requirements, Foliage), a constraint on C38's painter; fruit would be small meshes in vertex
+color, merging with the bark. Until ornaments land, `Foliage` is shaped as its tip-leaves
+ornament (C96), so files do not change when the stack arrives.
+
+### The file
+
+A species file is the species written by reflection (C10): JSON as the glTF extra, TOML in
+settings. The default species, abridged, angles in radians:
+
+```json
+{
+  "generator": 1,
+  "seed": 1, "detail": 0.02, "taper": 0.6,
+  "crown": { "profile": "Ellipsoid", "top": 1.25, "base": 0.4, "radius": 2.5 },
+  "trunk": {
+    "stems": 1, "splay": 0.0, "height": 5.0, "radius": 0.2, "sides": 6, "lean": 0.26,
+    "wander": { "angle": 0.14 }
+  },
+  "limbs": [
+    {
+      "density": 8.0, "per_node": 1.0, "facing": "Around", "skew": 0.35, "start": 0.0,
+      "angle": { "center": 1.05, "spread": 0.17, "shape": "Bell" },
+      "reach": { "center": 0.9, "spread": 0.1, "shape": "Bell" },
+      "radius": 0.5, "sides": 4,
+      "bend": { "toward": 1.57, "amount": 0.4 },
+      "wander": { "angle": 0.17 }
+    }
+  ],
+  "ornaments": {
+    "tip_leaves": { "size": 0.25, "lateral_droop": -0.28, "axial_droop": 0.3, "upright": "Triple" }
+  }
+}
+```
+
+- **Levels**: the shown levels only, as C10's `LimbLevels` writes them; a level's Scions are on
+  while the list reaches past it.
+- **Operators**: one that is on is written as its settings, under its slot's name; one that is
+  off is not written. `Toggle<T>` writes its `T` bare, and a level writes only the toggles that
+  are on, by type data on the level, as `LimbLevels` has. Ornaments are written the same way, so
+  a bare plant has no `tip_leaves`, in place of the Leaves switch.
+- **Reading**: reflection reads a struct with fields missing and rejects one with a field it does
+  not know (`bevy_reflect`'s `visit_struct`). The file is applied onto the template, the species
+  with every operator off and each level's frame at its depth's default, so a missing operator is
+  off and grows as a file written before it existed did (X15's third measure). The template is
+  not a new species' default, which has Bend and Wander on. A file from a newer generator, naming
+  an operator this one lacks, fails to load rather than loading wrong.
+- **Versions**: a new version of an operator is another slot beside the old (`wander_2`), at most
+  one of the two on; the old one is read and shown while on but left out of the add menu (a
+  `Legacy` attribute), so an old file grows as it did and its author upgrades on purpose. The
+  slot's name is the file's key, so the key names the version. `generator` counts the changes
+  outside operators (the skeleton, stage order, realization), X15's second measure.
+- **Stream keys**: an operator draws from each axis's stream forked by its kind's key, one key for
+  all its versions, since a version replaces its predecessor and never sits beside it. The streams
+  in use keep their numbers (`WANDER_STREAM` and the rest, `src/generator/skeleton.rs`), so the
+  default species grows as before across stacks; a new operator's key is the FNV-1a hash of its
+  kind's name, as D16 names streams, far from the small indices scions take. Inside an operator,
+  draws stay keyed by input name (`draw(&reach, "reach", …)`).
+- **Slots, not a list**: one of each operator per level, so the panel stays a walk of reflected
+  fields with one new widget kind (the `Toggle` group, its ✕ and the header's add menu), and field
+  paths, which row keys, C7's undo records and plans' `at=` read, stay fixed. A list, an operator
+  twice in one level, needs list and data-enum widgets and ids that survive a removal, which
+  patches' steps (X22) need anyway, so it waits for them.
+
+C10 need not wait for stacks. Before it, each level's fields are grouped into its operators'
+structs, every one always on (`limbs[0].bend.toward`, `limbs[0].fork.chance`), shown as the
+headings C33 gives them now: a struct nested in a level reads as a heading, not a subpane. C10's
+file then has the stacks file's shape with every operator written, and when stacks wrap the
+structs in `Toggle`, such a file reads as every operator on and grows as before; stacks change no
+file. The paths change once, before any file exists.
 
 Formulas then come as a later stage: any input may become a formula, and the levels and their
 operators become the patch's steps, with controls added above them.
