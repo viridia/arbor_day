@@ -100,9 +100,9 @@ Operators come in three kinds:
 - **Tracing**: the frame's growth traces an axis from its start, and bend and weep are read while
   it does, since changing the course changes where the envelope stops it. They cannot be laid
   over a finished path.
-- **Displacing**: wander and the shear back to the course move vertices, then carry the sides
-  along again, which the skeleton provides as one function for every operator that moves
-  vertices. Wander clips at the envelope again.
+- **Displacing**: wander moves vertices, then carries the sides along again, which the skeleton
+  provides as one function for every operator that moves vertices. Wander clips at the envelope
+  again.
 - **Restructuring**: scions add axes, carry-on (D30) and fork (D31) cut an axis and add others.
   These grow the list while walking it, so axes are named by index, not borrowed.
 
@@ -130,10 +130,10 @@ Placement:
 Composition:
 - `grow`: attachments into axes: length or reach to the envelope, bend toward, bend (D17's
   course), stopping at the envelope.
-- `wander`: kinks about each path's course (D17), on straight or bent paths alike.
+- `wander`: displaces each path between its base and the end of its course, both fixed, by
+  midpoints, as a lightning bolt (C84), on straight or bent paths alike.
 - `carry_on`: cuts each axis `on` at its last node and grows one more of its children's tag on
   along it (D30).
-- `shear_to_course`: moves a path's tip back to where its course ends (C62), stems only.
 
 Whole plant:
 - `pipe`: radii top-down from the stems (D22), each axis taking its `share` attribute, in
@@ -166,10 +166,11 @@ their fixed order:
    tilt, X36), which gives it the heading a bend keeps.
 3. **Weep**: the course allowed past level and below the envelope, for arching stems (C48) and
    pendulous levels (X19).
-4. **Wander**: kinks about the course (D17), with an amplitude (today's wander) and a
-   frequency in kinks per crown radius, so a level can kink faster or slower than the fixed
-   spacing D17 gives every level now. Its options: the tip held on the course (C62), and kinks
-   at the nodes (X23), which needs nodes laid out before the trace and so strains the order.
+4. **Wander**: the course displaced as a lightning bolt (C84), with an amplitude (today's
+   wander) and a frequency in kinks per crown radius, so a level can kink faster or slower than
+   the fixed spacing every level has now. Its options: a roughness falling off at smaller
+   scales, and kinks at the nodes (X23), which needs nodes laid out before the trace and so
+   strains the order.
 5. **Fork**: D31's five fields; on the trunk, stem forks (C75).
 6. **Scions**: the next level, placed on this one's axes (density, per node, facing, skew,
    start: the placement half of a limb). Not offered on the last of three limb levels (D15).

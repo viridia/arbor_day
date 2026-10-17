@@ -32,8 +32,8 @@ from general tree generators (SpeedTree, Blender's Sapling, The Grove, Arbaro):
    outlines like the rest of the game, or none. Outlined bark meshes carry outline metadata, which the game draws as an
    inverted hull (Panoply's `docs/outlines.md`); outlined leaf textures have them painted in.
 
-Botanical accuracy matters only as far as it reads at a distance. Silhouette, crown shape, and
-art direction come first.
+Paintings, not photographs: botanical accuracy matters only as far as it reads at a distance.
+Silhouette, crown shape, and art direction come first.
 
 ## What exists today
 

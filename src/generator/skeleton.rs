@@ -4,12 +4,17 @@
 use bevy::math::Vec3;
 
 use super::{
+    carry_on::carry_on,
     envelope::{ENVELOPE_BISECTIONS, Envelope, inside_envelope},
-    foliage::clusters,
-    placement::{grow_level, stems},
-    trace::{TRACE_STEP, end_at},
+    foliage::{AXIAL_FOLD, clusters},
+    fork::fork,
+    placement::{place_scions, stems},
+    trace::{TRACE_STEP, kink_spacing, trace_scions},
 };
-use crate::{random::Rng, species::Species};
+use crate::{
+    random::Rng,
+    species::{LimbLevel, Species},
+};
 
 /// Streams forked from an axis's own: its scions take theirs by index from 0, so these take
 /// indices no scion reaches.
@@ -35,8 +40,9 @@ pub struct Ring {
     pub side: Vec3,
     /// Distance along the axis from its base.
     pub at: f32,
-    /// The axis's radius there, as grown, before the drawing thickens it (`tube`). Written by the
-    /// taper (`taper_rings`) once the ring's axis is traced.
+    /// The axis's radius there, as grown, before the drawing thickens it (`tube`). The start
+    /// ring's is set where the axis is placed, and the taper (`taper_rings`) writes the rest once
+    /// the axis is traced.
     pub radius: f32,
 }
 
@@ -85,8 +91,13 @@ pub(super) struct Axis {
     /// 0 for a stem, 1 to 3 for the limb levels.
     pub level: usize,
     pub kind: AxisKind,
-    /// At least two, base to tip.
+    /// The axis it grows from, as an index in the plant's, and the distance along that where it
+    /// leaves; none for a stem.
+    pub parent: Option<(usize, f32)>,
+    /// Base to tip: at least two once traced, and only the start ring while placed.
     pub rings: Vec<Ring>,
+    /// How far it grows, as placed; the trace stops there or where it would leave the envelope.
+    pub reach: f32,
     /// The axis's own random stream, before any draw; its scions' streams fork from it.
     pub rng: Rng,
     /// The axes growing from it, as indices in the plant's: its limbs and the one carrying it on,
@@ -95,12 +106,36 @@ pub(super) struct Axis {
 }
 
 impl Axis {
-    /// An axis before any scions have grown on it.
-    pub fn new(level: usize, kind: AxisKind, rings: Vec<Ring>, rng: Rng) -> Self {
+    /// A stem, traced from the ground.
+    pub fn stem(rings: Vec<Ring>, rng: Rng) -> Self {
+        let reach = rings[rings.len() - 1].at;
+        Self {
+            level: 0,
+            kind: AxisKind::Stem,
+            parent: None,
+            rings,
+            reach,
+            rng,
+            scions: Vec::new(),
+        }
+    }
+
+    /// An axis placed on `parent` (an index and a distance along it) and not yet traced: its
+    /// start ring, at its own base radius, and how far it is to grow.
+    pub fn placed(
+        level: usize,
+        kind: AxisKind,
+        parent: (usize, f32),
+        start: Ring,
+        reach: f32,
+        rng: Rng,
+    ) -> Self {
         Self {
             level,
             kind,
-            rings,
+            parent: Some(parent),
+            rings: vec![start],
+            reach,
             rng,
             scions: Vec::new(),
         }
@@ -227,36 +262,67 @@ pub(super) struct Skeleton {
     pub cards: Vec<Card>,
 }
 
-/// The stems, their limbs level by level, each level on the axes of the one before, and the leaf
-/// clusters (`clusters`). A parent's top, where it ends, is where its last limb leaves it
-/// (`grow_level`), so it is set once the level after has grown.
-pub(super) fn grow(species: &Species) -> Skeleton {
-    let mut axes = stems(species);
-    for level in 1..=species.grown_levels().len() {
-        let mut grown = Vec::new();
-        for parent in 0..axes.len() {
-            if axes[parent].level + 1 != level {
-                continue;
-            }
-            let forked = axes[parent].bears(&axes, AxisKind::ForkCopy);
-            let bearing = grow_level(
-                species,
-                level,
-                &axes[parent],
-                forked,
-                axes.len(),
-                &mut grown,
-            );
-            let parent = &mut axes[parent];
-            if let Some(tip) = bearing.tip {
-                end_at(&mut parent.rings, tip);
-            }
-            parent.scions.extend(bearing.scions);
+/// One limb level as it grows: its parameters, and what each of its stages reads.
+pub(super) struct Level<'a> {
+    /// 1 to 3.
+    pub number: usize,
+    pub params: &'a LimbLevel,
+    pub envelope: Envelope,
+    /// The plant's taper (D22), 0 to 1.
+    pub taper: f32,
+    /// The distance between kinks (`kink_spacing`).
+    pub spacing: f32,
+    /// How far back from its tip a limb runs straight, under its tip's card (D17), whether or not
+    /// leaves grow, so turning them off leaves the branches alone.
+    pub straight: f32,
+    /// The bark's detail threshold, to which rings are kept (D17).
+    pub tolerance: f32,
+}
+
+impl<'a> Level<'a> {
+    pub fn new(species: &'a Species, number: usize) -> Self {
+        let envelope = Envelope::of(species);
+        Self {
+            number,
+            params: &species.grown_levels()[number - 1],
+            taper: species.taper.clamp(0.0, 1.0),
+            spacing: kink_spacing(&envelope),
+            straight: AXIAL_FOLD * species.foliage.size * envelope.radius.max(0.01),
+            tolerance: species.detail,
+            envelope,
         }
-        axes.extend(grown);
     }
-    let cards = clusters(species, &axes);
-    Skeleton { axes, cards }
+}
+
+/// The stems, their limbs level by level, each level on the axes of the one before, and the leaf
+/// clusters (`clusters`). Each level grows in stages, in a fixed order: its laterals are placed
+/// (`place_scions`) and traced (`trace_scions`), one more limb carries each parent bearing them on
+/// (`carry_on`), the level is tapered (`taper`), and its limbs may fork (`fork`).
+pub(super) fn grow(species: &Species) -> Skeleton {
+    let mut skeleton = Skeleton {
+        axes: stems(species),
+        cards: Vec::new(),
+    };
+    for number in 1..=species.grown_levels().len() {
+        let level = Level::new(species, number);
+        place_scions(&level, &mut skeleton);
+        trace_scions(&level, &mut skeleton);
+        carry_on(&level, &mut skeleton);
+        taper(&level, &mut skeleton);
+        fork(&level, &mut skeleton);
+    }
+    skeleton.cards = clusters(species, &skeleton.axes);
+    skeleton
+}
+
+/// Writes the taper on the level's axes (`taper_rings`), each from the radius its start ring was
+/// placed at. A fork's copies come later, and `fork` tapers them as it adds them.
+fn taper(level: &Level, skeleton: &mut Skeleton) {
+    let axes = skeleton.axes.iter_mut();
+    for axis in axes.filter(|axis| axis.level == level.number) {
+        let base = axis.rings[0].radius;
+        taper_rings(&mut axis.rings, base, level.taper);
+    }
 }
 
 /// The unit vector square to `direction` nearest world up: a limb's upper side. A limb pointing

@@ -63,6 +63,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C79   | One axis type (`docs/patches.md`, The abstract plant): `Stem` and `Limb` become `Axis`, level 0 for stems and 1 to 3 for the limb levels, with an `AxisKind` (stem, lateral, carry-on, fork copy). The plant grows as one list, stems first, each axis naming its scions by index, in place of the `children`, `carried_on`, `forked` and `copy` flags; `Parent` goes. `src/generator/` in place of `generator.rs`: skeleton, placement, trace, fork, foliage, mesh, envelope, and the tests together in `tests.rs`. The envelope's preview lines are its helper (`envelope_helper`), so "outline" means only the ink outline (C66). Golden hashes unchanged. |
 | C80   | Skeleton, then meshes: `grow` returns a `Skeleton` of axes and `Card`s, a leaf cluster each (an axis and a distance along it), and `plant` meshes it, the card quads now in `mesh.rs`. The Leaves switch acts on the clusters, so a bare plant has none. Rings stay simplified at trace time, since scions attach to the path as meshed (C83). Golden hashes unchanged. |
 | C81   | A radius per ring (D22), written by the taper (`taper_rings`) once an axis is traced, in place of an axis's base and top radii; `tube` draws each ring at its own radius, none narrower than the detail threshold, and leans each ring's normals by the radii either side. So a twig thinner than the threshold keeps its taper until it reaches it, rather than being thickened along its length, and a limb takes its parent's radius from the parent's rings, which fixes a forked limb's limbs, which had started thinner than the limb where they leave it. New bark hashes, leaves unchanged; at game scale, screenshots show no difference. |
+| C82   | Stages as functions: each level grows by `place_scions`, `trace_scions`, `carry_on`, the taper and `fork`, each over a `Level` (its parameters and what every stage reads) and the `Skeleton`, in that order, the taper before forks since copies start at the limb's radius at the fork. Placement records what the trace reads on the axis: its start ring at its own base radius, its reach, and its parent and where along it (`docs/patches.md`'s `parent`). Wander stays inside the trace. Axes are now added stage by stage, so the golden test hashed each mesh's triangles as a set, each from its least corner with its winding kept; hashes taken before the change held after it. Its work done, the golden test was then removed (X15). `trace.rs` defines tracing in its module doc. |
 
 ## Next
 
@@ -80,17 +81,33 @@ per-type hook, and is retained-mode.
 ### Milestone: the first species exported to Panoply
 
 The foundation first, the skeleton (`docs/patches.md`, The abstract plant), then leaf painting.
-C82 leaves output unchanged (C78); C83 and C84 change it, each judged by screenshots and given
-new hashes. None of them touches the panel, the species or the plans.
+C83 and C84 change output, each judged by screenshots. None of them touches the panel, the
+species or the plans.
 
-1. **C82 Operators as functions**: each stage of the level loop (place scions, trace, fork,
-   carry on, foliage, taper) a function over `&mut Skeleton` and a level, called in the fixed
-   order. Wander stays inside the trace. E[3]
-2. **C83 Hinting at meshing**: the skeleton keeps the full trace, simplified only when meshed
+1. **C83 Hinting at meshing**: the skeleton keeps the full trace, simplified only when meshed
    (D17), so scions attach to the true path. E[2]
-3. **C84 Wander as a displacement** of the traced course, out of the trace loop, clipping at the
-   envelope again; tips move, since wander now comes before the clip. E[3]
-4. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's leaf, as D29 has it, its
+2. **C84 Wander as a lightning bolt**, in place of D17's kinks, which turn each stretch off the
+   course and so walk the tip off it at random: on the default tree at the most wander (45°),
+   the trunk's tip lands 0.3 to 0.9 m off its course, its direction varying by seed, and 10 to
+   13% lower (4.94 m to about 4.4 m), since the zigzag spends its length sideways. A stage after
+   `carry_on` and before the taper and `fork` (C82): the trace follows the course (bend) alone,
+   and wander then displaces it by midpoints, between the base and the end of the course, both
+   fixed: the middle of each segment moves square to it, a random amount in a random direction,
+   up to half its length times the tangent of the wander, then each half likewise, down to
+   segments of about one kink spacing, each split point moved a little as `KINK_JITTER` does, so
+   kinks fall unevenly. So the tip stays where splay, lean and bend put it, at any wander, and the
+   trunk's height is the height its tip reaches (D23, revised); splay and lean still droop a stem
+   (D24). The same jaggedness at every scale; a roughness falling off at smaller scales waits for
+   a preset that needs smoother limbs (D25). A branch end's straight run under its card is a
+   third fixed point. Points that leave the envelope are pulled back inside. `fork` displaces its
+   copies, as it traces and tapers them. Limbs no longer drift either, so compare the shapes
+   screenshots at the usual wander. Less faithful to how a shoot grows, each internode turning
+   from the last, but a tree steers back toward light and up, so a limb zigzags about a line it
+   keeps returning to, which the lightning bolt draws: paintings, not photographs (requirements,
+   What it is for; D22). D17 revised
+   when it lands, with this reason; C62 (stems shorn back onto their course) goes, its drift gone.
+   E[3]
+3. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's leaf, as D29 has it, its
    fields in a "Sprig" and a "Leaf" group under Foliage, and the `Interval` type (D10) for its
    variations. The painter takes the outline as an
    argument, a width in texture pixels or none, which C38 fixes at a constant until C66 makes it
@@ -101,25 +118,25 @@ new hashes. None of them touches the panel, the species or the plans.
    with a tolerance, since SIMD can move a channel by a level. The card's axial fold
    (`AXIAL_FOLD` in `src/generator/foliage.rs`, halfway) moves to where the painted sprig's fan starts, as
    seedling's did. E[3]
-5. **C75 Stem forks**, forks (D31) on stems, at any point along them. A decurrent tree's
+4. **C75 Stem forks**, forks (D31) on stems, at any point along them. A decurrent tree's
    leader stopping short (D23) already ends in a fork when the first level forks, its top
    being a limb of that level (D30), so what is left is a stem splitting below its crown. A stem's fork may lie below the crown base:
    the trunk's height sets the axis's length, the fork where it splits. A three-way fork low on
    one stem stands in for several splayed stems, so stems and splay may become a fork at the
    ground, its copies and angle (D25), in place of fork fields beside them. Under stacks (X31),
    the Fork operator on the trunk. E[3]
-6. **C70 Card facing**: the face target (D27) widened from world up to a blend of up and the
+5. **C70 Card facing**: the face target (D27) widened from world up to a blend of up and the
    envelope's outward normal, with a spread. Measure how far cards are from edge-on to the
    game's camera (45° down), a figure in `PlantStats`, to judge facing and folds by numbers as
    well as by eye. Card counts multiply with levels, eight triangles each since C39, so look at
    density against the budget too. E[3]
-7. **C66 Outlines**, a switch for the whole plant (requirements, Foliage): in the Plant group
+6. **C66 Outlines**, a switch for the whole plant (requirements, Foliage): in the Plant group
    (C33), the switch, the bark's width as the game reads it, and the leaf stroke's in texture
    pixels (growth model, Consequences). On, the leaf texture is painted with its strokes (D29),
    the preview draws the bark with an inverted hull after Panoply's `src/materials/outline.wesl`,
    and the export writes the `"outline"` material extra (C41). Off, none of these; whether the
    translucent strokes between leaves stay is judged then. E[3]
-8. **C10 Species data model**, its groups the layers of the growth model (D11;
+7. **C10 Species data model**, its groups the layers of the growth model (D11;
    `docs/growth-model.md`, Consequences), correcting seedling where the requirements say.
    Reflectable types with `Default` for initial values and attributes for the editor, after the
    fields settle, so saved files are not broken by every change. Serialized
@@ -138,15 +155,15 @@ new hashes. None of them touches the panel, the species or the plans.
    levels with hidden ones stashed in the editor, the same in files but a larger change that
    undoes D15. Seedling's groups for reference: `trunk`; `branch[]`, one per level; the leaf as
    `leafGroup` (arrangement), `leafShape` and `leafColor`. E[4], split when started
-9. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
+8. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
    panel, above the Plant group (C33); the file browser is X2. File commands act on the active document, so that tabs (X26)
    need not change them. E[3]
-10. **C8 Working document in settings.** A settings group holding the working species and, once
-    set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
-    as seedling did. The document's name comes from the file name. Serialized by reflection, as
-    `bevy_settings` does. Stored as a list of open documents holding one, and the active one's
-    index, so several (X26) need no change of format. E[3]
-11. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
+9. **C8 Working document in settings.** A settings group holding the working species and, once
+   set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
+   as seedling did. The document's name comes from the file name. Serialized by reflection, as
+   `bevy_settings` does. Stored as a list of open documents holding one, and the active one's
+   index, so several (X26) need no change of format. E[3]
+10. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
     as a JSON extra (C10), written from the generator's output (`generator::plant`), never from
     the preview's entities, whose leaf mesh is only hidden while none grow, in the form Panoply loads (requirements, Output; "What Panoply does with the output"). Bevy writes no glTF,
     so this adds a dependency or a writer of our own; propose it before code. The command-line
@@ -188,12 +205,6 @@ new hashes. None of them touches the panel, the species or the plans.
   steep twig's sprig is then no longer seen edge-on from the game's camera. Roll spread: each
   card turns about its axis at random by up to this angle, drawn from a foliage stream of the twig's own (D16),
   so a plant reads from the side too, for games with a lower camera than Panoply's. E[2]
-- **C62 Stems end on their course**: the trunk's kinks (D17) displace its tip like a random
-  walk, since each stretch shifts the rest of the stem sideways, so a stem drifts even at no
-  lean, and the lean cannot cancel it. Trace a stem as now, then shear it back by the tip's
-  miss in proportion to the distance along it, turning each ring's tangent to match: the zigzag
-  stays and the tip lands where splay and lean put it, so the lean is the only tilt. Stems only;
-  limbs keep their drift. Under stacks (X31), an option of Wander. E[2]
 - **C55 Angle by place**, seedling's `angleBias` (`MeshGenerator.ts:593`), for crowns bald on
   top: twigs radiate outward, their leaves with them (D27), and the envelope's top stays empty. A
   field per level, "Angle at tip", −90° to 90°: the change in angle from a node at the base of
@@ -728,7 +739,9 @@ new hashes. None of them touches the panel, the species or the plans.
   export (X1) if the asset pipeline runs it. Rather than keeping every past generator (Cargo
   could depend on several versions under different names), three measures:
   (1) golden tests, species files with a hash of their meshes, so no output changes by
-  accident, landed as C78 (`src/golden.rs`); (2) a generator version in the species file, raised only when output changes on
+  accident, once C10 can save species files; C78's hash of four species built in code, in git
+  history, served the skeleton's refactors (C79 to C82), each mesh's triangles hashed as a set;
+  (2) a generator version in the species file, raised only when output changes on
   purpose, which the export can warn about; (3) an additive change defaults to the old output
   when the file lacks its field (no wander, say), so a new species' default and a missing
   field's default are different things. What remains (fixes, reordered draws) is re-exported
@@ -835,8 +848,9 @@ new hashes. None of them touches the panel, the species or the plans.
   menu on the level's header and removed by ✕. Scions add the next level, replacing the levels' − and +
   (D15). Fewer rows, since a missing operator shows none. Each operator a `Toggle<T>` field,
   its settings and whether it is on, so ✕ keeps its values for the session (D15). E[4], split: the operator group and add menu
-  with bend and wander; scions; angle bias (C55). *Gate:* the skeleton (C79 to C84) landed,
-  and settled before C10's file format.
+  with bend and wander; scions; angle bias (C55). The default species should grow as before, so
+  bring back C78's golden meshes (git history) for the first part. *Gate:* the skeleton (C79 to
+  C84) landed, and settled before C10's file format.
 
 - **X32** A taper per limb level, in place of the plant's one (D22); under stacks (X31), the
   Taper operator. *Gate:* a preset (X18) whose
@@ -858,7 +872,8 @@ new hashes. None of them touches the panel, the species or the plans.
   its base and recovering, as on slopes; past the tilt, today's bowing; past level, Weep (C48).
   The heading may be fixed rather than drawn from the seed, since Panoply turns placed
   instances anyway. Lean's use so far, steering back a stem the wander sent off course, goes
-  with C62. *Gate:* C62 landed, and an author wanting a leaning or recovering trunk.
+  with C84, whose wander leaves the tip on its course. *Gate:* C84 landed, and an author wanting
+  a leaning or recovering trunk.
 
 - **X37** Variety among the tips' leaves: several sprigs painted as regions of the one leaf
   texture (requirements, Foliage), each tip's card drawing one from its foliage stream (D16).

@@ -1,5 +1,9 @@
-//! Tracing an axis's course (D17): bend toward a direction, kinks about the course, and the rings
-//! kept by hinting.
+//! Tracing (D17). To trace an axis is to walk it from its start ring in steps of `TRACE_STEP`,
+//! recording a point at each, along a course that a limb turns toward its level's bend (a stem's
+//! is an arc, from its splay and lean), kinking about that course by its wander (`Kinks`). A limb's
+//! walk stops at its reach, or before a step that would leave the envelope. The points are then
+//! kept as rings only where the eye would miss them, to the bark's detail threshold (hinting,
+//! `Trace::finish`).
 
 use std::f32::consts::TAU;
 
@@ -7,7 +11,7 @@ use bevy::math::{Mat3, Quat, Vec3};
 
 use super::{
     envelope::{Envelope, inside_envelope},
-    skeleton::Ring,
+    skeleton::{Axis, Level, Ring, Skeleton, WANDER_STREAM},
 };
 use crate::{random::Rng, species::LimbLevel};
 
@@ -18,15 +22,50 @@ const KINK_SPACING: f32 = 0.15;
 /// so kinks fall unevenly without two of them running together.
 pub(super) const KINK_JITTER: f32 = 0.4;
 
-/// The step in tracing a limb, in metres.
+/// The step in tracing an axis, in metres.
 pub(super) const TRACE_STEP: f32 = 0.02;
 
-/// A limb's rings, from `start` for up to `length` along it, kept to `tolerance`
-/// (`Trace::finish`). Its course is traced in short steps from its start, turning toward the
-/// level's bend, and the limb kinks about its course (`Kinks`), but not in its last `straight`,
-/// where a tip's card lies (`foliage`). It stops early where it would leave the envelope, and is
-/// then traced again to there, so its last stretch is straight wherever it ends.
-pub(super) fn grow_limb(
+/// Traces the level's laterals just placed (`trace`), leaving out any that came out no longer
+/// than they are thick, and adds the rest to their parents' scions.
+pub(super) fn trace_scions(level: &Level, skeleton: &mut Skeleton) {
+    let axes = &mut skeleton.axes;
+    let first = (axes.iter().position(|axis| axis.level == level.number)).unwrap_or(axes.len());
+    for mut axis in axes.split_off(first) {
+        if trace(level, &mut axis) {
+            let (parent, _) = axis.parent.expect("a limb grows from a parent");
+            let id = axes.len();
+            axes[parent].scions.push(id);
+            axes.push(axis);
+        }
+    }
+}
+
+/// Traces a placed axis for up to its reach (`grow_limb`), replacing its start ring with its
+/// rings. Returns whether it came out longer than it is thick at its base, as an axis must to be
+/// kept.
+pub(super) fn trace(level: &Level, axis: &mut Axis) -> bool {
+    let start = axis.rings[0];
+    let kinks = Kinks::new(
+        level.spacing,
+        level.params.wander,
+        axis.rng.fork(WANDER_STREAM),
+    );
+    axis.rings = grow_limb(
+        &level.envelope,
+        level.params,
+        start,
+        axis.reach,
+        kinks,
+        level.straight,
+        level.tolerance,
+    );
+    axis.rings.len() >= 2 && axis.length() > start.radius
+}
+
+/// A limb's rings, traced from `start` for up to `length` and kept to `tolerance`. It does not
+/// kink in its last `straight`, where a tip's card lies (`foliage`); one that stops early at the
+/// envelope is traced again to there, so its last stretch is straight wherever it ends.
+fn grow_limb(
     envelope: &Envelope,
     params: &LimbLevel,
     start: Ring,
