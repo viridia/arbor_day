@@ -67,6 +67,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C82   | Stages as functions: each level grows by `place_scions`, `trace_scions`, `carry_on`, the taper and `fork`, each over a `Level` (its parameters and what every stage reads) and the `Skeleton`, in that order, the taper before forks since copies start at the limb's radius at the fork. Placement records what the trace reads on the axis: its start ring at its own base radius, its reach, and its parent and where along it (`docs/patches.md`'s `parent`). Wander stays inside the trace. Axes are now added stage by stage, so the golden test hashed each mesh's triangles as a set, each from its least corner with its winding kept; hashes taken before the change held after it. Its work done, the golden test was then removed (X15). `trace.rs` defines tracing in its module doc. |
 | C86   | Decisions out of the ledger, after `../ldd_template`: `docs/decisions.md` holds each decision as it now stands, what it rules out and what reversing it costs, with no revision history; `docs/design.md` holds the mechanism, numbered `TD<n>.<m>`. D4, D13, D14 and D18 are withdrawn, struck and pointing where their content went. Ledger 13,056 words to 7,816; Decisions 5,431 to 3,628 and design 2,598. |
 | C83   | Hinting as each level's last stage (TD3.4), `src/generator/hint.rs`, in place of at trace time: an axis keeps a ring at every trace step through its level's stages, so C84's displacement works on the full path, and the next level is placed on the hinted rings, so scions start inside the bark as meshed. |
+| C84   | Wander as a lightning bolt (D17, TD3.4), `src/generator/wander.rs`, in place of kinks: the trace follows the course alone, and a stage after carrying on displaces it by midpoints between fixed ends, past a straight run at the base, each stretch within the wander of its course and no move larger than at two spacings, so tips stay where the course puts them and a stem's height is reached at any wander (D23). `frame_at` takes the chord after a ring a point sits on. |
 | C87   | `docs/guidelines.md` after `../ldd_template`'s: G1 (change a field's meaning before adding a field) and G2 (vary a value where its instances are many), from D25 and D19, now struck, and G3, the effort scale, after `../ldd_template`'s G7. AGENTS.md says which doc each change updates, and to read the guidelines before adding to the species. |
 
 ## Next
@@ -82,32 +83,10 @@ per-type hook, and is retained-mode.
 
 ### Milestone: the first species exported to Panoply
 
-The foundation first, the skeleton (`docs/patches.md`, The abstract plant), then leaf painting.
-C84 changes output, judged by screenshots, and touches neither the panel, the species nor the
-plans.
+The foundation, the skeleton (`docs/patches.md`, The abstract plant), has landed; leaf painting
+next.
 
-1. **C84 Wander as a lightning bolt**, in place of D17's kinks, which turn each stretch off the
-   course and so walk the tip off it at random: on the default tree at the most wander (45°),
-   the trunk's tip lands 0.3 to 0.9 m off its course, its direction varying by seed, and 10 to
-   13% lower (4.94 m to about 4.4 m), since the zigzag spends its length sideways. A stage after
-   `carry_on` and before the taper, `fork` and the hint (C82, C83): the trace follows the course (bend) alone,
-   and wander then displaces it by midpoints, between the base and the end of the course, both
-   fixed: the middle of each segment moves square to it, a random amount in a random direction,
-   up to half its length times the tangent of the wander, then each half likewise, down to
-   segments of about one kink spacing, each split point moved a little as `KINK_JITTER` does, so
-   kinks fall unevenly. So the tip stays where splay, lean and bend put it, at any wander, and the
-   trunk's height is the height its tip reaches (D23, revised); splay and lean still droop a stem
-   (D24). The same jaggedness at every scale; a roughness falling off at smaller scales waits for
-   a preset that needs smoother limbs (G1). A branch end's straight run under its card is a
-   third fixed point. Points that leave the envelope are pulled back inside. `fork` displaces its
-   copies, as it traces and tapers them. Limbs no longer drift either, so compare the shapes
-   screenshots at the usual wander. Less faithful to how a shoot grows, each internode turning
-   from the last, but a tree steers back toward light and up, so a limb zigzags about a line it
-   keeps returning to, which the lightning bolt draws: paintings, not photographs (requirements,
-   What it is for; D22). D17 revised
-   when it lands, with this reason; C62 (stems shorn back onto their course) goes, its drift gone.
-   E[3]
-2. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's leaf, as D29 has it, its
+1. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's leaf, as D29 has it, its
    fields in a "Sprig" and a "Leaf" group under Foliage, and the `Interval` type (D10) for its
    variations. The painter takes the outline as an
    argument, a width in texture pixels or none, which C38 fixes at a constant until C66 makes it
@@ -118,25 +97,25 @@ plans.
    with a tolerance, since SIMD can move a channel by a level. The card's axial fold
    (`AXIAL_FOLD` in `src/generator/foliage.rs`, halfway) moves to where the painted sprig's fan starts, as
    seedling's did. E[3]
-3. **C75 Stem forks**, forks (D31) on stems, at any point along them. A decurrent tree's
+2. **C75 Stem forks**, forks (D31) on stems, at any point along them. A decurrent tree's
    leader stopping short (D23) already ends in a fork when the first level forks, its top
    being a limb of that level (D30), so what is left is a stem splitting below its crown. A stem's fork may lie below the crown base:
    the trunk's height sets the axis's length, the fork where it splits. A three-way fork low on
    one stem stands in for several splayed stems, so stems and splay may become a fork at the
    ground, its copies and angle (G1), in place of fork fields beside them. Under stacks (X31),
    the Fork operator on the trunk. E[3]
-4. **C70 Card facing**: the face target (D27) widened from world up to a blend of up and the
+3. **C70 Card facing**: the face target (D27) widened from world up to a blend of up and the
    envelope's outward normal, with a spread. Measure how far cards are from edge-on to the
    game's camera (45° down), a figure in `PlantStats`, to judge facing and folds by numbers as
    well as by eye. Card counts multiply with levels, eight triangles each since C39, so look at
    density against the budget too. E[3]
-5. **C66 Outlines**, a switch for the whole plant (requirements, Foliage): in the Plant group
+4. **C66 Outlines**, a switch for the whole plant (requirements, Foliage): in the Plant group
    (C33), the switch, the bark's width as the game reads it, and the leaf stroke's in texture
    pixels (growth model, Consequences). On, the leaf texture is painted with its strokes (D29),
    the preview draws the bark with an inverted hull after Panoply's `src/materials/outline.wesl`,
    and the export writes the `"outline"` material extra (C41). Off, none of these; whether the
    translucent strokes between leaves stay is judged then. E[3]
-6. **C10 Species data model**, its groups the layers of the growth model (D11;
+5. **C10 Species data model**, its groups the layers of the growth model (D11;
    `docs/growth-model.md`, Consequences), correcting seedling where the requirements say.
    Reflectable types with `Default` for initial values and attributes for the editor, after the
    fields settle, so saved files are not broken by every change. Serialized
@@ -155,15 +134,15 @@ plans.
    levels with hidden ones stashed in the editor, the same in files but a larger change that
    undoes D15. Seedling's groups for reference: `trunk`; `branch[]`, one per level; the leaf as
    `leafGroup` (arrangement), `leafShape` and `leafColor`. E[4], split when started
-7. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
+6. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
    panel, above the Plant group (C33); the file browser is X2. File commands act on the active document, so that tabs (X26)
    need not change them. E[3]
-8. **C8 Working document in settings.** A settings group holding the working species and, once
+7. **C8 Working document in settings.** A settings group holding the working species and, once
    set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
    as seedling did. The document's name comes from the file name. Serialized by reflection, as
    `bevy_settings` does. Stored as a list of open documents holding one, and the active one's
    index, so several (X26) need no change of format. E[3]
-9. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
+8. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
     as a JSON extra (C10), written from the generator's output (`generator::plant`), never from
     the preview's entities, whose leaf mesh is only hidden while none grow, in the form Panoply loads (requirements, Output; "What Panoply does with the output"). Bevy writes no glTF,
     so this adds a dependency or a writer of our own; propose it before code. The command-line
@@ -445,9 +424,10 @@ plans.
   presets (X18) begun.
 
 - **X29** `plans/levels.py` failed once of two runs (2026-10-14) at the second level's density
-  typed as 1.5: the plant kept the default's 70 limbs, as if the text never applied. *Gate:* a
-  second failure; then find whether the click lands before the row is ready, or the typing is
-  lost.
+  typed as 1.5: the plant kept the default's 70 limbs, as if the text never applied. It failed
+  again once of two runs (2026-10-16) just after that edit: the second level's − click did not
+  take, the plant keeping both levels. *Gate:* a third failure; then find whether a click right
+  after Enter lands before the panel has rebuilt, or the typing is lost.
 
 - **X30** Cards along a twig, for plants whose leaves crowd their shoots: spur-bearing trees
   (apple, larch, ginkgo) and conifers' needles (growth model, How the shapes are covered: "clusters
@@ -494,6 +474,16 @@ plans.
 - **X37** Variety among the tips' leaves: several sprigs painted as regions of the one leaf
   texture (requirements, Foliage), each tip's card drawing one from its foliage stream (D16).
   *Gate:* C38 landed, and the crown's tips reading as one sprig repeated.
+
+- **X38** Wander that falls off at smaller scales, so a limb sweeps in a few large kinks and its
+  smaller ones are gentler; today's bolt is as jagged at every scale (D17). *Gate:* a preset
+  (X18) that needs smoother limbs.
+
+- **X39** Rounded turns, as an old oak's limbs bend (D17): each corner the hinting keeps smoothed
+  into an arc with extra rings, in proportion to the tube's radius, so twigs at the detail
+  threshold stay cornered. Rings tilted through a tight turn meet on its inside where the arc's
+  radius is under the tube's, so the arc must be at least as wide as the tube, never fixed by
+  boolean geometry. *Gate:* corners reading as too angular at game scale.
 
 ## Notes
 

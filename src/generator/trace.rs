@@ -1,25 +1,20 @@
-//! Tracing (D17). To trace an axis is to walk it from its start ring in steps of `TRACE_STEP`,
-//! recording a point at each, along a course that a limb turns toward its level's bend (a stem's
-//! is an arc, from its splay and lean), kinking about that course by its wander (`Kinks`). A limb's
-//! walk stops at its reach, or before a step that would leave the envelope. Every point is kept as
-//! a ring, so the level's later stages work on the path as traced, until it is hinted (`hint`).
+//! Tracing (D17). To trace an axis is to walk its course from its start ring in steps of
+//! `TRACE_STEP`, recording a point at each: a limb's course turns toward its level's bend, and a
+//! stem's is an arc, from its splay and lean. A limb's walk stops at its reach, or before a step
+//! that would leave the envelope. Every point is kept as a ring, so the level's later stages work
+//! on the path as traced, until it is hinted (`hint`); the wander (`wander`) then displaces it.
 
-use std::f32::consts::TAU;
-
-use bevy::math::{Mat3, Quat, Vec3};
+use bevy::math::{Quat, Vec3};
 
 use super::{
     envelope::{Envelope, inside_envelope},
-    skeleton::{Axis, Level, Ring, Skeleton, WANDER_STREAM},
+    skeleton::{Axis, Level, Ring, Skeleton},
 };
-use crate::{random::Rng, species::LimbLevel};
+use crate::species::LimbLevel;
 
 /// The distance between kinks on every limb and stem, in crown radii: a limb's zigzag reads by
 /// its period, so long limbs kink several times and short twigs once or not at all.
 const KINK_SPACING: f32 = 0.15;
-/// The most a stretch between kinks is longer or shorter than `KINK_SPACING`, as a share of it,
-/// so kinks fall unevenly without two of them running together.
-pub(super) const KINK_JITTER: f32 = 0.4;
 
 /// The step in tracing an axis, in metres.
 pub(super) const TRACE_STEP: f32 = 0.02;
@@ -39,58 +34,18 @@ pub(super) fn trace_scions(level: &Level, skeleton: &mut Skeleton) {
     }
 }
 
-/// Traces a placed axis for up to its reach (`grow_limb`), replacing its start ring with its
-/// rings. Returns whether it came out longer than it is thick at its base, as an axis must to be
-/// kept.
+/// Traces a placed axis along its course for up to its reach (`trace_limb`), replacing its start
+/// ring with its rings. Returns whether it came out longer than it is thick at its base, as an
+/// axis must to be kept.
 pub(super) fn trace(level: &Level, axis: &mut Axis) -> bool {
     let start = axis.rings[0];
-    let kinks = Kinks::new(
-        level.spacing,
-        level.params.wander,
-        axis.rng.fork(WANDER_STREAM),
-    );
-    axis.rings = grow_limb(
-        &level.envelope,
-        level.params,
-        start,
-        axis.reach,
-        kinks,
-        level.straight,
-    );
+    axis.rings = trace_limb(&level.envelope, level.params, start, axis.reach).finish();
     axis.rings.len() >= 2 && axis.length() > start.radius
 }
 
-/// A limb's rings, traced from `start` for up to `length`. It does not kink in its last
-/// `straight`, where a tip's card lies (`foliage`); one that stops early at the envelope is traced
-/// again to there, so its last stretch is straight wherever it ends.
-fn grow_limb(
-    envelope: &Envelope,
-    params: &LimbLevel,
-    start: Ring,
-    length: f32,
-    kinks: Kinks,
-    straight: f32,
-) -> Vec<Ring> {
-    let trace = |length: f32, kinks: Kinks| {
-        trace_limb(envelope, params, start, length, length - straight, kinks)
-    };
-    let (mut traced, stopped) = trace(length, kinks.clone());
-    if let Some(at) = stopped {
-        traced = trace(at, kinks).0;
-    }
-    traced.finish()
-}
-
-/// A limb traced as `grow_limb` describes, with no kinks from `end` on, and where it left the
-/// envelope, if it did.
-fn trace_limb(
-    envelope: &Envelope,
-    params: &LimbLevel,
-    start: Ring,
-    length: f32,
-    end: f32,
-    mut kinks: Kinks,
-) -> (Trace, Option<f32>) {
+/// A limb's course, traced from `start` for up to `length`, or to where the next step would leave
+/// the envelope.
+fn trace_limb(envelope: &Envelope, params: &LimbLevel, start: Ring, length: f32) -> Trace {
     let (bend_sin, bend_cos) = params.bend_toward.sin_cos();
     // The share of the angle left to the bend that one step closes. Shares compound, so a run of
     // steps closes the same share whatever the step.
@@ -101,12 +56,12 @@ fn trace_limb(
     let mut course = start.tangent;
     let mut course_side = start.side;
     let mut trace = Trace::new(start);
-    let (mut center, mut tangent, mut at) = (start.center, start.tangent, 0.0);
+    let (mut center, mut at) = (start.center, 0.0);
     while at < length {
-        let step = kinks.step(at, TRACE_STEP.min(length - at));
-        let next = center + tangent * step;
+        let step = TRACE_STEP.min(length - at);
+        let next = center + course * step;
         if !inside_envelope(envelope, next) {
-            return (trace, Some(at));
+            break;
         }
         center = next;
         at += step;
@@ -124,10 +79,9 @@ fn trace_limb(
                 .normalize_or(course_side);
             course = turned;
         }
-        tangent = kinks.direction(at, end, course, course_side);
-        trace.push(center, at, tangent);
+        trace.push(center, at, course);
     }
-    (trace, None)
+    trace
 }
 
 /// `from` turned toward `toward` by at most `angle`, both unit vectors.
@@ -143,37 +97,24 @@ fn turn_toward(from: Vec3, toward: Vec3, angle: f32) -> Vec3 {
     Quat::from_axis_angle(axis, between.min(angle)) * from
 }
 
-/// A stem's rings (`Trace::finish`). Its course is an arc (`arc`) turned about the vertical to
-/// `heading`, which lies in one vertical plane, so a side square to it in that plane never twists:
-/// azimuth 0 is toward the heading. The stem kinks about its course as a limb does (`Kinks`).
-pub(super) fn stem_rings(
-    length: f32,
-    splay: f32,
-    lean: f32,
-    heading: f32,
-    mut kinks: Kinks,
-) -> Vec<Ring> {
+/// A stem's course (`Trace::finish`): an arc (`arc`) turned about the vertical to `heading`, which
+/// lies in one vertical plane, so a side square to it in that plane never twists: azimuth 0 is
+/// toward the heading.
+pub(super) fn stem_rings(length: f32, splay: f32, lean: f32, heading: f32) -> Vec<Ring> {
     let turn = Quat::from_rotation_y(heading);
-    let course_at = |at: f32| {
-        let (_, tangent) = arc(length, splay, lean, at / length);
-        (turn * tangent, turn * tangent.cross(Vec3::Z))
-    };
-    let (tangent, side) = course_at(0.0);
+    let tangent = turn * arc(length, splay, lean, 0.0).1;
     let mut trace = Trace::new(Ring {
         center: Vec3::ZERO,
         tangent,
-        side,
+        side: tangent.cross(turn * Vec3::Z),
         at: 0.0,
         radius: 0.0,
     });
-    let (mut center, mut tangent, mut at) = (Vec3::ZERO, tangent, 0.0);
+    let mut at = 0.0;
     while at < length {
-        let step = kinks.step(at, TRACE_STEP.min(length - at));
-        center += tangent * step;
-        at += step;
-        let (course, course_side) = course_at(at);
-        tangent = kinks.direction(at, length, course, course_side);
-        trace.push(center, at, tangent);
+        at += TRACE_STEP.min(length - at);
+        let (center, tangent) = arc(length, splay, lean, at / length);
+        trace.push(turn * center, at, turn * tangent);
     }
     trace.finish()
 }
@@ -182,64 +123,6 @@ pub(super) fn stem_rings(
 /// species keeps its form.
 pub(super) fn kink_spacing(envelope: &Envelope) -> f32 {
     KINK_SPACING * envelope.radius.max(0.01)
-}
-
-/// Where a limb or stem kinks, and which way each stretch between kinks points off its course: up
-/// to `wander` from it, about a random axis, held in the course's frame so it turns with the
-/// course. Each stretch is `spacing` long on average, give or take `KINK_JITTER` of it, so kinks
-/// fall unevenly. The first stretch follows the course. Offsets are from the course, not from the
-/// stretch before, so the limb zigzags about its course rather than curling away from it.
-#[derive(Clone)]
-pub(super) struct Kinks {
-    spacing: f32,
-    wander: f32,
-    next: f32,
-    offset: Quat,
-    rng: Rng,
-}
-
-impl Kinks {
-    pub fn new(spacing: f32, wander: f32, rng: Rng) -> Self {
-        let mut kinks = Self {
-            spacing,
-            wander,
-            next: 0.0,
-            offset: Quat::IDENTITY,
-            rng,
-        };
-        kinks.next = kinks.stretch();
-        kinks
-    }
-
-    /// The length of the next stretch, drawn.
-    fn stretch(&mut self) -> f32 {
-        let jitter = (self.rng.unit() * 2.0 - 1.0) * KINK_JITTER;
-        (self.spacing * (1.0 + jitter)).max(TRACE_STEP)
-    }
-
-    /// `step`, cut short to land on the next kink.
-    fn step(&self, at: f32, step: f32) -> f32 {
-        step.min(self.next - at)
-    }
-
-    /// The direction at `at`, given the course there and a side square to the course. A kink
-    /// falling there draws the next offset, unless it falls at or past `end`, from which the
-    /// stretch it is on carries on to the tip.
-    fn direction(&mut self, at: f32, end: f32, course: Vec3, side: Vec3) -> Vec3 {
-        if at >= self.next - 1e-5 {
-            if at < end {
-                self.next += self.stretch();
-                let tilt = self.rng.unit() * self.wander;
-                let around = self.rng.unit() * TAU;
-                self.offset =
-                    Quat::from_axis_angle(Vec3::new(around.cos(), around.sin(), 0.0), tilt);
-            } else {
-                self.next = f32::INFINITY;
-            }
-        }
-        let frame = Quat::from_mat3(&Mat3::from_cols(side, course.cross(side), course));
-        (frame * self.offset * Vec3::Z).normalize()
-    }
 }
 
 /// A tube as it is traced: a point every step, from its start ring, and the direction it was
@@ -266,30 +149,34 @@ impl Trace {
         self.tip_tangent = tangent;
     }
 
-    /// The tube's rings, one at every point. The start ring is kept as it is, and the tip heads as
-    /// the tube did; each ring between faces `halfway`, with its side carried along from the
-    /// start's without twisting.
     fn finish(self) -> Vec<Ring> {
-        let mut rings = vec![self.start];
-        for (i, &(center, at)) in self.points.iter().enumerate().skip(1) {
-            let previous = rings[rings.len() - 1];
-            let tangent = match self.points.get(i + 1) {
-                Some(&(next, _)) => halfway(previous.center, center, next, previous.tangent),
-                None => self.tip_tangent,
-            };
-            let side = (Quat::from_rotation_arc(previous.tangent, tangent) * previous.side)
-                .reject_from_normalized(tangent)
-                .normalize_or(previous.side);
-            rings.push(Ring {
-                center,
-                tangent,
-                side,
-                at,
-                radius: 0.0,
-            });
-        }
-        rings
+        rings_through(self.start, &self.points, self.tip_tangent)
     }
+}
+
+/// A tube's rings, one at each of `points` (a center and a distance along the tube), the first
+/// being `start`'s. The start ring is kept as it is, and the tip heads `tip_tangent`; each ring
+/// between faces `halfway`, with its side carried along from the start's without twisting.
+pub(super) fn rings_through(start: Ring, points: &[(Vec3, f32)], tip_tangent: Vec3) -> Vec<Ring> {
+    let mut rings = vec![start];
+    for (i, &(center, at)) in points.iter().enumerate().skip(1) {
+        let previous = rings[rings.len() - 1];
+        let tangent = match points.get(i + 1) {
+            Some(&(next, _)) => halfway(previous.center, center, next, previous.tangent),
+            None => tip_tangent,
+        };
+        let side = (Quat::from_rotation_arc(previous.tangent, tangent) * previous.side)
+            .reject_from_normalized(tangent)
+            .normalize_or(previous.side);
+        rings.push(Ring {
+            center,
+            tangent,
+            side,
+            at,
+            radius: 0.0,
+        });
+    }
+    rings
 }
 
 /// The direction at `center` halfway between the chords from `before` and to `after`, so a tube

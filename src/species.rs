@@ -202,7 +202,7 @@ pub struct Trunk {
     )]
     pub lean: f32,
     /// The most each stretch of a stem points off its course, which the splay and lean set, so it
-    /// zigzags about it as a limb does, kinking as often.
+    /// zigzags about it as a limb does, kinking as often, its tip where the course ends.
     #[reflect(
         @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_4),
         @Precision(1),
@@ -284,8 +284,9 @@ pub struct LimbLevel {
     )]
     pub bend: f32,
     /// The most each stretch points off the limb's course, which the angle and bend set, so the
-    /// limb zigzags about it rather than running smooth. Kinks fall at one spacing on every
-    /// level, so long limbs kink several times and short twigs once or not at all.
+    /// limb zigzags about it rather than running smooth, its tip where the course ends. Kinks fall
+    /// about one spacing apart on every level, so long limbs kink several times and short twigs
+    /// once or not at all.
     #[reflect(
         @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_4),
         @Precision(1),

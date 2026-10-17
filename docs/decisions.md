@@ -139,12 +139,20 @@ changing one leaves the others' numbers alone (requirements, Parameters, determi
 ### D17 — Tracing in steps, and rings by visible error
 
 A limb's course is traced in 2 cm steps (TD3.4), turning toward its bend as a share of the angle
-left per crown radius, so a species scaled up keeps its form. Kinks fall at one spacing in crown
-radii on every level, offset from the course rather than from the stretch before, so a limb
-zigzags about a steady line, as sympodial growth does; a zigzag reads by its period, so a long limb
-kinks several times and a twig once or not at all. Tying the spacing to a density made the wander
-vanish on sparse levels; turns blended smoothly added up, so limbs hooked and coiled. C84 replaces
-the kinks with midpoint displacement.
+left per crown radius, so a species scaled up keeps its form. Wander then displaces the course as
+a lightning bolt is drawn, by midpoints between its base and its end, both fixed, so the tip stays
+where the course puts it at any wander, and a limb zigzags about a line it keeps returning to, as a
+tree steers back toward light and up. Kinks fall about one spacing in crown radii apart on every
+level; a zigzag reads by its period, so a long limb kinks several times and a twig once or not at
+all. Each stretch points no further off its course than the wander, so no turn is sharper than
+twice it, and no displacement is larger than a segment of two spacings gets, so a trunk, being
+long, zigzags evenly about its course rather than turning on one large corner, as a load-bearing
+stem keeps near a straight line. An axis leaves along its course for about a spacing, so a trunk
+rises from the ground and a limb leaves at its angle. Less faithful to how a shoot grows, each internode turning from the last, but these are
+paintings, not photographs. Kinks offset from the course one stretch after another walked the tip
+off it at random, on the default tree at the most wander by 0.3 to 0.9 m and 10 to 13% lower;
+tying the spacing to a density made the wander vanish on sparse levels; turns blended smoothly
+added up, so limbs hooked and coiled.
 
 Rings are hinted, as font hinting keeps only what a pixel shows: a point is kept only where it lies
 further than the bark's detail threshold from the line kept, since the eye reads a branch by where
@@ -204,8 +212,8 @@ a multiple and its base a share, so a ratio suits a herb as well as a tree, and 
 never moves the trunk. The stems' length as a share of the envelope's height made raising the crown
 drag the trunk with it. Several stems share the trunk's radius and each bears the first level,
 their headings drawn from a stream of their own, so neighbouring trees of one species lean
-different ways. The height is each stem's length along its axis; C84 makes it the height its tip
-reaches. **Reversing it** changes every species' sizes.
+different ways. The height is each stem's length along its course, which wander leaves alone, so an
+upright stem's tip reaches it at any wander. **Reversing it** changes every species' sizes.
 
 ### D24 — The crown is the author's
 

@@ -2,19 +2,20 @@ use std::f32::consts::{FRAC_PI_2, TAU};
 
 use bevy::math::{Vec3, Vec3Swizzles};
 
-use super::{envelope::*, foliage::*, hint::*, mesh::*, placement::*, skeleton::*, trace::*};
+use super::{
+    envelope::*, foliage::*, hint::*, mesh::*, placement::*, skeleton::*, trace::*, wander::*,
+};
 use crate::{
     fuzzy::{Distribution, Fuzzy},
-    random::{Rng, Seed},
+    random::Seed,
     species::{Facing, Foliage, Profile, Species, Trunk},
 };
 
 /// A lone 5 m stem's rings, standing straight up and leaning toward +X, with no wander, hinted
 /// to `tolerance`.
 fn lone_stem(lean_degrees: f32, tolerance: f32) -> Vec<Ring> {
-    let kinks = Kinks::new(1.0, 0.0, Rng::stream(0, "test"));
     hint_rings(
-        &stem_rings(5.0, 0.0, lean_degrees.to_radians(), 0.0, kinks),
+        &stem_rings(5.0, 0.0, lean_degrees.to_radians(), 0.0),
         tolerance,
     )
 }
@@ -53,9 +54,7 @@ fn rings_follow_visible_error() {
     let mut species = Species::default();
     species.trunk.wander = 45.0_f32.to_radians();
     let traced = &stems(&species)[0];
-    for pair in traced.rings.windows(2) {
-        assert!(pair[1].at - pair[0].at <= TRACE_STEP + 1e-5);
-    }
+    assert!(traced.rings.len() as f32 > species.trunk.height / TRACE_STEP);
     let grown = &grow(&species).axes[0];
     assert!(grown.rings.len() < traced.rings.len() / 4);
 }
@@ -138,7 +137,7 @@ fn stems_never_turn_past_level() {
 #[test]
 fn slant_bends_a_stem_without_lengthening_it() {
     let length = |splay: f32, lean: f32| {
-        let mut species = Species::default();
+        let mut species = regular();
         species.trunk.splay = splay.to_radians();
         species.trunk.lean = lean.to_radians();
         stems(&species)[0].rings.last().unwrap().at
@@ -483,15 +482,16 @@ fn rings_advance_along_every_limb() {
 
 #[test]
 fn limbs_kink_at_one_spacing_on_every_level() {
-    // Kinks every 30 cm on average on both levels, whatever their densities, each stretch
-    // 18 to 42 cm: with no bend, the rings between a limb's ends can only be kinks, so a limb
-    // has no more than its length over the shortest stretch.
+    // Kinks about every 30 cm on both levels, whatever their densities: segments are split while
+    // longer than 45 cm, each half at least 30% of it, so no stretch is under 13.5 cm. With no
+    // bend, the rings between a limb's ends can only be kinks, so a limb has no more than its
+    // length over the shortest stretch.
     let mut species = level_limbs(45.0);
     species.limb_levels = 2;
     species.limbs[1].wander = 45.0_f32.to_radians();
     let spacing = kink_spacing(&Envelope::of(&species));
     assert!((spacing - 0.3).abs() < 1e-6);
-    let shortest = spacing * (1.0 - KINK_JITTER);
+    let shortest = spacing * SPLIT_LENGTH * (0.5 - KINK_JITTER);
     let limbs = limbs(&species);
     for limb in &limbs {
         let kinks = (limb.length() / shortest).floor() as usize;
@@ -551,6 +551,62 @@ fn wander_zigzags_about_the_course() {
         }
     }
     assert!(limbs.iter().any(|limb| limb.rings.len() > 4));
+}
+
+#[test]
+fn wander_leaves_tips_where_their_course_ends() {
+    // The trunk, and the limbs on it, end where they would with no wander.
+    let tips = |species: &Species| {
+        let axes = grow(species).axes;
+        let stem = stems(species)[0].rings.last().unwrap().center;
+        let limbs: Vec<Vec3> = (axes.iter().filter(|axis| axis.level == 1))
+            .map(|limb| limb.rings.last().unwrap().center)
+            .collect();
+        (stem, limbs)
+    };
+    let mut species = level_limbs(0.0);
+    let (stem, limbs) = tips(&species);
+    species.trunk.wander = 45.0_f32.to_radians();
+    assert!((tips(&species).0 - stem).length() < 1e-4);
+    species.trunk.wander = 0.0;
+    species.limbs[0].wander = 45.0_f32.to_radians();
+    let (_, wandering) = tips(&species);
+    assert_eq!(wandering.len(), limbs.len());
+    for (one, two) in wandering.iter().zip(&limbs) {
+        assert!((one - two).length() < 1e-4, "{one} {two}");
+    }
+    // A stem leaves the ground along its course, before it is hinted, which may drop the corner
+    // ending its straight base.
+    species.trunk.wander = 45.0_f32.to_radians();
+    let stem = &stems(&species)[0];
+    let base = stem.rings[0];
+    let run = stem.rings[1..]
+        .iter()
+        .take_while(|ring| ring.at < 0.5 * species.trunk.height);
+    let straight: Vec<&Ring> = run
+        .take_while(|ring| (ring.center - base.center).angle_between(base.tangent) < 1e-3)
+        .collect();
+    let along = straight.last().unwrap().at;
+    let spacing = kink_spacing(&Envelope::of(&species));
+    assert!(along >= 0.6 * spacing - TRACE_STEP, "{along} {spacing}");
+    // Every turn between stretches under twice the wander.
+    let mut species = Species {
+        limb_levels: 2,
+        ..Species::default()
+    };
+    species.trunk.wander = 45.0_f32.to_radians();
+    for level in &mut species.limbs {
+        level.wander = 45.0_f32.to_radians();
+    }
+    let mut sharpest = 0.0_f32;
+    for axis in grow(&species).axes {
+        for three in axis.rings.windows(3) {
+            let into = three[1].center - three[0].center;
+            let out = three[2].center - three[1].center;
+            sharpest = sharpest.max(into.angle_between(out).to_degrees());
+        }
+    }
+    assert!(sharpest < 90.0 + 1.0, "{sharpest}");
 }
 
 #[test]

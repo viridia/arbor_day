@@ -18,7 +18,7 @@ pub(super) fn card_size(species: &Species) -> f32 {
 /// The leaf clusters, unless leaves are off: one at the tip of each limb bearing none, wherever
 /// it ends, so no branch end is bare. Its card reaches back along the twig, its fold at the tip,
 /// so the sprig's stem overlaps the twig's end, as seedling's did; on a twig shorter than that,
-/// from its base. The twig runs straight there (`grow_limb`), so the card lies along it.
+/// from its base. The twig runs straight there (`wander_axis`), so the card lies along it.
 pub(super) fn clusters(species: &Species, axes: &[Axis]) -> Vec<Card> {
     if !species.foliage.leaves {
         return Vec::new();

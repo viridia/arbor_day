@@ -11,6 +11,7 @@ use super::{
     hint::hint,
     placement::{place_scions, stems},
     trace::{TRACE_STEP, kink_spacing, trace_scions},
+    wander::wander,
 };
 use crate::{
     random::Rng,
@@ -158,11 +159,13 @@ impl Axis {
     }
 
     /// The axis `at` metres along it: on the straight chord between ring centers, with that
-    /// chord's direction, so once hinted, scions start inside the bark as meshed.
+    /// chord's direction, so once hinted, scions start inside the bark as meshed. A point on a ring
+    /// takes the chord after it, so a card at the start of a branch end's straight run lies along
+    /// the run.
     pub fn frame_at(&self, at: f32) -> Frame {
         let rings = &self.rings;
         let next = rings
-            .partition_point(|ring| ring.at <= at)
+            .partition_point(|ring| ring.at <= at + 1e-5)
             .clamp(1, rings.len() - 1);
         let (a, b) = (rings[next - 1], rings[next]);
         let along = if b.at > a.at {
@@ -295,8 +298,8 @@ impl<'a> Level<'a> {
 /// The stems, hinted (`hint`), their limbs level by level, each level on the axes of the one
 /// before, and the leaf clusters (`clusters`). Each level grows in stages, in a fixed order: its
 /// laterals are placed (`place_scions`) and traced (`trace_scions`), one more limb carries each
-/// parent bearing them on (`carry_on`), the level is tapered (`taper`), its limbs may fork
-/// (`fork`), and it is hinted.
+/// parent bearing them on (`carry_on`), the level wanders (`wander`) and is tapered (`taper`), its
+/// limbs may fork (`fork`), and it is hinted.
 pub(super) fn grow(species: &Species) -> Skeleton {
     let mut skeleton = Skeleton {
         axes: stems(species),
@@ -308,6 +311,7 @@ pub(super) fn grow(species: &Species) -> Skeleton {
         place_scions(&level, &mut skeleton);
         trace_scions(&level, &mut skeleton);
         carry_on(&level, &mut skeleton);
+        wander(&level, &mut skeleton);
         taper(&level, &mut skeleton);
         fork(&level, &mut skeleton);
         hint(number, species.detail, &mut skeleton);

@@ -11,7 +11,8 @@ use super::{
         Axis, AxisKind, Frame, LAYOUT_STREAM, Level, OWN_VALUES_STREAM, Ring, Skeleton,
         WANDER_STREAM, taper_rings, upper_side,
     },
-    trace::{Kinks, kink_spacing, stem_rings},
+    trace::{kink_spacing, stem_rings},
+    wander::displace,
 };
 use crate::{
     fuzzy::Fuzzy,
@@ -37,7 +38,8 @@ const OUTWARD_WEIGHT: f32 = 1.0;
 
 /// The stems: `stems` of them from the origin, spaced evenly around, each leaving the ground at
 /// the splay from up and turning by the lean as it rises, away from the middle, but never past
-/// level, where it would sink again, and kinking about that course by the trunk's wander. The
+/// level, where it would sink again, and zigzagging about that course by the trunk's wander
+/// (`displace`), its tip where the course ends. The
 /// first's compass heading is drawn from the seed. Each narrows by the plant's taper.
 pub(super) fn stems(species: &Species) -> Vec<Axis> {
     let trunk = &species.trunk;
@@ -50,14 +52,10 @@ pub(super) fn stems(species: &Species) -> Vec<Axis> {
     (0..count)
         .map(|stem| {
             let rng = branching.fork(stem as u64);
-            let kinks = Kinks::new(spacing, trunk.wander, rng.fork(WANDER_STREAM));
-            let mut rings = stem_rings(
-                length,
-                trunk.splay,
-                lean,
-                heading + TAU * stem as f32 / count as f32,
-                kinks,
-            );
+            let turn = heading + TAU * stem as f32 / count as f32;
+            let mut rings = stem_rings(length, trunk.splay, lean, turn);
+            let wander = rng.fork(WANDER_STREAM);
+            displace(&mut rings, wander, trunk.wander, spacing, length, None);
             taper_rings(&mut rings, trunk.radius, species.taper.clamp(0.0, 1.0));
             Axis::stem(rings, rng)
         })

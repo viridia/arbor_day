@@ -149,16 +149,16 @@ cluster: an axis and a distance along it.
 
 `grow` makes the stems (TD3.2) and hints them (TD3.4), then grows each level in stages over a
 `Level`, which holds the level's parameters and what every stage reads: place its laterals (TD3.3),
-trace them (TD3.4), carry each parent bearing them on (TD3.6), taper (TD3.5), fork (TD3.7), and
-hint. Then it places the leaf clusters (TD3.8).
+trace them (TD3.4), carry each parent bearing them on (TD3.6), wander (TD3.4), taper (TD3.5), fork
+(TD3.7), and hint. Then it places the leaf clusters (TD3.8).
 
 ### 3.2 Stems
 
 `stems` makes `trunk.stems` of them from the origin, spaced evenly around, each the trunk's height
 long along its axis. Each leaves the ground at the splay from up and turns by the lean as it rises,
 away from the middle, but never past level; the first's compass heading is drawn from the `trunk`
-stream. Its course is an arc in one vertical plane, so its side never twists, and it kinks about
-the course as limbs do (TD3.4). Each has the trunk's radius and bears the first level. The crown is
+stream. Its course is an arc in one vertical plane, so its side never twists, and it wanders
+about the course as limbs do (TD3.4), its tip on the course. Each has the trunk's radius and bears the first level. The crown is
 measured against the trunk's height: its top a multiple, its base a share.
 
 ### 3.3 Placing laterals
@@ -186,13 +186,21 @@ radius share of the parent's radius there.
 ### 3.4 Tracing
 
 `trace.rs` defines tracing. A limb's course turns toward an angle from world up (bend toward),
-keeping its compass heading, closing a share of the angle left over each crown radius (bend). The
-limb kinks every 0.15 crown radii on average, each stretch longer or shorter by up to 40%, drawn
-from its wander stream; each stretch points off the course by a random angle up to the wander,
-about a random axis, held as the course turns. No kink falls in the last stretch under a tip's card
-(TD3.8). A limb that would leave the envelope stops, and is traced again to where it stopped, so
-its last stretch runs straight wherever it ends. A traced limb no longer than it is thick at its
-base is left out.
+keeping its compass heading, closing a share of the angle left over each crown radius (bend). A
+limb stops at its reach, or before a step that would leave the envelope. A traced limb no longer
+than it is thick at its base is left out.
+
+The level then wanders (`wander.rs`), after carrying on and before the taper; a fork's copies
+wander as they are added, and stems as they are made. The course is displaced between two fixed
+points, the end of a straight run at its base, a kink spacing (0.15 crown radii) give or take 40%,
+and the start of the straight run under a tip's card (TD3.8; a stem's end): a segment longer than
+1.5 spacings is split within 20% of its middle, and the split point moves square to the segment,
+in a random direction, by a random share of the shorter half's length, or a spacing if less, times
+the tangent of the wander, halved until neither half points further off the course than the
+wander; then each half likewise. An axis too short for both runs does not wander. Offsets between split points are
+interpolated along the course, each split point gets a ring, so each kink is a corner, and a
+point displaced outside the envelope is pulled back toward the course until inside. Draws come
+from the axis's wander stream.
 
 A traced axis keeps a ring at every step through its level's stages. The last stage, hinting
 (`hint.rs`), simplifies them by Ramer, Douglas and Peucker to the bark's detail threshold, keeping

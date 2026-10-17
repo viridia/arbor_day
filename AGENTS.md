@@ -16,7 +16,7 @@ growth model.
 - Never commit, push, or stage. The author reviews and commits; draft the commit message: a
   short subject line (`feat:` / `fix:` / `refactor:` / `chore:` / `docs:` prefix, under about 72
   characters), a blank line, then a body of bullets, one per change, wrapped at 72 columns.
-- One chunk per session: one focused change. Update the docs in the same chunk: the ledger's
+- One chunk at a time: one focused change. Update the docs in the same chunk: the ledger's
   Landed row, Next and deferrals; `docs/design.md` for what changed in how it works;
   `docs/decisions.md` for a new decision; `docs/guidelines.md` for a correction made twice.
 - Before scoping a chunk, read `docs/guidelines.md`.

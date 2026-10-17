@@ -10,6 +10,7 @@ mod mesh;
 mod placement;
 mod skeleton;
 mod trace;
+mod wander;
 
 #[cfg(test)]
 mod tests;
