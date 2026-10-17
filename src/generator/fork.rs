@@ -31,16 +31,18 @@ pub(super) fn fork(level: &Level, skeleton: &mut Skeleton) {
     }
 }
 
-/// Forks `limb`, the axis at `index`, with the chance its level gives, returning the copies
-/// carrying it on, or none. It ends at the fork, at its radius there, and the copies leave from
-/// there, spread evenly around its direction, each turned from it by half the fork angle, the
-/// first toward its flank turned up by the fork roll: so two copies make a Y lying level at no
-/// roll and upright at 90°. Each copy starts at the limb's radius at the fork and is grown, wanders
-/// and is tapered as a limb of its level does, reaching toward the envelope. A copy that would be no longer
-/// than it is thick is left out, and with no copies the limb does not fork.
+/// Forks `limb`, the axis at `index`, if its level's fork is on, with the chance it gives,
+/// returning the copies carrying it on, or none. It ends at the fork, at its radius there, and the
+/// copies leave from there, spread evenly around its direction, each turned from it by half the
+/// fork angle, the first toward its flank turned up by the fork roll: so two copies make a Y lying
+/// level at no roll and upright at 90°. Each copy starts at the limb's radius at the fork and is
+/// grown, wanders and is tapered as a limb of its level does, reaching toward the envelope. A copy
+/// that would be no longer than it is thick is left out, and with no copies the limb does not fork.
 fn fork_axis(level: &Level, index: usize, limb: &mut Axis) -> Vec<Axis> {
     let params = level.params;
-    let fork = &params.fork;
+    let Some(fork) = params.fork.get() else {
+        return Vec::new();
+    };
     let streams = limb.rng.fork(FORK_STREAM);
     let mut draws = streams.fork(OWN_VALUES_STREAM);
     if draws.unit() >= fork.chance {

@@ -53,6 +53,14 @@ impl<T> Toggle<T> {
         }
     }
 
+    /// `settings`, off.
+    pub fn off(settings: T) -> Self {
+        Self {
+            state: OperatorState::Off,
+            settings,
+        }
+    }
+
     /// The settings, if on.
     pub fn get(&self) -> Option<&T> {
         (self.state == OperatorState::On).then_some(&self.settings)

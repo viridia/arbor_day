@@ -53,21 +53,6 @@
       },
       "wander": {
         "angle": 0.17453292
-      },
-      "fork": {
-        "chance": 0.0,
-        "at": {
-          "center": 0.5,
-          "spread": 0.1,
-          "shape": "Bell"
-        },
-        "copies": 2,
-        "angle": {
-          "center": 0.6981317,
-          "spread": 0.17453292,
-          "shape": "Bell"
-        },
-        "roll": 0.0
       }
     }
   ],

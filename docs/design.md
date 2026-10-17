@@ -233,9 +233,9 @@ radius share of the parent's radius there.
 
 ### 3.4 Tracing
 
-`trace.rs` defines tracing. A limb's course turns toward an angle from world up (the bend's
-toward), keeping its compass heading, closing a share of the angle left over each crown radius
-(its amount). A
+`trace.rs` defines tracing. With Bend on, a limb's course turns toward an angle from world up
+(the bend's toward), keeping its compass heading, closing a share of the angle left over each
+crown radius (its amount); without it, the course is straight. A
 limb stops at its reach, or before a step that would leave the envelope. A traced limb no longer
 than it is thick at its base is left out.
 
@@ -275,7 +275,7 @@ length.
 
 ### 3.7 Forks
 
-A level's axes fork with the level's chance (`fork.rs`), at a drawn share of their length, and end
+With Fork on, a level's axes fork with its chance (`fork.rs`), at a drawn share of their length, and end
 there, capped. Copies carry the axis on, 2 to 4, of the same level: spread evenly around its
 direction, each turned half the drawn fork angle from it, the first toward its flank turned up by
 the roll. Each copy starts at the axis's radius at the fork and draws its reach, wander and limbs

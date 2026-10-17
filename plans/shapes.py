@@ -13,6 +13,7 @@ default.
   stems in its narrow foot, bearing fewer limbs."""
 
 BIN = "arbor_day"
+SPECIES = "arbor_day::species::Species"
 
 
 def set_number(driver, path, text):
@@ -70,6 +71,7 @@ def run(driver):
     pick_facing(driver, "Sides")
 
     # Every first-level limb forks: level, upright, then three ways.
+    driver.set_resource(SPECIES, "On", at="limbs.levels[0].fork.state")
     set_number(driver, "levels[0]/fork/chance", "100")
     driver.screenshot("forked")
     set_number(driver, "levels[0]/fork/roll", "90")
@@ -79,6 +81,7 @@ def run(driver):
     driver.screenshot("forked_three")
     set_number(driver, "levels[0]/fork/copies", "2")
     set_number(driver, "levels[0]/fork/chance", "0")
+    driver.set_resource(SPECIES, "Off", at="limbs.levels[0].fork.state")
     driver.click("Shell/Panel/levels[1]/remove")
     driver.frames(2)
 

@@ -9,6 +9,7 @@ BIN = "arbor_day"
 STATS = "arbor_day::plant::PlantStats"
 ENVELOPE = "arbor_day::plant::EnvelopeStats"
 GROWN_FROM = "arbor_day::plant::GrownFrom"
+SPECIES = "arbor_day::species::Species"
 LIMBS = "Shell/Panel/levels[0]"
 COLOR = "Shell/Panel/bark_color/input"
 
@@ -24,7 +25,8 @@ def run(driver):
     driver.present(f"{LIMBS}/reach/shape")  # the immediate-mode panel has built its rows
 
     # Fuzzy numbers: the first limb level's fork angle and reach, both bells. The fork's, since
-    # `levels[0]/angle` would also match the angles nested under it.
+    # `levels[0]/angle` would also match the angles nested under it; the fork is off by default.
+    driver.set_resource(SPECIES, "On", at="limbs.levels[0].fork.state")
     driver.expect("Plant", GROWN_FROM, "Bell", at="limbs[0].fork.angle.shape")
     driver.expect("Plant", GROWN_FROM, "Bell", at="limbs[0].reach.shape")
     driver.present(f"{LIMBS}/fork/angle/center/spread_strip/segment0")

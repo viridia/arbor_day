@@ -186,10 +186,10 @@ impl Default for LimbLevels {
                     reach: Fuzzy::new(0.6, 0.1, Distribution::Bell),
                     radius: 0.5,
                     sides: 3,
-                    bend: Bend {
+                    bend: Toggle::on(Bend {
                         amount: 0.5,
                         ..Bend::default()
-                    },
+                    }),
                     wander: Toggle::on(Wander::degrees(15.0)),
                     ..LimbLevel::default()
                 },
@@ -202,10 +202,10 @@ impl Default for LimbLevels {
                     reach: Fuzzy::new(0.5, 0.1, Distribution::Bell),
                     radius: 0.5,
                     sides: 3,
-                    bend: Bend {
+                    bend: Toggle::on(Bend {
                         amount: 0.5,
                         ..Bend::default()
-                    },
+                    }),
                     wander: Toggle::on(Wander::degrees(20.0)),
                     ..LimbLevel::default()
                 },
@@ -395,11 +395,11 @@ pub struct LimbLevel {
     #[reflect(@ValueRange::<i32>(3..=8), @Spinbox, @Caption("Sides"), @ControlGroup("Shape"))]
     pub sides: i32,
     #[reflect(@Caption("Bend"))]
-    pub bend: Bend,
+    pub bend: Toggle<Bend>,
     #[reflect(@Caption("Wander"))]
     pub wander: Toggle<Wander>,
     #[reflect(@Caption("Fork"))]
-    pub fork: Fork,
+    pub fork: Toggle<Fork>,
 }
 
 impl SerializeWithRegistry for LimbLevel {
@@ -424,9 +424,9 @@ impl Default for LimbLevel {
             reach: Fuzzy::new(0.9, 0.1, Distribution::Bell),
             radius: 0.5,
             sides: 4,
-            bend: Bend::default(),
+            bend: Toggle::on(Bend::default()),
             wander: Toggle::on(Wander::degrees(10.0)),
-            fork: Fork::default(),
+            fork: Toggle::off(Fork::default()),
         }
     }
 }
@@ -448,6 +448,7 @@ pub fn limits<T: Typed>(name: &str) -> RangeInclusive<f32> {
 /// A limb's course turning, as it grows, toward an angle from world up, keeping its compass
 /// heading. Without it the course is straight.
 #[derive(Reflect, Clone, PartialEq)]
+#[reflect(@Icon("icons/operators/bend.png"))]
 pub struct Bend {
     /// The angle from world up the limb bends toward: 0 up, as a poplar's, 90° level, as an oak's,
     /// 180° down, as a weeping tree's.
@@ -508,6 +509,7 @@ impl Wander {
 /// A limb ending partway along, and copies of it carrying it on from there, of its level, so they
 /// reach the envelope and bear limbs as it would.
 #[derive(Reflect, Clone, PartialEq)]
+#[reflect(@Icon("icons/operators/fork.png"))]
 pub struct Fork {
     /// The chance that a limb forks.
     #[reflect(

@@ -23,6 +23,7 @@ def run(driver):
     driver.screenshot("wander_off")
 
     driver.click("Shell/Panel/levels[0]/add_operator")
+    driver.present("Shell/Panel/levels[0]/add_operator/add_fork")  # off by default
     driver.screenshot("add_menu")
     driver.click("Shell/Panel/levels[0]/add_operator/add_wander")
     driver.present("Shell/Panel/levels[0]/wander/angle")

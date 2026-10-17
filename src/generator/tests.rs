@@ -249,14 +249,14 @@ fn regular() -> Species {
     let mut species = Species::default();
     species.trunk.wander.settings.angle = 0.0;
     for level in &mut species.limbs.levels {
-        level.bend.amount = 0.0;
+        level.bend.settings.amount = 0.0;
         level.wander.settings.angle = 0.0;
         level.skew = 0.0;
         for fuzzy in [
             &mut level.angle,
             &mut level.reach,
-            &mut level.fork.at,
-            &mut level.fork.angle,
+            &mut level.fork.settings.at,
+            &mut level.fork.settings.angle,
         ] {
             fuzzy.spread = 0.0;
         }
@@ -418,8 +418,8 @@ fn deeper_levels_grow_on_the_level_before() {
 #[test]
 fn limbs_bend_toward_their_bend() {
     let mut species = regular();
-    species.limbs.levels[0].bend.amount = 0.5;
-    let target = species.limbs.levels[0].bend.toward;
+    species.limbs.levels[0].bend.settings.amount = 0.5;
+    let target = species.limbs.levels[0].bend.settings.toward;
     let crown = species.crown.radius;
     for limb in limbs(&species) {
         let tip = limb.rings[limb.rings.len() - 1].tangent;
@@ -441,8 +441,8 @@ fn limbs_bend_toward_their_bend() {
 fn every_bend_target_moves_the_tip() {
     let tips = |degrees: f32| {
         let mut species = regular();
-        species.limbs.levels[0].bend.amount = 0.5;
-        species.limbs.levels[0].bend.toward = degrees.to_radians();
+        species.limbs.levels[0].bend.settings.amount = 0.5;
+        species.limbs.levels[0].bend.settings.toward = degrees.to_radians();
         limbs(&species)
             .iter()
             .map(|limb| limb.rings[limb.rings.len() - 1].tangent)
@@ -555,7 +555,8 @@ fn wander_zigzags_about_the_course() {
 }
 
 #[test]
-fn wander_off_grows_as_no_wander() {
+fn operators_not_on_grow_as_at_zero() {
+    // Disabled or off, an operator grows the plant as its value that does nothing would.
     let rings = |species: &Species| -> Vec<Vec3> {
         let axes = grow(species).axes;
         axes.iter()
@@ -565,6 +566,19 @@ fn wander_off_grows_as_no_wander() {
     let mut off = level_limbs(45.0);
     off.limbs.levels[0].wander.state = OperatorState::Disabled;
     assert_eq!(rings(&off), rings(&level_limbs(0.0)));
+
+    let mut bent = Species::default();
+    bent.limbs.levels[0].bend.settings.amount = 0.8;
+    let mut straight = bent.clone();
+    straight.limbs.levels[0].bend.settings.amount = 0.0;
+    bent.limbs.levels[0].bend.state = OperatorState::Off;
+    assert_eq!(rings(&bent), rings(&straight));
+
+    let mut unforked = forking(2, 0.0);
+    unforked.limbs.levels[0].fork.state = OperatorState::Disabled;
+    let mut never = forking(2, 0.0);
+    never.limbs.levels[0].fork.settings.chance = 0.0;
+    assert_eq!(rings(&unforked), rings(&never));
 }
 
 #[test]
@@ -960,11 +974,12 @@ fn forking(copies: i32, roll: f32) -> Species {
     let mut species = straight();
     let level = &mut species.limbs.levels[0];
     level.density = 1.0;
-    level.fork.chance = 1.0;
-    level.fork.at.center = 0.5;
-    level.fork.copies = copies;
-    level.fork.angle.center = 60.0_f32.to_radians();
-    level.fork.roll = roll.to_radians();
+    level.fork.state = OperatorState::On;
+    level.fork.settings.chance = 1.0;
+    level.fork.settings.at.center = 0.5;
+    level.fork.settings.copies = copies;
+    level.fork.settings.angle.center = 60.0_f32.to_radians();
+    level.fork.settings.roll = roll.to_radians();
     species
 }
 

@@ -158,7 +158,8 @@ mod tests {
         let registry = registry();
         let mut species = Species::default();
         species.limbs.shown = 3;
-        species.limbs.levels[2].fork.chance = 0.5;
+        species.limbs.levels[2].fork.state = OperatorState::On;
+        species.limbs.levels[2].fork.settings.chance = 0.5;
         species.trunk.wander.settings.angle = 0.3;
         species.ornaments.leaves = false;
         let written = write(&species, &registry).unwrap();
