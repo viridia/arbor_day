@@ -38,8 +38,8 @@ const OUTWARD_WEIGHT: f32 = 1.0;
 
 /// The stems: `stems` of them from the origin, spaced evenly around, each leaving the ground at
 /// the splay from up and turning by the lean as it rises, away from the middle, but never past
-/// level, where it would sink again, and zigzagging about that course by the trunk's wander
-/// (`displace`), its tip where the course ends. The
+/// level, where it would sink again, and zigzagging about that course by the trunk's wander, if
+/// on (`displace`), its tip where the course ends. The
 /// first's compass heading is drawn from the seed. Each narrows by the plant's taper.
 pub(super) fn stems(species: &Species) -> Vec<Axis> {
     let trunk = &species.trunk;
@@ -54,15 +54,10 @@ pub(super) fn stems(species: &Species) -> Vec<Axis> {
             let rng = branching.fork(stem as u64);
             let turn = heading + TAU * stem as f32 / count as f32;
             let mut rings = stem_rings(length, trunk.splay, lean, turn);
-            let wander = rng.fork(WANDER_STREAM);
-            displace(
-                &mut rings,
-                wander,
-                trunk.wander.angle,
-                spacing,
-                length,
-                None,
-            );
+            if let Some(wander) = trunk.wander.get() {
+                let stream = rng.fork(WANDER_STREAM);
+                displace(&mut rings, stream, wander.angle, spacing, length, None);
+            }
             taper_rings(&mut rings, trunk.radius, species.taper.clamp(0.0, 1.0));
             Axis::stem(rings, rng)
         })

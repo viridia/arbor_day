@@ -95,6 +95,19 @@ from a subpane's. An array marked `ShownCount` shows its first items, the count 
 last shown item's header hide it or show the next, and a hidden item keeps its values. Each limb
 level's header shows its count, "Limbs 1 (8)".
 
+An operator is a `Toggle<T>` field (`src/toggle.rs`): its settings and an `OperatorState`, off,
+disabled or on, as Blender's modifiers are removed, hidden or shown; the generator runs it only
+when on. The panel finds a toggle by reflection, through the `IsToggle` attribute on its type. On
+or disabled, it is a heading over its settings' rows, after an icon of its kind (an `Icon`
+attribute on the settings' type, tinted as the heading is), in a node named after the field, so panel
+paths skip `settings` (`levels[0]/wander/angle`) while reflection paths keep it
+(`limbs.levels[0].wander.settings.angle`). At the heading's right, an eye (`enabled`, Material
+Symbols' `visibility` and `visibility_off`) switches it between on and disabled, and a ✕ (`off`)
+turns it off. Off, it has no rows. The header of a level, or of a top-level struct holding
+toggles (the trunk), has an add menu (`add_operator`, a boxed plus, a feathers menu) listing its
+toggles that are off, an item each (`add_wander`), disabled while none is. Turned off and on
+again, an operator keeps its settings for the session.
+
 ### 1.6 The HUD
 
 The HUD (`src/hud.rs`) is a grid over the view pane with the panel's spacing (8 px padding and
@@ -151,9 +164,17 @@ written; a test compares the two. Custom serialization is type data on the type,
 
 Reading takes `generator` off and refuses a file without one or from a newer generator, then
 deserializes the rest strictly: a key the species lacks fails, naming it (D32). Reflection returns
-only the fields the file holds, applied onto a template, the default species, so a field left out
-keeps its default. `LimbLevels` reads one to three levels, each onto its depth's defaults, the
-levels after them their depths' defaults.
+only the fields the file holds, applied onto a template, the default species with every operator
+off (`all_off`), so a field left out keeps its default and an operator left out is off.
+`LimbLevels` reads one to three levels, each onto its depth's defaults with every operator off, the
+levels after them their depths' defaults as they are.
+
+An operator's `Toggle` writes its settings bare when on, and when disabled `"enabled": false`
+before them; a struct holding operators leaves out those that are off (`serialize_on`), as
+`LimbLevel`'s and `Trunk`'s `SerializeWithRegistry`. Read, an operator is on unless marked, its
+settings read whole: a field missing from an operator fails, since its fields are fixed for its
+version. Its settings go through a `serde_json::Value`, whatever the format, so `"enabled"` can be
+taken off before reflection reads them.
 
 BRP serializes through the same registry, so a plan reading the species (`GrownFrom`) sees the
 file's shape, `at="limbs[0].angle"`, while a path it writes (`set`) is a reflection path,

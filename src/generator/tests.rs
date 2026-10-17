@@ -9,6 +9,7 @@ use crate::{
     fuzzy::{Distribution, Fuzzy},
     random::Seed,
     species::{Facing, Ornaments, Profile, Species, TipLeaves, Trunk, Upright, Wander},
+    toggle::{OperatorState, Toggle},
 };
 
 /// A lone 5 m stem's rings, standing straight up and leaning toward +X, with no wander, hinted
@@ -33,7 +34,7 @@ fn trunk_with(sides: i32, lean_degrees: f32) -> Trunk {
     Trunk {
         sides,
         lean: lean_degrees.to_radians(),
-        wander: Wander::degrees(0.0),
+        wander: Toggle::on(Wander::degrees(0.0)),
         ..Trunk::default()
     }
 }
@@ -52,7 +53,7 @@ fn rings_follow_visible_error() {
     }
     // Traced, a stem keeps a ring at every step; grown, it keeps those hinting does.
     let mut species = Species::default();
-    species.trunk.wander.angle = 45.0_f32.to_radians();
+    species.trunk.wander.settings.angle = 45.0_f32.to_radians();
     let traced = &stems(&species)[0];
     assert!(traced.rings.len() as f32 > species.trunk.height / TRACE_STEP);
     let grown = &grow(&species).axes[0];
@@ -246,10 +247,10 @@ fn rays_leave_the_envelope_at_its_surface() {
 /// The default species with every level's limbs straight and nothing varied.
 fn regular() -> Species {
     let mut species = Species::default();
-    species.trunk.wander.angle = 0.0;
+    species.trunk.wander.settings.angle = 0.0;
     for level in &mut species.limbs.levels {
         level.bend.amount = 0.0;
-        level.wander.angle = 0.0;
+        level.wander.settings.angle = 0.0;
         level.skew = 0.0;
         for fuzzy in [
             &mut level.angle,
@@ -488,7 +489,7 @@ fn limbs_kink_at_one_spacing_on_every_level() {
     // length over the shortest stretch.
     let mut species = level_limbs(45.0);
     species.limbs.shown = 2;
-    species.limbs.levels[1].wander.angle = 45.0_f32.to_radians();
+    species.limbs.levels[1].wander.settings.angle = 45.0_f32.to_radians();
     let spacing = kink_spacing(&Envelope::of(&species));
     assert!((spacing - 0.3).abs() < 1e-6);
     let shortest = spacing * SPLIT_LENGTH * (0.5 - KINK_JITTER);
@@ -533,7 +534,7 @@ fn level_limbs(wander: f32) -> Species {
     let mut species = straight();
     species.limbs.levels[0].angle = Fuzzy::new(FRAC_PI_2, 0.0, Distribution::Uniform);
     species.limbs.levels[0].reach = Fuzzy::new(1.0, 0.0, Distribution::Uniform);
-    species.limbs.levels[0].wander.angle = wander.to_radians();
+    species.limbs.levels[0].wander.settings.angle = wander.to_radians();
     species
 }
 
@@ -554,6 +555,19 @@ fn wander_zigzags_about_the_course() {
 }
 
 #[test]
+fn wander_off_grows_as_no_wander() {
+    let rings = |species: &Species| -> Vec<Vec3> {
+        let axes = grow(species).axes;
+        axes.iter()
+            .flat_map(|axis| axis.rings.iter().map(|ring| ring.center))
+            .collect()
+    };
+    let mut off = level_limbs(45.0);
+    off.limbs.levels[0].wander.state = OperatorState::Disabled;
+    assert_eq!(rings(&off), rings(&level_limbs(0.0)));
+}
+
+#[test]
 fn wander_leaves_tips_where_their_course_ends() {
     // The trunk, and the limbs on it, end where they would with no wander.
     let tips = |species: &Species| {
@@ -566,10 +580,10 @@ fn wander_leaves_tips_where_their_course_ends() {
     };
     let mut species = level_limbs(0.0);
     let (stem, limbs) = tips(&species);
-    species.trunk.wander.angle = 45.0_f32.to_radians();
+    species.trunk.wander.settings.angle = 45.0_f32.to_radians();
     assert!((tips(&species).0 - stem).length() < 1e-4);
-    species.trunk.wander.angle = 0.0;
-    species.limbs.levels[0].wander.angle = 45.0_f32.to_radians();
+    species.trunk.wander.settings.angle = 0.0;
+    species.limbs.levels[0].wander.settings.angle = 45.0_f32.to_radians();
     let (_, wandering) = tips(&species);
     assert_eq!(wandering.len(), limbs.len());
     for (one, two) in wandering.iter().zip(&limbs) {
@@ -577,7 +591,7 @@ fn wander_leaves_tips_where_their_course_ends() {
     }
     // A stem leaves the ground along its course, before it is hinted, which may drop the corner
     // ending its straight base.
-    species.trunk.wander.angle = 45.0_f32.to_radians();
+    species.trunk.wander.settings.angle = 45.0_f32.to_radians();
     let stem = &stems(&species)[0];
     let base = stem.rings[0];
     let run = stem.rings[1..]
@@ -591,9 +605,9 @@ fn wander_leaves_tips_where_their_course_ends() {
     assert!(along >= 0.6 * spacing - TRACE_STEP, "{along} {spacing}");
     // Every turn between stretches under twice the wander.
     let mut species = shown(2, Species::default());
-    species.trunk.wander.angle = 45.0_f32.to_radians();
+    species.trunk.wander.settings.angle = 45.0_f32.to_radians();
     for level in &mut species.limbs.levels {
-        level.wander.angle = 45.0_f32.to_radians();
+        level.wander.settings.angle = 45.0_f32.to_radians();
     }
     let mut sharpest = 0.0_f32;
     for axis in grow(&species).axes {

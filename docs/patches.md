@@ -229,12 +229,14 @@ Levels grow in turn: a level's frame and operators, then its scions' level.
 - An operator a level lacks shows no rows: a twig level without wander has no wander fields. A
   new behaviour can be a new operator rather than a field on every level, which eases G1.
 - Each operator is a field of its level, in the fixed order, so a level has at most one of each:
-  a `Toggle<T>`, its settings and whether it is on. The add menu turns it on and ✕ off, so an
-  operator removed and added again keeps its values for the session, as a hidden level does
-  (D15); files write only operators that are on. Each level's defaults hold every operator's
-  settings, off, varying by depth as the levels' defaults do. The generator calls an operator's
-  function (C82) where it is on. The property editor gains a group shown while its `Toggle`
-  is on and listed in the add menu while off. C10 serializes them; so settle this before C10.
+  a `Toggle<T>`, its settings and its state: off, disabled or on, as Blender's modifiers are
+  removed, hidden or shown. The add menu turns it on, ✕ off, and an eye switches it between on
+  and disabled, so an author compares a plant with and without it and loses nothing; an operator
+  removed and added again keeps its values for the session, as a hidden level does (D15); files
+  write the operators that are not off. Each level's defaults hold every operator's settings,
+  varying by depth as the levels' defaults do. The generator calls an operator's function (C82)
+  where it is on. The property editor shows its rows unless it is off, and lists it in the add
+  menu while off.
 - Levels stay D15's array of three and its count of those shown: a level's Scions are on while
   the count reaches past it, so paths stay `limbs.levels[1].angle` and only D15's panel changes.
 
@@ -283,9 +285,9 @@ settings. The default species, abridged, angles in radians:
 
 - **Levels**: the shown levels only, as C10's `LimbLevels` writes them; a level's Scions are on
   while the list reaches past it.
-- **Operators**: one that is on is written as its settings, under its slot's name; one that is
-  off is not written. `Toggle<T>` writes its `T` bare, and a level writes only the toggles that
-  are on, by type data on the level, as `LimbLevels` has. Ornaments are written the same way, so
+- **Operators**: one that is on is written as its settings, under its slot's name; one disabled,
+  as its settings after `"enabled": false`; one that is off is not written. A level leaves out
+  the toggles that are off, by type data on the level, as `LimbLevels` has. Ornaments are written the same way, so
   a bare plant has no `tip_leaves`, in place of the Leaves switch.
 - **Reading**: reflection reads a struct with fields missing and rejects one with a field it does
   not know (`bevy_reflect`'s `visit_struct`). The file is applied onto the template, the species

@@ -14,15 +14,16 @@ use std::{collections::HashMap, ops::RangeInclusive};
 use bevy::{
     app::PropagateOver,
     feathers::{
-        constants::{fonts, size},
+        constants::{fonts, icons, size},
         containers::{subpane, subpane_body, subpane_header},
         controls::{
             ButtonVariant, ColorInputValue, FeathersCheckbox, FeathersColorInput, FeathersListRow,
+            FeathersMenu, FeathersMenuItem, FeathersMenuPopup, FeathersMenuToolButton,
             FeathersNumberInput, FeathersSelect, FeathersToolButton, HardLimit,
             NumberInputPrecision, NumberInputStep, NumberInputUnits, OptionIndex, SoftLimit,
         },
         display::{caption as option_caption, icon, label},
-        theme::{ThemeTextColor, ThemedText},
+        theme::{ThemeTextColor, ThemeToken, ThemedText},
         tokens,
     },
     prelude::*,
@@ -35,7 +36,10 @@ use bevy::{
     },
     text::FontSourceTemplate,
     ui::Selected,
-    ui_widgets::{NumericRange, SetSelected, ValueChange},
+    ui_widgets::{
+        NumericRange, SetSelected, ValueChange,
+        popover::{Popover, PopoverAlign, PopoverPlacement, PopoverSide},
+    },
 };
 use bevy_immediate::{
     CapSet, Imm, ImmCapAccessRequests, ImmCapability, ImmEntity, impl_capability_set,
@@ -59,6 +63,7 @@ use crate::{
     fuzzy::{Distribution, Fuzzy},
     random::Seed,
     spread_strip::{StripRange, spread_strip},
+    toggle::{OperatorState, set_toggle_state, toggle_state},
 };
 
 /// The panel's capabilities: `bevy_immediate`'s for feathers, and reading back an enum's select.
@@ -151,6 +156,10 @@ pub struct ControlGroup(pub &'static str);
 /// with no subpane, heading or node of their own.
 #[derive(Debug, Clone, Reflect)]
 pub struct Flatten;
+
+/// On an operator's settings type: the icon left of its heading, an image path under `assets/`.
+#[derive(Debug, Clone, Reflect)]
+pub struct Icon(pub &'static str);
 
 /// A number in a [`ValueRange`] shown without the slider fill, as a spinbox with step arrows.
 #[derive(Debug, Clone, Reflect)]
@@ -344,6 +353,13 @@ fn field_row(
         edit_struct(ui, field, notes, in_pane);
         return;
     }
+    if let Some(state) = toggle_state(field) {
+        // Off, it has no rows: its struct's add menu lists it.
+        if state != OperatorState::Off {
+            operator(ui, name, caption, state, field, notes);
+        }
+        return;
+    }
     // Rows are keyed by field name, so they keep their entities from frame to frame.
     let row = ui.ch_id(name);
 
@@ -377,7 +393,19 @@ fn field_row(
                 edit_struct(ui, field, notes, true);
             });
         } else {
-            group(row, caption, |ui| edit_struct(ui, field, notes, true));
+            let toggles = toggles(field);
+            let mut added = None;
+            let tools = |ui: &mut Imm<CapsPanel>| {
+                if !toggles.is_empty() {
+                    added = add_menu(ui, &toggles);
+                }
+            };
+            group_with_tools(row, caption.to_string(), tools, |ui| {
+                edit_struct(ui, field, notes, true);
+            });
+            if let Some(added) = added {
+                turn_on(field, added);
+            }
         }
     } else {
         let text = format!("{caption}: {}", field.reflect_short_type_path());
@@ -416,7 +444,10 @@ fn shown_items(
             .ch_id((name, index))
             .on_spawn_insert(move || Name::new(item_name.clone()));
         let last = index + 1 == count as usize;
+        let toggles = toggles(item);
+        let mut added = None;
         let tools = |ui: &mut Imm<CapsPanel>| {
+            added = add_menu(ui, &toggles);
             if last {
                 let removed = ui
                     .ch()
@@ -434,8 +465,206 @@ fn shown_items(
         group_with_tools(pane, header, tools, |ui| {
             edit_struct(ui, item, notes, true);
         });
+        if let Some(added) = added {
+            turn_on(item, added);
+        }
     }
     new_count
+}
+
+/// A [`Toggle`] field of a struct: its name, its caption and its state.
+///
+/// [`Toggle`]: crate::toggle::Toggle
+type ToggleField = (&'static str, &'static str, OperatorState);
+
+/// `value`'s fields that are [`Toggle`]s.
+///
+/// [`Toggle`]: crate::toggle::Toggle
+fn toggles(value: &dyn PartialReflect) -> Vec<ToggleField> {
+    let Some(TypeInfo::Struct(info)) = value.get_represented_type_info() else {
+        return Vec::new();
+    };
+    let ReflectRef::Struct(fields) = value.reflect_ref() else {
+        return Vec::new();
+    };
+    info.iter()
+        .filter_map(|field| {
+            let state = toggle_state(fields.field(field.name())?)?;
+            let caption = field.custom_attributes().get::<Caption>();
+            Some((field.name(), caption.map_or(field.name(), |caption| caption.0), state))
+        })
+        .collect()
+}
+
+/// Turns on the toggle in `value`'s field `name`.
+fn turn_on(value: &mut dyn PartialReflect, name: &str) {
+    if let ReflectMut::Struct(fields) = value.reflect_mut()
+        && let Some(toggle) = fields.field_mut(name)
+    {
+        set_toggle_state(toggle, OperatorState::On);
+    }
+}
+
+/// A header's add menu, named `add_operator`: a boxed plus listing those of `toggles` that are off,
+/// each item named `add_` and its field's name, and disabled while none is. Returns the field
+/// picked, if any.
+fn add_menu(ui: &mut Imm<CapsPanel>, toggles: &[ToggleField]) -> Option<&'static str> {
+    let off: Vec<_> = (toggles.iter())
+        .filter(|(.., state)| *state == OperatorState::Off)
+        .map(|&(field, caption, _)| (field, caption))
+        .collect();
+    let mut picked = None;
+    ui.ch()
+        .on_spawn_apply_scene(|| bsn! { @FeathersMenu #add_operator })
+        .add(|ui| {
+            ui.ch()
+                .on_spawn_apply_scene(|| {
+                    bsn! {
+                        @FeathersMenuToolButton {
+                            @caption: bsn! { @icon("icons/add_box.png") Node { height: px(18) } },
+                            @arrow: false,
+                        }
+                    }
+                })
+                .interactions_disabled(off.is_empty());
+            ui.ch()
+                .on_spawn_apply_scene(|| {
+                    bsn! {
+                        @FeathersMenuPopup
+                        // Right-aligned, since the add button sits at the header's right end.
+                        Popover {
+                            positions: vec![
+                                PopoverPlacement {
+                                    side: PopoverSide::Bottom,
+                                    align: PopoverAlign::End,
+                                    gap: 2.0,
+                                },
+                                PopoverPlacement {
+                                    side: PopoverSide::Top,
+                                    align: PopoverAlign::End,
+                                    gap: 2.0,
+                                },
+                            ],
+                            window_margin: 10.0,
+                        }
+                    }
+                })
+                .add(|ui| {
+                    for (field, caption) in off {
+                        let item = format!("add_{field}");
+                        let activated = ui
+                            .ch_id(field)
+                            .on_spawn_apply_scene(move || {
+                                bsn! {
+                                    @FeathersMenuItem { @caption: bsn! { Text(caption) ThemedText } }
+                                    Name({item.clone()})
+                                }
+                            })
+                            .activated();
+                        if activated {
+                            picked = Some(field);
+                        }
+                    }
+                });
+        });
+    picked
+}
+
+/// An operator that is on or disabled, in a subpane: its heading, after its settings type's
+/// [`Icon`] if it has one, over its settings' rows, in a node named `name`. At the heading's
+/// right, an eye named `enabled` switches it between on and disabled, showing which, and a ✕
+/// named `off` turns it off.
+fn operator(
+    ui: &mut Imm<CapsPanel>,
+    name: &'static str,
+    caption: &'static str,
+    state: OperatorState,
+    toggle: &mut dyn PartialReflect,
+    notes: &HeaderNotes,
+) {
+    let mut new_state = state;
+    let ReflectMut::Struct(fields) = toggle.reflect_mut() else {
+        return;
+    };
+    let kind_icon = fields
+        .field("settings")
+        .and_then(|settings| settings.get_represented_type_info())
+        .and_then(|info| info.as_struct().ok())
+        .and_then(|info| info.get_attribute::<Icon>())
+        .map(|icon| icon.0);
+    ui.ch_id(name)
+        .on_spawn_insert(move || (Name::new(name), heading_node()))
+        .add(|ui| {
+            ui.ch()
+                .on_spawn_insert(|| Node {
+                    margin: UiRect::top(px(6)),
+                    ..caption_line()
+                })
+                .add(|ui| {
+                    // Brighter while on; keyed by it, so the eye's click redraws it.
+                    let on = state == OperatorState::On;
+                    let color = if on { tokens::TEXT_MAIN } else { tokens::TEXT_DIM };
+                    ui.ch_id(("title", on))
+                        .on_spawn_insert(widget_line)
+                        .add(|ui| {
+                            if let Some(image) = kind_icon {
+                                let color = color.clone();
+                                ui.ch().on_spawn_apply_scene(move || {
+                                    bsn! {
+                                        @icon(image)
+                                        ThemeTextColor({color})
+                                        Name("icon")
+                                    }
+                                });
+                            }
+                            ui.ch()
+                                .on_spawn_apply_scene(move || heading_text(caption, color));
+                        });
+                    ui.ch().on_spawn_insert(widget_line).add(|ui| {
+                        let image = match state {
+                            OperatorState::On => "icons/visibility.png",
+                            _ => "icons/visibility_off.png",
+                        };
+                        if icon_button(ui, "enabled", image, px(16)) {
+                            new_state = match state {
+                                OperatorState::On => OperatorState::Disabled,
+                                _ => OperatorState::On,
+                            };
+                        }
+                        if icon_button(ui, "off", icons::X, px(14)) {
+                            new_state = OperatorState::Off;
+                        }
+                    });
+                });
+            if let Some(settings) = fields.field_mut("settings") {
+                edit_struct(ui, settings, notes, true);
+            }
+        });
+    if new_state != state {
+        set_toggle_state(toggle, new_state);
+    }
+}
+
+/// A plain tool button named `name`, showing `image` `height` high, keyed by the image so a new
+/// one replaces it. Returns whether it was clicked.
+fn icon_button(
+    ui: &mut Imm<CapsPanel>,
+    name: &'static str,
+    image: &'static str,
+    height: Val,
+) -> bool {
+    let mut button = ui.ch_id(name).on_spawn_apply_scene(move || {
+        bsn! {
+            @FeathersToolButton { @variant: {ButtonVariant::Plain} }
+            Name({name})
+        }
+    });
+    let clicked = button.activated();
+    button.add(|ui| {
+        ui.ch_id(image)
+            .on_spawn_apply_scene(move || bsn! { @icon(image) Node { height: {height} } });
+    });
+    clicked
 }
 
 /// A feathers tool button showing `caption`, named `name`.
@@ -515,6 +744,14 @@ fn row_node(name: &'static str) -> (Name, Node) {
 /// captions below it, with a gap above that sets it off from the rows before.
 fn group_heading(caption: &'static str) -> impl Scene {
     bsn! {
+        @heading_text(caption, tokens::TEXT_DIM)
+        Node { margin: UiRect::top(px(6)) }
+    }
+}
+
+/// A heading's text, bold, in `color`.
+fn heading_text(caption: &'static str, color: ThemeToken) -> impl Scene {
+    bsn! {
         Text(caption)
         TextFont {
             font: FontSourceTemplate::Handle(fonts::BOLD),
@@ -522,8 +759,7 @@ fn group_heading(caption: &'static str) -> impl Scene {
             weight: FontWeight::BOLD,
         }
         PropagateOver<TextFont>
-        ThemeTextColor(tokens::TEXT_DIM)
-        Node { margin: UiRect::top(px(6)) }
+        ThemeTextColor({color})
     }
 }
 

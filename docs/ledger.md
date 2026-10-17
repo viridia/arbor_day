@@ -76,6 +76,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C10a  | `LimbLevels { shown, levels }` (D15) in place of `limb_levels` and the `limbs` array, each depth's defaults in its `Default`; the generator reads `limbs.grown()`. A `Flatten` attribute shows a struct's rows in place of its own (TD1.5), so the levels stay beside the other subpanes. Paths: `limbs.levels[0].angle` in reflection, `levels[0]/…` in the panel and header notes. Output unchanged. |
 | C10b  | Writing the species file (TD2.3), `src/species_file.rs`: JSON with `generator: 1` first, then the species' fields by reflection, streamed in declared order since serde_json's `Value` sorts keys; `LimbLevels` writes its shown levels as a list (`SerializeWithRegistry`). `serde` (traits only) and `serde_json` as direct dependencies, already in the lock file through Bevy. A golden test against `src/default_species.json`, failing with the JSON to paste. Not yet called by the app (C40, C41). BRP writes through the same type data, so plans read `GrownFrom` in the file's shape (`at="limbs[0].facing"`) and write by reflection path. |
 | C10c  | Reading the species file (TD2.3), `species_file::read`: `generator` taken off and checked (none, or newer than this one, refused), the rest read strictly by reflection, a key the species lacks failing with its name (D32), and applied onto the default species, so a field left out keeps its default. `LimbLevels` reads one to three levels (`DeserializeWithRegistry`), each onto its depth's defaults. Tests: a round trip, a hidden level not kept, defaults at depth, unknown keys at the top and in a level, newer and missing generators, zero and four levels. C10 complete; X31's steps 2 to 4 move onto the milestone path as C97 to C99. |
+| C97   | Toggles (TD1.5, TD2.3), `src/toggle.rs`: Wander on the trunk and each limb level is a `Toggle<Wander>`, its state off, disabled or on, after Blender's modifiers. A heading's eye switches it between on and disabled, its ✕ turns it off, and the header's add menu (a feathers menu behind a boxed plus) turns it back on. The generator runs it only when on; the file leaves it out when off and marks it `"enabled": false` when disabled, read onto a template with every operator off. Reflection paths gain `settings` (`limbs.levels[0].wander.settings.angle`); panel and file paths do not. An operator's heading starts with its kind's icon (`Icon` on its settings type), Wander's `timeline`. Icons `add_box`, `visibility`, `visibility_off`, `timeline`, and for operators to come `alt_route`, `u_turn_right`, `sunny`, `deployed_code` (below); `conversion_path` the alternative for Wander. `plans/operators.py`. Output unchanged. |
 
 ## Next
 
@@ -90,19 +91,14 @@ per-type hook, and is retained-mode.
 
 ### Milestone: the first species exported to Panoply
 
-The foundation, the skeleton (`docs/patches.md`, The abstract plant), tip rosettes and the
-species file (C10) have landed; operator stacks (X31) next, then leaf painting.
+The foundation, the skeleton (`docs/patches.md`, The abstract plant), tip rosettes, the species
+file (C10) and toggles (C97) have landed; the rest of operator stacks (X31) next, then leaf
+painting.
 
-1. **C97 Toggle on Wander** (X31 step 2): `Toggle<T>`, an operator's settings and whether it is
-   on, and its widget kind: the heading's ✕, and the level header's add menu listing the
-   operators it lacks. Wander alone; the generator skips it where off, and the file leaves it
-   out, read from a template with every operator off (`docs/patches.md`, The file). The risky
-   step: the rest reuse the widget. E[3]
-2. **C98 Bend and Fork as toggles** (X31 step 3), and the trunk's Wander, the trunk becoming a
-   level to the panel. E[2]
-3. **C99 Scions** (X31 step 4): "Add level" below the add menu's divider, and a ✕ on each
+1. **C98 Bend and Fork as toggles** (X31 step 3), Fork's icon `alt_route`. E[1]
+2. **C99 Scions** (X31 step 4): "Add level" below the add menu's divider, and a ✕ on each
    level's header, in place of D15's − and +. E[2]
-4. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's leaf, as D29 has it, its
+3. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's leaf, as D29 has it, its
    fields in a "Sprig" and a "Leaf" group in the tip leaves (`TipLeaves`, C96), and the `Interval` type (D10) for its
    variations. The painter takes the outline as an
    argument, a width in texture pixels or none, which C38 fixes at a constant until C66 makes it
@@ -113,22 +109,22 @@ species file (C10) have landed; operator stacks (X31) next, then leaf painting.
    with a tolerance, since SIMD can move a channel by a level. The card's axial fold
    (`AXIAL_FOLD` in `src/generator/foliage.rs`, halfway) moves to where the painted sprig's fan starts, as
    seedling's did. E[3]
-5. **C70 Card facing**: first measure how far cards are from edge-on to the game's camera (45°
+4. **C70 Card facing**: first measure how far cards are from edge-on to the game's camera (45°
    down), a figure in `PlantStats`, to judge facing and folds by numbers as well as by eye; C60's
    rosettes took the steepest cards off edge-on. Then, if the figure still calls for it, the face
    target (D27) widened from world up to a blend of up and the envelope's outward normal, with a
    spread. Card counts multiply with levels, eight triangles each since C39, so look at density
    against the budget too. E[3]
-6. **C66 Outlines**, a switch for the whole plant (requirements, Foliage): in the Plant group
+5. **C66 Outlines**, a switch for the whole plant (requirements, Foliage): in the Plant group
    (C33), the switch, the bark's width as the game reads it, and the leaf stroke's in texture
    pixels (growth model, Consequences). On, the leaf texture is painted with its strokes (D29),
    the preview draws the bark with an inverted hull after Panoply's `src/materials/outline.wesl`,
    and the export writes the `"outline"` material extra (C41). Off, none of these; whether the
    translucent strokes between leaves stay is judged then. E[3]
-7. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
+6. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
    panel, above the Plant group (C33); the file browser is X2. File commands act on the active document, so that tabs (X26)
    need not change them. E[3]
-8. **C8 Working document in settings.** A settings group holding the working species and, once
+7. **C8 Working document in settings.** A settings group holding the working species and, once
    set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
    as seedling did. The document's name comes from the file name. Serialized by reflection, as
    `bevy_settings` does. A working document from before a schema change is lost (D32), but not
@@ -136,7 +132,7 @@ species file (C10) have landed; operator stacks (X31) next, then leaf painting.
    drops a field that fails to deserialize without a word (`load_properties`), so the species is
    read by C10's strict path and its error logged. Stored as a list of open documents holding
    one, and the active one's index, so several (X26) need no change of format. E[3]
-9. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
+8. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
     as a JSON extra (C10), written from the generator's output (`generator::plant`), never from
     the preview's entities, whose leaf mesh is only hidden while none grow, in the form Panoply loads (requirements, Output; "What Panoply does with the output"). Bevy writes no glTF,
     so this adds a dependency or a writer of our own; propose it before code. The command-line
@@ -217,7 +213,7 @@ species file (C10) have landed; operator stacks (X31) next, then leaf painting.
   no lean (found in C60). Sag turns a limb down by its weight, each step's turn scaled by the sine
   of its angle from up, the share acting as a cantilever, so an upright limb does not sag; rise
   turns it up toward the light, an upright one having no angle left. Under stacks (X31), two
-  operators, Sag and Rise, in place of Bend; before them, judge whether the flat panel takes both
+  operators, Sag and Rise, in place of Bend, their icons `u_turn_right` and `sunny`; before them, judge whether the flat panel takes both
   or sag alone. Changes every plant's limbs. E[3]
 - **C69 A color per part of the plant**: a 4 px stripe down the left side of each top-level
   subpane, a color each for Plant, Trunk, Limbs 1 to 3 and Foliage (the ornaments), running from
@@ -247,7 +243,7 @@ species file (C10) have landed; operator stacks (X31) next, then leaf painting.
   through `RenderPlugin`'s `WgpuSettings`, so first confirm Metal has both. A `Wireframe`
   component on the bark and leaf entities rather than the global `WireframeConfig`, so plans
   check it as they check `Visibility`. A third toggle in the upper left, saved in `ViewSettings`.
-  The icon, from Material Symbols, is the author's to choose and add to `assets/icons/`. E[2]
+  The icon is `deployed_code`, in `assets/icons/`. E[2]
 - **C58 Trunk below ground**, so a tree placed on a slope still meets the ground on its low side:
   the stems start below the origin by their base radius times the tangent of the steepest slope
   a tree stands on, a constant rather than a species field. At 45° the depth is the base radius.
@@ -453,7 +449,8 @@ species file (C10) have landed; operator stacks (X31) next, then leaf painting.
   steps, each small enough to check by eye in the app and `plans/shapes.py`'s gallery, the first
   four leaving every plant as it was:
   1. C96, operator-shaped levels: landed.
-  2. to 4. C97 to C99, on the milestone path.
+  2. C97, toggles on Wander, with the trunk's: landed.
+  3. and 4. C98 and C99, on the milestone path.
   5. Panes, each level a feathers pane and its operators subpanes, only if C33's headings feel
      cramped. A pane's header has room for more than a heading: the operator's name, its
      version when not the latest, an icon of its own, tinted by kind to break up the column,

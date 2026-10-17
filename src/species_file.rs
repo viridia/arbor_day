@@ -13,7 +13,7 @@ use serde::{
     ser::{Serialize, SerializeMap, Serializer},
 };
 
-use crate::species::Species;
+use crate::{species::Species, toggle::all_off};
 
 /// The generator's version, raised when output changes on purpose outside an operator (X15).
 pub const GENERATOR: u32 = 1;
@@ -54,8 +54,8 @@ impl From<serde_json::Error> for ReadError {
 }
 
 /// The species in a species file, read strictly: a key the species lacks fails, naming it. A field
-/// the file leaves out keeps the template's value, the default species, so a level's keeps its
-/// depth's (`LimbLevels`).
+/// the file leaves out keeps the template's value, the default species with every operator off,
+/// so a level's keeps its depth's (`LimbLevels`), and an operator left out is off.
 #[cfg_attr(not(test), expect(dead_code, reason = "opened by C40"))]
 pub fn read(json: &str, registry: &TypeRegistry) -> Result<Species, ReadError> {
     let mut file: serde_json::Value = serde_json::from_str(json)?;
@@ -72,6 +72,7 @@ pub fn read(json: &str, registry: &TypeRegistry) -> Result<Species, ReadError> {
         .expect("the species is registered");
     let read = TypedReflectDeserializer::new(registration, registry).deserialize(file)?;
     let mut species = Species::default();
+    all_off(&mut species);
     species.try_apply(&*read).map_err(ReadError::Apply)?;
     Ok(species)
 }
@@ -109,6 +110,7 @@ impl Serialize for File<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::toggle::OperatorState;
 
     /// A registry holding the species and every type in it.
     fn registry() -> TypeRegistry {
@@ -157,7 +159,7 @@ mod tests {
         let mut species = Species::default();
         species.limbs.shown = 3;
         species.limbs.levels[2].fork.chance = 0.5;
-        species.trunk.wander.angle = 0.3;
+        species.trunk.wander.settings.angle = 0.3;
         species.ornaments.leaves = false;
         let written = write(&species, &registry).unwrap();
         assert!(read(&written, &registry).unwrap() == species);
@@ -184,6 +186,35 @@ mod tests {
         .unwrap();
         assert_eq!(read.taper, Species::default().taper);
         assert_eq!(read.limbs.levels[1].density, 3.5);
+    }
+
+    #[test]
+    fn operators_are_written_and_read_in_each_state() {
+        // Off, left out; disabled, marked; on, bare.
+        let registry = registry();
+        let mut species = Species::default();
+        species.limbs.shown = 3;
+        species.trunk.wander.state = OperatorState::Off;
+        species.limbs.levels[1].wander.state = OperatorState::Disabled;
+        species.limbs.levels[2].wander.state = OperatorState::Off;
+        let written = write(&species, &registry).unwrap();
+        let file: serde_json::Value = serde_json::from_str(&written).unwrap();
+        assert!(file["trunk"].get("wander").is_none());
+        assert!(file["limbs"][0]["wander"].get("enabled").is_none());
+        assert_eq!(file["limbs"][1]["wander"]["enabled"], false);
+        assert!(file["limbs"][1]["wander"].get("angle").is_some());
+        assert!(file["limbs"][2].get("wander").is_none());
+        assert!(read(&written, &registry).unwrap() == species);
+    }
+
+    #[test]
+    fn an_operator_is_read_whole() {
+        let error = edited(&Species::default(), |file| {
+            file["limbs"][0]["wander"].as_object_mut().unwrap().remove("angle");
+        })
+        .err()
+        .unwrap();
+        assert!(error.to_string().contains("Wander"), "{error}");
     }
 
     #[test]

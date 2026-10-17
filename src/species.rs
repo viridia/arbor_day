@@ -20,8 +20,11 @@ use std::{any::TypeId, fmt, ops::RangeInclusive};
 
 use crate::{
     fuzzy::{Distribution, Fuzzy},
-    properties::{Caption, ControlGroup, Flatten, Precision, ShownCount, Spinbox, ValueRange},
+    properties::{
+        Caption, ControlGroup, Flatten, Icon, Precision, ShownCount, Spinbox, ValueRange,
+    },
     random::Seed,
+    toggle::{Toggle, all_off, serialize_on},
 };
 
 /// Most levels of limbs a species can have.
@@ -130,7 +133,8 @@ impl<'de> DeserializeWithRegistry<'de> for LimbLevels {
     }
 }
 
-/// Reads a file's list of limb levels, each onto its depth's defaults.
+/// Reads a file's list of limb levels, each onto its depth's defaults with every operator off, so
+/// an operator the file leaves out is off.
 struct LevelsVisitor<'a> {
     registry: &'a TypeRegistry,
 }
@@ -155,6 +159,7 @@ impl<'de> Visitor<'de> for LevelsVisitor<'_> {
             let Some(depth) = limbs.levels.get_mut(shown) else {
                 return Err(de::Error::invalid_length(shown + 1, &self));
             };
+            all_off(depth);
             depth.try_apply(&*level).map_err(de::Error::custom)?;
             shown += 1;
         }
@@ -185,7 +190,7 @@ impl Default for LimbLevels {
                         amount: 0.5,
                         ..Bend::default()
                     },
-                    wander: Wander::degrees(15.0),
+                    wander: Toggle::on(Wander::degrees(15.0)),
                     ..LimbLevel::default()
                 },
                 LimbLevel {
@@ -201,7 +206,7 @@ impl Default for LimbLevels {
                         amount: 0.5,
                         ..Bend::default()
                     },
-                    wander: Wander::degrees(20.0),
+                    wander: Toggle::on(Wander::degrees(20.0)),
                     ..LimbLevel::default()
                 },
             ],
@@ -264,8 +269,10 @@ pub enum Profile {
     Flame,
 }
 
-/// The stems rising from the ground: one for a tree, several for a shrub.
+/// The stems rising from the ground: one for a tree, several for a shrub. A file holds the
+/// operators that are not off.
 #[derive(Reflect, Clone, PartialEq)]
+#[reflect(SerializeWithRegistry)]
 pub struct Trunk {
     /// Stems rising from the ground, spaced evenly around.
     #[reflect(@ValueRange::<i32>(1..=5), @Spinbox, @Caption("Stems"))]
@@ -300,13 +307,25 @@ pub struct Trunk {
     pub lean: f32,
     /// Each stem zigzagging about the course the splay and lean set, as a limb does.
     #[reflect(@Caption("Wander"))]
-    pub wander: Wander,
+    pub wander: Toggle<Wander>,
+}
+
+impl SerializeWithRegistry for Trunk {
+    fn serialize<S: Serializer>(
+        &self,
+        serializer: S,
+        registry: &TypeRegistry,
+    ) -> Result<S::Ok, S::Error> {
+        serialize_on(self, serializer, registry)
+    }
 }
 
 /// One level of limbs on a parent, the trunk or a limb of the level before, in nodes along the
 /// part of the parent inside the crown. Each limb leaves at an angle from its parent and grows
-/// toward the envelope, bending, wandering and forking as its operators say.
+/// toward the envelope, bending, wandering and forking as its operators say. A file holds the
+/// operators that are on.
 #[derive(Reflect, Clone, PartialEq)]
+#[reflect(SerializeWithRegistry)]
 pub struct LimbLevel {
     /// Places where limbs start, per crown radius of the parent inside the crown, so a long parent
     /// bears more than a short one. Measured against the crown, so a shrub and a tree with the
@@ -378,9 +397,19 @@ pub struct LimbLevel {
     #[reflect(@Caption("Bend"))]
     pub bend: Bend,
     #[reflect(@Caption("Wander"))]
-    pub wander: Wander,
+    pub wander: Toggle<Wander>,
     #[reflect(@Caption("Fork"))]
     pub fork: Fork,
+}
+
+impl SerializeWithRegistry for LimbLevel {
+    fn serialize<S: Serializer>(
+        &self,
+        serializer: S,
+        registry: &TypeRegistry,
+    ) -> Result<S::Ok, S::Error> {
+        serialize_on(self, serializer, registry)
+    }
 }
 
 impl Default for LimbLevel {
@@ -396,7 +425,7 @@ impl Default for LimbLevel {
             radius: 0.5,
             sides: 4,
             bend: Bend::default(),
-            wander: Wander::degrees(10.0),
+            wander: Toggle::on(Wander::degrees(10.0)),
             fork: Fork::default(),
         }
     }
@@ -455,6 +484,7 @@ impl Default for Bend {
 /// ends. Kinks fall about one spacing apart on every level, so long limbs kink several times and
 /// short twigs once or not at all.
 #[derive(Reflect, Clone, PartialEq)]
+#[reflect(@Icon("icons/timeline.png"))]
 pub struct Wander {
     /// The most each stretch points off the course.
     #[reflect(
@@ -640,7 +670,7 @@ impl Default for Trunk {
             radius: 0.2,
             sides: 6,
             lean: 15.0_f32.to_radians(),
-            wander: Wander::degrees(8.0),
+            wander: Toggle::on(Wander::degrees(8.0)),
         }
     }
 }

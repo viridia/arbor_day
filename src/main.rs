@@ -45,6 +45,7 @@ mod settings;
 mod species;
 mod species_file;
 mod spread_strip;
+mod toggle;
 mod turntable;
 
 /// The game camera's vertical field of view (Panoply's `DEFAULT_FOV`, 40°), so plants are seen as

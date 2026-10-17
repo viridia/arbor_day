@@ -38,12 +38,15 @@ pub(super) fn wander(level: &Level, skeleton: &mut Skeleton) {
     }
 }
 
-/// Displaces a limb of `level` by its wander (`displace`), from its own wander stream, short of its
-/// straight run and inside the envelope.
+/// Displaces a limb of `level` by its wander (`displace`), if on, from its own wander stream, short
+/// of its straight run and inside the envelope.
 pub(super) fn wander_axis(level: &Level, axis: &mut Axis) {
+    let Some(wander) = level.params.wander.get() else {
+        return;
+    };
     let end = axis.length() - level.straight;
     let rng = axis.rng.fork(WANDER_STREAM);
-    let wander = level.params.wander.angle;
+    let wander = wander.angle;
     let envelope = Some(&level.envelope);
     displace(&mut axis.rings, rng, wander, level.spacing, end, envelope);
 }
