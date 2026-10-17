@@ -125,7 +125,7 @@ groups do. Built-in tags: `ends` (axes bearing none) and `all`.
 Placement:
 - `stems`: attachments on the ground, spaced around (count, splay, heading).
 - `nodes`: attachments along the axes `on`, within the crown: density, per node, start, facing,
-  skew (D21, D25, D26). Competition stays inside the operator; facing is an input.
+  skew (D21, D26, TD3.3). Competition stays inside the operator; facing is an input.
 
 Composition:
 - `grow`: attachments into axes: length or reach to the envelope, bend toward, bend (D17's
@@ -195,7 +195,7 @@ Levels grow in turn: a level's frame and operators, then its scions' level.
   after this one, its placement fields first, as the Arrangement group shows them now. Removing
   scions hides the levels above, which keep their values, as D15's hidden levels do.
 - An operator a level lacks shows no rows: a twig level without wander has no wander fields. A
-  new behaviour can be a new operator rather than a field on every level, which eases D25.
+  new behaviour can be a new operator rather than a field on every level, which eases G1.
 - Each operator is a field of its level, in the fixed order, so a level has at most one of each:
   a `Toggle<T>`, its settings and whether it is on. The add menu turns it on and ✕ off, so an
   operator removed and added again keeps its values for the session, as a hidden level does

@@ -158,15 +158,9 @@ changes every tree's bark and triangle count.
 
 Where varied values are drawn, and their clamping to `ValueRange`, is mechanism: TD2.2.
 
-### D19 — Variance pays where instances are many
+### ~~D19~~ — Withdrawn
 
-A value drawn once per plant is invisible within a tree and differs only from seed to seed, so it
-varies only where trees of one species should differ (the envelope's lean and squash, the trunk's
-lean direction); the trunk does not vary otherwise. Varied: angle and reach per limb, the most
-visible variety; the skew is a turn either way of up to its value. Not varied: bend toward and
-bend (wander already irregularizes), wander (itself the randomness), radius (a share of the
-parent's, D22), sides (mesh detail), start (each node's jitter varies the places). Counts are
-fractions rounded at random. **Reversing it** adds spread fields the panel must show.
+Varying a value only where its instances are many is a guideline: G2.
 
 ### D20 — Leaf textures painted with `tiny-skia`
 
@@ -223,15 +217,9 @@ crown to the stems, so no setting could leave them outside it, which made lean l
 and widen the crown, and raising the crown base lengthen splayed stems to several metres.
 **Reversing it** changes how every crown and stem setting reads.
 
-### D25 — Change a field's meaning before adding a field
+### ~~D25~~ — Withdrawn
 
-A new behaviour changes what a field means, or is derived, before it adds a field, since a level
-has many already: the span's two fields became one start with a constant jitter; a facing and a
-skew replaced the divergence, competition placing the children; wander became kinks at a fixed
-spacing rather than gaining a smoothness and a spacing. A predictable range beats a guessed curve
-until a model is worth exposing (X18, X22). Left out until a preset needs them: a jitter per level
-(a fir's even whorls), and a sharply bare stretch such as a bare leader tip. **Reversing it** grows
-the panel by a field per behaviour.
+Changing a field's meaning before adding a field is a guideline: G1.
 
 ### D26 — Children placed where they compete least
 

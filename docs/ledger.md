@@ -1,8 +1,9 @@
 # arbor_day ledger
 
 What has landed, what is next, and what is deferred and why. What the tool must do is in
-[requirements.md](requirements.md), how it works in [design.md](design.md) (`TD<n>`), and why in
-[decisions.md](decisions.md) (`D<n>`). Chunks are `C<n>`, deferrals `X<n>`. An id is assigned once and never reused or renumbered; Next lists chunks in the
+[requirements.md](requirements.md), how it works in [design.md](design.md) (`TD<n>`), why in
+[decisions.md](decisions.md) (`D<n>`), and the judgements made repeatedly in
+[guidelines.md](guidelines.md) (`G<n>`). Chunks are `C<n>`, deferrals `X<n>`. An id is assigned once and never reused or renumbered; Next lists chunks in the
 order they are meant to land, which their ids need not follow. Panoply's ledger
 (`../panoply/docs/migration.md`) is cited as "Panoply's".
 
@@ -65,13 +66,12 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C81   | A radius per ring (D22), written by the taper (`taper_rings`) once an axis is traced, in place of an axis's base and top radii; `tube` draws each ring at its own radius, none narrower than the detail threshold, and leans each ring's normals by the radii either side. So a twig thinner than the threshold keeps its taper until it reaches it, rather than being thickened along its length, and a limb takes its parent's radius from the parent's rings, which fixes a forked limb's limbs, which had started thinner than the limb where they leave it. New bark hashes, leaves unchanged; at game scale, screenshots show no difference. |
 | C82   | Stages as functions: each level grows by `place_scions`, `trace_scions`, `carry_on`, the taper and `fork`, each over a `Level` (its parameters and what every stage reads) and the `Skeleton`, in that order, the taper before forks since copies start at the limb's radius at the fork. Placement records what the trace reads on the axis: its start ring at its own base radius, its reach, and its parent and where along it (`docs/patches.md`'s `parent`). Wander stays inside the trace. Axes are now added stage by stage, so the golden test hashed each mesh's triangles as a set, each from its least corner with its winding kept; hashes taken before the change held after it. Its work done, the golden test was then removed (X15). `trace.rs` defines tracing in its module doc. |
 | C86   | Decisions out of the ledger, after `../ldd_template`: `docs/decisions.md` holds each decision as it now stands, what it rules out and what reversing it costs, with no revision history; `docs/design.md` holds the mechanism, numbered `TD<n>.<m>`. D4, D13, D14 and D18 are withdrawn, struck and pointing where their content went. Ledger 13,056 words to 7,816; Decisions 5,431 to 3,628 and design 2,598. |
+| C87   | `docs/guidelines.md` after `../ldd_template`'s: G1 (change a field's meaning before adding a field) and G2 (vary a value where its instances are many), from D25 and D19, now struck, and G3, the effort scale, after `../ldd_template`'s G7. AGENTS.md says which doc each change updates, and to read the guidelines before adding to the species. |
 
 ## Next
 
 Three parts: the path to the milestone, in order; quick wins, for between big chunks; and
-everything else, unordered. Each item ends with its effort, on `bevy_action_map`'s scale
-(`docs/guidelines.md`, G19): E[1] one function, E[2] several, E[3] a new mechanism (a chunk),
-E[4] more than a chunk (split before it is written). A new idea goes to Later unless the
+everything else, unordered. Each item ends with its effort (G3). A new idea goes to Later unless the
 milestone needs it.
 
 The property editor gains a widget kind as a species field needs it. Rows are keyed by field
@@ -99,7 +99,7 @@ species or the plans.
    kinks fall unevenly. So the tip stays where splay, lean and bend put it, at any wander, and the
    trunk's height is the height its tip reaches (D23, revised); splay and lean still droop a stem
    (D24). The same jaggedness at every scale; a roughness falling off at smaller scales waits for
-   a preset that needs smoother limbs (D25). A branch end's straight run under its card is a
+   a preset that needs smoother limbs (G1). A branch end's straight run under its card is a
    third fixed point. Points that leave the envelope are pulled back inside. `fork` displaces its
    copies, as it traces and tapers them. Limbs no longer drift either, so compare the shapes
    screenshots at the usual wander. Less faithful to how a shoot grows, each internode turning
@@ -124,7 +124,7 @@ species or the plans.
    being a limb of that level (D30), so what is left is a stem splitting below its crown. A stem's fork may lie below the crown base:
    the trunk's height sets the axis's length, the fork where it splits. A three-way fork low on
    one stem stands in for several splayed stems, so stems and splay may become a fork at the
-   ground, its copies and angle (D25), in place of fork fields beside them. Under stacks (X31),
+   ground, its copies and angle (G1), in place of fork fields beside them. Under stacks (X31),
    the Fork operator on the trunk. E[3]
 5. **C70 Card facing**: the face target (D27) widened from world up to a blend of up and the
    envelope's outward normal, with a spread. Measure how far cards are from edge-on to the
@@ -189,9 +189,6 @@ species or the plans.
 
 ### Quick wins
 
-- **C87 Guidelines** (C86's second part): `docs/guidelines.md` after `../ldd_template`'s, D19
-  (variance pays where instances are many) and D25 (a field's meaning changes before a field is
-  added) moving there and struck in `decisions.md`, and AGENTS.md's rules pointing at it. E[1]
 - **C88 Landed rows as citations**: each row a line naming the TD section or decision it landed,
   the design the longer rows restate now being `design.md`'s. E[1]
 - **C89 `growth-model.md` against `design.md`**: its Consequences describe the model as built;
@@ -221,7 +218,7 @@ species or the plans.
   the parent's part inside the crown to one at its tip, scaled by the node's place, added to each
   limb's drawn angle before it is clamped, so upper limbs leave steeper. The angle's caption
   becomes "Angle at base". Every level, not only the trunk's as in seedling, so sprays narrow
-  toward a limb's tip. A new field under D25, since nothing yet varies with place along the
+  toward a limb's tip. A new field under G1, since nothing yet varies with place along the
   parent. Default 0, so species are unchanged; the first level's default chosen by eye or by the
   share of the envelope's top (outward normal within 45° of up) under cards. Under stacks (X31)
   an operator, "Angle bias", rather than a field. E[2]
