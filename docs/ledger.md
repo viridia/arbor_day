@@ -94,10 +94,36 @@ per-type hook, and is retained-mode.
 ### Milestone: the first species exported to Panoply
 
 The foundation, the skeleton (`docs/patches.md`, The abstract plant), tip rosettes, the species
-file (C10) and operator stacks (X31's steps 1 to 4, C96 to C99) have landed; leaf painting
-next.
+file (C10) and operator stacks (X31's steps 1 to 4, C96 to C99) have landed; colors by part,
+forks drawn along the chain and on stems, and sag and rise next, then leaf painting.
 
-1. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's leaf, as D29 has it, its
+1. **C69 A color per part of the plant**: a 4 px stripe down the left side of each top-level
+   subpane, a color each for Plant, Trunk, Limbs 1 to 3 and Foliage (the ornaments), running from
+   bark brown to light green, root to leaf, so the levels are told apart at a glance; Crown, the
+   envelope rather than a part, a neutral grey (the envelope helper's pale green would read as
+   Foliage's). Its color
+   is set on the node, since feathers' contextual theming cannot shade a subtree. The only color
+   by part; operators' icons (C97) keep the heading's text color. E[1]
+2. **C95 Forks along the chain** (split from C85): a forked limb (D31) no longer ends capped; its
+   first copy continues the chain (TD3.9) as a carry-on does, with the forked limb's sides, so no
+   adapter, and the shared ring rounds its turn of half the fork angle into an elbow; the other
+   copies meet the chain as laterals meet their parents. A fan closes another copy's start only
+   if `plans/shapes.py`'s Y and three-way fork show its open base outside the chain's tube. E[2]
+3. **C75 Stem forks**, forks (D31) on stems, at any point along them, as codominant trunks split
+   (a vase elm, an old oak). A decurrent tree's leader stopping short (D23) already ends in a fork
+   when the first level forks, its top being a limb of that level (D30), so what is left is a stem
+   splitting below its crown, perhaps below the crown base: the trunk's height sets the axis's
+   length, the fork where it splits. A fork at the ground is several splayed stems, so it is the
+   trunk's Fork operator, and stems and splay may become one (G1). After C95, which draws the
+   fork. E[3]
+4. **C94 Sag and rise as two bends**, revising D17's bend toward an angle, by which an upright
+   limb, furthest from a level target, bends most, so the leader's carry-on tips over even with
+   no lean (found in C60). Sag turns a limb down by its weight, each step's turn scaled by the sine
+   of its angle from up, the share acting as a cantilever, so an upright limb does not sag; rise
+   turns it up toward the light, an upright one having no angle left. Two operators, Sag and
+   Rise, in place of Bend, their icons `sag.png` and `rise.png`. Changes every plant's limbs.
+   E[3]
+5. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's leaf, as D29 has it, its
    fields in a "Sprig" and a "Leaf" group in the tip leaves (`TipLeaves`, C96), and the `Interval` type (D10) for its
    variations. The painter takes the outline as an
    argument, a width in texture pixels or none, which C38 fixes at a constant until C66 makes it
@@ -108,22 +134,22 @@ next.
    with a tolerance, since SIMD can move a channel by a level. The card's axial fold
    (`AXIAL_FOLD` in `src/generator/foliage.rs`, halfway) moves to where the painted sprig's fan starts, as
    seedling's did. E[3]
-2. **C70 Card facing**: first measure how far cards are from edge-on to the game's camera (45°
+6. **C70 Card facing**: first measure how far cards are from edge-on to the game's camera (45°
    down), a figure in `PlantStats`, to judge facing and folds by numbers as well as by eye; C60's
    rosettes took the steepest cards off edge-on. Then, if the figure still calls for it, the face
    target (D27) widened from world up to a blend of up and the envelope's outward normal, with a
    spread. Card counts multiply with levels, eight triangles each since C39, so look at density
    against the budget too. E[3]
-3. **C66 Outlines**, a switch for the whole plant (requirements, Foliage): in the Plant group
+7. **C66 Outlines**, a switch for the whole plant (requirements, Foliage): in the Plant group
    (C33), the switch, the bark's width as the game reads it, and the leaf stroke's in texture
    pixels (growth model, Consequences). On, the leaf texture is painted with its strokes (D29),
    the preview draws the bark with an inverted hull after Panoply's `src/materials/outline.wesl`,
    and the export writes the `"outline"` material extra (C41). Off, none of these; whether the
    translucent strokes between leaves stay is judged then. E[3]
-4. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
+8. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
    panel, above the Plant group (C33); the file browser is X2. File commands act on the active document, so that tabs (X26)
    need not change them. E[3]
-5. **C8 Working document in settings.** A settings group holding the working species and, once
+9. **C8 Working document in settings.** A settings group holding the working species and, once
    set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
    as seedling did. The document's name comes from the file name. Serialized by reflection, as
    `bevy_settings` does. A working document from before a schema change is lost (D32), but not
@@ -131,7 +157,7 @@ next.
    drops a field that fails to deserialize without a word (`load_properties`), so the species is
    read by C10's strict path and its error logged. Stored as a list of open documents holding
    one, and the active one's index, so several (X26) need no change of format. E[3]
-6. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
+10. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
     as a JSON extra (C10), written from the generator's output (`generator::plant`), never from
     the preview's entities, whose leaf mesh is only hidden while none grow, in the form Panoply loads (requirements, Output; "What Panoply does with the output"). Bevy writes no glTF,
     so this adds a dependency or a writer of our own; propose it before code. The command-line
@@ -168,11 +194,6 @@ next.
   keep the survey and the reasons, citing TD for the mechanism. E[2]
 - **C90 `show.py`** from `../ldd_template`, printing a D, TD or X entry by its number, so a session
   reads the entries it needs rather than whole files. Propose it before code. E[2]
-- **C95 Forks along the chain** (split from C85): a forked limb (D31) no longer ends capped; its
-  first copy continues the chain (TD3.9) as a carry-on does, with the forked limb's sides, so no
-  adapter, and the shared ring rounds its turn of half the fork angle into an elbow; the other
-  copies meet the chain as laterals meet their parents. A fan closes another copy's start only
-  if `plans/shapes.py`'s Y and three-way fork show its open base outside the chain's tube. E[2]
 - **C55 Angle by place**, seedling's `angleBias` (`MeshGenerator.ts:593`), for crowns bald on
   top: twigs radiate outward, their leaves with them (D27), and the envelope's top stays empty. A
   field per level, "Angle at tip", −90° to 90°: the change in angle from a node at the base of
@@ -199,29 +220,6 @@ next.
 
 ### Later
 
-- **C75 Stem forks**, forks (D31) on stems, at any point along them, as codominant trunks split
-  (a vase elm, an old oak). A decurrent tree's leader stopping short (D23) already ends in a fork
-  when the first level forks, its top being a limb of that level (D30), so what is left is a stem
-  splitting below its crown, perhaps below the crown base: the trunk's height sets the axis's
-  length, the fork where it splits. A fork at the ground is several splayed stems, so under
-  stacks (X31) it is the trunk's Fork operator, and stems and splay may become one (G1). After
-  C95, which draws the fork. *Gate:* stacks landed, or a preset needing a split trunk before
-  them. E[3]
-- **C94 Sag and rise as two bends**, revising D17's bend toward an angle, by which an upright
-  limb, furthest from a level target, bends most, so the leader's carry-on tips over even with
-  no lean (found in C60). Sag turns a limb down by its weight, each step's turn scaled by the sine
-  of its angle from up, the share acting as a cantilever, so an upright limb does not sag; rise
-  turns it up toward the light, an upright one having no angle left. Under stacks (X31), two
-  operators, Sag and Rise, in place of Bend, their icons `sag.png` and `rise.png`; before them, judge whether the flat panel takes both
-  or sag alone. Changes every plant's limbs. E[3]
-- **C69 A color per part of the plant**: a 4 px stripe down the left side of each top-level
-  subpane, a color each for Plant, Trunk, Limbs 1 to 3 and Foliage (the ornaments), running from
-  bark brown to light green, root to leaf, so the levels are told apart at a glance; Crown, the
-  envelope rather than a part, a neutral grey (the envelope helper's pale green would read as
-  Foliage's). Its color
-  is set on the node, since feathers' contextual theming cannot shade a subtree. One dimension of
-  color, by part; operators' icons (X31 step 5) take the other, by kind, so the two do not
-  clash. E[1]
 - **C71 Crown softness** (was part of C39): the cards' shading normal blended toward the
   envelope's outward normal by a weight (growth model, Foliage), so the crown shades as one
   mass; built as a weight and judged in the preview before it becomes an option or is fixed
@@ -271,8 +269,13 @@ next.
 - **C54 Radiating foliage** (was X20, its gate C37 passed): cards radiating from a stem's tip or
   the ground, for palms, rosettes and tufts (agave, grass, fern), with no limbs (growth model,
   How the shapes are covered): C60's tip rosettes (TD3.8) with more cards and their own lean,
-  from a stem's tip or the ground. Under stacks, an ornament (X42).
-  E[3]
+  from a stem's tip or the ground, an ornament (X42). Settings: the count, the angle from up
+  with a spread, so young fronds stand and old ones droop, and the length. A palm's frond is one
+  card arching along its length: several axial segments, each bending further down, in place of
+  C39's one fold, its V from the lateral droop; not a limb level with tip leaves, whose card
+  runs straight along the twig and whose rachis tubes cost triangles that do not show at game
+  scale. Its texture, a midrib with leaflets either side, is a frond mode of C38's painter, a
+  second region of the leaf texture (requirements, Foliage). E[3]
 
 ## Deferred
 
@@ -451,15 +454,12 @@ next.
   2. C97, toggles on Wander, with the trunk's: landed.
   3. C98, Bend and Fork as toggles: landed.
   4. C99, scions: landed.
-  5. Panes, each level a feathers pane and its operators subpanes, only if C33's headings feel
-     cramped. A pane's header has room for more than a heading: the operator's name, its
-     version when not the latest, its icon (C97) tinted by kind to break up the column, and
-     the ✕. The icon's tint is by operator, the pane's stripe (C69) by part, two dimensions
-     that do not compete.
+  5. ~~Panes, each level a feathers pane and its operators subpanes.~~ Withdrawn: C97's
+     headings, each with its icon, eye and ✕, read well enough.
   6. New operators, each a chunk, judged by eye as they change output: angle bias (C55), sag
      and rise (C94), weep (C48), taper per level (X32), size bias.
 
-  *Gate:* step 5, the headings feeling cramped; step 6, each operator's own item.
+  *Gate:* step 6, each operator's own item.
 
 - **X32** A taper per limb level, in place of the plant's one (D22); under stacks (X31), the
   Taper operator. *Gate:* a preset (X18) whose
@@ -499,8 +499,10 @@ next.
 
 - **X42** Ornaments (`docs/patches.md`, Stacks): a plant-wide stack of what is placed on the
   grown skeleton, one slot per kind: the tip leaves (today's foliage), leaves along twigs
-  (X30), radiating cards (C54), fruit. Added and removed as operators are, with the same add
-  menu. C96 lays the groundwork. *Gate:* stacks (X31) landed, and a preset wanting a second
+  (X30), radiating cards (C54), fruit, and flowers, for plants grown for them (sunflower, tulip,
+  lavender) as well as blossom on trees: heads at tips or nodes, small meshes in vertex color
+  or cards from a region of the leaf texture. Added and removed as operators are, with the same
+  add menu. C96 lays the groundwork. *Gate:* stacks (X31) landed, and a preset wanting a second
   ornament.
 
 - **X41** Log scale for sizes (was C32), a convenience: an `@LogScale` attribute whose unit keeps
@@ -513,6 +515,29 @@ next.
   side, for games with a lower camera than Panoply's. Lateral droop (C39) already turns a card's
   halves toward the side. *Gate:* a game viewing plants from near level, where lateral droop
   does not keep cards from reading edge-on.
+
+- **X43** Crowns widest at the top: profiles beside `Profile`'s five, an umbrella (a flat top
+  over a narrow base, for acacia and stone pine) and a vase (widening to near the top, for elm
+  and zelkova), or a squash of the existing ones. Layered crowns (cloud-pruned pines, tiered
+  trees) are not this: they want several envelopes, which the skeleton does not have. *Gate:* a
+  preset (X18) needing one.
+
+- **X44** Many stems: bamboo groves, thickets and reed beds, past the trunk's five stems,
+  started over a disc of the clump's radius rather than from one point, and for bamboo its node
+  rings as bands of bark color. Triangles grow with the count, so judge against the budget.
+  *Gate:* a preset (X18) needing a clump the stems cannot make.
+
+- **X45** A radius profile along an axis, beside the even taper (D22, X32): the radius from a
+  curve rather than a line, for the flare at the base of a mature trunk, bottle trunks
+  (baobab), and bulging stems. Rings carry their own radii (C81), so it is the taper stage
+  written another way. Base flare first, which shows on most mature trees at game scale.
+  *Gate:* trunks reading as poles where they meet the ground, or a preset needing a bulge.
+
+- **X46** Roots as axes: buttress roots from a stem's base, and prop and aerial roots from its
+  limbs (mangrove, banyan), each a scion traced down toward the ground and stopped there, rather
+  than out toward the envelope. The skeleton takes them as axes of a new kind; what is new is
+  the course and where they start. Buttresses are flattened fins, which a tube approximates
+  with thick roots running together at the base. *Gate:* a preset (X18) needing them.
 
 ## Notes
 

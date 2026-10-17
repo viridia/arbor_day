@@ -212,13 +212,10 @@ Levels grow in turn: a level's frame and operators, then its scions' level.
 
 - A level's header has an add button (a boxed plus) opening a menu of the operators the level
   lacks; choosing one inserts it in its place, and a ✕ in an operator's header removes it.
-- No more than two boxes deep, in feathers' own order: each level a feathers pane, its frame's
-  rows in the pane's body and each operator a subpane in it. The pane's header is built for
-  tool buttons (the add button, and dividers between groups of them), and its body raises the
-  surface for subpanes. The other top-level groups (Plant, Crown, Foliage) become panes too,
-  so the panel is one column of panes. Should that prove heavy or repetitive, the fallback is
-  C33's lighter headings: each level stays a subpane and each operator a heading in it, the ✕
-  at the heading's right.
+- C33's light headings, not nested boxes: each level a subpane and each operator a heading in
+  it, after the operator's icon, its eye and ✕ at the heading's right. Making each level a
+  feathers pane and each operator a subpane in it was weighed and withdrawn: the headings read
+  well enough.
 - Scions replace the − and + on the levels' headers (D15): below a divider in the last shown
   level's add menu, after the operators, the next level ("Limbs 2") shows its pane, its
   Arrangement rows first. Operators the level has are left out of the menu, or shown grayed,
