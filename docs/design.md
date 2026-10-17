@@ -146,7 +146,14 @@ through the type registry, with no serde derives. The version is the file's, not
 so the panel never shows it. `LimbLevels` writes itself as a list of the shown levels, by
 `SerializeWithRegistry` type data. serde_json's `Value` would sort the keys, so the file is
 streamed rather than built as a `Value`. `src/default_species.json` is the default species as
-written; a test compares the two.
+written; a test compares the two. Custom serialization is type data on the type, not a
+`ReflectSerializerProcessor`, since `bevy_settings` makes its own serializer (C8).
+
+Reading takes `generator` off and refuses a file without one or from a newer generator, then
+deserializes the rest strictly: a key the species lacks fails, naming it (D32). Reflection returns
+only the fields the file holds, applied onto a template, the default species, so a field left out
+keeps its default. `LimbLevels` reads one to three levels, each onto its depth's defaults, the
+levels after them their depths' defaults.
 
 BRP serializes through the same registry, so a plan reading the species (`GrownFrom`) sees the
 file's shape, `at="limbs[0].angle"`, while a path it writes (`set`) is a reflection path,

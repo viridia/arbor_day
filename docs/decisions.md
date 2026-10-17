@@ -125,8 +125,9 @@ Limb levels are a fixed array of three and a count of those shown, 1 to 3, not a
 and shrinks: a hidden level keeps its parameters, so hiding one and showing it again loses nothing,
 with no `enabled` flag per level. A fourth level would be twigs too thin to mesh. A level's
 parameters mean something only at its depth, so there is no reordering. Saved, only the shown
-levels are written (C10), so a hidden level lasts a session, not a save. **Reversing it** changes
-the species' format and the panel's levels.
+levels are written (C10), so a hidden level lasts a session, not a save. Rejected: the species as
+a list of grown levels with hidden ones stashed in the editor, the same in files but a larger
+change. **Reversing it** changes the species' format and the panel's levels.
 
 ### D16 — Our own random numbers, a stream per subsystem
 

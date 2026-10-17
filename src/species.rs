@@ -4,13 +4,19 @@ use bevy::{
     feathers::controls::NumberInputUnits,
     prelude::*,
     reflect::{
-        TypeRegistry, Typed,
-        serde::{ReflectSerializeWithRegistry, SerializeWithRegistry, TypedReflectSerializer},
+        PartialReflect, TypeRegistry, Typed,
+        serde::{
+            DeserializeWithRegistry, ReflectDeserializeWithRegistry, ReflectSerializeWithRegistry,
+            SerializeWithRegistry, TypedReflectDeserializer, TypedReflectSerializer,
+        },
     },
 };
-use serde::ser::{SerializeSeq, Serializer};
+use serde::{
+    de::{self, Deserializer, SeqAccess, Visitor},
+    ser::{SerializeSeq, Serializer},
+};
 
-use std::ops::RangeInclusive;
+use std::{any::TypeId, fmt, ops::RangeInclusive};
 
 use crate::{
     fuzzy::{Distribution, Fuzzy},
@@ -80,9 +86,10 @@ impl Default for Species {
 
 /// The limb levels, each growing on the limbs of the one before it, the first on the trunk (D15).
 /// All three are kept, so a level hidden and shown again comes back as it was. A file holds the
-/// shown levels only, as a list.
+/// shown levels only, as a list; read, each lands on its depth's defaults, and the levels after
+/// them are their depths' defaults.
 #[derive(Reflect, Clone, PartialEq)]
-#[reflect(SerializeWithRegistry)]
+#[reflect(SerializeWithRegistry, DeserializeWithRegistry)]
 pub struct LimbLevels {
     /// How many of the levels grow, from the first.
     #[reflect(@ValueRange::<i32>(1..=MAX_LIMB_LEVELS as i32))]
@@ -111,6 +118,51 @@ impl SerializeWithRegistry for LimbLevels {
             levels.serialize_element(&TypedReflectSerializer::new(level, registry))?;
         }
         levels.end()
+    }
+}
+
+impl<'de> DeserializeWithRegistry<'de> for LimbLevels {
+    fn deserialize<D: Deserializer<'de>>(
+        deserializer: D,
+        registry: &TypeRegistry,
+    ) -> Result<Self, D::Error> {
+        deserializer.deserialize_seq(LevelsVisitor { registry })
+    }
+}
+
+/// Reads a file's list of limb levels, each onto its depth's defaults.
+struct LevelsVisitor<'a> {
+    registry: &'a TypeRegistry,
+}
+
+impl<'de> Visitor<'de> for LevelsVisitor<'_> {
+    type Value = LimbLevels;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        write!(formatter, "a list of 1 to {MAX_LIMB_LEVELS} limb levels")
+    }
+
+    fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<LimbLevels, A::Error> {
+        let registration = self
+            .registry
+            .get(TypeId::of::<LimbLevel>())
+            .ok_or_else(|| de::Error::custom("LimbLevel is not registered"))?;
+        let mut limbs = LimbLevels::default();
+        let mut shown = 0;
+        while let Some(level) =
+            seq.next_element_seed(TypedReflectDeserializer::new(registration, self.registry))?
+        {
+            let Some(depth) = limbs.levels.get_mut(shown) else {
+                return Err(de::Error::invalid_length(shown + 1, &self));
+            };
+            depth.try_apply(&*level).map_err(de::Error::custom)?;
+            shown += 1;
+        }
+        if shown == 0 {
+            return Err(de::Error::invalid_length(0, &self));
+        }
+        limbs.shown = shown as i32;
+        Ok(limbs)
     }
 }
 

@@ -55,7 +55,14 @@ pub(super) fn stems(species: &Species) -> Vec<Axis> {
             let turn = heading + TAU * stem as f32 / count as f32;
             let mut rings = stem_rings(length, trunk.splay, lean, turn);
             let wander = rng.fork(WANDER_STREAM);
-            displace(&mut rings, wander, trunk.wander.angle, spacing, length, None);
+            displace(
+                &mut rings,
+                wander,
+                trunk.wander.angle,
+                spacing,
+                length,
+                None,
+            );
             taper_rings(&mut rings, trunk.radius, species.taper.clamp(0.0, 1.0));
             Axis::stem(rings, rng)
         })
