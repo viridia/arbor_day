@@ -292,6 +292,8 @@ dependencies = [
  "bevy",
  "bevy_immediate",
  "bevy_remote_driver",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

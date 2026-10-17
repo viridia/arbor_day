@@ -311,7 +311,6 @@ fn edit_struct(
 /// The row for field `index` of `fields`, described by `field_info`, in a subpane if `in_pane`. A
 /// count field named by a [`ShownCount`] in `counts` gets none; the array it counts pushes its new
 /// count to `new_counts`.
-#[expect(clippy::too_many_arguments, reason = "the walk's state, passed down")]
 fn field_row(
     ui: &mut Imm<CapsPanel>,
     field_info: &NamedField,

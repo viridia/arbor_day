@@ -19,6 +19,9 @@ bevy = { git = "https://github.com/bevyengine/bevy.git", branch = "main", featur
 bevy_immediate = { git = "https://github.com/viridia/bevy_immediate", branch = "bevy-main" }
 # Inert unless BEVY_REMOTE_DRIVER_PORT is set.
 bevy_remote_driver = { git = "https://github.com/viridia/bevy_remote_driver" }
+# The traits only: the species is written by reflection, with no serde derives (C10).
+serde = "1.0.229"
+serde_json = "1.0.154"
 
 [profile.dev]
 opt-level = 1

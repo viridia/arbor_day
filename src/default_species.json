@@ -1,0 +1,83 @@
+{
+  "generator": 1,
+  "seed": 1,
+  "detail": 0.02,
+  "taper": 0.6,
+  "bark_color": {
+    "Srgba": {
+      "red": 0.42,
+      "green": 0.33,
+      "blue": 0.25,
+      "alpha": 1.0
+    }
+  },
+  "trunk": {
+    "stems": 1,
+    "splay": 0.0,
+    "height": 5.0,
+    "radius": 0.2,
+    "sides": 6,
+    "lean": 0.2617994,
+    "wander": {
+      "angle": 0.13962634
+    }
+  },
+  "crown": {
+    "profile": "Ellipsoid",
+    "top": 1.25,
+    "base": 0.4,
+    "radius": 2.5
+  },
+  "limbs": [
+    {
+      "density": 8.0,
+      "per_node": 1.0,
+      "facing": "Around",
+      "skew": 0.34906584,
+      "start": 0.0,
+      "angle": {
+        "center": 1.0471976,
+        "spread": 0.17453292,
+        "shape": "Bell"
+      },
+      "reach": {
+        "center": 0.9,
+        "spread": 0.1,
+        "shape": "Bell"
+      },
+      "radius": 0.5,
+      "sides": 4,
+      "bend": {
+        "toward": 1.5707964,
+        "amount": 0.4
+      },
+      "wander": {
+        "angle": 0.17453292
+      },
+      "fork": {
+        "chance": 0.0,
+        "at": {
+          "center": 0.5,
+          "spread": 0.1,
+          "shape": "Bell"
+        },
+        "copies": 2,
+        "angle": {
+          "center": 0.6981317,
+          "spread": 0.17453292,
+          "shape": "Bell"
+        },
+        "roll": 0.0
+      }
+    }
+  ],
+  "ornaments": {
+    "leaves": true,
+    "tip_leaves": {
+      "upright": "Triple",
+      "size": 0.25,
+      "lateral_droop": -0.27925268,
+      "axial_droop": 0.29670596
+    }
+  }
+}

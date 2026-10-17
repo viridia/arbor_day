@@ -74,6 +74,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C91   | The stacks file, on paper (`docs/patches.md`, The file): operators that are off left out and read from a template with all off; versions as slots, stream keys by kind; slots, not a list; C10 lands flat after C96 groups fields into operators. |
 | C96   | Operator-shaped levels (`docs/patches.md`, The file): a level's fields as its frame (Arrangement, and Shape with the angle) and its operators' structs, always on: `Bend` (toward, amount), `Wander` (angle), `Fork` (chance, at, copies, angle, roll); the trunk's wander a `Wander`; `Foliage` becomes `Ornaments`, the Leaves switch beside its one slot, `TipLeaves`. A struct nested in a subpane shows as a heading over its rows, in a node named after the field (TD1.5). Fuzzy draws are clamped by the owning struct's limits (`species::limits`). Plans' paths follow (`limbs[0]/fork/chance`, `ornaments.tip_leaves.upright`). Output unchanged. |
 | C10a  | `LimbLevels { shown, levels }` (D15) in place of `limb_levels` and the `limbs` array, each depth's defaults in its `Default`; the generator reads `limbs.grown()`. A `Flatten` attribute shows a struct's rows in place of its own (TD1.5), so the levels stay beside the other subpanes. Paths: `limbs.levels[0].angle` in reflection, `levels[0]/…` in the panel and header notes. Output unchanged. |
+| C10b  | Writing the species file (TD2.3), `src/species_file.rs`: JSON with `generator: 1` first, then the species' fields by reflection, streamed in declared order since serde_json's `Value` sorts keys; `LimbLevels` writes its shown levels as a list (`SerializeWithRegistry`). `serde` (traits only) and `serde_json` as direct dependencies, already in the lock file through Bevy. A golden test against `src/default_species.json`, failing with the JSON to paste. Not yet called by the app (C40, C41). BRP writes through the same type data, so plans read `GrownFrom` in the file's shape (`at="limbs[0].facing"`) and write by reflection path. |
 
 ## Next
 
@@ -131,11 +132,10 @@ landed; leaf painting next.
    editor, the same in files but a larger change that undoes D15. Seedling's groups for
    reference: `trunk`; `branch[]`, one per level; the leaf as `leafGroup` (arrangement),
    `leafShape` and `leafColor`. Reading is reflection's, strict: a file from before a schema
-   change fails with an error naming the key (D32). Split, C10a landed:
-   - **C10b Writing**: the species to JSON by reflection, `generator: 1`, `LimbLevels` writing
-     the shown levels; the golden test. E[3]
-   - **C10c Reading**: strict, `LimbLevels` filling the levels a file leaves out; a round trip,
-     and a file with an unknown key failing with its name. E[2]
+   change fails with an error naming the key (D32). Split, C10a and C10b landed:
+   - **C10c Reading**: strict, `LimbLevels` filling the levels a file leaves out; `generator`
+     taken off first, a file from a newer one refused; a round trip, and a file with an unknown
+     key failing with its name. E[2]
 5. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
    panel, above the Plant group (C33); the file browser is X2. File commands act on the active document, so that tabs (X26)
    need not change them. E[3]
@@ -232,7 +232,9 @@ landed; leaf painting next.
   or sag alone. Changes every plant's limbs. E[3]
 - **C69 A color per part of the plant**: a 4 px stripe down the left side of each top-level
   subpane, a color each for Plant, Trunk, Limbs 1 to 3 and Foliage (the ornaments), running from
-  bark brown to light green, root to leaf, so the levels are told apart at a glance. Its color
+  bark brown to light green, root to leaf, so the levels are told apart at a glance; Crown, the
+  envelope rather than a part, a neutral grey (the envelope helper's pale green would read as
+  Foliage's). Its color
   is set on the node, since feathers' contextual theming cannot shade a subtree. One dimension of
   color, by part; operators' icons (X31 step 5) take the other, by kind, so the two do not
   clash. E[1]

@@ -1,6 +1,14 @@
 //! The species: every parameter that shapes a plant, edited in the panel and read by the generator.
 
-use bevy::{feathers::controls::NumberInputUnits, prelude::*, reflect::Typed};
+use bevy::{
+    feathers::controls::NumberInputUnits,
+    prelude::*,
+    reflect::{
+        TypeRegistry, Typed,
+        serde::{ReflectSerializeWithRegistry, SerializeWithRegistry, TypedReflectSerializer},
+    },
+};
+use serde::ser::{SerializeSeq, Serializer};
 
 use std::ops::RangeInclusive;
 
@@ -71,8 +79,10 @@ impl Default for Species {
 }
 
 /// The limb levels, each growing on the limbs of the one before it, the first on the trunk (D15).
-/// All three are kept, so a level hidden and shown again comes back as it was.
+/// All three are kept, so a level hidden and shown again comes back as it was. A file holds the
+/// shown levels only, as a list.
 #[derive(Reflect, Clone, PartialEq)]
+#[reflect(SerializeWithRegistry)]
 pub struct LimbLevels {
     /// How many of the levels grow, from the first.
     #[reflect(@ValueRange::<i32>(1..=MAX_LIMB_LEVELS as i32))]
@@ -86,6 +96,21 @@ impl LimbLevels {
     pub fn grown(&self) -> &[LimbLevel] {
         let count = (self.shown.max(1) as usize).min(MAX_LIMB_LEVELS);
         &self.levels[..count]
+    }
+}
+
+impl SerializeWithRegistry for LimbLevels {
+    fn serialize<S: Serializer>(
+        &self,
+        serializer: S,
+        registry: &TypeRegistry,
+    ) -> Result<S::Ok, S::Error> {
+        let grown = self.grown();
+        let mut levels = serializer.serialize_seq(Some(grown.len()))?;
+        for level in grown {
+            levels.serialize_element(&TypedReflectSerializer::new(level, registry))?;
+        }
+        levels.end()
     }
 }
 

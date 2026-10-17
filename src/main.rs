@@ -43,6 +43,7 @@ mod properties;
 mod random;
 mod settings;
 mod species;
+mod species_file;
 mod spread_strip;
 mod turntable;
 
