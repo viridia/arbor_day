@@ -43,7 +43,7 @@ pub(super) fn wander(level: &Level, skeleton: &mut Skeleton) {
 pub(super) fn wander_axis(level: &Level, axis: &mut Axis) {
     let end = axis.length() - level.straight;
     let rng = axis.rng.fork(WANDER_STREAM);
-    let wander = level.params.wander;
+    let wander = level.params.wander.angle;
     let envelope = Some(&level.envelope);
     displace(&mut axis.rings, rng, wander, level.spacing, end, envelope);
 }

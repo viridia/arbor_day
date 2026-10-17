@@ -49,7 +49,7 @@ def run(driver):
     driver.expect("Plant", STATS, {"limbs": Between(10 + 5 + 1, 11 + 55 + 55 * (2 * 4 + 1))})
     driver.screenshot("three_levels")
 
-    driver.click("Shell/Panel/foliage/leaves")
+    driver.click("Shell/Panel/ornaments/leaves")
     driver.expect("Plant", STATS, {"cards": 0})
     driver.expect("Leaves", VISIBILITY, "Hidden")
     # Bare, with every stem drawn at least 10 cm wide: the twigs thicken, the limbs stay.
@@ -63,7 +63,7 @@ def run(driver):
     driver.screenshot("thick_detail")
 
     # Leaves come back, and show, when checked again.
-    driver.click("Shell/Panel/foliage/leaves")
+    driver.click("Shell/Panel/ornaments/leaves")
     driver.expect("Plant", STATS, {"cards": Between(20, 1000)})
     driver.expect("Leaves", VISIBILITY, "Inherited")
     driver.screenshot("leaves_again")

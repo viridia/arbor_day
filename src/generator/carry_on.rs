@@ -6,6 +6,7 @@ use super::{
     skeleton::{Axis, AxisKind, CARRY_ON_STREAM, Level, OWN_VALUES_STREAM, Ring, Skeleton},
     trace::{end_at, trace},
 };
+use crate::species::LimbLevel;
 
 /// Carries on each axis of the level before that bears laterals, unless it forked, its copies
 /// carrying it on instead: one more limb of the level leaves it at its last lateral's node, along
@@ -28,7 +29,7 @@ pub(super) fn carry_on(level: &Level, skeleton: &mut Skeleton) {
         let frame = parent.frame_at(at);
         let tip = frame.ring(at);
         let rng = parent.rng.fork(CARRY_ON_STREAM);
-        let reach = draw(
+        let reach = draw::<LimbLevel>(
             &level.params.reach,
             "reach",
             &mut rng.fork(OWN_VALUES_STREAM),

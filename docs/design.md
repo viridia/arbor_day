@@ -84,10 +84,12 @@ A select's option rows carry `OptionIndex`; an observer records the picked index
 capability set, `CapsPanel`, is `CapsUiFeathers`' list plus `CapabilityEnumSelect`.
 
 A `Fuzzy` row (TD2.2) is a center input, a spread input and a shape toggle, with a strip drawn
-along the center input showing center ± spread (`src/spread_strip.rs`). Nested structs are
-subpanes; a `ControlGroup` attribute gathers a struct's rows under a bold heading where its first
-field is declared, or into a subpane of its own at the panel's top level, so panes never nest
-boxes. An array marked `ShownCount` shows its first items, the count naming a field; − and + on the
+along the center input showing center ± spread (`src/spread_strip.rs`). A `ControlGroup`
+attribute gathers a struct's rows under a bold heading where its first field is declared, or into
+a subpane of its own at the panel's top level; a nested struct is shown the same way, a subpane at
+the top level and a heading over its rows in a subpane, so panes never nest boxes. Its rows sit in
+a node named after the field, so their paths stay apart from the outer struct's
+(`limbs[0]/fork/angle`). An array marked `ShownCount` shows its first items, the count naming a field; − and + on the
 last shown item's header hide it or show the next, and a hidden item keeps its values. Each limb
 level's header shows its count, "Limbs 1 (8)".
 
@@ -185,8 +187,9 @@ radius share of the parent's radius there.
 
 ### 3.4 Tracing
 
-`trace.rs` defines tracing. A limb's course turns toward an angle from world up (bend toward),
-keeping its compass heading, closing a share of the angle left over each crown radius (bend). A
+`trace.rs` defines tracing. A limb's course turns toward an angle from world up (the bend's
+toward), keeping its compass heading, closing a share of the angle left over each crown radius
+(its amount). A
 limb stops at its reach, or before a step that would leave the envelope. A traced limb no longer
 than it is thick at its base is left out.
 

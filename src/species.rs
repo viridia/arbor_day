@@ -57,7 +57,7 @@ pub struct Species {
     #[reflect(@Caption("Limbs"), @ShownCount("limb_levels"))]
     pub limbs: [LimbLevel; MAX_LIMB_LEVELS],
     #[reflect(@Caption("Foliage"))]
-    pub foliage: Foliage,
+    pub ornaments: Ornaments,
 }
 
 impl Species {
@@ -86,11 +86,14 @@ impl Default for Species {
                     facing: Facing::Sides,
                     start: 0.2,
                     angle: degrees(45.0, 10.0),
-                    bend: 0.5,
-                    wander: 15.0_f32.to_radians(),
                     reach: Fuzzy::new(0.6, 0.1, Distribution::Bell),
                     radius: 0.5,
                     sides: 3,
+                    bend: Bend {
+                        amount: 0.5,
+                        ..Bend::default()
+                    },
+                    wander: Wander::degrees(15.0),
                     ..LimbLevel::default()
                 },
                 LimbLevel {
@@ -99,15 +102,18 @@ impl Default for Species {
                     facing: Facing::Sides,
                     start: 0.3,
                     angle: degrees(40.0, 10.0),
-                    bend: 0.5,
-                    wander: 20.0_f32.to_radians(),
                     reach: Fuzzy::new(0.5, 0.1, Distribution::Bell),
                     radius: 0.5,
                     sides: 3,
+                    bend: Bend {
+                        amount: 0.5,
+                        ..Bend::default()
+                    },
+                    wander: Wander::degrees(20.0),
                     ..LimbLevel::default()
                 },
             ],
-            foliage: Foliage::default(),
+            ornaments: Ornaments::default(),
         }
     }
 }
@@ -201,20 +207,14 @@ pub struct Trunk {
         @Caption("Lean"),
     )]
     pub lean: f32,
-    /// The most each stretch of a stem points off its course, which the splay and lean set, so it
-    /// zigzags about it as a limb does, kinking as often, its tip where the course ends.
-    #[reflect(
-        @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_4),
-        @Precision(1),
-        @NumberInputUnits::new_static("angle_degrees"),
-        @Caption("Wander"),
-    )]
-    pub wander: f32,
+    /// Each stem zigzagging about the course the splay and lean set, as a limb does.
+    #[reflect(@Caption("Wander"))]
+    pub wander: Wander,
 }
 
 /// One level of limbs on a parent, the trunk or a limb of the level before, in nodes along the
 /// part of the parent inside the crown. Each limb leaves at an angle from its parent and grows
-/// toward the envelope, bending toward an angle from world up and wandering as it goes.
+/// toward the envelope, bending, wandering and forking as its operators say.
 #[derive(Reflect, Clone, PartialEq)]
 pub struct LimbLevel {
     /// Places where limbs start, per crown radius of the parent inside the crown, so a long parent
@@ -258,43 +258,9 @@ pub struct LimbLevel {
         @Precision(1),
         @NumberInputUnits::new_static("angle_degrees"),
         @Caption("Angle"),
-        @ControlGroup("Direction"),
+        @ControlGroup("Shape"),
     )]
     pub angle: Fuzzy,
-    /// The angle from world up the limb bends toward, keeping its compass heading: 0 up, as a
-    /// poplar's, 90° level, as an oak's, 180° down, as a weeping tree's.
-    #[reflect(
-        @ValueRange::<f32>(0.0..=std::f32::consts::PI),
-        @Precision(1),
-        @NumberInputUnits::new_static("angle_degrees"),
-        @Caption("Bend toward"),
-        @ControlGroup("Direction"),
-    )]
-    pub bend_toward: f32,
-    /// How much of the angle left to its bend the limb turns through over a length equal to the
-    /// crown's radius: 0 keeps it straight. Measured against the crown, so a shrub and a tree
-    /// with the same settings bend alike, and against what is left, so every bend target moves
-    /// the tip, and longer limbs bend further.
-    #[reflect(
-        @ValueRange::<f32>(0.0..=0.99),
-        @Precision(0),
-        @NumberInputUnits::new_static("ratio_percent"),
-        @Caption("Bend"),
-        @ControlGroup("Direction"),
-    )]
-    pub bend: f32,
-    /// The most each stretch points off the limb's course, which the angle and bend set, so the
-    /// limb zigzags about it rather than running smooth, its tip where the course ends. Kinks fall
-    /// about one spacing apart on every level, so long limbs kink several times and short twigs
-    /// once or not at all.
-    #[reflect(
-        @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_4),
-        @Precision(1),
-        @NumberInputUnits::new_static("angle_degrees"),
-        @Caption("Wander"),
-        @ControlGroup("Direction"),
-    )]
-    pub wander: f32,
     /// Length as a fraction of the distance from the limb's start to the envelope along its
     /// starting direction. A limb also stops where it leaves the envelope. Drawn for each limb.
     #[reflect(
@@ -318,48 +284,12 @@ pub struct LimbLevel {
     /// Sides of each ring.
     #[reflect(@ValueRange::<i32>(3..=8), @Spinbox, @Caption("Sides"), @ControlGroup("Shape"))]
     pub sides: i32,
-    /// The chance that a limb forks: it ends partway along, and copies of it carry on from there,
-    /// of its level, so they reach the envelope and bear limbs as it would.
-    #[reflect(
-        @ValueRange::<f32>(0.0..=1.0),
-        @Precision(0),
-        @NumberInputUnits::new_static("ratio_percent"),
-        @Caption("Chance"),
-        @ControlGroup("Fork"),
-    )]
-    pub fork_chance: f32,
-    /// Where along a limb it forks, as a share of its length. Drawn for each limb.
-    #[reflect(
-        @ValueRange::<f32>(0.05..=0.95),
-        @Precision(0),
-        @NumberInputUnits::new_static("ratio_percent"),
-        @Caption("At"),
-        @ControlGroup("Fork"),
-    )]
-    pub fork_at: Fuzzy,
-    /// Copies carrying a forked limb on, spread evenly around its direction.
-    #[reflect(@ValueRange::<i32>(2..=4), @Spinbox, @Caption("Copies"), @ControlGroup("Fork"))]
-    pub fork_copies: i32,
-    /// The angle across a fork: each copy turns half of it from the limb's direction. Drawn for
-    /// each fork.
-    #[reflect(
-        @ValueRange::<f32>(0.0..=std::f32::consts::PI),
-        @Precision(1),
-        @NumberInputUnits::new_static("angle_degrees"),
-        @Caption("Angle"),
-        @ControlGroup("Fork"),
-    )]
-    pub fork_angle: Fuzzy,
-    /// Where the copies lie around the limb: at 0, two copies spread level, side by side; at 90°,
-    /// one above the other.
-    #[reflect(
-        @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_2),
-        @Precision(1),
-        @NumberInputUnits::new_static("angle_degrees"),
-        @Caption("Roll"),
-        @ControlGroup("Fork"),
-    )]
-    pub fork_roll: f32,
+    #[reflect(@Caption("Bend"))]
+    pub bend: Bend,
+    #[reflect(@Caption("Wander"))]
+    pub wander: Wander,
+    #[reflect(@Caption("Fork"))]
+    pub fork: Fork,
 }
 
 impl Default for LimbLevel {
@@ -371,32 +301,141 @@ impl Default for LimbLevel {
             skew: 20.0_f32.to_radians(),
             start: 0.0,
             angle: degrees(60.0, 10.0),
-            bend_toward: 90.0_f32.to_radians(),
-            bend: 0.4,
-            wander: 10.0_f32.to_radians(),
             reach: Fuzzy::new(0.9, 0.1, Distribution::Bell),
             radius: 0.5,
             sides: 4,
-            fork_chance: 0.0,
-            fork_at: Fuzzy::new(0.5, 0.1, Distribution::Bell),
-            fork_copies: 2,
-            fork_angle: degrees(40.0, 10.0),
-            fork_roll: 0.0,
+            bend: Bend::default(),
+            wander: Wander::degrees(10.0),
+            fork: Fork::default(),
         }
     }
 }
 
-impl LimbLevel {
-    /// The limits of the field `name` (its `ValueRange`), to which values drawn for it are
-    /// clamped.
-    pub fn limits(name: &str) -> RangeInclusive<f32> {
-        Self::type_info()
-            .as_struct()
-            .ok()
-            .and_then(|info| info.field(name))
-            .and_then(|field| field.custom_attributes().get::<ValueRange<f32>>())
-            .map(|range| range.0.clone())
-            .unwrap_or_else(|| panic!("LimbLevel has no field `{name}` with a ValueRange<f32>"))
+/// The limits of `T`'s field `name` (its `ValueRange`), to which values drawn for it are clamped.
+pub fn limits<T: Typed>(name: &str) -> RangeInclusive<f32> {
+    T::type_info()
+        .as_struct()
+        .ok()
+        .and_then(|info| info.field(name))
+        .and_then(|field| field.custom_attributes().get::<ValueRange<f32>>())
+        .map(|range| range.0.clone())
+        .unwrap_or_else(|| {
+            let path = T::type_info().type_path();
+            panic!("{path} has no field `{name}` with a ValueRange<f32>")
+        })
+}
+
+/// A limb's course turning, as it grows, toward an angle from world up, keeping its compass
+/// heading. Without it the course is straight.
+#[derive(Reflect, Clone, PartialEq)]
+pub struct Bend {
+    /// The angle from world up the limb bends toward: 0 up, as a poplar's, 90° level, as an oak's,
+    /// 180° down, as a weeping tree's.
+    #[reflect(
+        @ValueRange::<f32>(0.0..=std::f32::consts::PI),
+        @Precision(1),
+        @NumberInputUnits::new_static("angle_degrees"),
+        @Caption("Toward"),
+    )]
+    pub toward: f32,
+    /// How much of the angle left to its target the limb turns through over a length equal to
+    /// the crown's radius: 0 keeps it straight. Measured against the crown, so a shrub and a tree
+    /// with the same settings bend alike, and against what is left, so every target moves the
+    /// tip, and longer limbs bend further.
+    #[reflect(
+        @ValueRange::<f32>(0.0..=0.99),
+        @Precision(0),
+        @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("Amount"),
+    )]
+    pub amount: f32,
+}
+
+impl Default for Bend {
+    fn default() -> Self {
+        Self {
+            toward: 90.0_f32.to_radians(),
+            amount: 0.4,
+        }
+    }
+}
+
+/// A stem or limb zigzagging about its course rather than running smooth, its tip where the course
+/// ends. Kinks fall about one spacing apart on every level, so long limbs kink several times and
+/// short twigs once or not at all.
+#[derive(Reflect, Clone, PartialEq)]
+pub struct Wander {
+    /// The most each stretch points off the course.
+    #[reflect(
+        @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_4),
+        @Precision(1),
+        @NumberInputUnits::new_static("angle_degrees"),
+        @Caption("Angle"),
+    )]
+    pub angle: f32,
+}
+
+impl Wander {
+    /// A wander of `angle` degrees.
+    pub fn degrees(angle: f32) -> Self {
+        Self {
+            angle: angle.to_radians(),
+        }
+    }
+}
+
+/// A limb ending partway along, and copies of it carrying it on from there, of its level, so they
+/// reach the envelope and bear limbs as it would.
+#[derive(Reflect, Clone, PartialEq)]
+pub struct Fork {
+    /// The chance that a limb forks.
+    #[reflect(
+        @ValueRange::<f32>(0.0..=1.0),
+        @Precision(0),
+        @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("Chance"),
+    )]
+    pub chance: f32,
+    /// Where along a limb it forks, as a share of its length. Drawn for each limb.
+    #[reflect(
+        @ValueRange::<f32>(0.05..=0.95),
+        @Precision(0),
+        @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("At"),
+    )]
+    pub at: Fuzzy,
+    /// Copies carrying a forked limb on, spread evenly around its direction.
+    #[reflect(@ValueRange::<i32>(2..=4), @Spinbox, @Caption("Copies"))]
+    pub copies: i32,
+    /// The angle across a fork: each copy turns half of it from the limb's direction. Drawn for
+    /// each fork.
+    #[reflect(
+        @ValueRange::<f32>(0.0..=std::f32::consts::PI),
+        @Precision(1),
+        @NumberInputUnits::new_static("angle_degrees"),
+        @Caption("Angle"),
+    )]
+    pub angle: Fuzzy,
+    /// Where the copies lie around the limb: at 0, two copies spread level, side by side; at 90°,
+    /// one above the other.
+    #[reflect(
+        @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_2),
+        @Precision(1),
+        @NumberInputUnits::new_static("angle_degrees"),
+        @Caption("Roll"),
+    )]
+    pub roll: f32,
+}
+
+impl Default for Fork {
+    fn default() -> Self {
+        Self {
+            chance: 0.0,
+            at: Fuzzy::new(0.5, 0.1, Distribution::Bell),
+            copies: 2,
+            angle: degrees(40.0, 10.0),
+            roll: 0.0,
+        }
     }
 }
 
@@ -421,13 +460,29 @@ fn degrees(center: f32, spread: f32) -> Fuzzy {
     Fuzzy::new(center.to_radians(), spread.to_radians(), Distribution::Bell)
 }
 
-/// A leaf cluster at the tip of every limb that bears none, so the leaves follow the branch ends:
-/// a card facing up, or on a steep twig what `Upright` says.
+/// What is placed on the grown limbs without changing them: so far the leaves at their tips.
 #[derive(Reflect, Clone, PartialEq)]
-pub struct Foliage {
+pub struct Ornaments {
     /// Whether leaves grow; off for a bare plant.
     #[reflect(@Caption("Leaves"))]
     pub leaves: bool,
+    #[reflect(@Caption("Tip leaves"))]
+    pub tip_leaves: TipLeaves,
+}
+
+impl Default for Ornaments {
+    fn default() -> Self {
+        Self {
+            leaves: true,
+            tip_leaves: TipLeaves::default(),
+        }
+    }
+}
+
+/// A leaf cluster at the tip of every limb that bears none, so the leaves follow the branch ends:
+/// a card facing up, or on a steep twig what `Upright` says.
+#[derive(Reflect, Clone, PartialEq)]
+pub struct TipLeaves {
     /// What a steep tip bears.
     #[reflect(@Caption("Upright tips"))]
     pub upright: Upright,
@@ -437,7 +492,6 @@ pub struct Foliage {
         @Precision(0),
         @NumberInputUnits::new_static("ratio_percent"),
         @Caption("Size"),
-        @ControlGroup("Card"),
     )]
     pub size: f32,
     /// How far each half of a card turns down about its midrib, folding it along the sprig's
@@ -447,7 +501,6 @@ pub struct Foliage {
         @Precision(1),
         @NumberInputUnits::new_static("angle_degrees"),
         @Caption("Lateral droop"),
-        @ControlGroup("Card"),
     )]
     pub lateral_droop: f32,
     /// How far the far half of a card bends down about the line across its middle; negative
@@ -457,7 +510,6 @@ pub struct Foliage {
         @Precision(1),
         @NumberInputUnits::new_static("angle_degrees"),
         @Caption("Axial droop"),
-        @ControlGroup("Card"),
     )]
     pub axial_droop: f32,
 }
@@ -476,10 +528,9 @@ pub enum Upright {
     Triple,
 }
 
-impl Default for Foliage {
+impl Default for TipLeaves {
     fn default() -> Self {
         Self {
-            leaves: true,
             upright: Upright::Triple,
             size: 0.25,
             // Seedling's most common pair, on the shrubs and two hemlocks.
@@ -498,7 +549,7 @@ impl Default for Trunk {
             radius: 0.2,
             sides: 6,
             lean: 15.0_f32.to_radians(),
-            wander: 8.0_f32.to_radians(),
+            wander: Wander::degrees(8.0),
         }
     }
 }

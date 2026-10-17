@@ -8,7 +8,7 @@ use super::{
     foliage::{AXIAL_FOLD, card_size},
     skeleton::{Axis, AxisKind, Frame, Ring, grow, upper_side},
 };
-use crate::species::{Foliage, Species};
+use crate::species::{Species, TipLeaves};
 
 /// Corners in one card: four quads of four, since each has its own normal (`card`).
 pub const CARD_CORNERS: usize = 16;
@@ -84,7 +84,7 @@ pub fn plant(species: &Species) -> Grown {
             tangent: cluster.direction,
             ..twig
         };
-        card(&mut leaves, &frame, size, &species.foliage);
+        card(&mut leaves, &frame, size, &species.ornaments.tip_leaves);
     }
     Grown {
         bark,
@@ -105,13 +105,13 @@ pub fn plant(species: &Species) -> Grown {
 /// shading: every quad keeps the flat card's normal, so a facet turned from the light is not cut
 /// dark against its neighbours. The corners go near quads before far, left before right, each
 /// quad's counter-clockwise from its face starting at its corner nearest the base on the left.
-pub(super) fn card(geometry: &mut Geometry, frame: &Frame, size: f32, foliage: &Foliage) {
+pub(super) fn card(geometry: &mut Geometry, frame: &Frame, size: f32, leaves: &TipLeaves) {
     let axis = frame.tangent;
     let normal = upper_side(axis, frame.side);
     // Square to both, so corners run counter-clockwise seen from the face.
     let across = axis.cross(normal);
-    let (lateral_sin, lateral_cos) = foliage.lateral_droop.sin_cos();
-    let (axial_sin, axial_cos) = foliage.axial_droop.sin_cos();
+    let (lateral_sin, lateral_cos) = leaves.lateral_droop.sin_cos();
+    let (axial_sin, axial_cos) = leaves.axial_droop.sin_cos();
     // A point on the flat card, `u` across from the midrib and `v` along from the base, both in
     // card widths, folded and placed.
     let fold = |u: f32, v: f32| {

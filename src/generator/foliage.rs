@@ -24,7 +24,7 @@ const ROSETTE_LEAN: f32 = 0.75;
 
 /// A card's width and length: a share of the crown's radius, so a scaled species keeps its form.
 pub(super) fn card_size(species: &Species) -> f32 {
-    species.foliage.size * Envelope::of(species).radius.max(0.01)
+    species.ornaments.tip_leaves.size * Envelope::of(species).radius.max(0.01)
 }
 
 /// How many cards a tip whose twig rises at `elevation` bears: one, unless it is `STEEP`, when
@@ -48,7 +48,7 @@ pub(super) fn cards_at(elevation: f32, upright: Upright) -> u32 {
 /// twig by `ROSETTE_LEAN` of the way to level, keeping its heading, so an upright tip reads as
 /// leaves splayed toward the light rather than one card on end.
 pub(super) fn clusters(species: &Species, axes: &[Axis]) -> Vec<Card> {
-    if !species.foliage.leaves {
+    if !species.ornaments.leaves {
         return Vec::new();
     }
     let size = card_size(species);
@@ -61,7 +61,7 @@ pub(super) fn clusters(species: &Species, axes: &[Axis]) -> Vec<Card> {
         let tip = twig.frame_at(length);
         let count = cards_at(
             tip.tangent.y.clamp(-1.0, 1.0).asin(),
-            species.foliage.upright,
+            species.ornaments.tip_leaves.upright,
         );
         if count == 1 {
             let back = (AXIAL_FOLD * size).min(length);

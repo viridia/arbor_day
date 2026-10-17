@@ -185,7 +185,7 @@ their fixed order:
 1. **Angle bias**: the angle changing with the node's place along the parent (C55). **Size
    bias** beside it: the reach changing the same way, for a form whose envelope does not
    shorten its upper scions enough.
-2. **Bend**: bend toward and bend (D17's course); C94 would make it Sag and Rise. Without it the
+2. **Bend**: its toward and amount (D17's course); C94 would make it Sag and Rise. Without it the
    course is straight. On the
    trunk it curves the stem after the tilt it leaves the ground at (the splay, and the lean's
    tilt, X36), which gives it the heading a bend keeps.
@@ -247,8 +247,9 @@ leaves along twigs (X30), radiating cards (C54) and fruit, each a placement (tip
 level's twigs, at nodes, radiating) and what it draws. Cards draw from regions of one leaf
 texture, since each texture is a material in Panoply and would split its merged flora meshes
 (requirements, Foliage), a constraint on C38's painter; fruit would be small meshes in vertex
-color, merging with the bark. Until ornaments land, `Foliage` is shaped as its tip-leaves
-ornament (C96), so files do not change when the stack arrives.
+color, merging with the bark. Until ornaments land, `Ornaments` holds the Leaves switch beside
+its one slot, `tip_leaves` (C96), so files change only by losing the switch when the stack
+arrives.
 
 ### The file
 
@@ -309,12 +310,11 @@ settings. The default species, abridged, angles in radians:
   twice in one level, needs list and data-enum widgets and ids that survive a removal, which
   patches' steps (X22) need anyway, so it waits for them.
 
-C10 need not wait for stacks. Before it, each level's fields are grouped into its operators'
-structs, every one always on (`limbs[0].bend.toward`, `limbs[0].fork.chance`), shown as the
-headings C33 gives them now: a struct nested in a level reads as a heading, not a subpane. C10's
-file then has the stacks file's shape with every operator written, and when stacks wrap the
-structs in `Toggle`, such a file reads as every operator on and grows as before; stacks change no
-file. The paths change once, before any file exists.
+C10 need not wait for stacks. Each level's fields are grouped into its operators' structs, every
+one always on (`limbs[0].bend.toward`, `limbs[0].fork.chance`, C96), each shown as a heading in
+the level's subpane. C10's file then has the stacks file's shape with every operator written, and
+when stacks wrap the structs in `Toggle`, such a file reads as every operator on and grows as
+before; stacks change no file.
 
 Formulas then come as a later stage: any input may become a formula, and the levels and their
 operators become the patch's steps, with controls added above them.

@@ -52,12 +52,12 @@ def run(driver):
     set_number(driver, "limbs[0]/density", "8")
     set_number(driver, "limbs[0]/per_node", "1")
 
-    set_number(driver, "limbs[0]/wander", "45")
+    set_number(driver, "limbs[0]/wander/angle", "45")
     driver.screenshot("most_wander")
     driver.click("Shell/Panel/limbs[0]/add")
     driver.frames(2)
     driver.screenshot("most_wander_twigs")
-    set_number(driver, "limbs[0]/wander", "10")
+    set_number(driver, "limbs[0]/wander/angle", "10")
 
     driver.screenshot("facing_sides")
     for variant in ["Up", "Down", "Around"]:
@@ -70,15 +70,15 @@ def run(driver):
     pick_facing(driver, "Sides")
 
     # Every first-level limb forks: level, upright, then three ways.
-    set_number(driver, "limbs[0]/fork_chance", "100")
+    set_number(driver, "limbs[0]/fork/chance", "100")
     driver.screenshot("forked")
-    set_number(driver, "limbs[0]/fork_roll", "90")
+    set_number(driver, "limbs[0]/fork/roll", "90")
     driver.screenshot("forked_upright")
-    set_number(driver, "limbs[0]/fork_roll", "0")
-    set_number(driver, "limbs[0]/fork_copies", "3")
+    set_number(driver, "limbs[0]/fork/roll", "0")
+    set_number(driver, "limbs[0]/fork/copies", "3")
     driver.screenshot("forked_three")
-    set_number(driver, "limbs[0]/fork_copies", "2")
-    set_number(driver, "limbs[0]/fork_chance", "0")
+    set_number(driver, "limbs[0]/fork/copies", "2")
+    set_number(driver, "limbs[0]/fork/chance", "0")
     driver.click("Shell/Panel/limbs[1]/remove")
     driver.frames(2)
 

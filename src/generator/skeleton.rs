@@ -291,7 +291,7 @@ impl<'a> Level<'a> {
             params: &species.grown_levels()[number - 1],
             taper: species.taper.clamp(0.0, 1.0),
             spacing: kink_spacing(&envelope),
-            straight: AXIAL_FOLD * species.foliage.size * envelope.radius.max(0.01),
+            straight: AXIAL_FOLD * species.ornaments.tip_leaves.size * envelope.radius.max(0.01),
             envelope,
         }
     }

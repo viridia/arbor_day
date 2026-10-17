@@ -46,10 +46,10 @@ pub(super) fn trace(level: &Level, axis: &mut Axis) -> bool {
 /// A limb's course, traced from `start` for up to `length`, or to where the next step would leave
 /// the envelope.
 fn trace_limb(envelope: &Envelope, params: &LimbLevel, start: Ring, length: f32) -> Trace {
-    let (bend_sin, bend_cos) = params.bend_toward.sin_cos();
+    let (bend_sin, bend_cos) = params.bend.toward.sin_cos();
     // The share of the angle left to the bend that one step closes. Shares compound, so a run of
     // steps closes the same share whatever the step.
-    let kept_per_crown = 1.0 - params.bend.clamp(0.0, 0.99);
+    let kept_per_crown = 1.0 - params.bend.amount.clamp(0.0, 0.99);
     let crown = envelope.radius.max(0.01);
 
     // The course, and a side square to it carried along without twisting.

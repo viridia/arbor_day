@@ -14,6 +14,7 @@ use super::{
     trace::{end_at, trace},
     wander::wander_axis,
 };
+use crate::species::{Fork, LimbLevel};
 
 /// Forks each of the level's axes with the chance its level gives (`fork_axis`), adding its
 /// copies as its scions. Copies do not fork again.
@@ -39,25 +40,26 @@ pub(super) fn fork(level: &Level, skeleton: &mut Skeleton) {
 /// than it is thick is left out, and with no copies the limb does not fork.
 fn fork_axis(level: &Level, index: usize, limb: &mut Axis) -> Vec<Axis> {
     let params = level.params;
+    let fork = &params.fork;
     let streams = limb.rng.fork(FORK_STREAM);
     let mut draws = streams.fork(OWN_VALUES_STREAM);
-    if draws.unit() >= params.fork_chance {
+    if draws.unit() >= fork.chance {
         return Vec::new();
     }
-    let at = draw(&params.fork_at, "fork_at", &mut draws);
-    let (half_sin, half_cos) = (draw(&params.fork_angle, "fork_angle", &mut draws) * 0.5).sin_cos();
+    let at = draw::<Fork>(&fork.at, "at", &mut draws);
+    let (half_sin, half_cos) = (draw::<Fork>(&fork.angle, "angle", &mut draws) * 0.5).sin_cos();
     let frame = limb.frame(at);
     let fork_at = at * limb.length();
     let upper = upper_side(frame.tangent, frame.side);
-    let (roll_sin, roll_cos) = params.fork_roll.sin_cos();
+    let (roll_sin, roll_cos) = fork.roll.sin_cos();
     let first = frame.tangent.cross(upper) * roll_cos + upper * roll_sin;
-    let count = params.fork_copies.max(2) as u32;
+    let count = fork.copies.max(2) as u32;
     let copies: Vec<Axis> = (0..count)
         .filter_map(|copy| {
             let rng = streams.fork(copy as u64);
             let around = Quat::from_axis_angle(frame.tangent, TAU * copy as f32 / count as f32);
             let direction = frame.tangent * half_cos + around * first * half_sin;
-            let reach = draw(&params.reach, "reach", &mut rng.fork(OWN_VALUES_STREAM))
+            let reach = draw::<LimbLevel>(&params.reach, "reach", &mut rng.fork(OWN_VALUES_STREAM))
                 * distance_to_envelope(&level.envelope, frame.point, direction);
             let start = Ring {
                 tangent: direction,

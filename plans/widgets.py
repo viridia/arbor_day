@@ -21,16 +21,17 @@ def pick(driver, field, variant):
 
 def run(driver):
     driver.present("Shell", ready=True)  # wait for the UI scene to finish spawning
-    driver.present(f"{LIMBS}/angle/shape")  # the immediate-mode panel has built its rows
+    driver.present(f"{LIMBS}/reach/shape")  # the immediate-mode panel has built its rows
 
-    # Fuzzy numbers: the first limb level's angle and reach, both bells.
-    driver.expect("Plant", GROWN_FROM, "Bell", at="limbs[0].angle.shape")
+    # Fuzzy numbers: the first limb level's fork angle and reach, both bells. The fork's, since
+    # `limbs[0]/angle` would also match the angles nested under it.
+    driver.expect("Plant", GROWN_FROM, "Bell", at="limbs[0].fork.angle.shape")
     driver.expect("Plant", GROWN_FROM, "Bell", at="limbs[0].reach.shape")
-    driver.present(f"{LIMBS}/angle/center/spread_strip/segment0")
-    driver.absent(f"{LIMBS}/angle/center/spread_strip/segment1")
+    driver.present(f"{LIMBS}/fork/angle/center/spread_strip/segment0")
+    driver.absent(f"{LIMBS}/fork/angle/center/spread_strip/segment1")
     driver.screenshot("fuzzy")
-    driver.click(f"{LIMBS}/angle/shape")
-    driver.expect("Plant", GROWN_FROM, "Uniform", at="limbs[0].angle.shape")
+    driver.click(f"{LIMBS}/fork/angle/shape")
+    driver.expect("Plant", GROWN_FROM, "Uniform", at="limbs[0].fork.angle.shape")
     driver.screenshot("fuzzy_toggled")
     # With no spread, the strip is a tick at the center. A click places the cursor rather than
     # selecting, so clear the default (10%) first.

@@ -1,8 +1,9 @@
 //! The property editor: panel rows for the fields of a reflected struct, one row per field, each
 //! named after its field. Booleans get a checkbox, numbers a number input, fuzzy numbers a center,
 //! a spread and a shape toggle, colors a swatch that opens a picker, enums of unit variants a
-//! select, nested structs a subpane of rows of their own, an array with a [`ShownCount`] a subpane
-//! per shown item, and every other field a label giving its name and type. Every row is one line:
+//! select, nested structs a subpane of rows of their own, or in a subpane a heading over them, an
+//! array with a [`ShownCount`] a subpane per shown item, and every other field a label giving its
+//! name and type. Every row is one line:
 //! a number input carries its caption inside, and other widgets sit right of theirs. Field
 //! attributes (below) set a row's
 //! caption, its control group, and a number's limits, precision, step and units.
@@ -209,8 +210,9 @@ pub fn edit_fields(ui: &mut Imm<CapsPanel>, value: &mut dyn PartialReflect, note
     edit_struct(ui, value, notes, false);
 }
 
-/// The rows of `value`'s fields. A [`ControlGroup`] is a subpane at the panel's top level and, in a
-/// subpane (`in_pane`), a heading over its rows, so panes do not nest boxes in boxes.
+/// The rows of `value`'s fields. A [`ControlGroup`] or a nested struct is a subpane at the panel's
+/// top level and, in a subpane (`in_pane`), a heading over its rows, so panes do not nest boxes in
+/// boxes.
 fn edit_struct(
     ui: &mut Imm<CapsPanel>,
     value: &mut dyn PartialReflect,
@@ -257,6 +259,7 @@ fn edit_struct(
                 &counts,
                 &mut new_counts,
                 notes,
+                in_pane,
             );
             continue;
         };
@@ -277,6 +280,7 @@ fn edit_struct(
                         &counts,
                         &mut new_counts,
                         notes,
+                        true,
                     );
                 }
             }
@@ -298,8 +302,10 @@ fn edit_struct(
     }
 }
 
-/// The row for field `index` of `fields`, described by `field_info`. A count field named by a
-/// [`ShownCount`] in `counts` gets none; the array it counts pushes its new count to `new_counts`.
+/// The row for field `index` of `fields`, described by `field_info`, in a subpane if `in_pane`. A
+/// count field named by a [`ShownCount`] in `counts` gets none; the array it counts pushes its new
+/// count to `new_counts`.
+#[expect(clippy::too_many_arguments, reason = "the walk's state, passed down")]
 fn field_row(
     ui: &mut Imm<CapsPanel>,
     field_info: &NamedField,
@@ -308,6 +314,7 @@ fn field_row(
     counts: &[(&'static str, i32, RangeInclusive<i32>)],
     new_counts: &mut Vec<(&'static str, i32)>,
     notes: &HeaderNotes,
+    in_pane: bool,
 ) {
     let Some(field) = fields.field_at_mut(index) else {
         return;
@@ -354,13 +361,15 @@ fn field_row(
     } else if let Some(variants) = unit_variants(field) {
         enum_row(row, name, caption, variants, field);
     } else if let Some(TypeInfo::Struct(_)) = field.get_represented_type_info() {
-        group(
-            row.on_spawn_insert(move || Name::new(name)),
-            caption,
-            |ui| {
+        let row = row.on_spawn_insert(move || Name::new(name));
+        if in_pane {
+            row.on_spawn_insert(heading_node).add(|ui| {
+                ui.ch().on_spawn_apply_scene(move || group_heading(caption));
                 edit_struct(ui, field, notes, true);
-            },
-        );
+            });
+        } else {
+            group(row, caption, |ui| edit_struct(ui, field, notes, true));
+        }
     } else {
         let text = format!("{caption}: {}", field.reflect_short_type_path());
         row.on_spawn_apply_scene(move || label(text))
@@ -506,6 +515,15 @@ fn group_heading(caption: &'static str) -> impl Scene {
         PropagateOver<TextFont>
         ThemeTextColor(tokens::TEXT_DIM)
         Node { margin: UiRect::top(px(6)) }
+    }
+}
+
+/// A nested struct's heading and rows in a subpane, spaced as the subpane's own rows are.
+fn heading_node() -> Node {
+    Node {
+        flex_direction: FlexDirection::Column,
+        row_gap: px(4),
+        ..default()
     }
 }
 

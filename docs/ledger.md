@@ -72,6 +72,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C60   | Tip rosettes (D27, TD3.8), in place of sprig pitch and roll: a tip 45° or more above level bears what "Upright tips" says, a Foliage select: none, one card, or a rosette of two or three (the default) splayed toward level, so the crown's upright tips no longer stand on end. `PlantStats` counts leafy tips beside cards. Roll is X40; C94 recorded. |
 | C85   | One tube along a carry-on chain (TD3.9, D30): a stem or limb drawn with the limbs carrying it on, sharing each join's ring, and a stitch of N + M triangles where the sides change. Forks split off as C95. |
 | C91   | The stacks file, on paper (`docs/patches.md`, The file): operators that are off left out and read from a template with all off; versions as slots, stream keys by kind; slots, not a list; C10 lands flat after C96 groups fields into operators. |
+| C96   | Operator-shaped levels (`docs/patches.md`, The file): a level's fields as its frame (Arrangement, and Shape with the angle) and its operators' structs, always on: `Bend` (toward, amount), `Wander` (angle), `Fork` (chance, at, copies, angle, roll); the trunk's wander a `Wander`; `Foliage` becomes `Ornaments`, the Leaves switch beside its one slot, `TipLeaves`. A struct nested in a subpane shows as a heading over its rows, in a node named after the field (TD1.5). Fuzzy draws are clamped by the owning struct's limits (`species::limits`). Plans' paths follow (`limbs[0]/fork/chance`, `ornaments.tip_leaves.upright`). Output unchanged. |
 
 ## Next
 
@@ -90,7 +91,7 @@ The foundation, the skeleton (`docs/patches.md`, The abstract plant), and tip ro
 landed; leaf painting next.
 
 1. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's leaf, as D29 has it, its
-   fields in a "Sprig" and a "Leaf" group under Foliage, and the `Interval` type (D10) for its
+   fields in a "Sprig" and a "Leaf" group in the tip leaves (`TipLeaves`, C96), and the `Interval` type (D10) for its
    variations. The painter takes the outline as an
    argument, a width in texture pixels or none, which C38 fixes at a constant until C66 makes it
    the species'. The texture goes on C37's cards, replacing the placeholder, with mipmaps, since
@@ -112,13 +113,7 @@ landed; leaf painting next.
    the preview draws the bark with an inverted hull after Panoply's `src/materials/outline.wesl`,
    and the export writes the `"outline"` material extra (C41). Off, none of these; whether the
    translucent strokes between leaves stay is judged then. E[3]
-4. **C96 Operator-shaped levels** (`docs/patches.md`, The file): each level's fields grouped into
-   its operators' structs, always on: Bend (bend toward, bend), Wander, Fork (its five fields),
-   and the trunk's Wander; and `Foliage`'s card fields into its tip-leaves ornament (X42), the
-   Leaves switch beside it until ornaments make it the slot's on. So C10's file has the stacks
-   file's shape. A struct nested in a level shows as a heading, as C33's groups do now, not a
-   subpane. Plans' `at=` paths change. Output unchanged. E[2]
-5. **C10 Species data model**, on C96's levels, its file the one `docs/patches.md` (The file)
+4. **C10 Species data model**, on C96's levels, its file the one `docs/patches.md` (The file)
    lays out; its groups the layers of the growth model (D11;
    `docs/growth-model.md`, Consequences), correcting seedling where the requirements say.
    Reflectable types with `Default` for initial values and attributes for the editor, after the
@@ -137,16 +132,24 @@ landed; leaf painting next.
    then lasts a session, not a save or a restart. Rejected: the species as a `Vec` of grown
    levels with hidden ones stashed in the editor, the same in files but a larger change that
    undoes D15. Seedling's groups for reference: `trunk`; `branch[]`, one per level; the leaf as
-   `leafGroup` (arrangement), `leafShape` and `leafColor`. E[4], split when started
-6. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
+   `leafGroup` (arrangement), `leafShape` and `leafColor`. Reading is the species' own, not
+   reflection's strict default, which fails the whole file on one unknown key: a key this
+   generator retired (C96's Leaves switch, once X42 makes it the slot's on) is read once or
+   dropped, and only an unknown one, from a newer generator, fails with an error naming it
+   (`docs/patches.md`, The file). This goes in the type data on `LimbLevels` and `Ornaments` that
+   writes only the operators that are on. E[4], split when started
+5. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
    panel, above the Plant group (C33); the file browser is X2. File commands act on the active document, so that tabs (X26)
    need not change them. E[3]
-7. **C8 Working document in settings.** A settings group holding the working species and, once
+6. **C8 Working document in settings.** A settings group holding the working species and, once
    set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
    as seedling did. The document's name comes from the file name. Serialized by reflection, as
-   `bevy_settings` does. Stored as a list of open documents holding one, and the active one's
-   index, so several (X26) need no change of format. E[3]
-8. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
+   `bevy_settings` does, but each species read through C10's reader: `bevy_settings` ignores
+   unknown keys only at a resource's top level, and below it a field that fails to deserialize is
+   dropped without a word (`load_properties`), so one stale key in a species would silently put
+   the default species in place of the unsaved edits. Stored as a list of open documents holding
+   one, and the active one's index, so several (X26) need no change of format. E[3]
+7. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
     as a JSON extra (C10), written from the generator's output (`generator::plant`), never from
     the preview's entities, whose leaf mesh is only hidden while none grow, in the form Panoply loads (requirements, Output; "What Panoply does with the output"). Bevy writes no glTF,
     so this adds a dependency or a writer of our own; propose it before code. The command-line
@@ -454,7 +457,7 @@ landed; leaf painting next.
   the skeleton and stage order, the global parameters, or realization, which fall to X15. In
   steps, each small enough to check by eye in the app and `plans/shapes.py`'s gallery, the first
   four leaving every plant as it was:
-  1. C96, operator-shaped levels, on the milestone path.
+  1. C96, operator-shaped levels: landed.
   2. `Toggle<T>` and its widget kind (the heading's ✕, the level header's add menu) on Wander
      alone; the generator skips it where off, and the file leaves it out. The risky step: the
      rest reuse the widget. E[3]

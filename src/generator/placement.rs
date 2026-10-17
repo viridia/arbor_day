@@ -3,7 +3,7 @@
 
 use std::f32::consts::{FRAC_PI_2, PI, TAU};
 
-use bevy::math::Vec3;
+use bevy::{math::Vec3, reflect::Typed};
 
 use super::{
     envelope::{Envelope, distance_to_envelope},
@@ -17,7 +17,7 @@ use super::{
 use crate::{
     fuzzy::Fuzzy,
     random::Rng,
-    species::{Facing, LimbLevel, Species},
+    species::{Facing, LimbLevel, Species, limits},
 };
 
 /// The most a node moves from its even place, as a share of the gap between places, so nodes are
@@ -55,7 +55,7 @@ pub(super) fn stems(species: &Species) -> Vec<Axis> {
             let turn = heading + TAU * stem as f32 / count as f32;
             let mut rings = stem_rings(length, trunk.splay, lean, turn);
             let wander = rng.fork(WANDER_STREAM);
-            displace(&mut rings, wander, trunk.wander, spacing, length, None);
+            displace(&mut rings, wander, trunk.wander.angle, spacing, length, None);
             taper_rings(&mut rings, trunk.radius, species.taper.clamp(0.0, 1.0));
             Axis::stem(rings, rng)
         })
@@ -118,8 +118,8 @@ fn place_on(level: &Level, index: usize, parent: &Axis, placed: &mut Vec<Axis>) 
             let rng = parent.rng.fork(limb);
             limb += 1;
             let mut own = rng.fork(OWN_VALUES_STREAM);
-            let angle = draw(&params.angle, "angle", &mut own);
-            let reach = draw(&params.reach, "reach", &mut own);
+            let angle = draw::<LimbLevel>(&params.angle, "angle", &mut own);
+            let reach = draw::<LimbLevel>(&params.reach, "reach", &mut own);
             let azimuth = azimuth + (own.unit() * 2.0 - 1.0) * params.skew;
             crowd.push((at, azimuth));
             let (sin, cos) = azimuth.sin_cos();
@@ -233,8 +233,8 @@ fn node_azimuths(
     }
 }
 
-/// A value drawn from `fuzzy`, clamped to the limits of `LimbLevel`'s field `field`.
-pub(super) fn draw(fuzzy: &Fuzzy, field: &str, rng: &mut Rng) -> f32 {
-    let limits = LimbLevel::limits(field);
+/// A value drawn from `fuzzy`, clamped to the limits of `T`'s field `field`.
+pub(super) fn draw<T: Typed>(fuzzy: &Fuzzy, field: &str, rng: &mut Rng) -> f32 {
+    let limits = limits::<T>(field);
     fuzzy.sample(rng).clamp(*limits.start(), *limits.end())
 }
