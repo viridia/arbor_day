@@ -320,9 +320,8 @@ the look the author tuned.
 A stem or limb bearing limbs ends at its last node, and one more limb of its children's level
 carries it on from there (TD3.6), so the trunk turns into a branch rather than ending in a post, as
 in decurrent trees and an excurrent leader's last shoot, and a limb's tip is a shoot like any
-other, as in sympodial growth: a fork of one, which D31 generalizes. The two are separate tubes
-meeting cleanly; where their sides differ the silhouette shows a shoulder and the normals crease
-(X27). **Reversing it** gives every bearing limb a bare post past its last node.
+other, as in sympodial growth: a fork of one, which D31 generalizes. The two are drawn as one
+tube (TD3.9), so the silhouette and normals run unbroken where their sides differ. **Reversing it** gives every bearing limb a bare post past its last node.
 
 ### D31 — Forks after Weber and Penn's splits
 

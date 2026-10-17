@@ -70,6 +70,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C84   | Wander as a lightning bolt (D17, TD3.4), `src/generator/wander.rs`, in place of kinks: the trace follows the course alone, and a stage after carrying on displaces it by midpoints between fixed ends, past a straight run at the base, each stretch within the wander of its course and no move larger than at two spacings, so tips stay where the course puts them and a stem's height is reached at any wander (D23). `frame_at` takes the chord after a ring a point sits on. |
 | C87   | `docs/guidelines.md` after `../ldd_template`'s: G1 (change a field's meaning before adding a field) and G2 (vary a value where its instances are many), from D25 and D19, now struck, and G3, the effort scale, after `../ldd_template`'s G7. AGENTS.md says which doc each change updates, and to read the guidelines before adding to the species. |
 | C60   | Tip rosettes (D27, TD3.8), in place of sprig pitch and roll: a tip 45° or more above level bears what "Upright tips" says, a Foliage select: none, one card, or a rosette of two or three (the default) splayed toward level, so the crown's upright tips no longer stand on end. `PlantStats` counts leafy tips beside cards. Roll is X40; C94 recorded. |
+| C85   | One tube along a carry-on chain (TD3.9, D30): a stem or limb drawn with the limbs carrying it on, sharing each join's ring, and a stitch of N + M triangles where the sides change. Forks split off as C95. |
 
 ## Next
 
@@ -183,17 +184,11 @@ landed; leaf painting next.
   keep the survey and the reasons, citing TD for the mechanism. E[2]
 - **C90 `show.py`** from `../ldd_template`, printing a D, TD or X entry by its number, so a session
   reads the entries it needs rather than whole files. Propose it before code. E[2]
-- **C85 One tube along a carry-on chain** (was X27, the crease at a join showing): `plant`
-  follows each axis to the one carrying it on (D30) and draws the chain as one tube, sharing
-  the ring at each join, so normals and the outline run unbroken; the radii already meet
-  (C81). Where the sides differ, the parent's last segment is the adapter: its last ring takes
-  the carry-on's sides, and a stitch beside `tube` joins N sides to M, walking both rings by
-  angle, N + M triangles, never more than the 2N it replaces. Equal sides join by dropping the
-  duplicate ring. Then forks (D31): the first copy continues the chain as a carry-on does,
-  with the forked limb's sides, so no adapter, and the shared ring rounds its turn of half the
-  fork angle into an elbow; the other copies meet the chain as laterals meet their parents. A
-  fan closes another copy's start only if `plans/shapes.py`'s Y and three-way fork show its
-  open base outside the chain's tube. E[2]
+- **C95 Forks along the chain** (split from C85): a forked limb (D31) no longer ends capped; its
+  first copy continues the chain (TD3.9) as a carry-on does, with the forked limb's sides, so no
+  adapter, and the shared ring rounds its turn of half the fork angle into an elbow; the other
+  copies meet the chain as laterals meet their parents. A fan closes another copy's start only
+  if `plans/shapes.py`'s Y and three-way fork show its open base outside the chain's tube. E[2]
 - **C55 Angle by place**, seedling's `angleBias` (`MeshGenerator.ts:593`), for crowns bald on
   top: twigs radiate outward, their leaves with them (D27), and the envelope's top stays empty. A
   field per level, "Angle at tip", −90° to 90°: the change in angle from a node at the base of

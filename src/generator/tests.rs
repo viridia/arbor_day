@@ -25,7 +25,7 @@ fn stem_mesh(sides: u32, lean_degrees: f32) -> Geometry {
     let mut rings = lone_stem(lean_degrees, 0.02);
     taper_rings(&mut rings, 0.2, 0.5);
     let mut geometry = Geometry::default();
-    tube(&mut geometry, &rings, 0.0, sides, true);
+    tube(&mut geometry, &rings, &vec![sides; rings.len()], 0.0);
     geometry
 }
 
@@ -906,7 +906,12 @@ fn a_tube_is_drawn_at_its_rings_radii() {
     let trunk = &grow(&species).axes[0];
     let mut geometry = Geometry::default();
     let sides = 6;
-    tube(&mut geometry, &trunk.rings, 0.0, sides, false);
+    tube(
+        &mut geometry,
+        &trunk.rings,
+        &vec![sides; trunk.rings.len()],
+        0.0,
+    );
     // The upright trunk narrows evenly over its height as grown, though cut shorter.
     let per_metre = species.trunk.radius * species.taper / species.trunk.height;
     for (i, ring) in trunk.rings.iter().enumerate() {
@@ -1034,12 +1039,62 @@ fn a_forked_limb_is_carried_on_by_its_copies_alone() {
 }
 
 #[test]
-fn a_tube_carried_on_is_left_open() {
+fn a_limb_carrying_another_on_is_one_tube_with_it() {
     let mut species = straight();
     species.limbs[0].density = 1.0;
-    // The trunk's one segment of six quads, open at its top, and three straight limbs of four
-    // quads and a cap.
-    assert_eq!(plant(&species).bark.triangles(), 6 * 2 + 3 * (4 * 2 + 4));
+    // The trunk's one segment stitches its six sides to the four of the limb carrying it on, which
+    // has one segment of four quads and a cap; two straight limbs of four quads and a cap.
+    let bark = plant(&species).bark;
+    assert_eq!(bark.triangles(), (6 + 4) + (4 * 2 + 4) + 2 * (4 * 2 + 4));
+    // The ring where they meet is drawn once: the trunk's base of six, then the join's four, the
+    // carrier's tip ring and its cap's center.
+    assert_eq!(bark.positions.len(), (6 + 4 + 4 + 1) + 2 * (4 + 4 + 1));
+}
+
+#[test]
+fn a_chain_shares_its_joins() {
+    // A trunk of six sides bent 90° at its tip, carried on level by a limb of three.
+    let ring = |center: Vec3, tangent: Vec3, at: f32| Ring {
+        center,
+        tangent,
+        side: Vec3::Z,
+        at,
+        radius: 0.1,
+    };
+    let stream = Seed(0).stream("test");
+    let trunk = Axis::stem(
+        vec![ring(Vec3::ZERO, Vec3::Y, 0.0), ring(Vec3::Y, Vec3::Y, 1.0)],
+        stream.clone(),
+    );
+    let mut carrier = Axis::placed(
+        1,
+        AxisKind::CarryOn,
+        (0, 1.0),
+        ring(Vec3::Y, Vec3::Y, 0.0),
+        1.0,
+        stream,
+    );
+    carrier
+        .rings
+        .push(ring(Vec3::new(1.0, 1.0, 0.0), Vec3::X, 1.0));
+    let mut axes = vec![trunk, carrier];
+    axes[0].scions.push(1);
+    let (rings, sides) = chain(&axes, &axes[0], |axis| if axis.level == 0 { 6 } else { 3 });
+    assert_eq!(sides, [6, 3, 3]);
+    assert_eq!(
+        rings.iter().map(|ring| ring.at).collect::<Vec<_>>(),
+        [0.0, 1.0, 2.0]
+    );
+    // The join faces halfway, its side square to it.
+    let halfway = Vec3::new(1.0, 1.0, 0.0).normalize();
+    assert!((rings[1].tangent - halfway).length() < 1e-5);
+    assert!(rings[1].side.dot(rings[1].tangent).abs() < 1e-5);
+    // The stitch covers the segment: every vertex of both rings in a triangle, n + m of them.
+    let mut geometry = Geometry::default();
+    tube(&mut geometry, &rings[..2], &sides[..2], 0.0);
+    assert_eq!(geometry.triangles(), (6 + 3) + 3);
+    let stitch = &geometry.indices[..(6 + 3) * 3];
+    assert!((0..6 + 3).all(|vertex| stitch.contains(&vertex)));
 }
 
 #[test]

@@ -6,7 +6,7 @@ use bevy::math::{Vec2, Vec3};
 
 use super::{
     foliage::{AXIAL_FOLD, card_size},
-    skeleton::{AxisKind, Frame, Ring, grow, upper_side},
+    skeleton::{Axis, AxisKind, Frame, Ring, grow, upper_side},
 };
 use crate::species::{Foliage, Species};
 
@@ -44,23 +44,28 @@ pub struct Grown {
 }
 
 /// The whole plant, grown (`grow`) and meshed: the stems and their limbs, none drawn narrower than
-/// the bark's detail threshold, and a card (`card`) for each leaf cluster. Each stem is a tube
-/// left open at the base, since it stands in the ground. A tube is closed at the top by a fan,
-/// unless an axis carries it on: that axis starts on its top ring, at its top radius.
+/// the bark's detail threshold, and a card (`card`) for each leaf cluster. Each stem or limb is
+/// drawn as one tube with the limbs carrying it on (`chain`), left open at its base, which stands
+/// in the ground or inside its parent, and closed at its tip by a fan.
 pub fn plant(species: &Species) -> Grown {
     let skeleton = grow(species);
     let axes = &skeleton.axes;
     let min_radius = species.detail * 0.5;
     let levels = species.grown_levels();
-    let mut bark = Geometry::default();
-    let mut level_limbs = vec![0; levels.len()];
-    for axis in axes {
+    let sides_of = |axis: &Axis| {
         let sides = match axis.level {
             0 => species.trunk.sides,
             level => levels[level - 1].sides,
         };
-        let cap = !axis.bears(axes, AxisKind::CarryOn);
-        tube(&mut bark, &axis.rings, min_radius, sides.max(3) as u32, cap);
+        sides.max(3) as u32
+    };
+    let mut bark = Geometry::default();
+    let mut level_limbs = vec![0; levels.len()];
+    for axis in axes {
+        if axis.kind != AxisKind::CarryOn {
+            let (rings, sides) = chain(axes, axis, sides_of);
+            tube(&mut bark, &rings, &sides, min_radius);
+        }
         if axis.level > 0 {
             level_limbs[axis.level - 1] += 1;
         }
@@ -134,19 +139,56 @@ pub(super) fn card(geometry: &mut Geometry, frame: &Frame, size: f32, foliage: &
     }
 }
 
-/// Adds a tube through `rings`, each turned to its ring's side, so the tube rolls only as the
-/// sides do, and drawn at its ring's radius, but none narrower than `min_radius`. The end is closed
-/// by a fan if `cap` is set; the start is left open.
-pub(super) fn tube(
-    geometry: &mut Geometry,
-    rings: &[Ring],
-    min_radius: f32,
-    sides: u32,
-    cap: bool,
-) {
-    let first = geometry.positions.len() as u32;
+/// The rings of `axis` and of each limb carrying it on in turn (D30), as one path, with the sides
+/// each ring is drawn with: its axis's (`sides_of`). Each limb carrying another on starts on the
+/// ring where that one was cut, which the path keeps once, with the carrying limb's sides, so the
+/// parent's last segment adapts one count to the other, and facing halfway between the segments
+/// meeting there. Distances run on along the path.
+pub(super) fn chain(
+    axes: &[Axis],
+    axis: &Axis,
+    sides_of: impl Fn(&Axis) -> u32,
+) -> (Vec<Ring>, Vec<u32>) {
+    let mut rings = axis.rings.clone();
+    let mut sides = vec![sides_of(axis); rings.len()];
+    let mut end = axis;
+    while let Some(&next) =
+        (end.scions.iter()).find(|&&scion| axes[scion].kind == AxisKind::CarryOn)
+    {
+        let next = &axes[next];
+        let joint = rings.len() - 1;
+        let offset = rings[joint].at;
+        let into = rings[joint].center - rings[joint - 1].center;
+        let out = next.rings[1].center - next.rings[0].center;
+        let ring = &mut rings[joint];
+        ring.tangent =
+            (into.normalize_or_zero() + out.normalize_or_zero()).normalize_or(ring.tangent);
+        ring.side = (ring.side.reject_from_normalized(ring.tangent)).normalize_or(ring.side);
+        sides[joint] = sides_of(next);
+        for ring in &next.rings[1..] {
+            rings.push(Ring {
+                at: ring.at + offset,
+                ..*ring
+            });
+            sides.push(sides_of(next));
+        }
+        end = next;
+    }
+    (rings, sides)
+}
+
+/// Adds a tube through `rings`, each with `sides` of its own, turned to its ring's side, so the
+/// tube rolls only as the sides do, and drawn at its ring's radius, but none narrower than
+/// `min_radius`. A segment between rings of the same count is a band of quads; between counts N
+/// and M, a stitch of N + M triangles, walking both rings by angle. The end is closed by a fan;
+/// the start is left open.
+pub(super) fn tube(geometry: &mut Geometry, rings: &[Ring], sides: &[u32], min_radius: f32) {
     let drawn = |ring: &Ring| ring.radius.max(min_radius);
+    // Each ring's first vertex.
+    let mut starts = Vec::with_capacity(rings.len());
     for (i, ring) in rings.iter().enumerate() {
+        starts.push(geometry.positions.len() as u32);
+        let sides = sides[i];
         // A narrowing tube's surface leans in, so its normals lean forward by the same angle,
         // measured between the rings either side.
         let (before, after) = (
@@ -166,24 +208,28 @@ pub(super) fn tube(
                 .push((outward * lean_cos + ring.tangent * lean_sin).normalize());
         }
     }
-    let segments = rings.len() as u32 - 1;
-    for ring in 0..segments {
-        for side in 0..sides {
-            let a = first + ring * sides + side;
-            let b = first + ring * sides + (side + 1) % sides;
-            let (c, d) = (a + sides, b + sides);
-            geometry.indices.extend([a, c, d, a, d, b]);
+    for ring in 0..rings.len() - 1 {
+        let (n, m) = (sides[ring], sides[ring + 1]);
+        let near = |side: u32| starts[ring] + side % n;
+        let far = |side: u32| starts[ring + 1] + side % m;
+        // Each step advances along the ring whose next vertex comes first by angle, n + m steps.
+        let (mut i, mut j) = (0, 0);
+        while i < n || j < m {
+            if j < m && (i == n || (j + 1) * n <= (i + 1) * m) {
+                geometry.indices.extend([near(i), far(j), far(j + 1)]);
+                j += 1;
+            } else {
+                geometry.indices.extend([near(i), far(j), near(i + 1)]);
+                i += 1;
+            }
         }
-    }
-    if !cap {
-        return;
     }
 
     let end = rings[rings.len() - 1];
     let tip = geometry.positions.len() as u32;
     geometry.positions.push(end.center);
     geometry.normals.push(end.tangent);
-    let last = first + segments * sides;
+    let (last, sides) = (starts[rings.len() - 1], sides[rings.len() - 1]);
     for side in 0..sides {
         geometry
             .indices

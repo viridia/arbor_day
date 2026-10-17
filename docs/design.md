@@ -250,11 +250,14 @@ and the one behind, turned over the top, 30°.
 
 ### 3.9 Meshing
 
-`plant` meshes the skeleton (`mesh.rs`). Each axis is a tube through its rings, each ring turned to
-its side, with its level's sides (the trunk's for stems), drawn at its ring's radius but none
-narrower than half the detail threshold; each ring's normals lean forward by the slope between the
-radii either side. A stem is open at its base; a tube is closed at its tip by a fan unless an axis
-carries it on.
+`plant` meshes the skeleton (`mesh.rs`). Each stem or limb, with the limbs carrying it on in turn
+(`chain`), is one tube through their rings, each ring turned to its side, with its axis's level's
+sides (the trunk's for stems), drawn at its ring's radius but none narrower than half the detail
+threshold; each ring's normals lean forward by the slope between the radii either side, distances
+running on along the chain. A join's ring is drawn once, with the carrying limb's sides, facing
+halfway between the segments meeting there. A segment between rings of equal sides is a band of
+quads; between N and M, so the parent's last, a stitch of N + M triangles walking both rings by
+angle. A tube is open at its base and closed at its tip by a fan.
 
 A card is two by two quads, its base where it was placed, its axis along its direction, its face
 toward that axis's upper side. Each half turns down about the midrib by the lateral droop (up, cupping, if negative),
