@@ -171,6 +171,17 @@ new hashes. None of them touches the panel, the species or the plans.
 
 ### Quick wins
 
+- **C85 One tube along a carry-on chain** (was X27, the crease at a join showing): `plant`
+  follows each axis to the one carrying it on (D30) and draws the chain as one tube, sharing
+  the ring at each join, so normals and the outline run unbroken; the radii already meet
+  (C81). Where the sides differ, the parent's last segment is the adapter: its last ring takes
+  the carry-on's sides, and a stitch beside `tube` joins N sides to M, walking both rings by
+  angle, N + M triangles, never more than the 2N it replaces. Equal sides join by dropping the
+  duplicate ring. Then forks (D31): the first copy continues the chain as a carry-on does,
+  with the forked limb's sides, so no adapter, and the shared ring rounds its turn of half the
+  fork angle into an elbow; the other copies meet the chain as laterals meet their parents. A
+  fan closes another copy's start only if `plans/shapes.py`'s Y and three-way fork show its
+  open base outside the chain's tube. E[2]
 - **C60 Sprig pitch and roll**, two foliage fields. Pitch: the share of the angle between the
   twig and level that a sprig's axis turns, keeping its heading, from 0% (along the twig, as
   now) to 100% (level), as a leaf turns to the light; droop below level is the fold's (C39). A
@@ -640,7 +651,7 @@ new hashes. None of them touches the panel, the species or the plans.
   its siblings' count leaves it alone. The two are separate tubes meeting cleanly: the parent's
   last ring is the new limb's first, at the parent's top radius (D22), and the parent is left
   open there. Where their sides differ the silhouette shows a shoulder, and the normals crease
-  (X27). If the new limb would be no longer than it is thick, the parent keeps its full length.
+  (C85). If the new limb would be no longer than it is thick, the parent keeps its full length.
 
 - **D31** Forks, after Weber and Penn's splits: a limb forks with its level's chance at one
   point, a share of its length, and ends there, capped, at its radius there (D22); copies of
@@ -785,12 +796,6 @@ new hashes. None of them touches the panel, the species or the plans.
   from defaults or a copy of the active one, and which
   need tabs serve that X28's sheets would not (editing variants one at a time, against comparing
   them side by side). *Gate:* C8 and C40 landed, and an author working on variants.
-
-- **X27** One continuous tube for a stem and the limbs carrying it on (D30), sharing the ring
-  at each join, so normals and the outline run unbroken. Keeping the first tube's sides out to
-  the twigs costs the triangles D22's per-level sides save; dropping sides at a join needs a
-  ring stitching, say, 6 to 4. *Gate:* the shoulder or crease at a join showing in screenshots
-  at game scale or in Panoply's outline.
 
 - **X28** Contact sheets (was C45), so designs are explored in sweeps rather than one
   screenshot at a time, by the author or by an agent. A second binary (`src/bin/sheet.rs`; the
