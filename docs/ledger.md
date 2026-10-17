@@ -69,6 +69,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C83   | Hinting as each level's last stage (TD3.4), `src/generator/hint.rs`, in place of at trace time: an axis keeps a ring at every trace step through its level's stages, so C84's displacement works on the full path, and the next level is placed on the hinted rings, so scions start inside the bark as meshed. |
 | C84   | Wander as a lightning bolt (D17, TD3.4), `src/generator/wander.rs`, in place of kinks: the trace follows the course alone, and a stage after carrying on displaces it by midpoints between fixed ends, past a straight run at the base, each stretch within the wander of its course and no move larger than at two spacings, so tips stay where the course puts them and a stem's height is reached at any wander (D23). `frame_at` takes the chord after a ring a point sits on. |
 | C87   | `docs/guidelines.md` after `../ldd_template`'s: G1 (change a field's meaning before adding a field) and G2 (vary a value where its instances are many), from D25 and D19, now struck, and G3, the effort scale, after `../ldd_template`'s G7. AGENTS.md says which doc each change updates, and to read the guidelines before adding to the species. |
+| C60   | Tip rosettes (D27, TD3.8), in place of sprig pitch and roll: a tip 45° or more above level bears what "Upright tips" says, a Foliage select: none, one card, or a rosette of two or three (the default) splayed toward level, so the crown's upright tips no longer stand on end. `PlantStats` counts leafy tips beside cards. Roll is X40; C94 recorded. |
 
 ## Next
 
@@ -83,8 +84,8 @@ per-type hook, and is retained-mode.
 
 ### Milestone: the first species exported to Panoply
 
-The foundation, the skeleton (`docs/patches.md`, The abstract plant), has landed; leaf painting
-next.
+The foundation, the skeleton (`docs/patches.md`, The abstract plant), and tip rosettes have
+landed; leaf painting next.
 
 1. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's leaf, as D29 has it, its
    fields in a "Sprig" and a "Leaf" group under Foliage, and the `Interval` type (D10) for its
@@ -115,7 +116,10 @@ next.
    the preview draws the bark with an inverted hull after Panoply's `src/materials/outline.wesl`,
    and the export writes the `"outline"` material extra (C41). Off, none of these; whether the
    translucent strokes between leaves stay is judged then. E[3]
-5. **C10 Species data model**, its groups the layers of the growth model (D11;
+5. **C91 The stacks file, on paper**: the shape of a species file under stacks (X31), its
+   operators, their versions and stream keys, in `docs/patches.md`, written before C10 so it
+   decides whether C10 waits for stacks or lands flat with room for them. No code. E[2]
+6. **C10 Species data model**, its groups the layers of the growth model (D11;
    `docs/growth-model.md`, Consequences), correcting seedling where the requirements say.
    Reflectable types with `Default` for initial values and attributes for the editor, after the
    fields settle, so saved files are not broken by every change. Serialized
@@ -134,15 +138,15 @@ next.
    levels with hidden ones stashed in the editor, the same in files but a larger change that
    undoes D15. Seedling's groups for reference: `trunk`; `branch[]`, one per level; the leaf as
    `leafGroup` (arrangement), `leafShape` and `leafColor`. E[4], split when started
-6. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
+7. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
    panel, above the Plant group (C33); the file browser is X2. File commands act on the active document, so that tabs (X26)
    need not change them. E[3]
-7. **C8 Working document in settings.** A settings group holding the working species and, once
+8. **C8 Working document in settings.** A settings group holding the working species and, once
    set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
    as seedling did. The document's name comes from the file name. Serialized by reflection, as
    `bevy_settings` does. Stored as a list of open documents holding one, and the active one's
    index, so several (X26) need no change of format. E[3]
-8. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
+9. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
     as a JSON extra (C10), written from the generator's output (`generator::plant`), never from
     the preview's entities, whose leaf mesh is only hidden while none grow, in the form Panoply loads (requirements, Output; "What Panoply does with the output"). Bevy writes no glTF,
     so this adds a dependency or a writer of our own; propose it before code. The command-line
@@ -167,6 +171,12 @@ next.
 
 ### Quick wins
 
+- **C93 Typed values lost in plans** (was X29, its gate passed): find whether a click right after
+  Enter lands before the panel has rebuilt, or the typing is lost. Three failures, each once of two
+  runs: `plans/levels.py` (2026-10-14) at the second level's density typed as 1.5, the plant
+  keeping the default's 70 limbs; `plans/levels.py` (2026-10-16) just after that edit, the second
+  level's − click not taking; `plans/cards.py` (2026-10-16), the axial droop typed as 0 keeping
+  its default. E[2]
 - **C88 Landed rows as citations**: each row a line naming the TD section or decision it landed,
   the design the longer rows restate now being `design.md`'s. E[1]
 - **C89 `growth-model.md` against `design.md`**: its Consequences describe the model as built;
@@ -184,12 +194,6 @@ next.
   fork angle into an elbow; the other copies meet the chain as laterals meet their parents. A
   fan closes another copy's start only if `plans/shapes.py`'s Y and three-way fork show its
   open base outside the chain's tube. E[2]
-- **C60 Sprig pitch and roll**, two foliage fields. Pitch: the share of the angle between the
-  twig and level that a sprig's axis turns, keeping its heading, from 0% (along the twig, as
-  now) to 100% (level), as a leaf turns to the light; droop below level is the fold's (C39). A
-  steep twig's sprig is then no longer seen edge-on from the game's camera. Roll spread: each
-  card turns about its axis at random by up to this angle, drawn from a foliage stream of the twig's own (D16),
-  so a plant reads from the side too, for games with a lower camera than Panoply's. E[2]
 - **C55 Angle by place**, seedling's `angleBias` (`MeshGenerator.ts:593`), for crowns bald on
   top: twigs radiate outward, their leaves with them (D27), and the envelope's top stays empty. A
   field per level, "Angle at tip", −90° to 90°: the change in angle from a node at the base of
@@ -216,6 +220,13 @@ next.
 
 ### Later
 
+- **C94 Sag and rise as two bends**, revising D17's bend toward an angle, by which an upright
+  limb, furthest from a level target, bends most, so the leader's carry-on tips over even with
+  no lean (found in C60). Sag turns a limb down by its weight, each step's turn scaled by the sine
+  of its angle from up, the share acting as a cantilever, so an upright limb does not sag; rise
+  turns it up toward the light, an upright one having no angle left. Under stacks (X31), two
+  operators, Sag and Rise, in place of Bend; before them, judge whether the flat panel takes both
+  or sag alone. Changes every plant's limbs. E[3]
 - **C32 Log scale** for sizes, with no change upstream: an `@LogScale` attribute. The species
   keeps metres; the panel's binding gives the number input ln(value) and a log range, and
   writes e^value back; a registered unit (`length_log_meters`) formats e^value in metres, to
@@ -269,6 +280,12 @@ next.
   - A context per document, so several open documents (X26) each keep their own history.
 
   E[4]
+- **C92 Scions by parent size**: larger limbs of a level bear more of the next level than smaller
+  ones, which today differ only by length (nodes are a density per crown radius). From the
+  parent's radius, already written by the taper (G1): a threshold, parents thinner than it
+  bearing none, so only main limbs carry the level; or a weight, density scaled by the parent's
+  base radius over the level's thickest, to a power (0 as now), after the pipe model. Under
+  stacks (X31), a parameter of the Scions operator. E[2]
 - **C54 Radiating foliage** (was X20, its gate C37 passed): cards radiating from a stem's tip or
   the ground, for palms, rosettes and tufts (agave, grass, fern), with no limbs (growth model,
   How the shapes are covered). A kind of the plant's foliage (`docs/patches.md`, Stacks). E[3]
@@ -340,8 +357,9 @@ next.
   purpose, which the export can warn about; (3) an additive change defaults to the old output
   when the file lacks its field (no wander, say), so a new species' default and a missing
   field's default are different things. What remains (fixes, reordered draws) is re-exported
-  deliberately, the earlier export being the record. *Gate:* the first species used in
-  Panoply.
+  deliberately, the earlier export being the record. Under stacks (X31), versioned operators keep
+  most changes out of this; what remains is the skeleton, the global parameters and realization.
+  *Gate:* the first species used in Panoply.
 - **X18** Forms and presets. The tool is for indie developers wanting the common Earth plant
   types (requirements, What it is for), so presets named after those types ("Fir", "Willow",
   "Live oak", "Clump"), each a saved species, are its starting points. Whether forms are needed
@@ -423,12 +441,6 @@ next.
   E[3] *Gate:* tuning in the editor proving too slow to compare designs at game scale, or
   presets (X18) begun.
 
-- **X29** `plans/levels.py` failed once of two runs (2026-10-14) at the second level's density
-  typed as 1.5: the plant kept the default's 70 limbs, as if the text never applied. It failed
-  again once of two runs (2026-10-16) just after that edit: the second level's − click did not
-  take, the plant keeping both levels. *Gate:* a third failure; then find whether a click right
-  after Enter lands before the panel has rebuilt, or the typing is lost.
-
 - **X30** Cards along a twig, for plants whose leaves crowd their shoots: spur-bearing trees
   (apple, larch, ginkgo) and conifers' needles (growth model, How the shapes are covered: "clusters
   along the limbs"). "Cards along the twig", default 0 with a small maximum, never past the tip's
@@ -445,7 +457,13 @@ next.
   (D15). Fewer rows, since a missing operator shows none. Each operator a `Toggle<T>` field,
   its settings and whether it is on, so ✕ keeps its values for the session (D15). E[4], split: the operator group and add menu
   with bend and wander; scions; angle bias (C55). The default species should grow as before, so
-  bring back C78's golden meshes (git history) for the first part. *Gate:* the skeleton (C79 to
+  bring back C78's golden meshes (git history) for the first part. Operators are versioned, after
+  Houdini: a new version is a new operator type (`wander::2`), the old one still loading but gone
+  from the add menu, so an old file grows as it did and an author upgrades on purpose; changes
+  that keep output take no version. Each operator draws from a stream keyed by its kind, and an
+  index only where one kind appears twice in a stack, never by its place, so adding an operator
+  leaves the others' draws alone. Versions do not cover the skeleton and stage order, the global
+  parameters, or realization (hinting, meshing); those fall to X15. *Gate:* the skeleton (C79 to
   C84) landed, and settled before C10's file format.
 
 - **X32** A taper per limb level, in place of the plant's one (D22); under stacks (X31), the
@@ -484,6 +502,12 @@ next.
   threshold stay cornered. Rings tilted through a tight turn meet on its inside where the arc's
   radius is under the tube's, so the arc must be at least as wide as the tube, never fixed by
   boolean geometry. *Gate:* corners reading as too angular at game scale.
+
+- **X40** Roll spread (was part of C60): each card turned about its axis at random, by up to a
+  species angle, drawn from a foliage stream of the twig's own (D16), so a plant reads from the
+  side, for games with a lower camera than Panoply's. Lateral droop (C39) already turns a card's
+  halves toward the side. *Gate:* a game viewing plants from near level, where lateral droop
+  does not keep cards from reading edge-on.
 
 ## Notes
 

@@ -145,7 +145,7 @@ lateral, carry-on, fork copy), its parent and the distance along it where it lea
 its reach, its stream and its scions, by index. An axis bearing no scions bears leaves. A `Ring` is
 a point on an axis, one at every trace step until the axis is hinted (TD3.4): center, tangent, side (carried along without twisting, setting the
 ring's roll and its children's azimuth 0), distance along the axis and radius. A `Card` is a leaf
-cluster: an axis and a distance along it.
+card: an axis, the distance along it of the card's base, and the card's direction.
 
 `grow` makes the stems (TD3.2) and hints them (TD3.4), then grows each level in stages over a
 `Level`, which holds the level's parameters and what every stage reads: place its laterals (TD3.3),
@@ -236,9 +236,17 @@ leaves at its tip, and copies do not fork again. A copy's limbs compete among th
 
 ### 3.8 Foliage
 
-`clusters` places a card at the tip of each limb bearing no scions, unless leaves are off. Its
-size is a share of the crown radius. It reaches back along the twig until its axial fold lies at
-the tip, or starts at the twig's base on a twig shorter than that. Stems bear none.
+`clusters` places cards at the tip of each limb bearing no scions, unless leaves are off. Their
+size is a share of the crown radius. Stems bear none. A tip bears one card, unless its twig rises
+45° or more above level at its tip, when the species' upright tips say: none, one, or a rosette
+of two or three (`cards_at`).
+
+One card lies along the twig, reaching back until its axial fold lies at the tip, or starting at
+the twig's base on a twig shorter than that. A rosette's cards start at the tip, spaced evenly
+about world up from the heading the twig points (straight up, the opposite of its upper side).
+Each turns from the twig toward level in its own heading by three quarters of the angle between
+them, so on an upright twig each rises 22.5°, and in a pair on a 60° one the card ahead rises 15°
+and the one behind, turned over the top, 30°.
 
 ### 3.9 Meshing
 
@@ -248,7 +256,7 @@ narrower than half the detail threshold; each ring's normals lean forward by the
 radii either side. A stem is open at its base; a tube is closed at its tip by a fan unless an axis
 carries it on.
 
-A card is two by two quads, its base on the twig, its axis along it, its face toward the twig's
-upper side. Each half turns down about the midrib by the lateral droop (up, cupping, if negative),
+A card is two by two quads, its base where it was placed, its axis along its direction, its face
+toward that axis's upper side. Each half turns down about the midrib by the lateral droop (up, cupping, if negative),
 and the far half bends down across the middle by the axial droop. Every quad keeps the flat card's
 normal. The texture's bottom is the card's base.

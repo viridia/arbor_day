@@ -421,13 +421,16 @@ fn degrees(center: f32, spread: f32) -> Fuzzy {
     Fuzzy::new(center.to_radians(), spread.to_radians(), Distribution::Bell)
 }
 
-/// A leaf cluster at the tip of every limb that bears none, so the leaves follow the branch ends.
-/// Each cluster is a card facing up.
+/// A leaf cluster at the tip of every limb that bears none, so the leaves follow the branch ends:
+/// a card facing up, or on a steep twig what `Upright` says.
 #[derive(Reflect, Clone, PartialEq)]
 pub struct Foliage {
     /// Whether leaves grow; off for a bare plant.
     #[reflect(@Caption("Leaves"))]
     pub leaves: bool,
+    /// What a steep tip bears.
+    #[reflect(@Caption("Upright tips"))]
+    pub upright: Upright,
     /// Each card's width, as a fraction of the crown's radius.
     #[reflect(
         @ValueRange::<f32>(0.02..=1.0),
@@ -459,10 +462,25 @@ pub struct Foliage {
     pub axial_droop: f32,
 }
 
+/// What a tip bears where its twig rises 45° or more above level, where one card along it would
+/// begin to stand on end.
+#[derive(Reflect, Clone, Copy, PartialEq, Debug)]
+pub enum Upright {
+    /// No leaves, as on shoots still growing.
+    Bare,
+    /// One card along the twig, as on a level one: crops and shrubs, seen from above.
+    Single,
+    /// Two cards from the tip, splayed toward level.
+    Double,
+    /// Three cards from the tip, splayed toward level, so the tip reads from every side.
+    Triple,
+}
+
 impl Default for Foliage {
     fn default() -> Self {
         Self {
             leaves: true,
+            upright: Upright::Triple,
             size: 0.25,
             // Seedling's most common pair, on the shrubs and two hemlocks.
             lateral_droop: (-16.0_f32).to_radians(),

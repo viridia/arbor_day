@@ -35,8 +35,10 @@ impl Geometry {
 #[derive(Debug, Default)]
 pub struct Grown {
     pub bark: Geometry,
-    /// One card for each leaf cluster, textured with the leaf.
+    /// The leaf cards, textured with the leaf.
     pub leaves: Geometry,
+    /// Branch ends bearing leaves, one card each or a rosette.
+    pub leafy_tips: usize,
     /// Limbs grown on each grown level.
     pub level_limbs: Vec<usize>,
 }
@@ -65,21 +67,32 @@ pub fn plant(species: &Species) -> Grown {
     }
     let size = card_size(species);
     let mut leaves = Geometry::default();
+    let mut leafy_tips = 0;
+    let mut last_axis = None;
     for cluster in &skeleton.cards {
-        let frame = axes[cluster.axis].frame_at(cluster.at);
+        if last_axis != Some(cluster.axis) {
+            leafy_tips += 1;
+            last_axis = Some(cluster.axis);
+        }
+        let twig = axes[cluster.axis].frame_at(cluster.at);
+        let frame = Frame {
+            tangent: cluster.direction,
+            ..twig
+        };
         card(&mut leaves, &frame, size, &species.foliage);
     }
     Grown {
         bark,
         leaves,
+        leafy_tips,
         level_limbs,
     }
 }
 
-/// Adds a square card `size` across for a sprig growing from `frame`: its base on the twig, its
-/// axis along the twig, so the sprig's painted stem lines up with it, and its face toward the
-/// twig's upper side, world up made square to the twig, so it is turned as near up as the twig
-/// allows. The texture's bottom is the base.
+/// Adds a square card `size` across for a sprig growing from `frame`: its base at the frame's
+/// point, its axis along the frame's tangent, so a sprig along its twig lines up with it, and its
+/// face toward the axis's upper side, world up made square to it, so it is turned as near up as
+/// the axis allows. The texture's bottom is the base.
 ///
 /// The card is two by two quads, after seedling, folded twice: each half turns down about the
 /// midrib by the lateral droop (up, cupping, if negative), and the far half bends down about the

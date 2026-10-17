@@ -247,7 +247,7 @@ up and down could not apply to a pair; room to the envelope for light, which nea
 turns children inward; full space colonization (X12), with limbs on different parents competing,
 which stays deferred. **Reversing it** changes every plant's arrangement and the levels' fields.
 
-### D27 — A card is a sprig along a twig, at every branch end
+### D27 — A card is a sprig along a twig, at every branch end; a rosette where it is steep
 
 A card is a sprig of leaves on a painted stem, lined up with a real twig, after seedling
 (growth-model.md, Foliage): its base on the twig, its axis along it, its face as near world up as
@@ -257,12 +257,23 @@ switch turns them all off. Card size is a share of the crown radius, so a scaled
 form (D21). Denser foliage comes from another limb level. The tip's card reaches back so its axial
 fold lies at the tip, as seedling's did, and the twig runs straight under it (D17).
 
+A steep tip bears what the species chooses, by default a rosette: several cards from the tip,
+splayed around the twig toward level. A level shoot twists its leaves into one flat spray, which
+one card models; an upright one bears them all around, each blade turned toward level, which one
+card along it showed on end, dark from the game's camera, with nothing on its other sides. The
+choice is a rosette of two or three, one card as on a level twig, for crops and shrubs seen from
+above, or none. A count rising with steepness, two from 45° and three from 75°, was rejected:
+the leader's carry-on bends toward level as its siblings do (D17), so a third card showed only
+in a narrow range of settings.
+
 Rejected: clusters at a density along each twig within a shell of the envelope, where any density
 put cards along twigs, none made the plant bare, and those near a tip ran past the tip's card
 (X30); the last grown level only, which left an earlier level's childless limbs bare; a free turn
 about the normal, which read as scattered leaves; every limb bearing clusters, which put leaves on
-boughs. Seedling's per-level leaf flag waits for a preset that needs it. **Reversing it** changes
-every plant's foliage and what its fields mean.
+boughs; pitching the one card toward level, which turned it to one side and left the others
+bare; a third limb level to fill the crown's top, which roughly doubles the triangles. Seedling's
+per-level leaf flag waits for a preset that needs it. **Reversing it** changes every plant's
+foliage and what its fields mean.
 
 ### D28 — The HUD changes the preview, not the species
 

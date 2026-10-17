@@ -8,7 +8,7 @@ use super::{
 use crate::{
     fuzzy::{Distribution, Fuzzy},
     random::Seed,
-    species::{Facing, Foliage, Profile, Species, Trunk},
+    species::{Facing, Foliage, Profile, Species, Trunk, Upright},
 };
 
 /// A lone 5 m stem's rings, standing straight up and leaning toward +X, with no wander, hinted
@@ -1008,10 +1008,12 @@ fn a_forked_limb_is_carried_on_by_its_copies_alone() {
     // No leaves at a fork: one card at each tip of the first level, forks left out.
     let mut species = forking(2, 0.0);
     let axes = grow(&species).axes;
-    let tips = (axes[1..].iter())
-        .filter(|limb| !limb.bears(&axes, AxisKind::ForkCopy))
-        .count();
-    assert_eq!(plant(&species).leaves.positions.len(), tips * CARD_CORNERS);
+    let tips: Vec<usize> = (1..axes.len())
+        .filter(|&index| !axes[index].bears(&axes, AxisKind::ForkCopy))
+        .collect();
+    let mut leafy: Vec<usize> = grow(&species).cards.iter().map(|card| card.axis).collect();
+    leafy.dedup();
+    assert_eq!(leafy, tips);
     // Carried on are the trunk and each unforked first-level limb bearing limbs, but no
     // forked one.
     species.limb_levels = 2;
@@ -1156,13 +1158,23 @@ fn a_card_at_every_branch_end() {
     };
     let leaves = plant(&species).leaves;
     let cards: Vec<&[Vec3]> = leaves.positions.chunks(CARD_CORNERS).collect();
-    let tips: Vec<Vec3> = limbs(&species)
-        .iter()
+    let ends: Vec<Axis> = (limbs(&species).into_iter())
         .filter(|limb| limb.scions.is_empty())
+        .collect();
+    let tips: Vec<Vec3> = (ends.iter())
         .map(|limb| limb.rings[limb.rings.len() - 1].center)
         .collect();
-    assert_eq!(cards.len(), tips.len());
-    // Each tip between a card's base and fold: at its fold, or short of it on a short twig.
+    // As many as the tips' steepness asks for, some tips bearing more than one.
+    let per_tip: Vec<usize> = (ends.iter())
+        .map(|limb| {
+            let elevation = limb.frame_at(limb.length()).tangent.y.asin();
+            cards_at(elevation, species.foliage.upright) as usize
+        })
+        .collect();
+    assert_eq!(cards.len(), per_tip.iter().sum::<usize>());
+    assert!(per_tip.contains(&1) && per_tip.iter().any(|&count| count > 1));
+    // Each tip between a card's base and fold: at its fold, or short of it on a short twig, or
+    // at the base of a rosette's card.
     let spans = |card: &[Vec3], tip: Vec3| distance_to_segment(tip, card[BASE], card[FOLD]) < 1e-4;
     assert!(
         tips.iter()
@@ -1187,11 +1199,21 @@ fn cards_lie_along_their_twigs_facing_up() {
     };
     let limbs = limbs(&species);
     let twigs: Vec<&Axis> = limbs.iter().filter(|limb| limb.scions.is_empty()).collect();
+    let skeleton = grow(&species);
     let leaves = plant(&species).leaves;
     assert!(!leaves.positions.is_empty());
     assert_eq!(leaves.uvs.len(), leaves.positions.len());
     let cards = leaves.positions.chunks(CARD_CORNERS);
-    for (corners, normals) in cards.zip(leaves.normals.chunks(CARD_CORNERS)) {
+    let cards = cards.zip(leaves.normals.chunks(CARD_CORNERS));
+    // Rosettes' cards turn from their twigs (`steep_tips_bear_rosettes`).
+    let mut along = 0;
+    for (cluster, (corners, normals)) in skeleton.cards.iter().zip(cards) {
+        let twig = &skeleton.axes[cluster.axis];
+        let elevation = twig.frame_at(twig.length()).tangent.y.asin();
+        if cards_at(elevation, species.foliage.upright) > 1 {
+            continue;
+        }
+        along += 1;
         let base = corners[BASE];
         let axis = (corners[TIP] - base) / side;
         let across = (corners[BASE_RIGHT] - corners[BASE_LEFT]) / side;
@@ -1210,6 +1232,67 @@ fn cards_lie_along_their_twigs_facing_up() {
             from.cross(twig.direction()).length() < 1e-3
                 && axis.angle_between(twig.direction()) < 1e-3
         }));
+    }
+    assert!(along > 0);
+}
+
+#[test]
+fn steep_tips_bear_rosettes() {
+    // A lone straight twig a metre long, rising at `elevation` toward +X, its tip as `upright`
+    // has it.
+    let cards_as = |elevation: f32, upright: Upright| {
+        let (rise, run) = elevation.to_radians().sin_cos();
+        let tangent = Vec3::new(run, rise, 0.0);
+        let ring = |at: f32| Ring {
+            center: tangent * at,
+            tangent,
+            side: Vec3::Z,
+            at,
+            radius: 0.01,
+        };
+        let stream = Seed(0).stream("test");
+        let mut twig = Axis::placed(1, AxisKind::Lateral, (0, 0.0), ring(0.0), 1.0, stream);
+        twig.rings.push(ring(1.0));
+        let mut species = Species::default();
+        species.foliage.upright = upright;
+        let cards = clusters(&species, &[twig]);
+        assert!(cards.iter().all(|card| card.direction.is_normalized()));
+        (cards, tangent)
+    };
+    let cards = |elevation: f32| cards_as(elevation, Upright::Triple);
+    let heading = |direction: Vec3| direction.xz().to_angle().to_degrees();
+    let rise = |direction: Vec3| direction.y.asin().to_degrees();
+    // Below 45°, one card along the twig, short of its tip.
+    let (one, tangent) = cards(40.0);
+    assert_eq!(one.len(), 1);
+    assert!(one[0].at < 1.0 && one[0].direction.angle_between(tangent) < 1e-4);
+    // Steep, the option's count from 45°.
+    assert_eq!(cards(45.0).0.len(), 3);
+    // At 60°, two at the tip, each turned ¾ of the way to level: one ahead, down from 60° to
+    // 15°, and one over the top, through 120° to 30° behind.
+    let (two, _) = cards_as(60.0, Upright::Double);
+    assert_eq!(two.len(), 2);
+    assert!(two.iter().all(|card| card.at == 1.0));
+    assert!(heading(two[0].direction).abs() < 1e-2);
+    assert!((rise(two[0].direction) - 15.0).abs() < 1e-2);
+    assert!((heading(two[1].direction).abs() - 180.0).abs() < 1e-2);
+    assert!((rise(two[1].direction) - 30.0).abs() < 1e-2);
+    // Straight up, three, 120° apart, each 22.5° above level.
+    let (three, _) = cards(90.0);
+    assert_eq!(three.len(), 3);
+    for (card, next) in three.iter().zip(three.iter().cycle().skip(1)) {
+        let apart = (heading(card.direction) - heading(next.direction)).rem_euclid(360.0);
+        assert!((apart - 120.0).abs() < 1e-2, "{apart}");
+        assert!((rise(card.direction) - 22.5).abs() < 1e-2);
+    }
+    // Single keeps one card along the twig; Bare, none. Below 45° every choice bears the one
+    // card.
+    let (single, tangent) = cards_as(90.0, Upright::Single);
+    assert_eq!(single.len(), 1);
+    assert!(single[0].direction.angle_between(tangent) < 1e-4);
+    assert!(cards_as(60.0, Upright::Bare).0.is_empty());
+    for upright in [Upright::Bare, Upright::Single, Upright::Double] {
+        assert_eq!(cards_as(40.0, upright).0.len(), 1);
     }
 }
 

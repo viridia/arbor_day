@@ -50,8 +50,10 @@ pub struct PlantStats {
     /// The bark's and the leaves'.
     pub triangles: u32,
     pub limbs: u32,
-    /// Leaf cards, one a cluster.
+    /// Leaf cards: one at each leafy tip, or more where a steep tip bears a rosette.
     pub cards: u32,
+    /// Branch ends bearing leaves.
+    pub leafy_tips: u32,
     /// Limbs on each grown level, first to last.
     pub level_limbs: Vec<u32>,
     /// The bark's vertex color, as sRGB hex.
@@ -82,6 +84,7 @@ fn build_plant(
             triangles: (grown.bark.triangles() + grown.leaves.triangles()) as u32,
             limbs: level_limbs.iter().sum::<usize>() as u32,
             cards: (grown.leaves.positions.len() / CARD_CORNERS) as u32,
+            leafy_tips: grown.leafy_tips as u32,
             level_limbs: level_limbs.iter().map(|&count| count as u32).collect(),
             bark_color: color.to_srgba().to_hex(),
         };

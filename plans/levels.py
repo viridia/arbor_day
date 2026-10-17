@@ -14,9 +14,11 @@ VISIBILITY = "bevy_camera::visibility::Visibility"
 def run(driver):
     driver.present("Shell", ready=True)  # wait for the UI scene to finish spawning
     driver.present("Shell/Panel/limbs[0]/add")  # the immediate-mode panel has built its rows
-    # Nine or ten, and the one carrying the trunk on, each bearing a card at its tip.
+    # Nine or ten, and the one carrying the trunk on, each bearing a card at its tip, or up to
+    # three where it is steep.
     first = Between(10, 11)
-    driver.expect("Plant", STATS, {"limbs": first, "level_limbs": [first], "cards": first})
+    leaves = {"leafy_tips": first, "cards": Between(10, 33)}
+    driver.expect("Plant", STATS, {"limbs": first, "level_limbs": [first], **leaves})
     driver.click("Shell/Panel/limbs[0]/add")
     # One to six nodes of one or two on each of the first level's ten or eleven limbs, 1 to 3 m
     # long, and one carrying each on. Each level's count shows in its header.

@@ -252,11 +252,13 @@ pub(super) fn taper_rings(rings: &mut [Ring], base: f32, taper: f32) {
     }
 }
 
-/// A leaf cluster `at` metres along the axis `axis` (D27), where its card's base lies.
+/// A leaf card whose base lies `at` metres along the axis `axis` (D27).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(super) struct Card {
     pub axis: usize,
     pub at: f32,
+    /// Unit direction from its base: along the twig, or turned from it in a rosette.
+    pub direction: Vec3,
 }
 
 /// The plant as grown, before meshing.
