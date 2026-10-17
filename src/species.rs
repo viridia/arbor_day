@@ -484,7 +484,7 @@ impl Default for Bend {
 /// ends. Kinks fall about one spacing apart on every level, so long limbs kink several times and
 /// short twigs once or not at all.
 #[derive(Reflect, Clone, PartialEq)]
-#[reflect(@Icon("icons/timeline.png"))]
+#[reflect(@Icon("icons/operators/wander.png"))]
 pub struct Wander {
     /// The most each stretch points off the course.
     #[reflect(

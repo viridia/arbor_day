@@ -76,7 +76,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C10a  | `LimbLevels { shown, levels }` (D15) in place of `limb_levels` and the `limbs` array, each depth's defaults in its `Default`; the generator reads `limbs.grown()`. A `Flatten` attribute shows a struct's rows in place of its own (TD1.5), so the levels stay beside the other subpanes. Paths: `limbs.levels[0].angle` in reflection, `levels[0]/…` in the panel and header notes. Output unchanged. |
 | C10b  | Writing the species file (TD2.3), `src/species_file.rs`: JSON with `generator: 1` first, then the species' fields by reflection, streamed in declared order since serde_json's `Value` sorts keys; `LimbLevels` writes its shown levels as a list (`SerializeWithRegistry`). `serde` (traits only) and `serde_json` as direct dependencies, already in the lock file through Bevy. A golden test against `src/default_species.json`, failing with the JSON to paste. Not yet called by the app (C40, C41). BRP writes through the same type data, so plans read `GrownFrom` in the file's shape (`at="limbs[0].facing"`) and write by reflection path. |
 | C10c  | Reading the species file (TD2.3), `species_file::read`: `generator` taken off and checked (none, or newer than this one, refused), the rest read strictly by reflection, a key the species lacks failing with its name (D32), and applied onto the default species, so a field left out keeps its default. `LimbLevels` reads one to three levels (`DeserializeWithRegistry`), each onto its depth's defaults. Tests: a round trip, a hidden level not kept, defaults at depth, unknown keys at the top and in a level, newer and missing generators, zero and four levels. C10 complete; X31's steps 2 to 4 move onto the milestone path as C97 to C99. |
-| C97   | Toggles (TD1.5, TD2.3), `src/toggle.rs`: Wander on the trunk and each limb level is a `Toggle<Wander>`, its state off, disabled or on, after Blender's modifiers. A heading's eye switches it between on and disabled, its ✕ turns it off, and the header's add menu (a feathers menu behind a boxed plus) turns it back on. The generator runs it only when on; the file leaves it out when off and marks it `"enabled": false` when disabled, read onto a template with every operator off. Reflection paths gain `settings` (`limbs.levels[0].wander.settings.angle`); panel and file paths do not. An operator's heading starts with its kind's icon (`Icon` on its settings type), Wander's `timeline`. Icons `add_box`, `visibility`, `visibility_off`, `timeline`, and for operators to come `alt_route`, `u_turn_right`, `sunny`, `deployed_code` (below); `conversion_path` the alternative for Wander. `plans/operators.py`. Output unchanged. |
+| C97   | Toggles (TD1.5, TD2.3), `src/toggle.rs`: Wander on the trunk and each limb level is a `Toggle<Wander>`, its state off, disabled or on, after Blender's modifiers. A heading's eye switches it between on and disabled, its ✕ turns it off, and the header's add menu (a feathers menu behind a boxed plus) turns it back on. The generator runs it only when on; the file leaves it out when off and marks it `"enabled": false` when disabled, read onto a template with every operator off. Reflection paths gain `settings` (`limbs.levels[0].wander.settings.angle`); panel and file paths do not. An operator's heading starts with its kind's icon (`Icon` on its settings type), an icon for every operator and ornament in `assets/icons/operators/`, named after it (`wander.png`, `fork.png`). Icons `add_box`, `visibility`, `visibility_off`, and `deployed_code` for C65. `plans/operators.py`. Output unchanged. |
 
 ## Next
 
@@ -95,7 +95,7 @@ The foundation, the skeleton (`docs/patches.md`, The abstract plant), tip rosett
 file (C10) and toggles (C97) have landed; the rest of operator stacks (X31) next, then leaf
 painting.
 
-1. **C98 Bend and Fork as toggles** (X31 step 3), Fork's icon `alt_route`. E[1]
+1. **C98 Bend and Fork as toggles** (X31 step 3), with their icons. E[1]
 2. **C99 Scions** (X31 step 4): "Add level" below the add menu's divider, and a ✕ on each
    level's header, in place of D15's − and +. E[2]
 3. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's leaf, as D29 has it, its
@@ -213,7 +213,7 @@ painting.
   no lean (found in C60). Sag turns a limb down by its weight, each step's turn scaled by the sine
   of its angle from up, the share acting as a cantilever, so an upright limb does not sag; rise
   turns it up toward the light, an upright one having no angle left. Under stacks (X31), two
-  operators, Sag and Rise, in place of Bend, their icons `u_turn_right` and `sunny`; before them, judge whether the flat panel takes both
+  operators, Sag and Rise, in place of Bend, their icons `sag.png` and `rise.png`; before them, judge whether the flat panel takes both
   or sag alone. Changes every plant's limbs. E[3]
 - **C69 A color per part of the plant**: a 4 px stripe down the left side of each top-level
   subpane, a color each for Plant, Trunk, Limbs 1 to 3 and Foliage (the ornaments), running from
@@ -453,10 +453,9 @@ painting.
   3. and 4. C98 and C99, on the milestone path.
   5. Panes, each level a feathers pane and its operators subpanes, only if C33's headings feel
      cramped. A pane's header has room for more than a heading: the operator's name, its
-     version when not the latest, an icon of its own, tinted by kind to break up the column,
-     and the ✕. The icons are the author's to choose, from any openly licensed set in a style
-     matching the HUD's Material Symbols, if each operator has a good one. The icon's tint is
-     by operator, the pane's stripe (C69) by part, two dimensions that do not compete.
+     version when not the latest, its icon (C97) tinted by kind to break up the column, and
+     the ✕. The icon's tint is by operator, the pane's stripe (C69) by part, two dimensions
+     that do not compete.
   6. New operators, each a chunk, judged by eye as they change output: angle bias (C55), sag
      and rise (C94), weep (C48), taper per level (X32), size bias.
 
