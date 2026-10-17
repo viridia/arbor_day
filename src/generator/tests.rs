@@ -1061,6 +1061,43 @@ fn a_forked_limb_is_carried_on_by_its_copies_alone() {
 }
 
 #[test]
+fn a_forked_limb_is_one_tube_with_its_first_copy() {
+    let species = forking(2, 0.0);
+    let axes = grow(&species).axes;
+    let sides_of = |axis: &Axis| match axis.level {
+        0 => species.trunk.sides as u32,
+        _ => species.limbs.levels[0].sides as u32,
+    };
+    let forks = forks(&axes);
+    assert!(!forks.is_empty());
+    for (limb, copies) in &forks {
+        // The limb's rings, then the first copy's past the one they share, all with its sides.
+        let (rings, sides) = chain(&axes, limb, sides_of);
+        let joint = limb.rings.len() - 1;
+        assert_eq!(rings.len(), joint + copies[0].rings.len());
+        let tip = |rings: &[Ring]| rings[rings.len() - 1].center;
+        assert_eq!(tip(&rings), tip(&copies[0].rings));
+        assert!(sides.iter().all(|&count| count == sides[0]));
+        // The shared ring faces halfway round the turn.
+        let into = (rings[joint].center - rings[joint - 1].center).normalize();
+        let out = (rings[joint + 1].center - rings[joint].center).normalize();
+        assert!((rings[joint].tangent - (into + out).normalize()).length() < 1e-4);
+        // The other copy is a tube of its own.
+        assert_eq!(chain(&axes, copies[1], sides_of).0, copies[1].rings);
+    }
+    // No axis drawn twice: a tube from each axis no other carries on, each with a ring of
+    // vertices per ring and its cap's center.
+    let first_copies: Vec<&Axis> = forks.iter().map(|(_, copies)| copies[0]).collect();
+    let vertices: usize = (axes.iter())
+        .filter(|&axis| {
+            axis.kind != AxisKind::CarryOn && !first_copies.contains(&axis)
+        })
+        .map(|axis| chain(&axes, axis, sides_of).1.iter().sum::<u32>() as usize + 1)
+        .sum();
+    assert_eq!(plant(&species).bark.positions.len(), vertices);
+}
+
+#[test]
 fn a_limb_carrying_another_on_is_one_tube_with_it() {
     let mut species = straight();
     species.limbs.levels[0].density = 1.0;

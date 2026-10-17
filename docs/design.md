@@ -285,7 +285,7 @@ length.
 ### 3.7 Forks
 
 With Fork on, a level's axes fork with its chance (`fork.rs`), at a drawn share of their length, and end
-there, capped. Copies carry the axis on, 2 to 4, of the same level: spread evenly around its
+there. Copies carry the axis on, 2 to 4, of the same level: spread evenly around its
 direction, each turned half the drawn fork angle from it, the first toward its flank turned up by
 the roll. Each copy starts at the axis's radius at the fork and draws its reach, wander and limbs
 from a stream of the fork's; it is traced and tapered as it is added. A copy no longer than it is
@@ -309,11 +309,13 @@ and the one behind, turned over the top, 30°.
 ### 3.9 Meshing
 
 `plant` meshes the skeleton (`mesh.rs`). Each stem or limb, with the limbs carrying it on in turn
-(`chain`), is one tube through their rings, each ring turned to its side, with its axis's level's
+(`chain`), its carrier or, if it forked, its first copy (`carrier`), is one tube through their rings, each ring turned to its side, with its axis's level's
 sides (the trunk's for stems), drawn at its ring's radius but none narrower than half the detail
 threshold; each ring's normals lean forward by the slope between the radii either side, distances
 running on along the chain. A join's ring is drawn once, with the carrying limb's sides, facing
-halfway between the segments meeting there. A segment between rings of equal sides is a band of
+halfway between the segments meeting there, so a fork's turn is an elbow. A fork's other copies
+are tubes of their own, open at their base inside the chain's, as laterals are inside their
+parents'. A segment between rings of equal sides is a band of
 quads; between N and M, so the parent's last, a stitch of N + M triangles walking both rings by
 angle. A tube is open at its base and closed at its tip by a fan.
 

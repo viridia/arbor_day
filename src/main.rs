@@ -134,8 +134,11 @@ fn scene() -> impl SceneList {
         #Plant
         Plant
         TurntableSubject
-        // White, so the mesh's vertex colors show as they are.
-        MeshMaterial3d::<StandardMaterial>(asset_value(Color::WHITE))
+        // White, so the mesh's vertex colors show as they are, and matte, as the leaves are.
+        MeshMaterial3d::<StandardMaterial>(asset_value(StandardMaterial {
+            perceptual_roughness: 1.0,
+            ..default()
+        }))
         --
         // Not framed: a bare plant has no leaves to bound, and the envelope bounds them.
         #Leaves
