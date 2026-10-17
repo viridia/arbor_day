@@ -18,7 +18,8 @@ use bevy::{
         containers::{subpane, subpane_body, subpane_header},
         controls::{
             ButtonVariant, ColorInputValue, FeathersCheckbox, FeathersColorInput, FeathersListRow,
-            FeathersMenu, FeathersMenuItem, FeathersMenuPopup, FeathersMenuToolButton,
+            FeathersMenu, FeathersMenuDivider, FeathersMenuItem, FeathersMenuPopup,
+            FeathersMenuToolButton,
             FeathersNumberInput, FeathersSelect, FeathersToolButton, HardLimit,
             NumberInputPrecision, NumberInputStep, NumberInputUnits, OptionIndex, SoftLimit,
         },
@@ -396,8 +397,10 @@ fn field_row(
             let toggles = toggles(field);
             let mut added = None;
             let tools = |ui: &mut Imm<CapsPanel>| {
-                if !toggles.is_empty() {
-                    added = add_menu(ui, &toggles);
+                if !toggles.is_empty()
+                    && let Some(Picked::Operator(field)) = add_menu(ui, &toggles, None)
+                {
+                    added = Some(field);
                 }
             };
             group_with_tools(row, caption.to_string(), tools, |ui| {
@@ -415,8 +418,9 @@ fn field_row(
 }
 
 /// The first `count` of `items`, a subpane each named `name[index]` and headed with its note, if
-/// any, the last with − and + buttons, named `remove` and `add`. Returns the count as the buttons
-/// leave it.
+/// any. The last one's add menu ends with the next item, named `add`, and each header past the
+/// fewest shown has a ✕ named `remove`, hiding its item and those after it. Returns the count as
+/// they leave it.
 fn shown_items(
     ui: &mut Imm<CapsPanel>,
     name: &'static str,
@@ -426,7 +430,7 @@ fn shown_items(
     range: RangeInclusive<i32>,
     notes: &HeaderNotes,
 ) -> i32 {
-    // Never none: with no subpane there would be no + to bring one back.
+    // Never none: with no subpane there would be no add menu to bring one back.
     let min = (*range.start()).max(1);
     let max = (*range.end()).min(items.len() as i32).max(min);
     let count = count.clamp(min, max);
@@ -444,22 +448,17 @@ fn shown_items(
             .ch_id((name, index))
             .on_spawn_insert(move || Name::new(item_name.clone()));
         let last = index + 1 == count as usize;
+        let next = (last && count < max).then(|| format!("{caption} {}", index + 2));
         let toggles = toggles(item);
         let mut added = None;
         let tools = |ui: &mut Imm<CapsPanel>| {
-            added = add_menu(ui, &toggles);
-            if last {
-                let removed = ui
-                    .ch()
-                    .on_spawn_apply_scene(|| tool_button("−", "remove"))
-                    .interactions_disabled(count <= min)
-                    .activated();
-                let added = ui
-                    .ch()
-                    .on_spawn_apply_scene(|| tool_button("+", "add"))
-                    .interactions_disabled(count >= max)
-                    .activated();
-                new_count = (count - removed as i32 + added as i32).clamp(min, max);
+            match add_menu(ui, &toggles, next) {
+                Some(Picked::Operator(field)) => added = Some(field),
+                Some(Picked::Item) => new_count = count + 1,
+                None => {}
+            }
+            if index as i32 >= min && icon_button(ui, "remove", icons::X, px(14)) {
+                new_count = index as i32;
             }
         };
         group_with_tools(pane, header, tools, |ui| {
@@ -469,7 +468,15 @@ fn shown_items(
             turn_on(item, added);
         }
     }
-    new_count
+    new_count.clamp(min, max)
+}
+
+/// What was picked from an add menu.
+enum Picked {
+    /// An operator that was off, by its field's name.
+    Operator(&'static str),
+    /// The next item of a [`ShownCount`] array.
+    Item,
 }
 
 /// A [`Toggle`] field of a struct: its name, its caption and its state.
@@ -506,9 +513,13 @@ fn turn_on(value: &mut dyn PartialReflect, name: &str) {
 }
 
 /// A header's add menu, named `add_operator`: a boxed plus listing those of `toggles` that are off,
-/// each item named `add_` and its field's name, and disabled while none is. Returns the field
-/// picked, if any.
-fn add_menu(ui: &mut Imm<CapsPanel>, toggles: &[ToggleField]) -> Option<&'static str> {
+/// each item named `add_` and its field's name, then below a divider `next`, if given, the next
+/// item of an array, named `add`. Disabled while it lists nothing. Returns what was picked.
+fn add_menu(
+    ui: &mut Imm<CapsPanel>,
+    toggles: &[ToggleField],
+    next: Option<String>,
+) -> Option<Picked> {
     let off: Vec<_> = (toggles.iter())
         .filter(|(.., state)| *state == OperatorState::Off)
         .map(|&(field, caption, _)| (field, caption))
@@ -526,7 +537,7 @@ fn add_menu(ui: &mut Imm<CapsPanel>, toggles: &[ToggleField]) -> Option<&'static
                         }
                     }
                 })
-                .interactions_disabled(off.is_empty());
+                .interactions_disabled(off.is_empty() && next.is_none());
             ui.ch()
                 .on_spawn_apply_scene(|| {
                     bsn! {
@@ -550,24 +561,37 @@ fn add_menu(ui: &mut Imm<CapsPanel>, toggles: &[ToggleField]) -> Option<&'static
                     }
                 })
                 .add(|ui| {
+                    let operators = !off.is_empty();
                     for (field, caption) in off {
                         let item = format!("add_{field}");
-                        let activated = ui
-                            .ch_id(field)
-                            .on_spawn_apply_scene(move || {
-                                bsn! {
-                                    @FeathersMenuItem { @caption: bsn! { Text(caption) ThemedText } }
-                                    Name({item.clone()})
-                                }
-                            })
-                            .activated();
-                        if activated {
-                            picked = Some(field);
+                        if menu_item(ui.ch_id(field), caption.to_string(), item) {
+                            picked = Some(Picked::Operator(field));
+                        }
+                    }
+                    if let Some(next) = next {
+                        if operators {
+                            ui.ch_id("divider")
+                                .on_spawn_apply_scene(|| bsn! { @FeathersMenuDivider });
+                        }
+                        if menu_item(ui.ch_id("add"), next, "add".to_string()) {
+                            picked = Some(Picked::Item);
                         }
                     }
                 });
         });
     picked
+}
+
+/// A feathers menu item showing `caption`, named `name`. Returns whether it was picked.
+fn menu_item(item: ImmEntity<CapsPanel>, caption: String, name: String) -> bool {
+    item.on_spawn_apply_scene(move || {
+        let caption = caption.clone();
+        bsn! {
+            @FeathersMenuItem { @caption: bsn! { Text(caption) ThemedText } }
+            Name({name.clone()})
+        }
+    })
+    .activated()
 }
 
 /// An operator that is on or disabled, in a subpane: its heading, after its settings type's
@@ -665,14 +689,6 @@ fn icon_button(
             .on_spawn_apply_scene(move || bsn! { @icon(image) Node { height: {height} } });
     });
     clicked
-}
-
-/// A feathers tool button showing `caption`, named `name`.
-fn tool_button(caption: &'static str, name: &'static str) -> impl Scene {
-    bsn! {
-        @FeathersToolButton { @caption: bsn! { Text(caption) ThemedText } }
-        Name({name})
-    }
 }
 
 /// A feathers subpane headed `caption`, its body built by `body`.

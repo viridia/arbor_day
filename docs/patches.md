@@ -220,7 +220,7 @@ Levels grow in turn: a level's frame and operators, then its scions' level.
   C33's lighter headings: each level stays a subpane and each operator a heading in it, the ✕
   at the heading's right.
 - Scions replace the − and + on the levels' headers (D15): below a divider in the last shown
-  level's add menu, after the operators, "Add level" shows the next level's pane, its
+  level's add menu, after the operators, the next level ("Limbs 2") shows its pane, its
   Arrangement rows first. Operators the level has are left out of the menu, or shown grayed,
   judged when it is built. The ✕ on a limb
   level's own header hides it and the levels after it, which keep their values, as D15's hidden

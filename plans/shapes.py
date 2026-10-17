@@ -16,6 +16,12 @@ BIN = "arbor_day"
 SPECIES = "arbor_day::species::Species"
 
 
+def add_level(driver, last):
+    """Shows the level after `last`, the last shown, from its header's add menu."""
+    driver.click(f"Shell/Panel/levels[{last}]/add_operator")
+    driver.click(f"Shell/Panel/levels[{last}]/add_operator/add")
+
+
 def set_number(driver, path, text):
     """Replaces a number input's text and lets the plant rebuild. A click places the cursor rather
     than selecting, so clear what is there first."""
@@ -55,7 +61,7 @@ def run(driver):
 
     set_number(driver, "levels[0]/wander/angle", "45")
     driver.screenshot("most_wander")
-    driver.click("Shell/Panel/levels[0]/add")
+    add_level(driver, 0)
     driver.frames(2)
     driver.screenshot("most_wander_twigs")
     set_number(driver, "levels[0]/wander/angle", "10")

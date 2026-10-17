@@ -1,7 +1,7 @@
-"""Limb levels: + shows the next level, growing on the limbs of the one before, and − hides the
-last. A hidden level keeps its parameters, so showing it again brings it back as it was. A leaf
-card grows at each branch end, and unchecking Leaves leaves the tree bare until it is checked
-again."""
+"""Limb levels: the last level's add menu shows the next, growing on the limbs of the one before,
+and a level's ✕ hides it and those after it. A hidden level keeps its parameters, so showing it
+again brings it back as it was. A leaf card grows at each branch end, and unchecking Leaves leaves
+the tree bare until it is checked again."""
 
 from driver import Between
 
@@ -9,6 +9,12 @@ BIN = "arbor_day"
 STATS = "arbor_day::plant::PlantStats"
 GROWN_FROM = "arbor_day::plant::GrownFrom"
 VISIBILITY = "bevy_camera::visibility::Visibility"
+
+
+def add_level(driver, last):
+    """Shows the level after `last`, the last shown, from its header's add menu."""
+    driver.click(f"Shell/Panel/levels[{last}]/add_operator")
+    driver.click(f"Shell/Panel/levels[{last}]/add_operator/add")
 
 
 def run(driver):
@@ -19,12 +25,13 @@ def run(driver):
     first = Between(10, 11)
     leaves = {"leafy_tips": first, "cards": Between(10, 33)}
     driver.expect("Plant", STATS, {"limbs": first, "level_limbs": [first], **leaves})
-    driver.click("Shell/Panel/levels[0]/add")
+    add_level(driver, 0)
     # One to six nodes of one or two on each of the first level's ten or eleven limbs, 1 to 3 m
     # long, and one carrying each on. Each level's count shows in its header.
     second = Between(10 * 2, 11 * (2 * 6 + 1))
     driver.expect("Plant", STATS, {"level_limbs": [first, second]})
-    driver.absent("Shell/Panel/levels[0]/add")  # the buttons move to the last level
+    driver.absent("Shell/Panel/levels[0]/add")  # the next level is offered by the last only
+    driver.absent("Shell/Panel/levels[0]/remove")  # the first level stays
     driver.screenshot("two_levels")
 
     # Fewer nodes: up to two on each first-level limb, and some bearing none.
@@ -40,10 +47,10 @@ def run(driver):
     driver.click("Shell/Panel/levels[1]/remove")
     driver.expect("Plant", STATS, {"level_limbs": [first]})
     driver.absent("Shell/Panel/levels[1]")
-    driver.click("Shell/Panel/levels[0]/add")
+    add_level(driver, 0)
     driver.expect("Plant", STATS, fewer)
 
-    driver.click("Shell/Panel/levels[1]/add")
+    add_level(driver, 1)
     # A few nodes of two on each second-level limb, less those that start outside the envelope or
     # would be too short, and one carrying each on.
     driver.expect("Plant", STATS, {"limbs": Between(10 + 5 + 1, 11 + 55 + 55 * (2 * 4 + 1))})
@@ -67,4 +74,9 @@ def run(driver):
     driver.expect("Plant", STATS, {"cards": Between(20, 1000)})
     driver.expect("Leaves", VISIBILITY, "Inherited")
     driver.screenshot("leaves_again")
+
+    # The second level's ✕ hides the third with it.
+    driver.click("Shell/Panel/levels[1]/remove")
+    driver.expect("Plant", STATS, {"level_limbs": [first]})
+    driver.absent("Shell/Panel/levels[2]")
     driver.exit()

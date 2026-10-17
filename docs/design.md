@@ -91,8 +91,10 @@ the top level and a heading over its rows in a subpane, so panes never nest boxe
 a node named after the field, so their paths stay apart from the outer struct's
 (`levels[0]/fork/angle`). A struct field marked `Flatten` shows its fields' rows in place of its
 own, with no node of its own, since Bevy UI has no `display: contents` and the panel's gaps differ
-from a subpane's. An array marked `ShownCount` shows its first items, the count naming a field; − and + on the
-last shown item's header hide it or show the next, and a hidden item keeps its values. Each limb
+from a subpane's. An array marked `ShownCount` shows its first items, the count naming a field. The last
+shown item's add menu ends, below a divider, with the next item ("Limbs 2", named `add`), and
+each item past the fewest shown has a ✕ (`remove`) hiding it and those after it; a hidden item
+keeps its values. Each limb
 level's header shows its count, "Limbs 1 (8)".
 
 An operator is a `Toggle<T>` field (`src/toggle.rs`): its settings and an `OperatorState`, off,
