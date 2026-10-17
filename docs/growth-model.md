@@ -177,8 +177,7 @@ whenever the leader stops short.
 One to three levels. Each level places children in nodes along the part of the parent inside the
 crown, spread evenly from a start (a share of that part) to the tip, with bounded jitter on each
 angle. A parent with children ends at its last node, and one more child carries it on from there
-along it, grown like the others (ledger D30), so no stem ends in a post. Phyllotaxis is limbs per node and a facing (ledger
-D26). Facing around, each node turns to where the limbs below crowd it least, which gives a
+along it, grown like the others (D30), so no stem ends in a post. Phyllotaxis is limbs per node and a facing (D26). Facing around, each node turns to where the limbs below crowd it least, which gives a
 spiral of about 137.5° for one per node, opposite pairs crossing for two, and alternating whorls
 for more. Facing sides, limbs alternate flank to flank; up or down, they leave from the parent's
 upper side or underside. Each limb then turns at random by up to the level's skew. A child's
@@ -203,14 +202,14 @@ tropism, an angle from world up (up for poplars, level for oaks, down for weepin
 forms), closing a set share of the angle left to it over each crown radius of length. That is
 its course: the limb kinks about it, each stretch between kinks pointing off it by up to the
 wander, kinks falling at one spacing on every level, so long limbs zigzag and short twigs
-hardly do, and rings kept only where they move the line by about a pixel (ledger D17). It stops at its
+hardly do, and rings kept only where they move the line by about a pixel (D17). It stops at its
 reach or the envelope, whichever comes first. Neither depends on ring spacing. Because the share is of the angle left, every
 tropism moves the tip, and longer limbs bend further; because it is per crown radius, a shrub
 and a tree with the same settings bend alike.
 
 Every stem and limb narrows evenly by one taper per species, and a limb starts at its level's
-share of the parent's radius where it leaves (ledger D22). Meshing draws every stem, none
-narrower than a detail threshold, about a pixel at the game's scale (ledger D22): what is drawn
+share of the parent's radius where it leaves (D22). Meshing draws every stem, none
+narrower than a detail threshold, about a pixel at the game's scale (D22): what is drawn
 is chosen by what the eye reads at that size, not by botany.
 
 ### Foliage

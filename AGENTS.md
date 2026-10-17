@@ -6,7 +6,8 @@ growth model.
 
 ## Orient
 
-1. Read `docs/ledger.md`: what has landed, what is next, decisions, deferrals.
+1. Read `docs/ledger.md`: what has landed, what is next, deferrals. How it works is in
+   `docs/design.md` (`TD<n>`) and why in `docs/decisions.md` (`D<n>`); read those by section.
 2. Check `git log --oneline -5`.
 3. `docs/requirements.md` says what the tool must do.
 
@@ -20,12 +21,12 @@ growth model.
 - Every open item goes in the ledger: in Next, or in Deferred with a gate.
 - Propose structural changes (new dependencies, a new crate, replacing a subsystem) with a
   recommendation before writing code.
-- Bevy is main, named by branch (ledger D1). Read APIs at the commit `Cargo.lock` holds, in
+- Bevy is main, named by branch (D1). Read APIs at the commit `Cargo.lock` holds, in
   Cargo's git checkout of it (ledger, Notes), and its `_release-content/migration-guides/`,
   rather than guessing. Prefer Bevy's built-in replacements over third-party crates.
 - `../seedling` is a reference for what the old tool did, not how to do it; the requirements say
   where it went wrong.
-- Patterns here are meant for Panoply's editor (ledger D3). When one settles, say so in the
+- Patterns here are meant for Panoply's editor (D3). When one settles, say so in the
   ledger, so Panoply can take it.
 - Prose follows the "House style" section of `../bevy_action_map/CLAUDE.md`.
 

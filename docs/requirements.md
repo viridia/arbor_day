@@ -297,4 +297,4 @@ The output of this step is a short write-up with a recommendation, before any co
    one crate; the split is proposed in the ledger, X1.
 3. Leaf texture rendering in Rust: a 2D vector rasterizer (e.g. `tiny-skia`) on the CPU, or
    drawn on the GPU in the app. The command-line mode needs the CPU path either way. Settled:
-   `tiny-skia` (ledger, D20).
+   `tiny-skia` (D20).

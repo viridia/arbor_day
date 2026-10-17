@@ -1,8 +1,8 @@
 # arbor_day ledger
 
-What has landed, what is next, the decisions that stand, and what is deferred and why. What the
-tool must do is in [requirements.md](requirements.md). Chunks are `C<n>`, decisions `D<n>`,
-deferrals `X<n>`. An id is assigned once and never reused or renumbered; Next lists chunks in the
+What has landed, what is next, and what is deferred and why. What the tool must do is in
+[requirements.md](requirements.md), how it works in [design.md](design.md) (`TD<n>`), and why in
+[decisions.md](decisions.md) (`D<n>`). Chunks are `C<n>`, deferrals `X<n>`. An id is assigned once and never reused or renumbered; Next lists chunks in the
 order they are meant to land, which their ids need not follow. Panoply's ledger
 (`../panoply/docs/migration.md`) is cited as "Panoply's".
 
@@ -64,6 +64,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C80   | Skeleton, then meshes: `grow` returns a `Skeleton` of axes and `Card`s, a leaf cluster each (an axis and a distance along it), and `plant` meshes it, the card quads now in `mesh.rs`. The Leaves switch acts on the clusters, so a bare plant has none. Rings stay simplified at trace time, since scions attach to the path as meshed (C83). Golden hashes unchanged. |
 | C81   | A radius per ring (D22), written by the taper (`taper_rings`) once an axis is traced, in place of an axis's base and top radii; `tube` draws each ring at its own radius, none narrower than the detail threshold, and leans each ring's normals by the radii either side. So a twig thinner than the threshold keeps its taper until it reaches it, rather than being thickened along its length, and a limb takes its parent's radius from the parent's rings, which fixes a forked limb's limbs, which had started thinner than the limb where they leave it. New bark hashes, leaves unchanged; at game scale, screenshots show no difference. |
 | C82   | Stages as functions: each level grows by `place_scions`, `trace_scions`, `carry_on`, the taper and `fork`, each over a `Level` (its parameters and what every stage reads) and the `Skeleton`, in that order, the taper before forks since copies start at the limb's radius at the fork. Placement records what the trace reads on the axis: its start ring at its own base radius, its reach, and its parent and where along it (`docs/patches.md`'s `parent`). Wander stays inside the trace. Axes are now added stage by stage, so the golden test hashed each mesh's triangles as a set, each from its least corner with its winding kept; hashes taken before the change held after it. Its work done, the golden test was then removed (X15). `trace.rs` defines tracing in its module doc. |
+| C86   | Decisions out of the ledger, after `../ldd_template`: `docs/decisions.md` holds each decision as it now stands, what it rules out and what reversing it costs, with no revision history; `docs/design.md` holds the mechanism, numbered `TD<n>.<m>`. D4, D13, D14 and D18 are withdrawn, struck and pointing where their content went. Ledger 13,056 words to 7,816; Decisions 5,431 to 3,628 and design 2,598. |
 
 ## Next
 
@@ -188,6 +189,15 @@ species or the plans.
 
 ### Quick wins
 
+- **C87 Guidelines** (C86's second part): `docs/guidelines.md` after `../ldd_template`'s, D19
+  (variance pays where instances are many) and D25 (a field's meaning changes before a field is
+  added) moving there and struck in `decisions.md`, and AGENTS.md's rules pointing at it. E[1]
+- **C88 Landed rows as citations**: each row a line naming the TD section or decision it landed,
+  the design the longer rows restate now being `design.md`'s. E[1]
+- **C89 `growth-model.md` against `design.md`**: its Consequences describe the model as built;
+  keep the survey and the reasons, citing TD for the mechanism. E[2]
+- **C90 `show.py`** from `../ldd_template`, printing a D, TD or X entry by its number, so a session
+  reads the entries it needs rather than whole files. Propose it before code. E[2]
 - **C85 One tube along a carry-on chain** (was X27, the crease at a join showing): `plant`
   follows each axis to the one carrying it on (D30) and draws the chain as one tube, sharing
   the ring at each join, so normals and the outline run unbroken; the radii already meet
@@ -287,396 +297,6 @@ species or the plans.
 - **C54 Radiating foliage** (was X20, its gate C37 passed): cards radiating from a stem's tip or
   the ground, for palms, rosettes and tufts (agave, grass, fern), with no limbs (growth model,
   How the shapes are covered). A kind of the plant's foliage (`docs/patches.md`, Stacks). E[3]
-
-## Decisions
-
-- **D1** Own repository and workspace. Bevy is main, named exactly
-  `git = "https://github.com/bevyengine/bevy.git", branch = "main"`; `Cargo.lock` holds the
-  commit. Cargo treats a branch and a rev as different sources, so any other form builds a
-  second Bevy beside the dependencies'. Bump with the family (Panoply, the `bevy_immediate`
-  fork, `bevy_action_map`, `bevy_remote_driver`), one chunk per bump (Panoply's Next item 0).
-- **D2** UI: `bevy_immediate` from the fork `viridia/bevy_immediate`, branch `bevy-main`, with
-  `bevy_feathers` widgets. `bevy_remote_driver` by git from `viridia/bevy_remote_driver`; plans
-  follow its `docs/writing-plans.md`. Keys do not use `bevy_action_map` (D8).
-- **D3** The shell comes first, with a stub in place of the generator, before the growth-model
-  survey. It is the `bevy_immediate` spike for Panoply's editor (Panoply's X3), so its patterns
-  (panel layout, viewport, settings, plans) are meant to be reused there.
-- **D4** The requirements live here, in `docs/requirements.md`, moved from Panoply on
-  2026-10-11.
-- **D5** The 3D view is a camera `Viewport` that follows a UI node (`ViewportSlot`), not a
-  `ViewportNode` render target. `follow_viewport_slot` runs in `PostUpdate` after UI layout and
-  sets the viewport from the node's `UiGlobalTransform` and `ComputedNode::size`, both physical
-  pixels, so no scale factor is applied. The UI needs its own camera: UI lays out within its
-  camera's viewport, so on the 3D camera it would shrink into the view pane. A `Camera2d` with
-  `IsDefaultUiCamera`, `order: 1` and `ClearColorConfig::None` draws the UI over the whole
-  window. Panoply's X3 viewport takes this form. The view's node is pickable: the turntable's
-  drag and scroll observers sit on it (D7), so the panel's own drags and scrolls never reach the
-  camera.
-- **D6** App state is saved with `bevy_settings` as `org.viridia.arbor_day`; under the driver,
-  `BEVY_SETTINGS_DIR` gives each run a fresh directory, so the app has no driver-specific name.
-  The panel keeps a fixed width in pixels: `Pane::size` is a flex weight, so the two panes get
-  weights in pixels summing to the space they share, reset when the window resizes, and a
-  finished drag's first proposed size is the panel's new width. Settings save on any `AppExit`
-  (`SaveSettingsSync` in `Last`), since the driver ends a plan with one and a deferred save may
-  not have run. On macOS, Cmd+Q quits the app before any of it runs, so there only the deferred
-  save (half a second after each change) protects settings.
-- **D7** The 3D view uses a turntable camera of our own (`src/turntable.rs`), not Bevy's
-  pan-orbit camera, which rotates and pans freely: every control is one more thing to reset, so
-  there is no roll or pan, and Frame resets the rest. It circles a vertical axis through the
-  subject with the game's field of view (40°, Panoply's `DEFAULT_FOV`), and frames from the
-  game's elevation (45°, Panoply's `elevation: PI * 0.25`), so plants are seen as players will
-  see them. Spin: horizontal drag or scroll. Tilt: vertical drag (dragging down looks from above),
-  5° to 85°, because the hand expects it; Frame returns it to the game's elevation, which is what
-  makes the extra control acceptable. Zoom: vertical scroll, moving the focus toward the height
-  under the pointer (where the pointer's ray crosses the vertical plane through the axis), clamped
-  to the subject's heights, so zooming in on the crown frames the crown. Frame fits the subject's
-  bounding sphere once (at start and on Frame), waiting until every subject has bounds; the camera
-  does not follow the subject as it changes, so an edit shows at its true size (following it made
-  a taller tree look smaller). While `keep_framed` is set the distance follows the viewport so
-  the sphere last framed still fits; spinning and tilting keep it, zooming clears it. Frame
-  leaves the spin alone. The view is not saved: every start frames the subject.
-  A drag or scroll moves along one axis at a time: each axis's movement is summed, decayed with a
-  0.15 s time constant, and each event applies along the larger sum. It starts at once and
-  changes axis when the other persists. A lock chosen per gesture was tried first and felt stuck:
-  scroll events carry no gesture phase, and momentum scrolling kept the gesture from ending.
-  The module is shaped like `bevy_camera_controller`'s (a component, a plugin, input from picking
-  events) so it can be offered upstream (X7). Framing reads the subject's world transform, so it
-  runs after transform propagation (before frustum update) and sets the camera's
-  `GlobalTransform` itself; run before propagation, a scale change reached the camera a frame
-  late and the view jittered. The camera must therefore have no parent.
-- **D9** Property editor attributes follow the author's `bevy_reactor_prop_inspect`
-  (`../bevy_reactor_3/crates/bevy_reactor_prop_inspect/src/attribute.rs`), the design borrowed,
-  not the code (it uses older feathers names): `ValueRange<T>`, `Precision(i32)`, `Step<T>`,
-  written `#[reflect(@ValueRange::<f32>(0.0..=1.0), @Precision(2))]`, read from the type
-  (`StructInfo::field_at(i).custom_attributes()`), not the value. Added: `Caption` names a row,
-  and every species field has one rather than showing its Rust name;
-  `NumberInputUnits` is itself the units attribute (`angle_degrees` shows radians as degrees);
-  `Spinbox`. A `Wrap` for an angle of a full turn went with the placeholder (C27), since every
-  species angle clamps; feathers' `NumberInputWrap` remains should one be needed. A `bool` is a
-  checkbox row, first used by Foliage's Leaves (C74). Every number is a feathers number input; the slider is not used. Its
-  `ValueRange` is always the `HardLimit`: no value here normally sits in a range while
-  occasionally leaving it (HDR illuminance would), so a soft limit is never a narrower range. It is
-  the same range, and its presence only chooses the look: a fill bar dragged like a slider (the
-  default, as in reactor), or with `Spinbox` none, showing the step chevrons on hover. Row
-  captions use feathers' `label`, which sets its own font: plain `Text` in a row node gets the
-  default font, since the panel's font does not reach it. Multiline text waits for text fields.
-- **D8** Keys are handled by an observer of `FocusedInput<KeyboardInput>` on the primary window,
-  not `bevy_action_map`: the keys are fixed, with no rebinding or saved bindings. Focused input
-  reaches the window either way, directly when nothing has focus or bubbling up from the focused
-  widget. A feathers text input stops what it consumes (plain and shifted characters, Space,
-  editing keys, its own Cmd shortcuts) and passes the rest on (Escape after blurring, Enter,
-  Tab, other Cmd shortcuts), so letter keys never fire while typing and Cmd+S works while a
-  field has focus. Checked in `bevy_ui_widgets`' `text_input.rs` and `bevy_input_focus`.
-- **D10** A varied parameter is a `Fuzzy`, after the fuzzy number: a value with a peak, bounded
-  support either side, and a shape. Rejected: `Varied` (vague), "window" and "error bars" (the
-  right idea, but read otherwise), `Tolerance` (one of its fields would share the name),
-  `FuzzyNumber` (rules out a later `Fuzzy<Color>`). A fuzzy number's membership is not a
-  probability, but nobody reading `length: Fuzzy` takes it for anything but a bounded variation.
-  Where too few values are drawn for a shape to show, such as the leaves of one sprig, a varied
-  parameter is an `Interval` instead: center ± spread, drawn uniformly with one draw, its row a
-  `Fuzzy`'s with an empty space where the shape toggle would be, so the two rows' inputs line
-  up (C38). Not in Bevy's prelude, so `bevy_math`'s
-  `curve::Interval` does not clash.
-
-- **D11** The growth model is parametric per level, with a crown envelope that sets limb reach
-  and foliage placement, limbs bending toward directions measured against world up, and cards
-  lying along their twigs (D27). A limb leaves its parent at an angle from the parent
-  (revised in C19 from an angle from world up; cards revised in C37 from oriented apart from the
-  branch tangent). The design and the survey behind it are in
-  `docs/growth-model.md`.
-
-- **D12** The species is one resource, and any change to it rebuilds the whole plant: most
-  parameters change much of the tree, so finer change detection would save little. The panel
-  edits a copy and writes it back with `set_if_neq`, so the rebuild runs only on a real edit.
-  The leaf texture is the likely exception, being far costlier to make; it can become a second
-  resource if dragging stutters. Plans read the result (`PlantStats` on the plant) and the species
-  it was grown from (`GrownFrom`, a copy as a component), since the driver reads components, not
-  resources; a resource is already a component in this Bevy, so `Species` cannot derive both.
-
-- **D13** An enum field is a feathers select, `bevy_immediate` having no binding for one. Each
-  option row carries `OptionIndex`; an observer on the select records the picked index in a
-  `PickedVariant` component, which the panel reads on its next pass and applies through reflection
-  (`DynamicEnum`). A variant changed elsewhere is shown by triggering `SetSelected`. The panel may
-  read only components its capability set requests, so it has its own, `CapsPanel` in
-  `src/properties.rs`: `CapsUiFeathers`' list plus `CapabilityEnumSelect`. Keep the list in step
-  with `CapsUiFeathers` when the fork changes it. A select rather than radio buttons: one row
-  however many variants.
-
-- **D14** Phyllotaxis is limbs per node and a facing per level (D26), in place of a rule enum:
-  competition gives the spiral, crossing pairs and alternating whorls (`docs/growth-model.md`,
-  Limbs), and each field changes one visible thing. Revised in C51 from limbs per node and a
-  divergence between nodes.
-
-- **D15** Limb levels are a fixed array of three and a count of those shown, 1 to 3, not a list
-  that grows and shrinks: a hidden level keeps its parameters, so hiding one and showing it again
-  loses nothing, with no `enabled` flag per level. A fourth level would be twigs too thin to
-  mesh. A level's parameters mean something only at its depth, so there is no reordering, and
-  − and + on the last shown level's header hide it or show the next. The property editor does
-  this for any array marked `ShownCount`, naming the count field; each shown item is a subpane
-  beside the struct's other rows, as seedling's were. Saved, only the shown levels are written
-  (C10), so a hidden level is kept for the session, not across a save.
-
-- **D16** Random numbers come from our own SplitMix64 (`src/random.rs`), not the `rand` crate:
-  `rand` reserves the right to change the values its conversions give between versions, and it
-  is shared with Bevy's tree, so a Bevy bump could change every plant. Each subsystem draws from
-  a stream of its own, `Rng::stream(seed, name)`, so changing one leaves the others' numbers
-  alone (requirements, Parameters, determinism, variants). `Fuzzy::sample` always draws three
-  numbers: the bell is their mean, uniform uses the first.
-
-- **D17** A limb's course is traced in 2 cm steps, turning toward its level's bend (an angle
-  from world up, keeping its compass heading), closing a share of the angle left over each
-  crown radius (revised in C31 from a fixed turn per metre). The limb kinks every 0.15 crown
-  radii on average, on every level and on stems alike, each stretch longer or shorter by up to
-  40%, drawn from the wander's stream, so kinks fall unevenly but never run together: each
-  stretch points off the course by a random angle up to the wander, about a random axis, and
-  holds that offset as the course turns.
-  Offsets are from the course, not from the stretch before, so a limb zigzags about a steady
-  line, as sympodial growth does. A zigzag reads by its period, so a first-level limb kinks
-  four to six times and a twig once or not at all. Revised in C52 from 1.5 internodes of the
-  level a limb bears, which tied the wander to a density: with sparser levels it vanished.
-  Revised in C50 from turns drawn a metre apart, blended smoothly, whose turns added up, so at
-  high wander limbs hooked and coiled. Kinks fall on steps, so the shape does not depend on the
-  step. It stops at its reach or where it would leave the envelope. No kink falls in a limb's
-  last stretch, as long as a tip's card reaches back from its fold (D27), so a branch end runs
-  straight under its card; a limb that leaves the envelope early is traced again to where it
-  stopped, so this holds wherever it ends (C74). Every limb, since which bear none is known only
-  once their children grow; a parent's end is cut at its last node anyway (D30).
-
-  Rings are hinted, as font hinting keeps only what a pixel shows (C52): the traced path is
-  simplified as Ramer, Douglas and Peucker do, keeping a point only where it lies further than
-  the bark's detail threshold (D22) from the chord between the points kept either side. The eye
-  reads a branch by where it goes and by its corners more than by gentle curvature, so kinks
-  that move the line by a pixel stay, and bends and twigs' sub-pixel zigzags straighten. Each
-  kept ring faces halfway between the chords meeting there, so the tube does not pinch; the
-  start ring stays as given, so a limb carrying its parent on still meets it (D30), and the tip
-  heads as the trace did. A kept point less than a step before the tip goes, since a tube
-  turning between two rings that close folds over itself where it is drawn thicker than the
-  gap. Revised in C52 from a ring at every 15° of turn and every kink of 5°, the same however
-  the tree is seen. The defaults draw 448, 1,252 and 3,106 bark triangles for one to three
-  levels (second and third at 3.5 and 4 nodes per crown radius, revised in C63 from 7 and 10,
-  the author judging the leaves too dense). Most trees are meant to have two levels; three are
-  the costly exception, their twig count the cost (X24). An author tunes branching toward a
-  leaf density, and makes a crown denser with larger leaves rather than more branches, so costs
-  are judged at the densities that give it. Each ring carries a side transported along the
-  limb without twisting, which sets the ring's roll and its children's azimuth zero. Each limb's stream
-  forks from its parent's by its index
-  (the trunk's is the seed's `branching` stream), so a limb's draws depend on where it sits,
-  not on how many came before. The seed is a `Seed` in the species, saved with it; the panel
-  gives it a number input without a fill and a Random button. The seed list for variants
-  (requirements, a species file plus a seed list) can grow from it.
-
-- **D18** A level's varied fields are drawn where they belong: each node's jitter and limb count
-  once per node, from the parent's layout stream; the angle, reach and skew once per limb, from
-  the limb's own. Fixed streams take fork indices from the top (`u64::MAX` down), so they never
-  meet a child's index. A drawn value is clamped to its field's `ValueRange`, read from the
-  type by reflection (`LimbLevel::limits`), so the limits have one owner; the skew is not
-  clamped, since any turn is a turn.
-
-- **D19** Variance pays where instances are many. A value drawn once per plant is invisible
-  within a tree and differs only from seed to seed, so it varies only where trees of one
-  species should differ (the envelope's lean and squash, the trunk's lean direction). The
-  trunk does not vary otherwise. Kept as `Fuzzy`: angle and reach per limb, the most visible
-  variety; the skew is a turn either way of up to its value, per limb (D26). Not varied: bend toward and bend (wander already irregularizes),
-  wander (itself the randomness), radius (a share of the parent's, D22), sides (mesh detail),
-  start (each node's jitter varies the places, D25). Counts are fractions rounded at random
-  (D21).
-
-- **D20** Leaf textures are painted on the CPU with `tiny-skia`, a pure-Rust port of part of
-  Skia (requirements, open question 3). It covers seedling's Canvas2D subset almost one to one:
-  `PathBuilder` for lines and cubics, `fill_path` and `stroke_path`, `Transform`, `Stroke` for
-  width, join and cap, `LinearGradient`, and paint alpha. On the CPU, so the command-line export
-  (X1) can use it. Rejected: `vello` (GPU, so not for the command line), `vello_cpu` (likely
-  tiny-skia's successor, but its API still moving; revisit when it settles), `raqote` (quieter),
-  Cairo (a C library to build and ship), `lyon` (tessellates, does not rasterize).
-
-- **D21** A level's nodes are a density, per crown radius of the parent, not per metre,
-  as bend is measured against the crown (D17): a species scaled up keeps its form and its
-  triangle count. Seedling's `interval` was absolute, as real internodes nearly are. The count
-  per parent and the limbs per node are fractions rounded at random (`Rng::round`, always one
-  draw), from the parent's layout stream; limbs take stream indices in order, whatever each
-  node's count. The parent is measured over its part inside the crown (D24).
-
-- **D22** Radii by taper, top-down from the trunk's radius, which the author sets: every stem and
-  limb narrows evenly by the plant's one taper, from its base to its tip as grown, and a limb's
-  base radius is its level's `radius` share of the parent's radius where it leaves. A parent cut
-  at its last node (D30) keeps the radius it has there, and the limb carrying it on starts at
-  it, so a carried-on chain narrows step by step. So each parameter changes one visible thing:
-  a level's radius thickens that level alone (requirements). One taper for all wood, as
-  seedling had, which served well. Revised in C73 from the pipe model, a stem's radius raised
-  to an exponent (2 to 3) shared among the limbs leaving it and what carried on: raising a
-  level's radius thinned the trunk past each node and every later limb, a stem kept its base
-  radius to its first limb, and the taper was only the least a stem narrowed. Lost until the
-  pipe model returns as a stack operator (X31): the trunk narrowing more where many limbs leave
-  it. A taper per level is X32. Rejected:
-  bottom-up from the twigs, which makes the trunk's radius follow the limb count, so showing a
-  third level thickened the trunk about 2.4 times.
-  Every stem is drawn, none narrower than the bark's detail threshold (2 cm by default, about a
-  pixel at the game's scale), as font hinting keeps a stem a pixel wide: the aim is
-  verisimilitude, not realism. Only the drawing thickens; the radii stay true. Revised in C63
-  from a cutoff, below which limbs were grown for the foliage but not meshed:
-  their leaves floated off visible tips, and visible twigs with thinner children went bare. The
-  threshold is also the rings' tolerance (D17), one setting for what the game can show.
-  Sides stay per level, for Panoply's inverted-hull outline (`src/materials/outline.wesl`,
-  extruding along vertex normals): a face's middle moves out by width × cos(180° ÷ sides), so
-  the line swells and thins with the view, 50% to 100% at 3 sides, 71% at 4, 87% at 6. Hence 3
-  for thin levels, where it saves most and cannot be seen, and 4 or more for the trunk and the
-  first level, as the defaults have it.
-
-- **D23** The trunk's height, each stem's length along its axis in metres, is the plant's one
-  size, and the crown is measured against it: its top a multiple, its base a share, so a ratio
-  suits a herb as well as a tree, and moving the crown never moves the trunk. Revised in C61
-  from the stems' length as a share of the envelope's height, where raising the crown dragged
-  the trunk with it. Splay and lean bend a stem without lengthening it (D24). Several stems are spaced
-  evenly around the base, each leaving the ground at the splay from up and turning by the lean
-  as it rises, away from the middle; each has the trunk's radius and bears the first limb level,
-  its stream forked from `branching` by its index. The first stem's compass heading is drawn
-  from a `trunk` stream (D16), so neighbouring trees of one species lean different ways. The
-  panel group stays "Trunk", ahead of the "Crown" group measured against it.
-
-- **D24** The crown is the author's: each setting changes one thing, and the crown is never
-  resized to fit the stems. A stem keeps its length whatever its splay and lean, so leaning
-  droops it, and the lean stops at level so a stem never sinks toward the ground (C48). Nodes
-  lie along the part of their parent inside the crown, so the crown base alone sets where a
-  stem's limbs begin; limbs lie wholly inside, so theirs is the whole limb. A stem that
-  misses the crown bears no limbs, which its level's header count shows. Rejected: fitting the
-  crown to the stems, so no setting could leave them outside it (C44's first form). The
-  stems' length was solved to reach a height in the crown and the crown widened by their
-  spread, so lean lengthened the stems and widened the crown, and raising the crown base
-  lengthened splayed stems to several metres.
-
-- **D25** A new behaviour changes what a field means, or is derived, before it adds a field: a
-  level has many already. So the span's two fields become one start, with a constant jitter
-  (C46, C63); a facing and a skew replace the divergence, competition placing the children
-  (C51, D26); wander becomes kinks at a fixed spacing, smooth curves being bend's (C50, C52),
-  rather than gaining a smoothness and a spacing. A level keeps 12 fields. The start is a share
-  of the parent's part inside the crown below which no nodes grow; nodes spread evenly from
-  there to the tip, jitter moving each up to 30% of the gap. No end: the limb carrying the
-  parent on (D30) gives the tip its length. Revised in C63 from a bias, which raised even
-  places to the power 4^−bias: it kept both ends, so at 100% the lowest node still sat halfway.
-  A predictable range over a guessed curve, until a model is worth exposing (X18, X22). Left
-  out until a preset needs them: a jitter per level (a fir's even whorls), and a sharply bare
-  stretch, such as a bare leader tip. Sides stay a field, being plain to read.
-
-- **D26** Children are placed where they compete least, not by a fixed divergence: a simple
-  form of space colonization's competition for light, kept to siblings on one parent. It is
-  how botany explains phyllotaxis (Hofmeister's rule, that a new bud forms furthest from the
-  last ones; Douady and Couder, that an inhibition fading with distance yields the golden
-  angle, crossing pairs and alternating whorls), so the spiral the divergence set by hand
-  comes out of the rule, and the same rule serves lateral limbs, which a divergence served
-  poorly. A level's facing is one of the patterns botany names on sloping limbs (Hallé,
-  Oldeman and Tomlinson), measured from the parent's upper side, the one nearest world up; no
-  tree fans vertically:
-  - around: competition turns each node's limbs, spaced evenly, to the least crowded place,
-    and toward the outside, the more so the further the node is from the plant's axis, so
-    splayed stems' children face outward, toward light;
-  - sides (amphitony): limbs on alternate flanks, competition picking the less crowded flank
-    for the first, so one limb a node alternates and a pair takes both;
-  - up and down (epitony and hypotony): every limb on the upper side or the underside, with no
-    competition.
-
-  Each limb then turns by its own random amount up to the level's skew, so a pair is not held
-  opposite and the pattern loosens. The constants (crowding fades to 0.7 a mean gap further
-  along the parent, nearness is raised to the 4th power, and outward counts 1 against
-  crowding's 1) were tuned in simulation: gentler crowding falls to 180° turns, sharper turns
-  erratic. Rejected: children facing from the flank with a divergence of 180° (C49, never
-  built), which flattened lateral limbs only when the author set it and left the trunk's
-  spiral fixed; facing as a weighted preference beside competition, which up and down could
-  not apply to a pair, one limb of which always faced each way; room to the envelope for
-  light, which near the crown's edge turns children inward; and full space colonization
-  (X12), with limbs on different parents competing, which stays deferred.
-
-- **D27** A card is a sprig of leaves on a painted stem, lined up with a real twig, after
-  seedling (`docs/growth-model.md`, Foliage): its base on the twig, its axis along it, its face
-  as near world up as the axis allows. Seen edge-on, a card then loses leaves but never a twig.
-  One cluster grows at the tip of every branch end, the limbs that bear none, whatever their
-  level, so no visible end is bare; a "Leaves" switch turns them all off for a bare plant. Card
-  size is a share of the crown radius, so a scaled species keeps its form (D21). Stems bear none.
-  Denser foliage comes from another limb level. Revised in C74 from more clusters at a density
-  along each twig within a shell of the envelope: any density put cards along twigs, none made
-  the plant bare, and those near a tip ran past the tip's card (X30). Revised in C63 from the
-  last grown level only, which left an earlier level's childless limbs bare. Seedling's
-  per-level leaf flag waits until a preset needs to turn leaves off a level. Rejected: a free
-  turn about the normal, which read as scattered leaves; every limb bearing clusters, which put
-  leaves on boughs and stacked counts. The tip's card reaches back along the twig until its
-  axial fold lies at the tip, as seedling's did, so the sprig's stem overlaps the twig's end; on
-  a twig shorter than that, it starts at the twig's base (C39). The twig runs straight under it
-  (D17), so the card lies along the twig.
-
-- **D28** The HUD (`src/hud.rs`) holds controls that change the preview rather than the species,
-  over the view: a grid filling the view pane with the panel's spacing (8 px padding and gaps),
-  ignored by picking, so the view's drags and scrolls pass between its buttons. Toggles in the
-  upper left; the camera's buttons in the upper right, an L with orbit along the top, zoom and
-  tilt down the side and Frame in the corner, after Google Maps' controls turned upside down;
-  the bottom row for status, the triangle count at its left. A camera button moves the camera
-  smoothly from the moment it is pressed until it is released (60° a second of orbit, 30° of
-  tilt, a factor of 2 in distance), and Frame acts on a click. A step on the press, then smooth
-  movement after a delay, was tried and felt wrong. Plans hold a button with the driver's
-  `click(…, hold=frames)`. Its buttons are
-  our own, a `bevy_ui_widgets` `Button` the size of feathers' tool button, with fixed
-  translucent grays rather than theme tokens: the theme is for a light and dark switch, which a
-  HUD over the scene does not follow, so forking feathers' button and registering tokens would
-  buy nothing. A toggle's state is a field of `ViewSettings` (D6), so it is saved, as the panel
-  width is and the camera is not (D7); the target's `Visibility` follows it, and plans check
-  that. The icon dims while the target is hidden. `Button` stops presses and
-  clicks but not drags, so the grid stops `PointerDrag` bubbling up from a button, or a drag
-  that starts on one would turn the camera. Icons are Material Symbols, chosen by the author,
-  in `assets/icons/` (48 px white PNGs, under their Material names). The ground toggle outlives
-  the placeholder it came from: a trunk sunk below the ground (C58) shows only with the ground
-  hidden.
-
-- **D29** The leaf texture is seedling's (`genLeafShape.ts`, `genLeafTexture.ts`, and
-  `createLeafStamps` in `MeshGenerator.ts`), the look the author tuned, with five changes.
-  Kept: a leaf is a cubic Bézier half-outline, mirrored, split into segments; each segment's end
-  is pushed outward (serration) and toward the tip (rake), with jitter, and a straight line back
-  to the curve makes the tooth; serration also sharpens the tip. A sprig is a fan (count, angle,
-  a size taper per step) and pairs down the stem at the fan's angle. Each leaf is filled with
-  an inner and an outer color, in a lateral or axial gradient in its own frame, shifted in hue
-  and lightness at random per leaf. Every leaf is stroked black first, then each is filled and
-  stroked translucent dark, so the black shows only around the cluster and the leaves within it
-  are parted by faint lines. The texture is square, fitted to the sprig. Changed:
-  - Colors are painted as picked. Seedling converted them to linear and painted those values as
-    sRGB (three.js r136's `getStyle` does not convert back), so leaves came out far darker than
-    their swatches: poplar-green's outer `rgb(80,201,80)` painted near `rgb(20,149,20)`. Colors
-    were tuned by eye on the preview, so seedling's stored values are not targets.
-  - Lengths are fractions of the leaf's length, which is not a field. The sprig is scaled to fit
-    the texture, so seedling's length mattered only against constants in absolute units (tooth
-    depth 40 × serration, jitter ±10, outline 2, spacing), and changing it changed the teeth and
-    the outline's weight. The outline's width is in texture pixels.
-  - A painted stem, which seedling coded but left off: a midrib in the bark color, outlined, from
-    the texture's bottom edge (the card's base on the twig, D27) through the pairs to the fan.
-    Its width is a constant.
-  - The angle and spacing variations are `Interval`s (D10). The color shift per leaf is in Oklch
-    rather than HSL, so a step of lightness looks alike on every hue.
-  - Shape, arrangement and color draw from streams of their own (D16); seedling's one stream
-    reshuffled the leaf on any edit.
-
-  The fan's angle still sets the pairs', until a preset needs them apart. The droops shape the
-  card, not the texture (C39). Seedling's 47 models used every field, jitter least (3).
-
-- **D30** A stem or limb bearing limbs ends at its last node, and one more limb of its
-  children's level carries it on from there: along it (angle 0, no skew), otherwise grown as
-  its siblings are (bend, wander, reach to the envelope, its own limbs). So the trunk turns
-  into a branch rather than ending in a post, as in decurrent trees and an excurrent leader's
-  last shoot, and a limb's tip is a shoot like any other, as in sympodial growth; a fork of
-  one, which C30 generalizes. It draws from a stream of its own (`CARRY_ON_STREAM`, D18), so
-  its siblings' count leaves it alone. The two are separate tubes meeting cleanly: the parent's
-  last ring is the new limb's first, at the parent's top radius (D22), and the parent is left
-  open there. Where their sides differ the silhouette shows a shoulder, and the normals crease
-  (C85). If the new limb would be no longer than it is thick, the parent keeps its full length.
-
-- **D31** Forks, after Weber and Penn's splits: a limb forks with its level's chance at one
-  point, a share of its length, and ends there, capped, at its radius there (D22); copies of
-  it carry it on, the same level as it, not its children, so they reach the envelope and bear
-  limbs as it would. They are spread evenly around its direction, each turned half the fork
-  angle from it, the first toward its flank turned up by the roll, so two make a Y from level
-  (0°) to upright (90°), and three or four a ring, as a shrub's low split. Each copy starts at
-  the limb's radius at the fork and draws its own reach, wander and limbs from a stream of the
-  fork's (`FORK_STREAM`, D18). A forked limb bears limbs up to the fork and neither a limb
-  carrying it on (D30) nor a leaf there; a copy's nodes start from its base, the level's start
-  being a limb's bare base, and copies do not fork again. The limb carrying a parent on is a
-  limb of its level, so it forks too: a trunk's top forks when its first level does. A copy's
-  limbs compete among themselves alone (D26; X33). Five fields in a Fork group, chance, at,
-  copies (2 to 4), angle and roll, all inert at the default chance of 0.
 
 ## Deferred
 
@@ -790,7 +410,7 @@ species or the plans.
 - **X25** The property editor's attributes from `bevy::annotations` (bevy#26164, merged as `8550394`): its
   `ValueRange` (an `f64` range, read with `ValueRange::from_attributes`), `Step` and
   `DisplayName` in place of ours (`ValueRange<T>`, `Step<T>`, `Caption`), so a species reads
-  the same in any Bevy inspector; `LimbLevel::limits` (D18) reads through `from_attributes`.
+  the same in any Bevy inspector; `LimbLevel::limits` (TD2.2) reads through `from_attributes`.
   `Tooltip` for the species' doc comments. Ours stay where it has none: `Precision` and
   `Spinbox` (its follow-ups), `ShownCount`, and units, since its `Unit` is a label while ours
   names a feathers units format that also scales and parses. *Gate:* C77 committed; then the
