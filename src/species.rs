@@ -21,7 +21,7 @@ use std::{any::TypeId, fmt, ops::RangeInclusive};
 use crate::{
     fuzzy::{Distribution, Fuzzy},
     properties::{
-        Caption, ControlGroup, Flatten, Icon, Precision, ShownCount, Spinbox, ValueRange,
+        Caption, ControlGroup, Flatten, Icon, Precision, ShownCount, Spinbox, Stripe, ValueRange,
     },
     random::Seed,
     toggle::{Toggle, all_off, serialize_on},
@@ -30,13 +30,25 @@ use crate::{
 /// Most levels of limbs a species can have.
 pub const MAX_LIMB_LEVELS: usize = 3;
 
+/// The panel's [`Stripe`] colors, one per part of the plant, from bark brown to light green, root
+/// to leaf; the crown, the envelope rather than a part, neutral grey.
+const STRIPE_PLANT: Color = Color::srgb(0.42, 0.29, 0.20);
+const STRIPE_TRUNK: Color = Color::srgb(0.52, 0.36, 0.22);
+const STRIPE_LIMBS: [Color; MAX_LIMB_LEVELS] = [
+    Color::srgb(0.56, 0.45, 0.23),
+    Color::srgb(0.52, 0.53, 0.25),
+    Color::srgb(0.44, 0.60, 0.28),
+];
+const STRIPE_FOLIAGE: Color = Color::srgb(0.50, 0.76, 0.36);
+const STRIPE_CROWN: Color = Color::srgb(0.48, 0.48, 0.48);
+
 /// The species being edited. One resource, so any edit rebuilds the whole plant: most parameters
 /// change much of the tree anyway.
 #[derive(Resource, Reflect, Clone, PartialEq)]
 #[reflect(Resource)]
 pub struct Species {
     /// Where the plant's random numbers start: the same seed makes the same plant.
-    #[reflect(@Caption("Seed"), @ControlGroup("Plant"))]
+    #[reflect(@Caption("Seed"), @ControlGroup("Plant"), @Stripe(vec![STRIPE_PLANT]))]
     pub seed: Seed,
     /// The smallest detail drawn, in meters, about a pixel at the game's scale: no stem is drawn
     /// narrower, so twigs still show. Only the drawing is thickened: limbs take their share of
@@ -62,13 +74,13 @@ pub struct Species {
     /// can merge into one mesh in the game.
     #[reflect(@Caption("Bark color"), @ControlGroup("Plant"))]
     pub bark_color: Color,
-    #[reflect(@Caption("Trunk"))]
+    #[reflect(@Caption("Trunk"), @Stripe(vec![STRIPE_TRUNK]))]
     pub trunk: Trunk,
-    #[reflect(@Caption("Crown"))]
+    #[reflect(@Caption("Crown"), @Stripe(vec![STRIPE_CROWN]))]
     pub crown: Crown,
     #[reflect(@Flatten)]
     pub limbs: LimbLevels,
-    #[reflect(@Caption("Foliage"))]
+    #[reflect(@Caption("Foliage"), @Stripe(vec![STRIPE_FOLIAGE]))]
     pub ornaments: Ornaments,
 }
 
@@ -97,7 +109,7 @@ pub struct LimbLevels {
     /// How many of the levels grow, from the first.
     #[reflect(@ValueRange::<i32>(1..=MAX_LIMB_LEVELS as i32))]
     pub shown: i32,
-    #[reflect(@Caption("Limbs"), @ShownCount("shown"))]
+    #[reflect(@Caption("Limbs"), @ShownCount("shown"), @Stripe(STRIPE_LIMBS.to_vec()))]
     pub levels: [LimbLevel; MAX_LIMB_LEVELS],
 }
 

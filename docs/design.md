@@ -97,6 +97,13 @@ each item past the fewest shown has a ✕ (`remove`) hiding it and those after i
 keeps its values. Each limb
 level's header shows its count, "Limbs 1 (8)".
 
+A `Stripe` attribute colors a 4 px stripe down a top-level subpane's left side, the left border of
+the subpane's outer node with 4 px of padding inside it, set on the node since feathers' theming
+cannot shade a subtree. A `ControlGroup`'s stripe is on its first field, and an array's items take
+one color each. A subpane with none keeps the room, clear. The species' run from bark brown to
+light green, root to leaf: Plant, Trunk, Limbs 1 to 3, Foliage; Crown, the envelope rather than a
+part, is grey.
+
 An operator is a `Toggle<T>` field (`src/toggle.rs`): its settings and an `OperatorState`, off,
 disabled or on, as Blender's modifiers are removed, hidden or shown; the generator runs it only
 when on. The panel finds a toggle by reflection, through the `IsToggle` attribute on its type. On

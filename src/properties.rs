@@ -158,6 +158,20 @@ pub struct ControlGroup(pub &'static str);
 #[derive(Debug, Clone, Reflect)]
 pub struct Flatten;
 
+/// On a field shown as a subpane at the panel's top level, or the first field of a top-level
+/// [`ControlGroup`]: the color of a stripe down the subpane's left side, so parts of the value are
+/// told apart at a glance. An array's items take one color each, in order. A subpane with none
+/// keeps the stripe's room, so subpanes stay aligned.
+#[derive(Debug, Clone, Reflect)]
+pub struct Stripe(pub Vec<Color>);
+
+/// The stripe color of item `index` of the field with attributes `attrs`, clear if it has none.
+fn stripe(attrs: &CustomAttributes, index: usize) -> Color {
+    (attrs.get::<Stripe>())
+        .and_then(|stripe| stripe.0.get(index).copied())
+        .unwrap_or(Color::NONE)
+}
+
 /// On an operator's settings type: the icon left of its heading, an image path under `assets/`.
 #[derive(Debug, Clone, Reflect)]
 pub struct Icon(pub &'static str);
@@ -168,9 +182,10 @@ pub struct Spinbox;
 
 /// On an array of structs: the sibling `i32` field holding how many of its items are shown, from
 /// the first. Each shown item is a subpane, captioned with the array's caption and its number,
-/// beside the struct's other rows. The last one's header has − and + buttons that change the
-/// count, within the count field's [`ValueRange`] and the array's length, and never below 1. The
-/// count field gets no row of its own.
+/// beside the struct's other rows. The last one's add menu shows the next item, and each header
+/// past the first has a ✕ hiding its item and those after it, within the count field's
+/// [`ValueRange`] and the array's length, and never below 1. The count field gets no row of its
+/// own.
 #[derive(Debug, Clone, Reflect)]
 pub struct ShownCount(pub &'static str);
 
@@ -306,7 +321,8 @@ fn edit_struct(
                 .on_spawn_apply_scene(move || group_heading(caption));
             rows(ui);
         } else {
-            group(ui.ch_id(caption), caption, rows);
+            let color = stripe(field_info.custom_attributes(), 0);
+            group(ui.ch_id(caption), caption, color, rows);
         }
     }
     for (count, value) in new_counts {
@@ -344,7 +360,7 @@ fn field_row(
         && let Some((_, count, range)) = counts.iter().find(|(count, ..)| *count == shown.0)
         && let ReflectMut::Array(items) = field.reflect_mut()
     {
-        let new_count = shown_items(ui, name, caption, items, *count, range.clone(), notes);
+        let new_count = shown_items(ui, name, caption, attrs, items, *count, range.clone(), notes);
         if new_count != *count {
             new_counts.push((shown.0, new_count));
         }
@@ -403,7 +419,7 @@ fn field_row(
                     added = Some(field);
                 }
             };
-            group_with_tools(row, caption.to_string(), tools, |ui| {
+            group_with_tools(row, caption.to_string(), stripe(attrs, 0), tools, |ui| {
                 edit_struct(ui, field, notes, true);
             });
             if let Some(added) = added {
@@ -418,13 +434,14 @@ fn field_row(
 }
 
 /// The first `count` of `items`, a subpane each named `name[index]` and headed with its note, if
-/// any. The last one's add menu ends with the next item, named `add`, and each header past the
-/// fewest shown has a ✕ named `remove`, hiding its item and those after it. Returns the count as
-/// they leave it.
+/// any, striped as the array's attributes `attrs` say. The last one's add menu ends with the next
+/// item, named `add`, and each header past the fewest shown has a ✕ named `remove`, hiding its
+/// item and those after it. Returns the count as they leave it.
 fn shown_items(
     ui: &mut Imm<CapsPanel>,
     name: &'static str,
     caption: &'static str,
+    attrs: &CustomAttributes,
     items: &mut dyn Array,
     count: i32,
     range: RangeInclusive<i32>,
@@ -461,7 +478,7 @@ fn shown_items(
                 new_count = index as i32;
             }
         };
-        group_with_tools(pane, header, tools, |ui| {
+        group_with_tools(pane, header, stripe(attrs, index), tools, |ui| {
             edit_struct(ui, item, notes, true);
         });
         if let Some(added) = added {
@@ -691,24 +708,35 @@ fn icon_button(
     clicked
 }
 
-/// A feathers subpane headed `caption`, its body built by `body`.
+/// A feathers subpane headed `caption`, striped in `stripe`, its body built by `body`.
 pub fn group<'w, 's>(
     pane: ImmEntity<'_, 'w, 's, CapsPanel>,
     caption: &'static str,
+    stripe: Color,
     body: impl FnOnce(&mut Imm<'w, 's, CapsPanel>),
 ) {
-    group_with_tools(pane, caption.to_string(), |_| {}, body);
+    group_with_tools(pane, caption.to_string(), stripe, |_| {}, body);
 }
 
-/// A feathers subpane headed `caption`, with buttons built by `tools` at the header's right end,
-/// its body built by `body`. The caption follows `caption` as it changes.
+/// A feathers subpane headed `caption`, with a [`Stripe`] in `stripe` down its left side and
+/// buttons built by `tools` at the header's right end, its body built by `body`. The caption
+/// follows `caption` as it changes.
 fn group_with_tools<'w, 's>(
     pane: ImmEntity<'_, 'w, 's, CapsPanel>,
     caption: String,
+    stripe: Color,
     tools: impl FnOnce(&mut Imm<'w, 's, CapsPanel>),
     body: impl FnOnce(&mut Imm<'w, 's, CapsPanel>),
 ) {
-    pane.on_spawn_apply_scene(subpane).add(|ui| {
+    // Set on the node, since feathers' theming cannot shade a subtree.
+    let pane = pane.on_spawn_apply_scene(move || {
+        bsn! {
+            @subpane()
+            Node { border: UiRect::left(px(4)), padding: UiRect::left(px(4)) }
+            BorderColor { left: {stripe} }
+        }
+    });
+    pane.add(|ui| {
         ui.ch().on_spawn_apply_scene(subpane_header).add(|ui| {
             ui.ch()
                 .on_spawn_apply_scene(|| bsn! { Text("") ThemedText })
