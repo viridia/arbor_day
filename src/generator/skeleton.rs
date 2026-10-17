@@ -288,7 +288,7 @@ impl<'a> Level<'a> {
         let envelope = Envelope::of(species);
         Self {
             number,
-            params: &species.grown_levels()[number - 1],
+            params: &species.limbs.grown()[number - 1],
             taper: species.taper.clamp(0.0, 1.0),
             spacing: kink_spacing(&envelope),
             straight: AXIAL_FOLD * species.ornaments.tip_leaves.size * envelope.radius.max(0.01),
@@ -308,7 +308,7 @@ pub(super) fn grow(species: &Species) -> Skeleton {
         cards: Vec::new(),
     };
     hint(0, species.detail, &mut skeleton);
-    for number in 1..=species.grown_levels().len() {
+    for number in 1..=species.limbs.grown().len() {
         let level = Level::new(species, number);
         place_scions(&level, &mut skeleton);
         trace_scions(&level, &mut skeleton);

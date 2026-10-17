@@ -330,3 +330,13 @@ the same level as it rather than its children, so they reach the envelope and be
 would (TD3.7): two make a Y from level to upright by the roll, three or four a ring, as a shrub's
 low split. Copies do not fork again. Five fields in a Fork group, all inert at the default chance of
 0. **Reversing it** removes the Y and the split shrub from the shapes a species can take.
+
+### D32 — No file compatibility before the first species ships
+
+Until X15's gate, the first species used in Panoply, the species schema changes freely: a chunk
+that renames, moves or removes a species field breaks every file written before it, and no
+version or migration covers it. Its Landed row says "Breaks files", so a saved species or working
+document is known not to survive it. Reading stays strict, so a stale file fails with an error
+naming the key rather than loading wrong (C10). Compatibility starts at the gate, as X15 and
+`docs/patches.md` (The file) lay out. **Reversing it** means a migration for every schema change
+from C10 on, for files that are only test artifacts.

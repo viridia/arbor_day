@@ -1,8 +1,9 @@
 //! The property editor: panel rows for the fields of a reflected struct, one row per field, each
 //! named after its field. Booleans get a checkbox, numbers a number input, fuzzy numbers a center,
 //! a spread and a shape toggle, colors a swatch that opens a picker, enums of unit variants a
-//! select, nested structs a subpane of rows of their own, or in a subpane a heading over them, an
-//! array with a [`ShownCount`] a subpane per shown item, and every other field a label giving its
+//! select, nested structs a subpane of rows of their own, or in a subpane a heading over them, or
+//! with [`Flatten`] their rows in place of their own, an array with a [`ShownCount`] a subpane per
+//! shown item, and every other field a label giving its
 //! name and type. Every row is one line:
 //! a number input carries its caption inside, and other widgets sit right of theirs. Field
 //! attributes (below) set a row's
@@ -146,6 +147,11 @@ pub struct Caption(pub &'static str);
 #[derive(Debug, Clone, Reflect)]
 pub struct ControlGroup(pub &'static str);
 
+/// On a struct field: its fields' rows in place of its own, as if they were the outer struct's,
+/// with no subpane, heading or node of their own.
+#[derive(Debug, Clone, Reflect)]
+pub struct Flatten;
+
 /// A number in a [`ValueRange`] shown without the slider fill, as a spinbox with step arrows.
 #[derive(Debug, Clone, Reflect)]
 pub struct Spinbox;
@@ -201,7 +207,7 @@ impl NumberField for i64 {
 }
 
 /// Text shown in parentheses after an item's caption in its subpane header ("Limbs 1 (8)"), keyed
-/// by the item's name (`limbs[0]`): figures about the item that the panel's owner knows and the
+/// by the item's name (`levels[0]`): figures about the item that the panel's owner knows and the
 /// item does not.
 pub type HeaderNotes = HashMap<String, String>;
 
@@ -333,6 +339,10 @@ fn field_row(
         if new_count != *count {
             new_counts.push((shown.0, new_count));
         }
+        return;
+    }
+    if attrs.get::<Flatten>().is_some() {
+        edit_struct(ui, field, notes, in_pane);
         return;
     }
     // Rows are keyed by field name, so they keep their entities from frame to frame.

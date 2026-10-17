@@ -23,7 +23,7 @@ def set_number(driver, path, text):
 
 def run(driver):
     driver.present("Shell", ready=True)  # wait for the UI scene to finish spawning
-    driver.present("Shell/Panel/limbs[0]/add")  # the immediate-mode panel has built its rows
+    driver.present("Shell/Panel/levels[0]/add")  # the immediate-mode panel has built its rows
     # A card at each of the ten or eleven limbs' tips, or up to three where it is steep, eight
     # triangles each.
     leaves = {"leafy_tips": Between(10, 11), "cards": Between(10, 33)}

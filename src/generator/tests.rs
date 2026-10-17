@@ -247,7 +247,7 @@ fn rays_leave_the_envelope_at_its_surface() {
 fn regular() -> Species {
     let mut species = Species::default();
     species.trunk.wander.angle = 0.0;
-    for level in &mut species.limbs {
+    for level in &mut species.limbs.levels {
         level.bend.amount = 0.0;
         level.wander.angle = 0.0;
         level.skew = 0.0;
@@ -260,6 +260,12 @@ fn regular() -> Species {
             fuzzy.spread = 0.0;
         }
     }
+    species
+}
+
+/// `species` with its first `count` limb levels growing.
+fn shown(count: i32, mut species: Species) -> Species {
+    species.limbs.shown = count;
     species
 }
 
@@ -322,7 +328,7 @@ fn limbs_reach_their_share_of_the_way_to_the_envelope() {
         let tip = limb.origin() + limb.direction() * limb.length();
         let rest = distance_to_envelope(&Envelope::of(&species), tip, limb.direction());
         let whole = limb.length() + rest;
-        assert!((limb.length() - species.limbs[0].reach.center * whole).abs() < 1e-3);
+        assert!((limb.length() - species.limbs.levels[0].reach.center * whole).abs() < 1e-3);
     }
 }
 
@@ -335,7 +341,7 @@ fn limbs_leave_the_trunk_at_their_angle() {
     for limb in side_limbs(&species) {
         let angle = limb.direction().angle_between(tip);
         assert!(
-            (angle - species.limbs[0].angle.center).abs() < 1e-5,
+            (angle - species.limbs.levels[0].angle.center).abs() < 1e-5,
             "{limb:?}"
         );
     }
@@ -345,13 +351,13 @@ fn limbs_leave_the_trunk_at_their_angle() {
 fn varied_values_stay_within_their_spread_and_limits() {
     let mut species = regular();
     species.trunk.lean = 0.0;
-    species.limbs[0].angle = Fuzzy::new(
+    species.limbs.levels[0].angle = Fuzzy::new(
         60.0_f32.to_radians(),
         10.0_f32.to_radians(),
         Distribution::Uniform,
     );
     // Reaching past the envelope is clamped to reaching it.
-    species.limbs[0].reach = Fuzzy::new(0.95, 0.2, Distribution::Uniform);
+    species.limbs.levels[0].reach = Fuzzy::new(0.95, 0.2, Distribution::Uniform);
     let tip = stems(&species)[0].rings.last().unwrap().center;
     let limbs = side_limbs(&species);
     let angles: Vec<f32> = limbs
@@ -376,7 +382,7 @@ fn varied_values_stay_within_their_spread_and_limits() {
 fn deeper_levels_grow_on_the_level_before() {
     let mut species = regular();
     let first = limbs(&species);
-    species.limb_levels = 2;
+    species.limbs.shown = 2;
     let both = limbs(&species);
     // The first level is unchanged but for its tips, which its limbs narrow and cut short at
     // the last of them, and the second follows it.
@@ -404,15 +410,15 @@ fn deeper_levels_grow_on_the_level_before() {
             })
             .expect("a parent under the limb");
         let angle = limb.direction().angle_between(parent.direction());
-        assert!((angle - species.limbs[1].angle.center).abs() < 1e-3);
+        assert!((angle - species.limbs.levels[1].angle.center).abs() < 1e-3);
     }
 }
 
 #[test]
 fn limbs_bend_toward_their_bend() {
     let mut species = regular();
-    species.limbs[0].bend.amount = 0.5;
-    let target = species.limbs[0].bend.toward;
+    species.limbs.levels[0].bend.amount = 0.5;
+    let target = species.limbs.levels[0].bend.toward;
     let crown = species.crown.radius;
     for limb in limbs(&species) {
         let tip = limb.rings[limb.rings.len() - 1].tangent;
@@ -434,8 +440,8 @@ fn limbs_bend_toward_their_bend() {
 fn every_bend_target_moves_the_tip() {
     let tips = |degrees: f32| {
         let mut species = regular();
-        species.limbs[0].bend.amount = 0.5;
-        species.limbs[0].bend.toward = degrees.to_radians();
+        species.limbs.levels[0].bend.amount = 0.5;
+        species.limbs.levels[0].bend.toward = degrees.to_radians();
         limbs(&species)
             .iter()
             .map(|limb| limb.rings[limb.rings.len() - 1].tangent)
@@ -456,10 +462,7 @@ fn default_plants_stay_within_budget() {
     // under seedling's trees (about 2,500); three, the costly exception, a little over them,
     // every twig drawn.
     let triangles = |limb_levels| {
-        let species = Species {
-            limb_levels,
-            ..Species::default()
-        };
+        let species = shown(limb_levels, Species::default());
         plant(&species).bark.triangles()
     };
     assert!((100..1_000).contains(&triangles(1)), "{}", triangles(1));
@@ -469,10 +472,7 @@ fn default_plants_stay_within_budget() {
 
 #[test]
 fn rings_advance_along_every_limb() {
-    let species = Species {
-        limb_levels: 3,
-        ..Species::default()
-    };
+    let species = shown(3, Species::default());
     for limb in limbs(&species) {
         for pair in limb.rings.windows(2) {
             assert!(pair[1].at > pair[0].at);
@@ -487,8 +487,8 @@ fn limbs_kink_at_one_spacing_on_every_level() {
     // bend, the rings between a limb's ends can only be kinks, so a limb has no more than its
     // length over the shortest stretch.
     let mut species = level_limbs(45.0);
-    species.limb_levels = 2;
-    species.limbs[1].wander.angle = 45.0_f32.to_radians();
+    species.limbs.shown = 2;
+    species.limbs.levels[1].wander.angle = 45.0_f32.to_radians();
     let spacing = kink_spacing(&Envelope::of(&species));
     assert!((spacing - 0.3).abs() < 1e-6);
     let shortest = spacing * SPLIT_LENGTH * (0.5 - KINK_JITTER);
@@ -531,9 +531,9 @@ fn limbs_kink_at_one_spacing_on_every_level() {
 /// wall 2 m away, but for wandering by `wander` degrees.
 fn level_limbs(wander: f32) -> Species {
     let mut species = straight();
-    species.limbs[0].angle = Fuzzy::new(FRAC_PI_2, 0.0, Distribution::Uniform);
-    species.limbs[0].reach = Fuzzy::new(1.0, 0.0, Distribution::Uniform);
-    species.limbs[0].wander.angle = wander.to_radians();
+    species.limbs.levels[0].angle = Fuzzy::new(FRAC_PI_2, 0.0, Distribution::Uniform);
+    species.limbs.levels[0].reach = Fuzzy::new(1.0, 0.0, Distribution::Uniform);
+    species.limbs.levels[0].wander.angle = wander.to_radians();
     species
 }
 
@@ -569,7 +569,7 @@ fn wander_leaves_tips_where_their_course_ends() {
     species.trunk.wander.angle = 45.0_f32.to_radians();
     assert!((tips(&species).0 - stem).length() < 1e-4);
     species.trunk.wander.angle = 0.0;
-    species.limbs[0].wander.angle = 45.0_f32.to_radians();
+    species.limbs.levels[0].wander.angle = 45.0_f32.to_radians();
     let (_, wandering) = tips(&species);
     assert_eq!(wandering.len(), limbs.len());
     for (one, two) in wandering.iter().zip(&limbs) {
@@ -590,12 +590,9 @@ fn wander_leaves_tips_where_their_course_ends() {
     let spacing = kink_spacing(&Envelope::of(&species));
     assert!(along >= 0.6 * spacing - TRACE_STEP, "{along} {spacing}");
     // Every turn between stretches under twice the wander.
-    let mut species = Species {
-        limb_levels: 2,
-        ..Species::default()
-    };
+    let mut species = shown(2, Species::default());
     species.trunk.wander.angle = 45.0_f32.to_radians();
-    for level in &mut species.limbs {
+    for level in &mut species.limbs.levels {
         level.wander.angle = 45.0_f32.to_radians();
     }
     let mut sharpest = 0.0_f32;
@@ -633,10 +630,7 @@ fn branch_ends_run_straight_under_their_cards() {
 
 #[test]
 fn limbs_stay_inside_the_envelope() {
-    let species = Species {
-        limb_levels: 3,
-        ..Species::default()
-    };
+    let species = shown(3, Species::default());
     for limb in limbs(&species) {
         for ring in &limb.rings[1..] {
             assert!(
@@ -652,8 +646,7 @@ fn the_seed_sets_the_wander() {
     let positions = |seed| {
         let species = Species {
             seed: Seed(seed),
-            limb_levels: 2,
-            ..Species::default()
+            ..shown(2, Species::default())
         };
         plant(&species).bark.positions
     };
@@ -664,13 +657,13 @@ fn the_seed_sets_the_wander() {
 #[test]
 fn hidden_levels_do_not_grow() {
     let mut species = Species::default();
-    species.limbs[2].density = 40.0;
+    species.limbs.levels[2].density = 40.0;
     let one = limbs(&species).len();
-    species.limb_levels = 2;
+    species.limbs.shown = 2;
     let two = limbs(&species);
     assert!(two.len() > one);
     assert!(two.iter().all(|limb| limb.level < 3));
-    species.limb_levels = 3;
+    species.limbs.shown = 3;
     assert!(limbs(&species).iter().any(|limb| limb.level == 3));
 }
 
@@ -697,8 +690,8 @@ fn nodes_hold_their_limbs_evenly_around() {
     // Straight, so azimuth about the trunk is azimuth about world up.
     let mut species = straight();
     // Two nodes on the stem's two crown radii.
-    species.limbs[0].density = 1.0;
-    species.limbs[0].per_node = 3.0;
+    species.limbs.levels[0].density = 1.0;
+    species.limbs.levels[0].per_node = 3.0;
     let limbs = side_limbs(&species);
     assert_eq!(limbs.len(), 6);
     // A node's limbs share an origin and stand a third of a turn apart.
@@ -713,8 +706,8 @@ fn nodes_hold_their_limbs_evenly_around() {
 /// pattern settles.
 fn node_turns(per_node: f32) -> Vec<f32> {
     let mut species = straight();
-    species.limbs[0].density = 8.0;
-    species.limbs[0].per_node = per_node;
+    species.limbs.levels[0].density = 8.0;
+    species.limbs.levels[0].per_node = per_node;
     let limbs = side_limbs(&species);
     let per_node = per_node as usize;
     assert_eq!(limbs.len(), 16 * per_node);
@@ -759,10 +752,10 @@ fn competition_gives_the_classic_patterns() {
 /// the second level facing `facing`.
 fn rises(facing: Facing) -> Vec<f32> {
     let mut species = straight();
-    species.limb_levels = 2;
-    species.limbs[0].angle = Fuzzy::new(FRAC_PI_2, 0.0, Distribution::Uniform);
-    species.limbs[1].facing = facing;
-    species.limbs[1].per_node = 1.0;
+    species.limbs.shown = 2;
+    species.limbs.levels[0].angle = Fuzzy::new(FRAC_PI_2, 0.0, Distribution::Uniform);
+    species.limbs.levels[1].facing = facing;
+    species.limbs.levels[1].per_node = 1.0;
     let limbs = limbs(&species);
     let rises: Vec<f32> = limbs
         .iter()
@@ -788,8 +781,8 @@ fn skew_turns_each_limb_on_its_own() {
     // How far each pair's limbs are from opposite, about the upright stem, in degrees.
     let off_opposite = |skew: f32| -> Vec<f32> {
         let mut species = straight();
-        species.limbs[0].per_node = 2.0;
-        species.limbs[0].skew = skew.to_radians();
+        species.limbs.levels[0].per_node = 2.0;
+        species.limbs.levels[0].skew = skew.to_radians();
         let azimuth = |limb: &Axis| limb.direction().z.atan2(limb.direction().x).to_degrees();
         side_limbs(&species)
             .chunks(2)
@@ -825,7 +818,7 @@ fn nodes_lie_near_their_even_places_inside_the_crown() {
     let mut species = straight();
     // Five nodes along the stem's two crown radii inside the crown, each within 30% of the
     // 0.8 m gap of 1.65, 2.45, 3.25, 4.05 and 4.85 m.
-    species.limbs[0].density = 2.5;
+    species.limbs.levels[0].density = 2.5;
     let heights: Vec<f32> = side_limbs(&species)
         .iter()
         .map(|limb| limb.origin().y)
@@ -844,8 +837,8 @@ fn nodes_lie_near_their_even_places_inside_the_crown() {
 #[test]
 fn nodes_spread_from_their_start_to_the_tip() {
     let mut species = straight();
-    species.limbs[0].density = 2.5;
-    species.limbs[0].start = 0.5;
+    species.limbs.levels[0].density = 2.5;
+    species.limbs.levels[0].start = 0.5;
     // The stem inside the crown is 1.25 to 5.25 m, so nodes start at 3.25 m: five in its
     // upper 2 m, each within 30% of the 0.4 m gap of 3.45, 3.85, 4.25, 4.65 and 5.05 m.
     let heights: Vec<f32> = side_limbs(&species)
@@ -875,8 +868,8 @@ fn node_places_keep_their_ends_and_order() {
 #[test]
 fn limbs_take_their_share_of_the_parent_where_they_leave() {
     let mut species = straight();
-    species.limbs[0].density = 1.0;
-    species.limbs[0].radius = 0.6;
+    species.limbs.levels[0].density = 1.0;
+    species.limbs.levels[0].radius = 0.6;
     let (trunk, taper) = (species.trunk.radius, species.taper);
     let height = species.trunk.height;
     let axes = grow(&species).axes;
@@ -896,7 +889,7 @@ fn limbs_take_their_share_of_the_parent_where_they_leave() {
     assert!((stems[0].radii().1 - trunk_at(tip.y)).abs() < 1e-5);
     assert_eq!(limbs[2].radii().0, stems[0].radii().1);
     // A level's radius thickens that level and nothing else.
-    species.limbs[0].radius = 1.0;
+    species.limbs.levels[0].radius = 1.0;
     assert_eq!(grow(&species).axes[0].rings, stems[0].rings);
 }
 
@@ -925,7 +918,7 @@ fn a_tube_is_drawn_at_its_rings_radii() {
 #[test]
 fn a_limb_carries_its_parent_on_from_its_last_node() {
     let mut species = straight();
-    species.limb_levels = 2;
+    species.limbs.shown = 2;
     let axes = grow(&species).axes;
     let sides = side_limbs(&species);
     let carriers = limbs_of(&species, AxisKind::CarryOn);
@@ -951,7 +944,7 @@ fn a_limb_carries_its_parent_on_from_its_last_node() {
 /// plane turned by `roll` in degrees.
 fn forking(copies: i32, roll: f32) -> Species {
     let mut species = straight();
-    let level = &mut species.limbs[0];
+    let level = &mut species.limbs.levels[0];
     level.density = 1.0;
     level.fork.chance = 1.0;
     level.fork.at.center = 0.5;
@@ -1021,7 +1014,7 @@ fn a_forked_limb_is_carried_on_by_its_copies_alone() {
     assert_eq!(leafy, tips);
     // Carried on are the trunk and each unforked first-level limb bearing limbs, but no
     // forked one.
-    species.limb_levels = 2;
+    species.limbs.shown = 2;
     let axes = grow(&species).axes;
     let bearing = |forked| {
         (axes[1..].iter())
@@ -1041,7 +1034,7 @@ fn a_forked_limb_is_carried_on_by_its_copies_alone() {
 #[test]
 fn a_limb_carrying_another_on_is_one_tube_with_it() {
     let mut species = straight();
-    species.limbs[0].density = 1.0;
+    species.limbs.levels[0].density = 1.0;
     // The trunk's one segment stitches its six sides to the four of the limb carrying it on, which
     // has one segment of four quads and a cap; two straight limbs of four quads and a cap.
     let bark = plant(&species).bark;
@@ -1099,10 +1092,7 @@ fn a_chain_shares_its_joins() {
 
 #[test]
 fn thin_limbs_are_drawn_as_wide_as_the_detail_threshold() {
-    let mut species = Species {
-        limb_levels: 3,
-        ..regular()
-    };
+    let mut species = shown(3, regular());
     species.trunk.lean = 0.0;
     let thick = Species {
         detail: 0.1,
@@ -1134,7 +1124,7 @@ fn thin_limbs_are_drawn_as_wide_as_the_detail_threshold() {
 fn nodes_are_counted_in_crown_radii() {
     let mut species = straight();
     // The stem inside the crown is 4 m, two crown radii, then four.
-    species.limbs[0].density = 1.0;
+    species.limbs.levels[0].density = 1.0;
     assert_eq!(side_limbs(&species).len(), 2);
     species.crown.radius = 1.0;
     assert_eq!(side_limbs(&species).len(), 4);
@@ -1148,8 +1138,8 @@ fn fractional_counts_average_out_over_seeds() {
             .map(|seed| {
                 let mut species = straight();
                 species.seed = Seed(seed);
-                species.limbs[0].density = density;
-                species.limbs[0].per_node = per_node;
+                species.limbs.levels[0].density = density;
+                species.limbs.levels[0].per_node = per_node;
                 side_limbs(&species).len()
             })
             .collect()
@@ -1176,8 +1166,7 @@ fn winding_faces_the_normals() {
     for lean in [0.0, 45.0, 90.0] {
         let species = Species {
             trunk: trunk_with(5, lean),
-            limb_levels: 3,
-            ..Species::default()
+            ..shown(3, Species::default())
         };
         let grown = plant(&species);
         assert!(grown.leaves.triangles() > 0);
@@ -1207,10 +1196,7 @@ const TIP: usize = 10;
 #[test]
 fn a_card_at_every_branch_end() {
     // Two levels, whose twigs kink near their tips.
-    let mut species = Species {
-        limb_levels: 2,
-        ..Species::default()
-    };
+    let mut species = shown(2, Species::default());
     let leaves = plant(&species).leaves;
     let cards: Vec<&[Vec3]> = leaves.positions.chunks(CARD_CORNERS).collect();
     let ends: Vec<Axis> = (limbs(&species).into_iter())
@@ -1252,8 +1238,7 @@ fn cards_lie_along_their_twigs_facing_up() {
             tip_leaves,
             ..Ornaments::default()
         },
-        limb_levels: 2,
-        ..regular()
+        ..shown(2, regular())
     };
     let limbs = limbs(&species);
     let twigs: Vec<&Axis> = limbs.iter().filter(|limb| limb.scions.is_empty()).collect();
@@ -1397,14 +1382,11 @@ fn cards_fold_at_the_midrib_and_across_the_middle() {
 #[test]
 fn leaves_grow_on_every_limb_bearing_none() {
     // A second level with no nodes leaves the first bearing the leaves, as if it were the last.
-    let mut species = Species {
-        limb_levels: 2,
-        ..Species::default()
-    };
-    species.limbs[1].density = 0.0;
+    let mut species = shown(2, Species::default());
+    species.limbs.levels[1].density = 0.0;
     let leaves = |species: &Species| plant(species).leaves.positions;
     let bare_second = leaves(&species);
-    species.limb_levels = 1;
+    species.limbs.shown = 1;
     assert!(!bare_second.is_empty());
     assert_eq!(bare_second, leaves(&species));
 }

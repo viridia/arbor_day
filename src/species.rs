@@ -6,7 +6,7 @@ use std::ops::RangeInclusive;
 
 use crate::{
     fuzzy::{Distribution, Fuzzy},
-    properties::{Caption, ControlGroup, Precision, ShownCount, Spinbox, ValueRange},
+    properties::{Caption, ControlGroup, Flatten, Precision, ShownCount, Spinbox, ValueRange},
     random::Seed,
 };
 
@@ -49,23 +49,10 @@ pub struct Species {
     pub trunk: Trunk,
     #[reflect(@Caption("Crown"))]
     pub crown: Crown,
-    /// How many of the limb levels grow, from the first. The rest keep their parameters, so a
-    /// level hidden and shown again comes back as it was.
-    #[reflect(@ValueRange::<i32>(1..=MAX_LIMB_LEVELS as i32))]
-    pub limb_levels: i32,
-    /// Each level grows on the limbs of the one before it, the first on the trunk.
-    #[reflect(@Caption("Limbs"), @ShownCount("limb_levels"))]
-    pub limbs: [LimbLevel; MAX_LIMB_LEVELS],
+    #[reflect(@Flatten)]
+    pub limbs: LimbLevels,
     #[reflect(@Caption("Foliage"))]
     pub ornaments: Ornaments,
-}
-
-impl Species {
-    /// The levels that grow.
-    pub fn grown_levels(&self) -> &[LimbLevel] {
-        let count = (self.limb_levels.max(1) as usize).min(MAX_LIMB_LEVELS);
-        &self.limbs[..count]
-    }
 }
 
 impl Default for Species {
@@ -77,8 +64,36 @@ impl Default for Species {
             taper: 0.6,
             trunk: Trunk::default(),
             crown: Crown::default(),
-            limb_levels: 1,
-            limbs: [
+            limbs: LimbLevels::default(),
+            ornaments: Ornaments::default(),
+        }
+    }
+}
+
+/// The limb levels, each growing on the limbs of the one before it, the first on the trunk (D15).
+/// All three are kept, so a level hidden and shown again comes back as it was.
+#[derive(Reflect, Clone, PartialEq)]
+pub struct LimbLevels {
+    /// How many of the levels grow, from the first.
+    #[reflect(@ValueRange::<i32>(1..=MAX_LIMB_LEVELS as i32))]
+    pub shown: i32,
+    #[reflect(@Caption("Limbs"), @ShownCount("shown"))]
+    pub levels: [LimbLevel; MAX_LIMB_LEVELS],
+}
+
+impl LimbLevels {
+    /// The levels that grow.
+    pub fn grown(&self) -> &[LimbLevel] {
+        let count = (self.shown.max(1) as usize).min(MAX_LIMB_LEVELS);
+        &self.levels[..count]
+    }
+}
+
+impl Default for LimbLevels {
+    fn default() -> Self {
+        Self {
+            shown: 1,
+            levels: [
                 LimbLevel::default(),
                 LimbLevel {
                     density: 3.5,
@@ -113,7 +128,6 @@ impl Default for Species {
                     ..LimbLevel::default()
                 },
             ],
-            ornaments: Ornaments::default(),
         }
     }
 }

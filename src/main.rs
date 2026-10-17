@@ -267,7 +267,7 @@ impl ImmediateAttach<CapsPanel> for ParamPanel {
                     .level_limbs
                     .iter()
                     .enumerate()
-                    .map(|(level, count)| (format!("limbs[{level}]"), count.to_string()))
+                    .map(|(level, count)| (format!("levels[{level}]"), count.to_string()))
                     .collect()
             })
             .unwrap_or_default();

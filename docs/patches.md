@@ -236,7 +236,7 @@ Levels grow in turn: a level's frame and operators, then its scions' level.
   function (C82) where it is on. The property editor gains a group shown while its `Toggle`
   is on and listed in the add menu while off. C10 serializes them; so settle this before C10.
 - Levels stay D15's array of three and its count of those shown: a level's Scions are on while
-  the count reaches past it, so paths stay `limbs[1].angle` and only D15's panel changes.
+  the count reaches past it, so paths stay `limbs.levels[1].angle` and only D15's panel changes.
 
 The crown is fixed at the head, the plant's, not a level's. At the foot is a second stack, the
 **ornaments** (X42): what is placed on the grown skeleton without changing it, so its order
@@ -311,7 +311,7 @@ settings. The default species, abridged, angles in radians:
   patches' steps (X22) need anyway, so it waits for them.
 
 C10 need not wait for stacks. Each level's fields are grouped into its operators' structs, every
-one always on (`limbs[0].bend.toward`, `limbs[0].fork.chance`, C96), each shown as a heading in
+one always on (`limbs.levels[0].bend.toward`, `limbs.levels[0].fork.chance`, C96), each shown as a heading in
 the level's subpane. C10's file then has the stacks file's shape with every operator written, and
 when stacks wrap the structs in `Toggle`, such a file reads as every operator on and grows as
 before; stacks change no file.

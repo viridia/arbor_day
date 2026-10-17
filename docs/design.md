@@ -89,7 +89,9 @@ attribute gathers a struct's rows under a bold heading where its first field is 
 a subpane of its own at the panel's top level; a nested struct is shown the same way, a subpane at
 the top level and a heading over its rows in a subpane, so panes never nest boxes. Its rows sit in
 a node named after the field, so their paths stay apart from the outer struct's
-(`limbs[0]/fork/angle`). An array marked `ShownCount` shows its first items, the count naming a field; − and + on the
+(`levels[0]/fork/angle`). A struct field marked `Flatten` shows its fields' rows in place of its
+own, with no node of its own, since Bevy UI has no `display: contents` and the panel's gaps differ
+from a subpane's. An array marked `ShownCount` shows its first items, the count naming a field; − and + on the
 last shown item's header hide it or show the next, and a hidden item keeps its values. Each limb
 level's header shows its count, "Limbs 1 (8)".
 
@@ -115,8 +117,9 @@ back with `set_if_neq`, and any change rebuilds the whole plant (`src/plant.rs`)
 the species it was grown from as a component (`GrownFrom`) and figures about the result
 (`PlantStats`), which plans read.
 
-Limb levels are a fixed array of three and a count of those shown, 1 to 3 (`limb_levels`); only
-the shown levels grow.
+Limb levels are `LimbLevels`: a fixed array of three and a count of those shown, 1 to 3
+(`limbs.shown`), each depth's defaults in its `Default`; only the shown levels grow (`grown`). The
+panel shows it flattened, its levels beside the other subpanes.
 
 ### 2.2 Varied values
 

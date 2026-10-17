@@ -83,7 +83,7 @@ def run(driver):
     driver.expect("Plant", GROWN_FROM, 1, at="trunk.stems")
     # Editing the species rebuilds the plant: four or five nodes on the trunk's 1.2 crown radii
     # inside the crown, and the limb carrying it on.
-    set_number(driver, "limbs[0]/density", "4")
+    set_number(driver, "levels[0]/density", "4")
     driver.expect("Plant", STATS, {"limbs": Between(5, 6)})
     driver.screenshot("four_nodes")
     # The camera does not follow the subject: a taller tree grows out of the frame (compare the

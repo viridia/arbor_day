@@ -51,7 +51,7 @@ pub fn plant(species: &Species) -> Grown {
     let skeleton = grow(species);
     let axes = &skeleton.axes;
     let min_radius = species.detail * 0.5;
-    let levels = species.grown_levels();
+    let levels = species.limbs.grown();
     let sides_of = |axis: &Axis| {
         let sides = match axis.level {
             0 => species.trunk.sides,

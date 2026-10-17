@@ -73,6 +73,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C85   | One tube along a carry-on chain (TD3.9, D30): a stem or limb drawn with the limbs carrying it on, sharing each join's ring, and a stitch of N + M triangles where the sides change. Forks split off as C95. |
 | C91   | The stacks file, on paper (`docs/patches.md`, The file): operators that are off left out and read from a template with all off; versions as slots, stream keys by kind; slots, not a list; C10 lands flat after C96 groups fields into operators. |
 | C96   | Operator-shaped levels (`docs/patches.md`, The file): a level's fields as its frame (Arrangement, and Shape with the angle) and its operators' structs, always on: `Bend` (toward, amount), `Wander` (angle), `Fork` (chance, at, copies, angle, roll); the trunk's wander a `Wander`; `Foliage` becomes `Ornaments`, the Leaves switch beside its one slot, `TipLeaves`. A struct nested in a subpane shows as a heading over its rows, in a node named after the field (TD1.5). Fuzzy draws are clamped by the owning struct's limits (`species::limits`). Plans' paths follow (`limbs[0]/fork/chance`, `ornaments.tip_leaves.upright`). Output unchanged. |
+| C10a  | `LimbLevels { shown, levels }` (D15) in place of `limb_levels` and the `limbs` array, each depth's defaults in its `Default`; the generator reads `limbs.grown()`. A `Flatten` attribute shows a struct's rows in place of its own (TD1.5), so the levels stay beside the other subpanes. Paths: `limbs.levels[0].angle` in reflection, `levels[0]/…` in the panel and header notes. Output unchanged. |
 
 ## Next
 
@@ -116,38 +117,35 @@ landed; leaf painting next.
 4. **C10 Species data model**, on C96's levels, its file the one `docs/patches.md` (The file)
    lays out; its groups the layers of the growth model (D11;
    `docs/growth-model.md`, Consequences), correcting seedling where the requirements say.
-   Reflectable types with `Default` for initial values and attributes for the editor, after the
-   fields settle, so saved files are not broken by every change. Serialized
+   Reflectable types with `Default` for initial values and attributes for the editor. Serialized
    by reflection only, no serde derives: TOML in settings (C8) and JSON as the glTF extra, one
    representation that cannot drift. The file records the generator version it was made with
    (X15). A golden test: a species serialized and compared with a JSON file in the repo,
    brought in with `include_str!` rather than quoted inline. The limb levels are written as the
-   panel shows them, a list of the shown levels only: the count and the array (D15) move into a
-   `LimbLevels { shown, levels }` type with `#[reflect(SerializeWithRegistry,
-   DeserializeWithRegistry)]`, which writes the shown levels, each by reflection through the
-   registry, and reads one to three, filling the rest from each depth's defaults (moved from
-   `Species::default` to `LimbLevels::default`). Type data on the type, not a
-   `ReflectSerializerProcessor`, since `bevy_settings` makes its own serializer. The panel shows
-   `LimbLevels` flattened, its levels beside the other subpanes, by an attribute. A hidden level
-   then lasts a session, not a save or a restart. Rejected: the species as a `Vec` of grown
-   levels with hidden ones stashed in the editor, the same in files but a larger change that
-   undoes D15. Seedling's groups for reference: `trunk`; `branch[]`, one per level; the leaf as
-   `leafGroup` (arrangement), `leafShape` and `leafColor`. Reading is the species' own, not
-   reflection's strict default, which fails the whole file on one unknown key: a key this
-   generator retired (C96's Leaves switch, once X42 makes it the slot's on) is read once or
-   dropped, and only an unknown one, from a newer generator, fails with an error naming it
-   (`docs/patches.md`, The file). This goes in the type data on `LimbLevels` and `Ornaments` that
-   writes only the operators that are on. E[4], split when started
+   panel shows them, a list of the shown levels only: `LimbLevels` (C10a) gets
+   `#[reflect(SerializeWithRegistry, DeserializeWithRegistry)]`, which writes the shown levels,
+   each by reflection through the registry, and reads one to three, filling the rest from each
+   depth's defaults. Type data on the type, not a `ReflectSerializerProcessor`, since
+   `bevy_settings` makes its own serializer. A hidden level then lasts a session, not a save or a
+   restart. Rejected: the species as a `Vec` of grown levels with hidden ones stashed in the
+   editor, the same in files but a larger change that undoes D15. Seedling's groups for
+   reference: `trunk`; `branch[]`, one per level; the leaf as `leafGroup` (arrangement),
+   `leafShape` and `leafColor`. Reading is reflection's, strict: a file from before a schema
+   change fails with an error naming the key (D32). Split, C10a landed:
+   - **C10b Writing**: the species to JSON by reflection, `generator: 1`, `LimbLevels` writing
+     the shown levels; the golden test. E[3]
+   - **C10c Reading**: strict, `LimbLevels` filling the levels a file leaves out; a round trip,
+     and a file with an unknown key failing with its name. E[2]
 5. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
    panel, above the Plant group (C33); the file browser is X2. File commands act on the active document, so that tabs (X26)
    need not change them. E[3]
 6. **C8 Working document in settings.** A settings group holding the working species and, once
    set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
    as seedling did. The document's name comes from the file name. Serialized by reflection, as
-   `bevy_settings` does, but each species read through C10's reader: `bevy_settings` ignores
-   unknown keys only at a resource's top level, and below it a field that fails to deserialize is
-   dropped without a word (`load_properties`), so one stale key in a species would silently put
-   the default species in place of the unsaved edits. Stored as a list of open documents holding
+   `bevy_settings` does. A working document from before a schema change is lost (D32), but not
+   silently: `bevy_settings` ignores unknown keys only at a resource's top level, and below it
+   drops a field that fails to deserialize without a word (`load_properties`), so the species is
+   read by C10's strict path and its error logged. Stored as a list of open documents holding
    one, and the active one's index, so several (X26) need no change of format. E[3]
 7. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
     as a JSON extra (C10), written from the generator's output (`generator::plant`), never from
@@ -232,10 +230,12 @@ landed; leaf painting next.
   turns it up toward the light, an upright one having no angle left. Under stacks (X31), two
   operators, Sag and Rise, in place of Bend; before them, judge whether the flat panel takes both
   or sag alone. Changes every plant's limbs. E[3]
-- **C69 A color per limb level**, so the Limbs 1 to 3 subpanes are told apart at a glance: a
-  thin stripe on each level's header or left edge, its color set on the node, since feathers'
-  contextual theming cannot shade a subtree. *Gate:* C33's groups and C77's denser rows still
-  leaving the levels hard to tell apart. E[1]
+- **C69 A color per part of the plant**: a 4 px stripe down the left side of each top-level
+  subpane, a color each for Plant, Trunk, Limbs 1 to 3 and Foliage (the ornaments), running from
+  bark brown to light green, root to leaf, so the levels are told apart at a glance. Its color
+  is set on the node, since feathers' contextual theming cannot shade a subtree. One dimension of
+  color, by part; operators' icons (X31 step 5) take the other, by kind, so the two do not
+  clash. E[1]
 - **C71 Crown softness** (was part of C39): the cards' shading normal blended toward the
   envelope's outward normal by a weight (growth model, Foliage), so the crown shades as one
   mass; built as a weight and judged in the preview before it becomes an option or is fixed
@@ -357,7 +357,11 @@ landed; leaf painting next.
   field's default are different things. What remains (fixes, reordered draws) is re-exported
   deliberately, the earlier export being the record. Under stacks (X31), versioned operators keep
   most changes out of this; what remains is the skeleton, the global parameters and realization.
-  *Gate:* the first species used in Panoply.
+  Reading a file with a key this generator retired wants a policy per unknown field (skip, warn
+  or error), which `bevy_reflect`'s deserializer lacks: its maintainer wants one configurable in
+  the deserializer (Discord, 2026-10), with no date, during reflection's rewrite. Use it if it
+  has landed by the gate; otherwise the species reads its own fields. *Gate:* the first species
+  used in Panoply.
 - **X18** Forms and presets. The tool is for indie developers wanting the common Earth plant
   types (requirements, What it is for), so presets named after those types ("Fir", "Willow",
   "Live oak", "Clump"), each a saved species, are its starting points. Whether forms are needed
@@ -469,7 +473,8 @@ landed; leaf painting next.
      cramped. A pane's header has room for more than a heading: the operator's name, its
      version when not the latest, an icon of its own, tinted by kind to break up the column,
      and the ✕. The icons are the author's to choose, from any openly licensed set in a style
-     matching the HUD's Material Symbols, if each operator has a good one; color by operator then competes with C69's color by level, so one wins.
+     matching the HUD's Material Symbols, if each operator has a good one. The icon's tint is
+     by operator, the pane's stripe (C69) by part, two dimensions that do not compete.
   6. New operators, each a chunk, judged by eye as they change output: angle bias (C55), sag
      and rise (C94), weep (C48), taper per level (X32), size bias.
 

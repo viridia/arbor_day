@@ -9,7 +9,7 @@ BIN = "arbor_day"
 STATS = "arbor_day::plant::PlantStats"
 ENVELOPE = "arbor_day::plant::EnvelopeStats"
 GROWN_FROM = "arbor_day::plant::GrownFrom"
-LIMBS = "Shell/Panel/limbs[0]"
+LIMBS = "Shell/Panel/levels[0]"
 COLOR = "Shell/Panel/bark_color/input"
 
 
@@ -24,14 +24,14 @@ def run(driver):
     driver.present(f"{LIMBS}/reach/shape")  # the immediate-mode panel has built its rows
 
     # Fuzzy numbers: the first limb level's fork angle and reach, both bells. The fork's, since
-    # `limbs[0]/angle` would also match the angles nested under it.
-    driver.expect("Plant", GROWN_FROM, "Bell", at="limbs[0].fork.angle.shape")
-    driver.expect("Plant", GROWN_FROM, "Bell", at="limbs[0].reach.shape")
+    # `levels[0]/angle` would also match the angles nested under it.
+    driver.expect("Plant", GROWN_FROM, "Bell", at="limbs.levels[0].fork.angle.shape")
+    driver.expect("Plant", GROWN_FROM, "Bell", at="limbs.levels[0].reach.shape")
     driver.present(f"{LIMBS}/fork/angle/center/spread_strip/segment0")
     driver.absent(f"{LIMBS}/fork/angle/center/spread_strip/segment1")
     driver.screenshot("fuzzy")
     driver.click(f"{LIMBS}/fork/angle/shape")
-    driver.expect("Plant", GROWN_FROM, "Uniform", at="limbs[0].fork.angle.shape")
+    driver.expect("Plant", GROWN_FROM, "Uniform", at="limbs.levels[0].fork.angle.shape")
     driver.screenshot("fuzzy_toggled")
     # With no spread, the strip is a tick at the center. A click places the cursor rather than
     # selecting, so clear the default (10%) first.
@@ -41,7 +41,7 @@ def run(driver):
         driver.key("Backspace")
     driver.type("0")
     driver.key("Enter")
-    driver.expect("Plant", GROWN_FROM, 0.0, at="limbs[0].reach.spread")
+    driver.expect("Plant", GROWN_FROM, 0.0, at="limbs.levels[0].reach.spread")
     driver.present(f"{LIMBS}/reach/center/spread_strip/segment0")
     driver.screenshot("no_spread")
 
@@ -57,9 +57,9 @@ def run(driver):
     pick(driver, "profile", "Column")
     driver.expect("Envelope", ENVELOPE, {"segments": 360})
     # Any enum of unit variants gets a select, here one in a limb level.
-    driver.expect("Plant", GROWN_FROM, "Around", at="limbs[0].facing")
-    pick(driver, "limbs[0]/facing", "Up")
-    driver.expect("Plant", GROWN_FROM, "Up", at="limbs[0].facing")
+    driver.expect("Plant", GROWN_FROM, "Around", at="limbs.levels[0].facing")
+    pick(driver, "levels[0]/facing", "Up")
+    driver.expect("Plant", GROWN_FROM, "Up", at="limbs.levels[0].facing")
     driver.screenshot("picked_variant")
 
     # The bark's color, under Plant.

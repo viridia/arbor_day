@@ -29,57 +29,57 @@ def set_number(driver, path, text):
 
 def pick_facing(driver, variant):
     """Opens the second level's facing select, picks a variant, and lets the plant rebuild."""
-    driver.click("Shell/Panel/limbs[1]/facing/select")
-    driver.click(f"Shell/Panel/limbs[1]/facing/{variant}")
+    driver.click("Shell/Panel/levels[1]/facing/select")
+    driver.click(f"Shell/Panel/levels[1]/facing/{variant}")
     driver.frames(2)
 
 
 def run(driver):
     driver.present("Shell", ready=True)  # wait for the UI scene to finish spawning
-    driver.present("Shell/Panel/limbs[0]/add")  # the immediate-mode panel has built its rows
+    driver.present("Shell/Panel/levels[0]/add")  # the immediate-mode panel has built its rows
     driver.frames(2)
     driver.screenshot("default")
 
-    set_number(driver, "limbs[0]/start", "50")
+    set_number(driver, "levels[0]/start", "50")
     driver.screenshot("start_halfway")
-    set_number(driver, "limbs[0]/start", "0")
+    set_number(driver, "levels[0]/start", "0")
 
-    set_number(driver, "limbs[0]/per_node", "3")
+    set_number(driver, "levels[0]/per_node", "3")
     driver.screenshot("whorled")
-    set_number(driver, "limbs[0]/density", "2")
-    set_number(driver, "limbs[0]/per_node", "1.5")
+    set_number(driver, "levels[0]/density", "2")
+    set_number(driver, "levels[0]/per_node", "1.5")
     driver.screenshot("mixed")
-    set_number(driver, "limbs[0]/density", "8")
-    set_number(driver, "limbs[0]/per_node", "1")
+    set_number(driver, "levels[0]/density", "8")
+    set_number(driver, "levels[0]/per_node", "1")
 
-    set_number(driver, "limbs[0]/wander/angle", "45")
+    set_number(driver, "levels[0]/wander/angle", "45")
     driver.screenshot("most_wander")
-    driver.click("Shell/Panel/limbs[0]/add")
+    driver.click("Shell/Panel/levels[0]/add")
     driver.frames(2)
     driver.screenshot("most_wander_twigs")
-    set_number(driver, "limbs[0]/wander/angle", "10")
+    set_number(driver, "levels[0]/wander/angle", "10")
 
     driver.screenshot("facing_sides")
     for variant in ["Up", "Down", "Around"]:
         pick_facing(driver, variant)
         driver.screenshot(f"facing_{variant.lower()}")
     # The most skew turns each limb up to 90° from where its facing put it.
-    set_number(driver, "limbs[1]/skew", "90")
+    set_number(driver, "levels[1]/skew", "90")
     driver.screenshot("skewed")
-    set_number(driver, "limbs[1]/skew", "20")
+    set_number(driver, "levels[1]/skew", "20")
     pick_facing(driver, "Sides")
 
     # Every first-level limb forks: level, upright, then three ways.
-    set_number(driver, "limbs[0]/fork/chance", "100")
+    set_number(driver, "levels[0]/fork/chance", "100")
     driver.screenshot("forked")
-    set_number(driver, "limbs[0]/fork/roll", "90")
+    set_number(driver, "levels[0]/fork/roll", "90")
     driver.screenshot("forked_upright")
-    set_number(driver, "limbs[0]/fork/roll", "0")
-    set_number(driver, "limbs[0]/fork/copies", "3")
+    set_number(driver, "levels[0]/fork/roll", "0")
+    set_number(driver, "levels[0]/fork/copies", "3")
     driver.screenshot("forked_three")
-    set_number(driver, "limbs[0]/fork/copies", "2")
-    set_number(driver, "limbs[0]/fork/chance", "0")
-    driver.click("Shell/Panel/limbs[1]/remove")
+    set_number(driver, "levels[0]/fork/copies", "2")
+    set_number(driver, "levels[0]/fork/chance", "0")
+    driver.click("Shell/Panel/levels[1]/remove")
     driver.frames(2)
 
     set_number(driver, "trunk/stems", "3")
