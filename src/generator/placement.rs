@@ -57,7 +57,6 @@ pub(super) fn stems(species: &Species) -> Vec<Axis> {
                 lean,
                 heading + TAU * stem as f32 / count as f32,
                 kinks,
-                species.detail,
             );
             taper_rings(&mut rings, trunk.radius, species.taper.clamp(0.0, 1.0));
             Axis::stem(rings, rng)

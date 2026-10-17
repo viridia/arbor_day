@@ -8,6 +8,7 @@ use super::{
     envelope::{ENVELOPE_BISECTIONS, Envelope, inside_envelope},
     foliage::{AXIAL_FOLD, clusters},
     fork::fork,
+    hint::hint,
     placement::{place_scions, stems},
     trace::{TRACE_STEP, kink_spacing, trace_scions},
 };
@@ -28,7 +29,7 @@ pub(super) const CARRY_ON_STREAM: u64 = u64::MAX - 4;
 /// A limb's fork: whether it forks, where and how widely, and its copies.
 pub(super) const FORK_STREAM: u64 = u64::MAX - 5;
 
-/// A ring along an axis, as meshed.
+/// A ring along an axis: one at every step of its trace, until its level is hinted (`hint`).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Ring {
     pub center: Vec3,
@@ -151,13 +152,13 @@ impl Axis {
         self.rings[self.rings.len() - 1].at
     }
 
-    /// The axis at `t` (0 to 1) along it as meshed (`frame_at`).
+    /// The axis at `t` (0 to 1) along it (`frame_at`).
     pub fn frame(&self, t: f32) -> Frame {
         self.frame_at(t.clamp(0.0, 1.0) * self.length())
     }
 
-    /// The axis `at` metres along it as meshed: on the straight chord between ring centers, so
-    /// scions start inside the bark, with that chord's direction.
+    /// The axis `at` metres along it: on the straight chord between ring centers, with that
+    /// chord's direction, so once hinted, scions start inside the bark as meshed.
     pub fn frame_at(&self, at: f32) -> Frame {
         let rings = &self.rings;
         let next = rings
@@ -275,8 +276,6 @@ pub(super) struct Level<'a> {
     /// How far back from its tip a limb runs straight, under its tip's card (D17), whether or not
     /// leaves grow, so turning them off leaves the branches alone.
     pub straight: f32,
-    /// The bark's detail threshold, to which rings are kept (D17).
-    pub tolerance: f32,
 }
 
 impl<'a> Level<'a> {
@@ -288,21 +287,22 @@ impl<'a> Level<'a> {
             taper: species.taper.clamp(0.0, 1.0),
             spacing: kink_spacing(&envelope),
             straight: AXIAL_FOLD * species.foliage.size * envelope.radius.max(0.01),
-            tolerance: species.detail,
             envelope,
         }
     }
 }
 
-/// The stems, their limbs level by level, each level on the axes of the one before, and the leaf
-/// clusters (`clusters`). Each level grows in stages, in a fixed order: its laterals are placed
-/// (`place_scions`) and traced (`trace_scions`), one more limb carries each parent bearing them on
-/// (`carry_on`), the level is tapered (`taper`), and its limbs may fork (`fork`).
+/// The stems, hinted (`hint`), their limbs level by level, each level on the axes of the one
+/// before, and the leaf clusters (`clusters`). Each level grows in stages, in a fixed order: its
+/// laterals are placed (`place_scions`) and traced (`trace_scions`), one more limb carries each
+/// parent bearing them on (`carry_on`), the level is tapered (`taper`), its limbs may fork
+/// (`fork`), and it is hinted.
 pub(super) fn grow(species: &Species) -> Skeleton {
     let mut skeleton = Skeleton {
         axes: stems(species),
         cards: Vec::new(),
     };
+    hint(0, species.detail, &mut skeleton);
     for number in 1..=species.grown_levels().len() {
         let level = Level::new(species, number);
         place_scions(&level, &mut skeleton);
@@ -310,6 +310,7 @@ pub(super) fn grow(species: &Species) -> Skeleton {
         carry_on(&level, &mut skeleton);
         taper(&level, &mut skeleton);
         fork(&level, &mut skeleton);
+        hint(number, species.detail, &mut skeleton);
     }
     skeleton.cards = clusters(species, &skeleton.axes);
     skeleton

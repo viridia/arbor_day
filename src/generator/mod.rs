@@ -5,6 +5,7 @@ mod carry_on;
 mod envelope;
 mod foliage;
 mod fork;
+mod hint;
 mod mesh;
 mod placement;
 mod skeleton;

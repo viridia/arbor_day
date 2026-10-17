@@ -29,8 +29,9 @@ per plant or once per element (an axis, a node), never per ring or vertex.
    row as a species field does now (D9's attributes, read from the patch rather than the type).
 2. **Operators**: a pipeline over the abstract plant (below), each input a number or a formula.
 3. **Realization**: a Rust library turning the finished abstract plant into bark and cards:
-   hinting (D17), the drawn minimum radius (D22), tubes, cards. Its settings are the game's, not
-   the form's (the detail threshold, sides per level), so it sits outside the patch.
+   the drawn minimum radius (D22), tubes, cards. Its settings are the game's, not the form's (the
+   detail threshold, sides per level), so it sits outside the patch. Hinting (D17) shares the
+   detail threshold but runs at the end of each level, since the next level is placed on it.
 
 ## The abstract plant
 
@@ -88,7 +89,8 @@ pub struct Card {
   The start frame is the parent's frame at the attachment.
 - A radius on every vertex replaces the generator's base and top radii and the stretch kept at
   the base radius: the taper and the pipe model (D22) each write radii.
-- The skeleton keeps the full trace; hinting (D17) simplifies it when meshed.
+- An axis keeps the full trace through its level's operators; hinting (D17) simplifies it as the
+  level's last stage, before the next level is placed, so scions start on the bark as meshed.
 - Whether an axis bears scions, or leaves (`Card`s) at its tip, follows from its `scions`.
 - Size does not pass from parent to scion. A scion near its parent's tip is already shorter, its
   reach a share of the distance to the envelope, which narrows toward the top of most profiles,
@@ -298,7 +300,7 @@ second form is a second file.
 
 1. The skeleton, with the panel and species unchanged: golden meshes (C78), one axis type
    (C79), the skeleton meshed after growing (C80), a radius per vertex (C81), operators as
-   functions (C82); then, changing output, hinting at meshing (C83) and wander as a
+   functions (C82); then, changing output, hinting as each level's last stage (C83) and wander as a
    displacement (C84). Useful alone: it is most of X1.
 2. Stacks (X31): the operators on the panel, today's per-level fields split between the frames
    and default operators, so the default species grows as before.

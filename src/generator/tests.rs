@@ -2,21 +2,24 @@ use std::f32::consts::{FRAC_PI_2, TAU};
 
 use bevy::math::{Vec3, Vec3Swizzles};
 
-use super::{envelope::*, foliage::*, mesh::*, placement::*, skeleton::*, trace::*};
+use super::{envelope::*, foliage::*, hint::*, mesh::*, placement::*, skeleton::*, trace::*};
 use crate::{
     fuzzy::{Distribution, Fuzzy},
     random::{Rng, Seed},
     species::{Facing, Foliage, Profile, Species, Trunk},
 };
 
-/// A lone 5 m stem's rings, standing straight up and leaning toward +X, with no wander, kept
+/// A lone 5 m stem's rings, standing straight up and leaning toward +X, with no wander, hinted
 /// to `tolerance`.
 fn lone_stem(lean_degrees: f32, tolerance: f32) -> Vec<Ring> {
     let kinks = Kinks::new(1.0, 0.0, Rng::stream(0, "test"));
-    stem_rings(5.0, 0.0, lean_degrees.to_radians(), 0.0, kinks, tolerance)
+    hint_rings(
+        &stem_rings(5.0, 0.0, lean_degrees.to_radians(), 0.0, kinks),
+        tolerance,
+    )
 }
 
-/// `lone_stem`'s mesh, kept to 2 cm, narrowing from 20 cm to 10 cm.
+/// `lone_stem`'s mesh, hinted to 2 cm, narrowing from 20 cm to 10 cm.
 fn stem_mesh(sides: u32, lean_degrees: f32) -> Geometry {
     let mut rings = lone_stem(lean_degrees, 0.02);
     taper_rings(&mut rings, 0.2, 0.5);
@@ -46,6 +49,15 @@ fn rings_follow_visible_error() {
         let before_tip = rings[rings.len() - 2].at;
         assert!(before_tip < 5.0 - TRACE_STEP, "{before_tip}");
     }
+    // Traced, a stem keeps a ring at every step; grown, it keeps those hinting does.
+    let mut species = Species::default();
+    species.trunk.wander = 45.0_f32.to_radians();
+    let traced = &stems(&species)[0];
+    for pair in traced.rings.windows(2) {
+        assert!(pair[1].at - pair[0].at <= TRACE_STEP + 1e-5);
+    }
+    let grown = &grow(&species).axes[0];
+    assert!(grown.rings.len() < traced.rings.len() / 4);
 }
 
 #[test]
@@ -483,12 +495,8 @@ fn limbs_kink_at_one_spacing_on_every_level() {
     let limbs = limbs(&species);
     for limb in &limbs {
         let kinks = (limb.length() / shortest).floor() as usize;
-        assert!(
-            limb.rings.len() - 2 <= kinks,
-            "{} {}",
-            limb.rings.len(),
-            limb.length()
-        );
+        let rings = limb.rings.len();
+        assert!(rings - 2 <= kinks, "{rings} {}", limb.length());
     }
     assert!(
         limbs

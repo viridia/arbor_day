@@ -143,14 +143,14 @@ A `Skeleton` is a list of axes and a list of cards (`skeleton.rs`). An `Axis` is
 order, the trunk or a limb: its level (0 for a stem, 1 to 3 for the limb levels), its kind (stem,
 lateral, carry-on, fork copy), its parent and the distance along it where it leaves, its rings,
 its reach, its stream and its scions, by index. An axis bearing no scions bears leaves. A `Ring` is
-a point on an axis as meshed: center, tangent, side (carried along without twisting, setting the
+a point on an axis, one at every trace step until the axis is hinted (TD3.4): center, tangent, side (carried along without twisting, setting the
 ring's roll and its children's azimuth 0), distance along the axis and radius. A `Card` is a leaf
 cluster: an axis and a distance along it.
 
-`grow` makes the stems (TD3.2), then grows each level in stages over a `Level`, which holds the
-level's parameters and what every stage reads: place its laterals (TD3.3), trace them (TD3.4),
-carry each parent bearing them on (TD3.6), taper (TD3.5), and fork (TD3.7). Then it places the leaf
-clusters (TD3.8).
+`grow` makes the stems (TD3.2) and hints them (TD3.4), then grows each level in stages over a
+`Level`, which holds the level's parameters and what every stage reads: place its laterals (TD3.3),
+trace them (TD3.4), carry each parent bearing them on (TD3.6), taper (TD3.5), fork (TD3.7), and
+hint. Then it places the leaf clusters (TD3.8).
 
 ### 3.2 Stems
 
@@ -194,10 +194,12 @@ about a random axis, held as the course turns. No kink falls in the last stretch
 its last stretch runs straight wherever it ends. A traced limb no longer than it is thick at its
 base is left out.
 
-The traced points are simplified by Ramer, Douglas and Peucker to the bark's detail threshold,
-keeping a point only where it lies further than that from the chord between the points kept either
-side; a point less than a trace step before the tip goes. Each kept ring faces halfway between the
-chords meeting there; the start ring stays as given, and the tip heads as the trace did.
+A traced axis keeps a ring at every step through its level's stages. The last stage, hinting
+(`hint.rs`), simplifies them by Ramer, Douglas and Peucker to the bark's detail threshold, keeping
+a point only where it lies further than that from the chord between the points kept either side; a
+point less than a trace step before the tip goes. Each kept ring faces halfway between the chords
+meeting there; the start ring stays as given, and the tip heads as the trace did. The next level is
+placed on the rings kept, so its laterals start inside the bark as meshed.
 
 ### 3.5 Taper
 

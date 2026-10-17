@@ -1,9 +1,8 @@
 //! Tracing (D17). To trace an axis is to walk it from its start ring in steps of `TRACE_STEP`,
 //! recording a point at each, along a course that a limb turns toward its level's bend (a stem's
 //! is an arc, from its splay and lean), kinking about that course by its wander (`Kinks`). A limb's
-//! walk stops at its reach, or before a step that would leave the envelope. The points are then
-//! kept as rings only where the eye would miss them, to the bark's detail threshold (hinting,
-//! `Trace::finish`).
+//! walk stops at its reach, or before a step that would leave the envelope. Every point is kept as
+//! a ring, so the level's later stages work on the path as traced, until it is hinted (`hint`).
 
 use std::f32::consts::TAU;
 
@@ -57,14 +56,13 @@ pub(super) fn trace(level: &Level, axis: &mut Axis) -> bool {
         axis.reach,
         kinks,
         level.straight,
-        level.tolerance,
     );
     axis.rings.len() >= 2 && axis.length() > start.radius
 }
 
-/// A limb's rings, traced from `start` for up to `length` and kept to `tolerance`. It does not
-/// kink in its last `straight`, where a tip's card lies (`foliage`); one that stops early at the
-/// envelope is traced again to there, so its last stretch is straight wherever it ends.
+/// A limb's rings, traced from `start` for up to `length`. It does not kink in its last
+/// `straight`, where a tip's card lies (`foliage`); one that stops early at the envelope is traced
+/// again to there, so its last stretch is straight wherever it ends.
 fn grow_limb(
     envelope: &Envelope,
     params: &LimbLevel,
@@ -72,7 +70,6 @@ fn grow_limb(
     length: f32,
     kinks: Kinks,
     straight: f32,
-    tolerance: f32,
 ) -> Vec<Ring> {
     let trace = |length: f32, kinks: Kinks| {
         trace_limb(envelope, params, start, length, length - straight, kinks)
@@ -81,7 +78,7 @@ fn grow_limb(
     if let Some(at) = stopped {
         traced = trace(at, kinks).0;
     }
-    traced.finish(tolerance)
+    traced.finish()
 }
 
 /// A limb traced as `grow_limb` describes, with no kinks from `end` on, and where it left the
@@ -146,17 +143,15 @@ fn turn_toward(from: Vec3, toward: Vec3, angle: f32) -> Vec3 {
     Quat::from_axis_angle(axis, between.min(angle)) * from
 }
 
-/// A stem's rings, kept to `tolerance` (`Trace::finish`). Its course is an arc (`arc`) turned
-/// about the vertical to `heading`, which lies in one vertical plane, so a side square to it in
-/// that plane never twists: azimuth 0 is toward the heading. The stem kinks about its course as a
-/// limb does (`Kinks`).
+/// A stem's rings (`Trace::finish`). Its course is an arc (`arc`) turned about the vertical to
+/// `heading`, which lies in one vertical plane, so a side square to it in that plane never twists:
+/// azimuth 0 is toward the heading. The stem kinks about its course as a limb does (`Kinks`).
 pub(super) fn stem_rings(
     length: f32,
     splay: f32,
     lean: f32,
     heading: f32,
     mut kinks: Kinks,
-    tolerance: f32,
 ) -> Vec<Ring> {
     let turn = Quat::from_rotation_y(heading);
     let course_at = |at: f32| {
@@ -180,7 +175,7 @@ pub(super) fn stem_rings(
         tangent = kinks.direction(at, length, course, course_side);
         trace.push(center, at, tangent);
     }
-    trace.finish(tolerance)
+    trace.finish()
 }
 
 /// The distance between kinks on any limb or stem: `KINK_SPACING` crown radii, so a scaled
@@ -271,25 +266,15 @@ impl Trace {
         self.tip_tangent = tangent;
     }
 
-    /// The tube's rings: the points kept by `simplify` at `tolerance`, less any within a step of
-    /// the tip (`end_at`). The start ring is kept as it is, and the tip heads as the tube did; each
-    /// ring between faces halfway between the chords meeting there, so the tube does not pinch,
-    /// with its side carried along from the start's without twisting.
-    fn finish(self, tolerance: f32) -> Vec<Ring> {
-        let centers: Vec<Vec3> = self.points.iter().map(|(center, _)| *center).collect();
-        let mut kept = simplify(&centers, tolerance);
-        let tip = self.points.len() - 1;
-        let tip_at = self.points[tip].1;
-        kept.retain(|&i| i == 0 || i == tip || self.points[i].1 < tip_at - TRACE_STEP);
+    /// The tube's rings, one at every point. The start ring is kept as it is, and the tip heads as
+    /// the tube did; each ring between faces `halfway`, with its side carried along from the
+    /// start's without twisting.
+    fn finish(self) -> Vec<Ring> {
         let mut rings = vec![self.start];
-        for (k, &i) in kept.iter().enumerate().skip(1) {
-            let (center, at) = self.points[i];
+        for (i, &(center, at)) in self.points.iter().enumerate().skip(1) {
             let previous = rings[rings.len() - 1];
-            let into = (center - previous.center).normalize_or(previous.tangent);
-            let tangent = match kept.get(k + 1) {
-                Some(&next) => {
-                    (into + (self.points[next].0 - center).normalize_or(into)).normalize_or(into)
-                }
+            let tangent = match self.points.get(i + 1) {
+                Some(&(next, _)) => halfway(previous.center, center, next, previous.tangent),
                 None => self.tip_tangent,
             };
             let side = (Quat::from_rotation_arc(previous.tangent, tangent) * previous.side)
@@ -307,39 +292,11 @@ impl Trace {
     }
 }
 
-/// The indices of the points of a polyline that Ramer, Douglas and Peucker keep at `tolerance`:
-/// both ends, and between two kept points the one furthest from the chord joining them, if it lies
-/// further than `tolerance`, and so on within each half. What is left out lies within `tolerance`
-/// of the polyline kept.
-pub(super) fn simplify(points: &[Vec3], tolerance: f32) -> Vec<usize> {
-    let mut keep = vec![false; points.len()];
-    keep[0] = true;
-    keep[points.len() - 1] = true;
-    let mut spans = vec![(0, points.len() - 1)];
-    while let Some((a, b)) = spans.pop() {
-        let furthest = (a + 1..b)
-            .map(|i| (i, distance_to_segment(points[i], points[a], points[b])))
-            .max_by(|x, y| x.1.total_cmp(&y.1));
-        if let Some((i, distance)) = furthest
-            && distance > tolerance
-        {
-            keep[i] = true;
-            spans.push((a, i));
-            spans.push((i, b));
-        }
-    }
-    (0..points.len()).filter(|&i| keep[i]).collect()
-}
-
-/// How far `point` lies from the segment from `a` to `b`.
-pub(super) fn distance_to_segment(point: Vec3, a: Vec3, b: Vec3) -> f32 {
-    let along = b - a;
-    let t = if along.length_squared() > 0.0 {
-        ((point - a).dot(along) / along.length_squared()).clamp(0.0, 1.0)
-    } else {
-        0.0
-    };
-    (a + along * t - point).length()
+/// The direction at `center` halfway between the chords from `before` and to `after`, so a tube
+/// does not pinch there; `fallback` where the chord in has no length.
+pub(super) fn halfway(before: Vec3, center: Vec3, after: Vec3, fallback: Vec3) -> Vec3 {
+    let into = (center - before).normalize_or(fallback);
+    (into + (after - center).normalize_or(into)).normalize_or(into)
 }
 
 /// Ends a tube's rings at `tip`, a ring along it. Rings past it go, and so do rings less than a
