@@ -347,3 +347,15 @@ document is known not to survive it. Reading stays strict, so a stale file fails
 naming the key rather than loading wrong (C10). Compatibility starts at the gate, as X15 and
 `docs/patches.md` (The file) lay out. **Reversing it** means a migration for every schema change
 from C10 on, for files that are only test artifacts.
+
+### D33 — Operators are added on purpose; the default is bare
+
+A new species, and a limb level added to one, starts with no operator on: no lean, sag, rise,
+wander or fork. An author adds each behaviour a species needs, so a species with straight limbs
+carries no rows or concepts for bending ones, and every behaviour in a species was chosen rather
+than inherited. Tip leaves are the exception, on in the default once they become an ornament
+slot like any other (C103), since leaves are what make a plant read as alive; a bare one is a dead
+tree, which the tool also makes, by taking them off. Anything with a value
+that does nothing is an operator, however common; the frame keeps only what has no such value,
+as reach and radius, which no species does without. **Reversing it** gives every species the
+default's behaviours to undo, and the panel the rows for them.

@@ -4,8 +4,8 @@ the plant. A section that edits the first level puts it back, so later shots com
 default.
 - node start: the first level's nodes in the upper half of the trunk inside the crown;
 - limbs per node and density: whorls, and a mix of one and two limbs to a node;
-- wander: the first level's limbs zigzag about their course at the most wander, 45°, and the
-  second level's shorter twigs kink once or not at all;
+- wander, turned on for the shots: the first level's limbs zigzag about their course at the most
+  wander, 45°, and the second level's shorter twigs kink once or not at all;
 - facing: the second level's limbs to the sides (the default), up, down and around, then skewed;
 - forks: every first-level limb forking, the Y level, then upright, then three ways, the second
   level to the sides, so the level Y shows whether twigs crowd its crotch (ledger X33);
@@ -62,12 +62,16 @@ def run(driver):
     set_number(driver, "levels[0]/density", "8")
     set_number(driver, "levels[0]/per_node", "1")
 
+    driver.set_resource(SPECIES, "On", at="limbs.levels[0].wander.state")
     set_number(driver, "levels[0]/wander/angle", "45")
     driver.screenshot("most_wander")
     add_level(driver, 0)
+    driver.set_resource(SPECIES, "On", at="limbs.levels[1].wander.state")
     driver.frames(2)
     driver.screenshot("most_wander_twigs")
     set_number(driver, "levels[0]/wander/angle", "10")
+    driver.set_resource(SPECIES, "Off", at="limbs.levels[0].wander.state")
+    driver.set_resource(SPECIES, "Off", at="limbs.levels[1].wander.state")
 
     driver.screenshot("facing_sides")
     for variant in ["Up", "Down", "Around"]:

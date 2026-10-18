@@ -27,7 +27,7 @@ def run(driver):
     # A card at each of the ten or eleven limbs' tips, or up to three where it is steep, eight
     # triangles each.
     leaves = {"leafy_tips": Between(10, 11), "cards": Between(10, 33)}
-    driver.expect("Plant", STATS, {**leaves, "triangles": Between(300, 2000)})
+    driver.expect("Plant", STATS, {**leaves, "triangles": Between(150, 2000)})
     driver.screenshot("default_folds")
 
     set_number(driver, "tip_leaves/lateral_droop", "45")

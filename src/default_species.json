@@ -14,11 +14,7 @@
   "trunk": {
     "height": 5.0,
     "radius": 0.2,
-    "sides": 6,
-    "lean": 0.2617994,
-    "wander": {
-      "angle": 0.13962634
-    }
+    "sides": 6
   },
   "crown": {
     "profile": "Ellipsoid",
@@ -44,13 +40,7 @@
         "shape": "Bell"
       },
       "radius": 0.5,
-      "sides": 4,
-      "sag": {
-        "amount": 0.2617994
-      },
-      "wander": {
-        "angle": 0.17453292
-      }
+      "sides": 4
     }
   ],
   "ornaments": {

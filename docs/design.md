@@ -212,7 +212,7 @@ trace them (TD3.4), carry each parent bearing them on (TD3.6), wander (TD3.4), t
 ### 3.2 Stems
 
 `stems` makes the trunk from the origin, the trunk's height long along its axis. It leaves the
-ground upright and turns by the lean as it rises, but never past level, toward a compass heading
+ground upright and, with Lean on, turns by its angle as it rises, but never past level, toward a compass heading
 drawn from the `trunk` stream. Its course is an arc in one vertical plane, so its side never
 twists, and it wanders about the course as limbs do (TD3.4), its tip on the course. With the
 trunk's Fork on, it forks as a limb does (TD3.7), but each copy is a stem: an arc from the fork,

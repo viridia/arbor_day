@@ -8,7 +8,7 @@ use super::{
 use crate::{
     fuzzy::{Distribution, Fuzzy},
     random::Seed,
-    species::{Facing, Ornaments, Profile, Species, TipLeaves, Trunk, Upright, Wander},
+    species::{Facing, Lean, Ornaments, Sag, Profile, Species, TipLeaves, Trunk, Upright, Wander},
     toggle::{OperatorState, Toggle},
 };
 
@@ -45,7 +45,7 @@ fn forked_trunk(mut species: Species, count: i32, splay: f32, at: f32) -> Specie
 fn trunk_with(sides: i32, lean_degrees: f32) -> Trunk {
     Trunk {
         sides,
-        lean: lean_degrees.to_radians(),
+        lean: Toggle::on(Lean::degrees(lean_degrees)),
         wander: Toggle::on(Wander::degrees(0.0)),
         ..Trunk::default()
     }
@@ -119,7 +119,6 @@ fn base_stands_on_the_origin() {
 #[test]
 fn a_straight_stem_reaches_its_height() {
     let mut species = regular();
-    species.trunk.lean = 0.0;
     species.trunk.height = 3.0;
     let tip = stems(&species)[0].rings.last().unwrap().center;
     assert!((tip - Vec3::Y * 3.0).length() < 1e-5, "{tip}");
@@ -128,7 +127,6 @@ fn a_straight_stem_reaches_its_height() {
 #[test]
 fn the_crown_moves_without_the_trunk() {
     let mut species = regular();
-    species.trunk.lean = 0.0;
     let tip = |species: &Species| stems(species)[0].rings.last().unwrap().center;
     let before = (tip(&species), Envelope::of(&species));
     species.crown.top = 1.8;
@@ -143,7 +141,7 @@ fn stems_never_turn_past_level() {
     // Forked at the ground, at partway up past level, and partway up from a leaning trunk.
     for (splay, at) in [(50.0, 0.0), (120.0, 0.5)] {
         let mut species = forked_trunk(regular(), 2, splay, at);
-        species.trunk.lean = 90.0_f32.to_radians();
+        species.trunk.lean = Toggle::on(Lean::degrees(90.0));
         for stem in stems(&species) {
             let tip = stem.rings.last().unwrap().tangent;
             assert!(tip.y > -1e-5, "{splay} {at}: {tip}");
@@ -155,7 +153,7 @@ fn stems_never_turn_past_level() {
 fn slant_bends_a_stem_without_lengthening_it() {
     let length = |splay: f32, lean: f32| {
         let mut species = forked_trunk(regular(), 2, splay, 0.0);
-        species.trunk.lean = lean.to_radians();
+        species.trunk.lean = Toggle::on(Lean::degrees(lean));
         stems(&species)[0].rings.last().unwrap().at
     };
     let upright = length(0.0, 0.0);
@@ -169,8 +167,7 @@ fn slant_bends_a_stem_without_lengthening_it() {
 
 #[test]
 fn a_trunk_forked_at_the_ground_is_a_clump() {
-    let mut species = forked_trunk(Species::default(), 3, 30.0, 0.0);
-    species.trunk.lean = 0.0;
+    let species = forked_trunk(Species::default(), 3, 30.0, 0.0);
     let stems = stems(&species);
     assert_eq!(stems.len(), 3);
     assert!(
@@ -197,7 +194,7 @@ fn a_trunk_forked_at_the_ground_is_a_clump() {
 #[test]
 fn a_trunk_forked_partway_splits_into_stems() {
     let mut species = forked_trunk(regular(), 2, 20.0, 0.4);
-    species.trunk.lean = 30.0_f32.to_radians();
+    species.trunk.lean = Toggle::on(Lean::degrees(30.0));
     let stems = stems(&species);
     let (trunk, copies) = (&stems[0], &stems[1..]);
     assert_eq!(copies.len(), 2);
@@ -256,10 +253,11 @@ fn a_limb_forked_at_its_base_is_several_limbs() {
 #[test]
 fn the_seed_turns_the_lean() {
     let tip = |seed| {
-        let species = Species {
+        let mut species = Species {
             seed: Seed(seed),
             ..regular()
         };
+        species.trunk.lean = Toggle::on(Lean::default());
         stems(&species)[0].rings.last().unwrap().center
     };
     // The same height and lean, in another compass direction.
@@ -356,7 +354,6 @@ fn shown(count: i32, mut species: Species) -> Species {
 /// crown base at 1.25 m to its tip at 5.25 m, two crown radii of 2 m.
 fn straight() -> Species {
     let mut species = regular();
-    species.trunk.lean = 0.0;
     species.trunk.height = 5.25;
     species.crown.profile = Profile::Column;
     species.crown.base = 1.25 / 5.25;
@@ -418,8 +415,7 @@ fn limbs_reach_their_share_of_the_way_to_the_envelope() {
 #[test]
 fn limbs_leave_the_trunk_at_their_angle() {
     // Upright, the trunk is one straight segment, base to tip.
-    let mut species = regular();
-    species.trunk.lean = 0.0;
+    let species = regular();
     let tip = stems(&species)[0].rings.last().unwrap().center;
     for limb in side_limbs(&species) {
         let angle = limb.direction().angle_between(tip);
@@ -433,7 +429,6 @@ fn limbs_leave_the_trunk_at_their_angle() {
 #[test]
 fn varied_values_stay_within_their_spread_and_limits() {
     let mut species = regular();
-    species.trunk.lean = 0.0;
     species.limbs.levels[0].angle = Fuzzy::new(
         60.0_f32.to_radians(),
         10.0_f32.to_radians(),
@@ -517,7 +512,7 @@ fn limbs_sag_by_the_sine_of_their_angle() {
     // The turn per crown radius scaled by the sine of the angle from up: the tangent of the half
     // angle grows by e to the turn.
     let mut species = regular();
-    species.limbs.levels[0].sag.settings.amount = 0.5;
+    species.limbs.levels[0].sag = Toggle::on(Sag { amount: 0.5 });
     check_tips(&species, |at_base, crowns| {
         2.0 * ((at_base / 2.0).tan() * (0.5 * crowns).exp()).atan()
     });
@@ -584,7 +579,7 @@ fn limbs_kink_at_one_spacing_on_every_level() {
     // length over the shortest stretch.
     let mut species = level_limbs(45.0);
     species.limbs.shown = 2;
-    species.limbs.levels[1].wander.settings.angle = 45.0_f32.to_radians();
+    species.limbs.levels[1].wander = Toggle::on(Wander::degrees(45.0));
     let spacing = kink_spacing(&Envelope::of(&species));
     assert!((spacing - 0.3).abs() < 1e-6);
     let shortest = spacing * SPLIT_LENGTH * (0.5 - KINK_JITTER);
@@ -629,7 +624,7 @@ fn level_limbs(wander: f32) -> Species {
     let mut species = straight();
     species.limbs.levels[0].angle = Fuzzy::new(FRAC_PI_2, 0.0, Distribution::Uniform);
     species.limbs.levels[0].reach = Fuzzy::new(1.0, 0.0, Distribution::Uniform);
-    species.limbs.levels[0].wander.settings.angle = wander.to_radians();
+    species.limbs.levels[0].wander = Toggle::on(Wander::degrees(wander));
     species
 }
 
@@ -677,6 +672,13 @@ fn operators_not_on_grow_as_at_zero() {
     risen.limbs.levels[0].rise.state = OperatorState::Disabled;
     assert_eq!(rings(&risen), rings(&level));
 
+    let mut leaning = Species::default();
+    leaning.trunk.lean = Toggle::on(Lean::degrees(30.0));
+    let mut upright = leaning.clone();
+    upright.trunk.lean.settings.angle = 0.0;
+    leaning.trunk.lean.state = OperatorState::Disabled;
+    assert_eq!(rings(&leaning), rings(&upright));
+
     let mut unforked = forking(2, 0.0);
     unforked.limbs.levels[0].fork.state = OperatorState::Disabled;
     let mut never = forking(2, 0.0);
@@ -722,9 +724,9 @@ fn wander_leaves_tips_where_their_course_ends() {
     assert!(along >= 0.6 * spacing - TRACE_STEP, "{along} {spacing}");
     // Every turn between stretches under twice the wander.
     let mut species = shown(2, Species::default());
-    species.trunk.wander.settings.angle = 45.0_f32.to_radians();
+    species.trunk.wander = Toggle::on(Wander::degrees(45.0));
     for level in &mut species.limbs.levels {
-        level.wander.settings.angle = 45.0_f32.to_radians();
+        level.wander = Toggle::on(Wander::degrees(45.0));
     }
     let mut sharpest = 0.0_f32;
     for axis in grow(&species).axes {
@@ -808,8 +810,7 @@ fn azimuth_zero_is_the_upper_side() {
 #[test]
 fn limbs_start_on_the_trunk_as_meshed() {
     // Upright, the trunk is one straight segment, base to tip.
-    let mut species = regular();
-    species.trunk.lean = 0.0;
+    let species = regular();
     let tip = stems(&species)[0].rings.last().unwrap().center;
     for limb in limbs(&species) {
         assert!(limb.origin().cross(tip).length() < 1e-5, "{limb:?}");
@@ -929,8 +930,7 @@ fn skew_turns_each_limb_on_its_own() {
 
 #[test]
 fn splayed_stems_send_their_limbs_outward() {
-    let mut species = forked_trunk(regular(), 3, 30.0, 0.0);
-    species.trunk.lean = 0.0;
+    let species = forked_trunk(regular(), 3, 30.0, 0.0);
     // How far each limb points out from the axis, horizontally.
     let outward: Vec<f32> = limbs(&species)
         .iter()
@@ -1257,8 +1257,7 @@ fn a_chain_shares_its_joins() {
 
 #[test]
 fn thin_limbs_are_drawn_as_wide_as_the_detail_threshold() {
-    let mut species = shown(3, regular());
-    species.trunk.lean = 0.0;
+    let species = shown(3, regular());
     let thick = Species {
         detail: 0.1,
         ..species.clone()

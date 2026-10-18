@@ -110,7 +110,10 @@ impl Serialize for File<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::toggle::OperatorState;
+    use crate::{
+        species::Wander,
+        toggle::{OperatorState, Toggle},
+    };
 
     /// A registry holding the species and every type in it.
     fn registry() -> TypeRegistry {
@@ -160,7 +163,7 @@ mod tests {
         species.limbs.shown = 3;
         species.limbs.levels[2].fork.state = OperatorState::On;
         species.limbs.levels[2].fork.settings.chance = 0.5;
-        species.trunk.wander.settings.angle = 0.3;
+        species.trunk.wander = Toggle::on(Wander { angle: 0.3 });
         species.ornaments.leaves = false;
         let written = write(&species, &registry).unwrap();
         assert!(read(&written, &registry).unwrap() == species);
@@ -196,6 +199,7 @@ mod tests {
         let mut species = Species::default();
         species.limbs.shown = 3;
         species.trunk.wander.state = OperatorState::Off;
+        species.limbs.levels[0].wander.state = OperatorState::On;
         species.limbs.levels[1].wander.state = OperatorState::Disabled;
         species.limbs.levels[2].wander.state = OperatorState::Off;
         let written = write(&species, &registry).unwrap();
@@ -210,7 +214,9 @@ mod tests {
 
     #[test]
     fn an_operator_is_read_whole() {
-        let error = edited(&Species::default(), |file| {
+        let mut species = Species::default();
+        species.limbs.levels[0].wander.state = OperatorState::On;
+        let error = edited(&species, |file| {
             file["limbs"][0]["wander"]
                 .as_object_mut()
                 .unwrap()

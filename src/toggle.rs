@@ -45,6 +45,7 @@ pub struct Toggle<T> {
 
 impl<T> Toggle<T> {
     /// `settings`, on.
+    #[cfg(test)]
     pub fn on(settings: T) -> Self {
         Self {
             state: OperatorState::On,

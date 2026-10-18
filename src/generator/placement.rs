@@ -40,8 +40,8 @@ const CROWDING_SHARPNESS: i32 = 4;
 /// against crowding of 1 for a limb at the same azimuth one gap away.
 const OUTWARD_WEIGHT: f32 = 1.0;
 
-/// The stems: the trunk from the origin, upright at the ground and turning by the lean as it
-/// rises toward a compass heading drawn from the seed (`stem_course`). With Fork on, it may fork
+/// The stems: the trunk from the origin, upright at the ground and turning by the lean, if on, as
+/// it rises toward a compass heading drawn from the seed (`stem_course`). With Fork on, it may fork
 /// (D31): it ends at the fork, and copies carry it on in their directions (`copy_directions`),
 /// each from the trunk's radius there and turning by what is left of the lean, away from the
 /// middle, the rest of the trunk's height long, so every tip is the height from the ground along
@@ -51,12 +51,13 @@ pub(super) fn stems(species: &Species) -> Vec<Axis> {
     let length = trunk.height.max(0.01);
     let heading = species.seed.stream("trunk").unit() * TAU;
     let rng = species.seed.stream("branching").fork(0);
+    let trunk_lean = trunk.lean.get().map_or(0.0, |lean| lean.angle);
     let rings = stem_course(
         species,
         Vec3::ZERO,
         0.0,
         heading,
-        trunk.lean,
+        trunk_lean,
         length,
         trunk.radius,
         &rng,
@@ -71,7 +72,7 @@ pub(super) fn stems(species: &Species) -> Vec<Axis> {
     let frame = stem.frame(drawn.at);
     let fork_at = drawn.at * stem.length();
     let at_base = at_base(fork_at, frame.radius);
-    let lean = trunk.lean * (1.0 - drawn.at);
+    let lean = trunk_lean * (1.0 - drawn.at);
     let copies: Vec<Axis> = (copy_directions(&frame, fork, drawn.half_angle).into_iter())
         .enumerate()
         .map(|(copy, direction)| {

@@ -198,8 +198,8 @@ impl Default for LimbLevels {
                     reach: Fuzzy::new(0.6, 0.1, Distribution::Bell),
                     radius: 0.5,
                     sides: 3,
-                    sag: Toggle::on(Sag::degrees(20.0)),
-                    wander: Toggle::on(Wander::degrees(15.0)),
+                    sag: Toggle::off(Sag::degrees(20.0)),
+                    wander: Toggle::off(Wander::degrees(15.0)),
                     ..LimbLevel::default()
                 },
                 LimbLevel {
@@ -211,8 +211,8 @@ impl Default for LimbLevels {
                     reach: Fuzzy::new(0.5, 0.1, Distribution::Bell),
                     radius: 0.5,
                     sides: 3,
-                    sag: Toggle::on(Sag::degrees(20.0)),
-                    wander: Toggle::on(Wander::degrees(20.0)),
+                    sag: Toggle::off(Sag::degrees(20.0)),
+                    wander: Toggle::off(Wander::degrees(20.0)),
                     ..LimbLevel::default()
                 },
             ],
@@ -290,16 +290,8 @@ pub struct Trunk {
     /// Sides of each ring.
     #[reflect(@ValueRange::<i32>(3..=8), @Spinbox, @Caption("Sides"))]
     pub sides: i32,
-    /// How much further from up the trunk turns between the base and the top, but never past
-    /// level; a fork's stems turn by what is left, away from the middle. A tree's compass
-    /// direction is drawn from the seed, so neighbouring trees of one species lean different ways.
-    #[reflect(
-        @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_2),
-        @Precision(1),
-        @NumberInputUnits::new_static("angle_degrees"),
-        @Caption("Lean"),
-    )]
-    pub lean: f32,
+    #[reflect(@Caption("Lean"))]
+    pub lean: Toggle<Lean>,
     /// Each stem zigzagging about the course the lean sets, as a limb does.
     #[reflect(@Caption("Wander"))]
     pub wander: Toggle<Wander>,
@@ -425,9 +417,9 @@ impl Default for LimbLevel {
             reach: Fuzzy::new(0.9, 0.1, Distribution::Bell),
             radius: 0.5,
             sides: 4,
-            sag: Toggle::on(Sag::default()),
+            sag: Toggle::off(Sag::default()),
             rise: Toggle::off(Rise::default()),
-            wander: Toggle::on(Wander::degrees(10.0)),
+            wander: Toggle::off(Wander::degrees(10.0)),
             fork: Toggle::off(Fork::default()),
         }
     }
@@ -445,6 +437,37 @@ pub fn limits<T: Typed>(name: &str) -> RangeInclusive<f32> {
             let path = T::type_info().type_path();
             panic!("{path} has no field `{name}` with a ValueRange<f32>")
         })
+}
+
+/// The trunk curving away from up as it rises, toward a compass heading drawn from the seed, so
+/// neighbouring trees of one species lean different ways. Without it the stems grow straight.
+#[derive(Reflect, Clone, PartialEq)]
+#[reflect(@Icon("icons/operators/bend.png"))]
+pub struct Lean {
+    /// How much further from up the trunk turns between the base and the top, but never past
+    /// level; a fork's stems turn by what is left, away from the middle.
+    #[reflect(
+        @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_2),
+        @Precision(1),
+        @NumberInputUnits::new_static("angle_degrees"),
+        @Caption("Angle"),
+    )]
+    pub angle: f32,
+}
+
+impl Lean {
+    /// A lean of `angle` degrees.
+    pub fn degrees(angle: f32) -> Self {
+        Self {
+            angle: angle.to_radians(),
+        }
+    }
+}
+
+impl Default for Lean {
+    fn default() -> Self {
+        Self::degrees(15.0)
+    }
 }
 
 /// A limb's course turning down under its weight as it grows, keeping its compass heading: most
@@ -691,8 +714,8 @@ impl Default for Trunk {
             height: 5.0,
             radius: 0.2,
             sides: 6,
-            lean: 15.0_f32.to_radians(),
-            wander: Toggle::on(Wander::degrees(8.0)),
+            lean: Toggle::off(Lean::default()),
+            wander: Toggle::off(Wander::degrees(8.0)),
             // Turned on, a trunk splits: there is only one to fork.
             fork: Toggle::off(Fork {
                 chance: 1.0,

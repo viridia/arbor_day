@@ -52,7 +52,7 @@ field of its own, as its slot is in the species, today's cards being the tip lea
 ```rust
 pub struct Skeleton {
     pub axes: Vec<Axis>,
-    /// Placed on the grown axes, after every level has grown: one field per ornament (X42).
+    /// Placed on the grown axes, after every level has grown: one field per ornament (C103).
     pub tip_leaves: Vec<Card>,
     pub twig_leaves: Vec<Card>,
     pub radiating: Vec<Card>,
@@ -177,8 +177,9 @@ Each level, the trunk included, has a fixed frame and its operators. The frame i
 level needs: for the trunk its stems, height, radius and sides; for a limb level its angle,
 reach, radius and sides. Without operators a level grows straight along its angle.
 
-A behaviour is an operator when it has a value that turns it off and most species leave it
-there (a fork's chance of 0, no bend, no wander); what every level needs is the frame's, and an
+A behaviour is an operator when it has a value that turns it off (a fork's chance of 0, no sag,
+no wander), however many species use it (D33); what has no such value, as reach and radius, is
+the frame's, and an
 operator's own settings (a foliage card's facing and shape) are its fields. The operators, in
 their fixed order:
 
@@ -238,7 +239,7 @@ Levels grow in turn: a level's frame and operators, then its scions' level.
   the count reaches past it, so paths stay `limbs.levels[1].angle` and only D15's panel changes.
 
 The crown is fixed at the head, the plant's, not a level's. At the foot is a second stack, the
-**ornaments** (X42): what is placed on the grown skeleton without changing it, so its order
+**ornaments** (C103): what is placed on the grown skeleton without changing it, so its order
 never moves a limb. Like a level's operators, each ornament is a slot, one of each kind. The
 first is today's foliage, the tip leaves: cards on every branch end, whatever its level (D27),
 with its size, droops and upright tips; the Leaves switch is whether it is on. Others would be
@@ -261,7 +262,7 @@ settings. The default species, abridged, angles in radians:
   "seed": 1, "detail": 0.02, "taper": 0.6,
   "crown": { "profile": "Ellipsoid", "top": 1.25, "base": 0.4, "radius": 2.5 },
   "trunk": {
-    "stems": 1, "splay": 0.0, "height": 5.0, "radius": 0.2, "sides": 6, "lean": 0.26,
+    "stems": 1, "splay": 0.0, "height": 5.0, "radius": 0.2, "sides": 6, "lean": { "angle": 0.26 },
     "wander": { "angle": 0.14 }
   },
   "limbs": [
@@ -290,7 +291,7 @@ settings. The default species, abridged, angles in radians:
   not know (`bevy_reflect`'s `visit_struct`). The file is applied onto the template, the species
   with every operator off and each level's frame at its depth's default, so a missing operator is
   off and grows as a file written before it existed did (X15's third measure). The template is
-  not a new species' default, which has Sag and Wander on. A file from a newer generator, naming
+  the new species' default with its tip leaves off, the one slot a new species has on (D33). A file from a newer generator, naming
   an operator this one lacks, fails to load rather than loading wrong.
 - **Versions**: a new version of an operator is another slot beside the old (`wander_2`), at most
   one of the two on; the old one is read and shown while on but left out of the add menu (a
