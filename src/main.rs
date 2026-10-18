@@ -14,6 +14,7 @@ use bevy::{
         tokens,
     },
     light::{NotShadowCaster, NotShadowReceiver},
+    pbr::wireframe::WireframePlugin,
     prelude::*,
     ui::{IsDefaultUiCamera, UiGlobalTransform, UiSystems},
     ui_widgets::{ControlOrientation, ScrollArea, split_pane_self_update},
@@ -71,6 +72,8 @@ fn main() {
                 exit_condition: ExitCondition::DontExit,
                 ..default()
             }),
+            // Its GPU features are on by default: Bevy enables all the adapter has.
+            WireframePlugin::default(),
             AppSettingsPlugin,
             FeathersPlugins,
             BevyImmediateAttachPlugin::<CapsPanel, ParamPanel>::new(),

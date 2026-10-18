@@ -127,8 +127,12 @@ again, an operator keeps its settings for the session.
 
 The HUD (`src/hud.rs`) is a grid over the view pane with the panel's spacing (8 px padding and
 gaps), ignored by picking, so the view's drags and scrolls pass between its buttons. Toggles for the
-envelope and the ground sit in the upper left; their state is a field of `ViewSettings`, saved, and
-each target's `Visibility` follows it, its icon dimming while the target is hidden. The camera's
+envelope, the ground and the wireframe sit in the upper left; their state is a field of
+`ViewSettings`, saved, and the icon dims while the target is hidden. The envelope's and the
+ground's `Visibility` follows it; the wireframe is Bevy's `Wireframe` with an orange
+`WireframeColor`, added to the bark and the leaves while shown and removed while not. Its GPU
+features (line polygon mode, immediates) need no request, since Bevy enables all the adapter
+has. The camera's
 buttons sit in the upper right, an L: orbit along the top, zoom and tilt down the side, Frame in the
 corner. A camera button moves the camera from the moment it is pressed until it is released (60° a
 second of orbit, 30° of tilt, a factor of 2 in distance); Frame acts on a click. The bottom row

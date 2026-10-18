@@ -4,6 +4,7 @@
 
 use bevy::{
     feathers::{constants::size, display::label},
+    pbr::wireframe::{Wireframe, WireframeColor},
     picking::{cursor::EntityCursor, events::PointerDrag, hover::Hovered},
     prelude::*,
     settings::SaveSettingsDeferred,
@@ -13,7 +14,7 @@ use bevy::{
 };
 
 use crate::{
-    plant::{PlantEnvelope, PlantStats},
+    plant::{Plant, PlantEnvelope, PlantLeaves, PlantStats},
     settings::{SAVE_DELAY, ViewSettings},
     turntable::TurntableCamera,
 };
@@ -27,6 +28,9 @@ const BUTTON_BG_PRESSED: Color = Color::srgba(0.5, 0.5, 0.5, 0.4);
 /// A toggle's icon while what it shows is shown, and while it is hidden.
 const ICON_ON: Color = Color::WHITE;
 const ICON_OFF: Color = Color::srgba(1.0, 1.0, 1.0, 0.4);
+
+/// The wireframe's lines: orange, apart from the envelope's pale green.
+const WIREFRAME_COLOR: Color = Color::srgb(1.0, 0.55, 0.1);
 
 /// How fast a held camera button moves the camera, per second.
 const ORBIT_RATE: f32 = 60.0 * std::f32::consts::PI / 180.0;
@@ -43,6 +47,7 @@ impl Plugin for HudPlugin {
             (
                 style_hud_buttons,
                 show_targets,
+                show_wireframe,
                 show_triangles,
                 hold_camera_buttons,
             ),
@@ -60,6 +65,8 @@ pub enum HudTarget {
     #[default]
     Envelope,
     Ground,
+    /// Lines over the bark's and the leaves' triangles, to see where the triangles go.
+    Wireframe,
 }
 
 impl HudTarget {
@@ -68,6 +75,7 @@ impl HudTarget {
         match self {
             HudTarget::Envelope => view.show_envelope,
             HudTarget::Ground => view.show_ground,
+            HudTarget::Wireframe => view.show_wireframe,
         }
     }
 }
@@ -124,6 +132,7 @@ pub fn hud() -> impl Scene {
             grid_template_columns: {vec![
                 GridTrack::auto(),
                 GridTrack::auto(),
+                GridTrack::auto(),
                 GridTrack::flex(1.0),
                 GridTrack::auto(),
                 GridTrack::auto(),
@@ -155,41 +164,47 @@ pub fn hud() -> impl Scene {
             on(toggle_target)
             Node { grid_row: GridPlacement::start(1), grid_column: GridPlacement::start(2) }
             --
+            @hud_button("icons/deployed_code.png", UiTransform::IDENTITY)
+            #wireframe
+            HudToggle(HudTarget::Wireframe)
+            on(toggle_target)
+            Node { grid_row: GridPlacement::start(1), grid_column: GridPlacement::start(3) }
+            --
             @hud_button("icons/360.png", mirrored)
             #orbit_left
             CameraButton(CameraMove::OrbitLeft)
-            Node { grid_row: GridPlacement::start(1), grid_column: GridPlacement::start(4) }
+            Node { grid_row: GridPlacement::start(1), grid_column: GridPlacement::start(5) }
             --
             @hud_button("icons/360.png", UiTransform::IDENTITY)
             #orbit_right
             CameraButton(CameraMove::OrbitRight)
-            Node { grid_row: GridPlacement::start(1), grid_column: GridPlacement::start(5) }
+            Node { grid_row: GridPlacement::start(1), grid_column: GridPlacement::start(6) }
             --
             @hud_button("icons/center_focus_strong.png", UiTransform::IDENTITY)
             #frame
             CameraButton(CameraMove::Frame)
             on(frame_camera)
-            Node { grid_row: GridPlacement::start(1), grid_column: GridPlacement::start(6) }
+            Node { grid_row: GridPlacement::start(1), grid_column: GridPlacement::start(7) }
             --
             @hud_button("icons/zoom_in.png", UiTransform::IDENTITY)
             #zoom_in
             CameraButton(CameraMove::ZoomIn)
-            Node { grid_row: GridPlacement::start(2), grid_column: GridPlacement::start(6) }
+            Node { grid_row: GridPlacement::start(2), grid_column: GridPlacement::start(7) }
             --
             @hud_button("icons/zoom_out.png", UiTransform::IDENTITY)
             #zoom_out
             CameraButton(CameraMove::ZoomOut)
-            Node { grid_row: GridPlacement::start(3), grid_column: GridPlacement::start(6) }
+            Node { grid_row: GridPlacement::start(3), grid_column: GridPlacement::start(7) }
             --
             @hud_button("icons/360.png", up)
             #tilt_up
             CameraButton(CameraMove::TiltUp)
-            Node { grid_row: GridPlacement::start(4), grid_column: GridPlacement::start(6) }
+            Node { grid_row: GridPlacement::start(4), grid_column: GridPlacement::start(7) }
             --
             @hud_button("icons/360.png", down)
             #tilt_down
             CameraButton(CameraMove::TiltDown)
-            Node { grid_row: GridPlacement::start(5), grid_column: GridPlacement::start(6) }
+            Node { grid_row: GridPlacement::start(5), grid_column: GridPlacement::start(7) }
             --
             @label("")
             #triangles
@@ -197,7 +212,7 @@ pub fn hud() -> impl Scene {
             Pickable::IGNORE
             Node {
                 grid_row: GridPlacement::start(7),
-                grid_column: GridPlacement::span(3),
+                grid_column: GridPlacement::span(4),
                 justify_self: JustifySelf::Start,
             }
         ]
@@ -240,6 +255,7 @@ fn toggle_target(
     let shown = match toggle.0 {
         HudTarget::Envelope => &mut view.show_envelope,
         HudTarget::Ground => &mut view.show_ground,
+        HudTarget::Wireframe => &mut view.show_wireframe,
     };
     *shown = !*shown;
     commands.queue(SaveSettingsDeferred(SAVE_DELAY));
@@ -264,6 +280,27 @@ fn show_targets(
     }
     for mut ground in &mut grounds {
         ground.set_if_neq(visibility(view.show_ground));
+    }
+}
+
+/// Adds the wireframe to the bark and the leaves while the settings show it, and removes it while
+/// they do not.
+fn show_wireframe(
+    view: Res<ViewSettings>,
+    meshes: Query<(Entity, Has<Wireframe>), Or<(With<Plant>, With<PlantLeaves>)>>,
+    mut commands: Commands,
+) {
+    for (entity, has_wireframe) in &meshes {
+        if view.show_wireframe && !has_wireframe {
+            commands.entity(entity).insert((
+                Wireframe,
+                WireframeColor {
+                    color: WIREFRAME_COLOR,
+                },
+            ));
+        } else if !view.show_wireframe && has_wireframe {
+            commands.entity(entity).remove::<Wireframe>();
+        }
     }
 }
 

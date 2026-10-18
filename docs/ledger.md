@@ -97,6 +97,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C41   | Save and Open (D34), `src/gltf_file.rs`: the plant written from `generator::plant` as a `.gltf` with its `.bin` and leaf `.png` beside it, named after it, their URIs escaped. A scene named after the document, holding the species file under the extra `arbor_day`; bark (`COLOR_0`, linear) and leaf (`TEXCOORD_0`, mask at `LEAF_CUTOFF`, double-sided) meshes, both materials matte and not metallic, the bark's with the `"outline"` extra when outlined. The PNG is the full-size level; the pipeline mipmaps. Open reads the species back from the extra. `gltf-json`, `png` and `percent-encoding` as direct dependencies, `gltf` as a dev-dependency, all already in the lock file; a test validates the output with `gltf`. `FileRequest` (Open or Save As, with a path) is what a dialog's pick writes, and what plans send through the driver's `message`. `plans/panel.py` saves, edits, saves, opens. |
 | C110  | Four launches in place of eight, since each plan is a launch whose window takes focus: `panel.py` (groups, operators, then from a New document the file commands), `levels.py` (levels, then from a New document cards), `smoke.py` and `widgets.py`. The shapes gallery, with no checks, moves to `plans/gallery/`, which `run.py plans` passes over; run it by path when the generator's output changes. Values `levels.py` and the card folds typed are now set by `set_resource`, the number input's typing being checked elsewhere. New resets the species, not the view. |
 | C101  | Control-group headings like operators' (TD1.5): in `TEXT_MAIN` rather than dimmed, after an `Icon` on the group's first field, `assets/icons/groups/arrangement.png` (Material's `graph_5`) and `shape.png` (Lucide's `drafting-compass`). A nested struct's heading in a subpane is bright too, with no icon. Checked by eye in `plans/panel.py`'s screenshots. |
+| C65   | Wireframe toggle on the HUD (TD1.6, D28), the third in the upper left (`deployed_code.png`): Bevy's `WireframePlugin`, lines in orange over the shaded bark and leaves, apart from the envelope's green. The GPU features need no request on Metal; the plugin's "GPU lacks support" warning does not appear. `plans/smoke.py` turns it on and off. |
 
 ## Next
 
@@ -195,14 +196,6 @@ slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
 - **C48 Arching stems**, for fountain shrubs: a lean past level, so a stem rises and then droops
   toward the ground, stopping above it. D24 stops the lean at level until a preset needs more
   (X18). The Weep operator on the trunk. E[2]
-- **C65 Wireframe toggle on the HUD** (D28), to see where the triangles go: rings along the bark
-  (D17's hinting), sides per level (D22), and each leaf card's quad, for card density and
-  facing (C39). Bevy's `WireframePlugin` (`bevy_pbr`), drawing lines over the shaded mesh rather
-  than in its place; it needs the `POLYGON_MODE_LINE` and `IMMEDIATES` GPU features, requested
-  through `RenderPlugin`'s `WgpuSettings`, so first confirm Metal has both. A `Wireframe`
-  component on the bark and leaf entities rather than the global `WireframeConfig`, so plans
-  check it as they check `Visibility`. A third toggle in the upper left, saved in `ViewSettings`.
-  The icon is `deployed_code`, in `assets/icons/`. E[2]
 - **C58 Trunk below ground**, so a tree placed on a slope still meets the ground on its low side:
   the stems start below the origin by their base radius times the tangent of the steepest slope
   a tree stands on, a constant rather than a species field. At 45° the depth is the base radius.
@@ -238,6 +231,15 @@ slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
   runs straight along the twig and whose rachis tubes cost triangles that do not show at game
   scale. Its texture, a midrib with leaflets either side, is a frond mode of C38's painter, a
   second region of the leaf texture (requirements, Foliage). E[3]
+- **C111 Scale**: a species field, default 1.0, that resizes a finished plant without changing
+  its design. The plant grows as the species describes it, then its positions are multiplied by
+  the scale; the bark outline's width and the detail threshold apply in final units, so neither
+  scales. Raising the height instead redesigns the plant, since most fields are relative to it,
+  and scaling in Panoply thickens or thins outlines with the model. E[2]
+- **C112 View settings panel**: a gear icon opening a dialog of view settings, saved in
+  `ViewSettings` (D28): the lighting and tone mapping (`GameLook`, TD1.1; per-project looks stay
+  X6), and a ruler gizmo for judging a plant's size. Two buttons reset the lighting and tone
+  mapping: one to Bevy's defaults, one to Panoply's. E[3]
 
 ## Deferred
 

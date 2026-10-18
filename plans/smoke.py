@@ -1,6 +1,6 @@
 """The shell starts from default settings: the panel shows the trunk's parameters, the panel has
 its default width, the turntable camera frames the plant, the zoom and frame keys work, the HUD's
-toggles hide the ground and envelope, the property editor edits numbers within their limits, an
+toggles hide the ground and envelope and show the wireframe, the property editor edits numbers within their limits, an
 edit rebuilds the plant, and the seed reaches the plant, typed or picked by Random."""
 
 from driver import Between
@@ -11,6 +11,8 @@ GROWN_FROM = "arbor_day::plant::GrownFrom"
 TURNTABLE = "arbor_day::turntable::TurntableCamera"
 PANE = "bevy_ui_widgets::split_pane::Pane"
 VISIBILITY = "bevy_camera::visibility::Visibility"
+WIREFRAME = "bevy_pbr::wireframe::Wireframe"
+VIEW_SETTINGS = "arbor_day::settings::ViewSettings"
 
 
 def set_number(driver, path, text):
@@ -75,6 +77,16 @@ def run(driver):
     driver.expect("Ground", VISIBILITY, "Inherited")
     driver.click("Shell/View/envelope")
     driver.expect("Envelope", VISIBILITY, "Inherited")
+    # The wireframe toggle draws lines over the bark and the leaves, and its second click turns
+    # the setting off again.
+    driver.click("Shell/View/wireframe")
+    driver.expect("Plant", WIREFRAME, {})
+    driver.expect("Leaves", WIREFRAME, {})
+    driver.screenshot("wireframe")
+    driver.click("Shell/View/wireframe")
+    driver.frames(2)
+    view = driver.get_resource(VIEW_SETTINGS)
+    assert not view["show_wireframe"], view
     # Typing past the trunk's sides' range (3 to 8) stops at its hard limit.
     set_number(driver, "trunk/sides", "42")
     driver.expect("Plant", GROWN_FROM, 8, at="trunk.sides")
