@@ -6,13 +6,17 @@ use bevy::math::{Quat, Vec3};
 
 use super::{
     envelope::Envelope,
+    leaf,
     skeleton::{Axis, Card, upper_side},
 };
 use crate::species::{Species, Upright};
 
-/// Where a card's axial droop bends it, as a share of its length from the base. Halfway, as
-/// seedling's grid has it, until the painted leaf (C38) can say where its sprig parts.
-pub(super) const AXIAL_FOLD: f32 = 0.5;
+/// Where a card's axial droop bends it, as a share of its length from the base: where the painted
+/// sprig's fan starts, as seedling's did.
+pub(super) fn axial_fold(species: &Species) -> f32 {
+    let tip_leaves = &species.ornaments.tip_leaves.settings;
+    leaf::layout(tip_leaves, species.seed, leaf::OUTLINE).fold
+}
 
 /// The elevation above level from which a tip is steep, where one card along the twig would
 /// begin to stand on end from the game's camera.
@@ -52,6 +56,7 @@ pub(super) fn clusters(species: &Species, axes: &[Axis]) -> Vec<Card> {
         return Vec::new();
     };
     let size = card_size(species);
+    let fold = axial_fold(species);
     let mut cards = Vec::new();
     for (index, twig) in axes.iter().enumerate() {
         if twig.level == 0 || !twig.scions.is_empty() {
@@ -64,7 +69,7 @@ pub(super) fn clusters(species: &Species, axes: &[Axis]) -> Vec<Card> {
             tip_leaves.upright,
         );
         if count == 1 {
-            let back = (AXIAL_FOLD * size).min(length);
+            let back = (fold * size).min(length);
             let t = (1.0 - back / length.max(f32::EPSILON)).clamp(0.0, 1.0);
             let at = t * length;
             cards.push(Card {

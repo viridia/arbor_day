@@ -1,9 +1,12 @@
 """The property editor's widgets beyond the plain number:
 - a fuzzy number's row: center, spread and a shape toggle whose icon shows the current shape, and
   the spread strip in the center input, a tick where there is no spread;
+- an interval's row: a fuzzy number's without the shape toggle;
 - an enum's select: picking a profile redraws the crown envelope, drawn as lines around the
   plant, and picking a limb level's facing sets it;
 - a color field's row: a swatch that opens a picker, where a typed color tints the trunk."""
+
+from driver import Between
 
 BIN = "arbor_day"
 STATS = "arbor_day::plant::PlantStats"
@@ -12,6 +15,7 @@ GROWN_FROM = "arbor_day::plant::GrownFrom"
 SPECIES = "arbor_day::species::Species"
 LIMBS = "Shell/Panel/levels[0]"
 COLOR = "Shell/Panel/bark_color/input"
+SPACING = "Shell/Panel/tip_leaves/sprig/spacing"
 
 
 def pick(driver, field, variant):
@@ -46,6 +50,19 @@ def run(driver):
     driver.expect("Plant", GROWN_FROM, 0.0, at="limbs[0].reach.spread")
     driver.present(f"{LIMBS}/reach/center/spread_strip/segment0")
     driver.screenshot("no_spread")
+
+    # An interval: a fuzzy row without the shape button, here the painted sprig's spacing, whose
+    # default has no spread.
+    driver.absent(f"{SPACING}/shape")
+    driver.click(f"{SPACING}/spread")
+    driver.key("End")
+    for _ in range(6):
+        driver.key("Backspace")
+    driver.type("10")
+    driver.key("Enter")
+    driver.expect("Plant", GROWN_FROM, Between(0.099, 0.101), at="ornaments.tip_leaves.sprig.spacing.spread")
+    driver.present(f"{SPACING}/center/spread_strip/segment0")
+    driver.screenshot("interval")
 
     # Selects. The default ellipsoid closes at both ends: 7 rings of 24 and 8 meridians of 16.
     driver.expect("Envelope", ENVELOPE, {"segments": 296})

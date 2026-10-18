@@ -19,7 +19,7 @@ use serde::{
 use std::{any::TypeId, fmt, ops::RangeInclusive};
 
 use crate::{
-    fuzzy::{Distribution, Fuzzy},
+    fuzzy::{Distribution, Fuzzy, Interval},
     properties::{
         Caption, ControlGroup, Flatten, Icon, Precision, ShownCount, Spinbox, Stripe, ValueRange,
     },
@@ -695,6 +695,170 @@ pub struct TipLeaves {
         @Caption("Axial droop"),
     )]
     pub axial_droop: f32,
+    #[reflect(@Caption("Sprig"))]
+    pub sprig: Sprig,
+    #[reflect(@Caption("Leaf"))]
+    pub leaf: Leaf,
+}
+
+/// How the leaves of the painted sprig are arranged: a fan at the stem's end, and pairs below it
+/// down the stem. Lengths are in leaf lengths, the middle leaf's.
+#[derive(Reflect, Clone, PartialEq)]
+pub struct Sprig {
+    /// Leaves in the fan either side of the middle one, each smaller than the one inside it.
+    #[reflect(@ValueRange::<i32>(0..=9), @Spinbox, @Caption("Fan"))]
+    pub fan: i32,
+    /// The fan's outermost leaves' angle from the stem, the leaves inside it spaced evenly, and the
+    /// pairs' angle. Each leaf strays from its angle by up to the spread.
+    #[reflect(
+        @ValueRange::<f32>(0.0..=std::f32::consts::PI),
+        @Precision(1),
+        @NumberInputUnits::new_static("angle_degrees"),
+        @Caption("Angle"),
+    )]
+    pub angle: Interval,
+    /// The size of the fan's outermost leaves and of the pairs, as a share of the middle leaf's.
+    #[reflect(
+        @ValueRange::<f32>(0.0..=2.0),
+        @Precision(0),
+        @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("Outer size"),
+    )]
+    pub outer_size: f32,
+    /// Pairs of leaves down the stem below the fan.
+    #[reflect(@ValueRange::<i32>(0..=10), @Spinbox, @Caption("Pairs"))]
+    pub pairs: i32,
+    /// The distance between pairs, in leaf lengths. Each leaf strays from its place by up to the
+    /// spread.
+    #[reflect(
+        @ValueRange::<f32>(0.0..=1.5),
+        @Precision(0),
+        @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("Spacing"),
+    )]
+    pub spacing: Interval,
+}
+
+impl Default for Sprig {
+    fn default() -> Self {
+        // Seedling's poplar-green, whose texture the placeholder was.
+        Self {
+            fan: 2,
+            angle: Interval::new(50.0_f32.to_radians(), 9.0_f32.to_radians()),
+            outer_size: 0.72,
+            pairs: 2,
+            spacing: Interval::new(0.5, 0.0),
+        }
+    }
+}
+
+/// One painted leaf: a curve from base to tip for each half, mirrored, cut into segments that
+/// may end in teeth, and filled with a gradient. Lengths are in leaf lengths.
+#[derive(Reflect, Clone, PartialEq)]
+pub struct Leaf {
+    /// How far out the curve is pulled near the base.
+    #[reflect(
+        @ValueRange::<f32>(0.01..=1.0),
+        @Precision(0),
+        @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("Base width"),
+    )]
+    pub base_width: f32,
+    /// How far up the curve is pulled near the base: higher widens the leaf further from it.
+    #[reflect(
+        @ValueRange::<f32>(-1.0..=1.0),
+        @Precision(0),
+        @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("Base taper"),
+    )]
+    pub base_taper: f32,
+    /// How far out the curve is pulled near the tip.
+    #[reflect(
+        @ValueRange::<f32>(0.01..=1.0),
+        @Precision(0),
+        @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("Tip width"),
+    )]
+    pub tip_width: f32,
+    /// How far down the curve is pulled near the tip: higher widens the leaf further from it.
+    #[reflect(
+        @ValueRange::<f32>(-1.0..=1.0),
+        @Precision(0),
+        @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("Tip taper"),
+    )]
+    pub tip_taper: f32,
+    /// Pieces each half is cut into, each but the last ending in a tooth when serrated.
+    #[reflect(@ValueRange::<i32>(1..=12), @Spinbox, @Caption("Segments"))]
+    pub segments: i32,
+    /// How far each tooth stands out from the edge, and the tip beyond the curve.
+    #[reflect(
+        @ValueRange::<f32>(0.0..=1.0),
+        @Precision(0),
+        @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("Serration"),
+    )]
+    pub serration: f32,
+    /// How far each tooth is pushed toward the tip, in segment lengths.
+    #[reflect(
+        @ValueRange::<f32>(0.0..=2.0),
+        @Precision(0),
+        @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("Rake"),
+    )]
+    pub rake: f32,
+    /// The most each tooth is moved at random, either way along each axis.
+    #[reflect(
+        @ValueRange::<f32>(0.0..=0.2),
+        @Precision(0),
+        @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("Jitter"),
+    )]
+    pub jitter: f32,
+    #[reflect(@Caption("Inner color"))]
+    pub inner_color: Color,
+    #[reflect(@Caption("Outer color"))]
+    pub outer_color: Color,
+    /// Which way the colors run.
+    #[reflect(@Caption("Gradient"))]
+    pub gradient: Gradient,
+    /// How far each leaf's hue and lightness shift at random.
+    #[reflect(
+        @ValueRange::<f32>(0.0..=1.0),
+        @Precision(0),
+        @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("Variation"),
+    )]
+    pub variation: f32,
+}
+
+impl Default for Leaf {
+    fn default() -> Self {
+        // Seedling's poplar-green.
+        Self {
+            base_width: 0.18,
+            base_taper: 0.0,
+            tip_width: 0.2,
+            tip_taper: 0.41,
+            segments: 1,
+            serration: 0.0,
+            rake: 0.0,
+            jitter: 0.0,
+            inner_color: Color::srgb_u8(65, 146, 146),
+            outer_color: Color::srgb_u8(80, 201, 80),
+            gradient: Gradient::Axial,
+            variation: 0.18,
+        }
+    }
+}
+
+/// Which way a leaf's colors run.
+#[derive(Reflect, Clone, Copy, PartialEq, Debug)]
+pub enum Gradient {
+    /// The inner color down the midrib, the outer at the edges.
+    Lateral,
+    /// The inner color at the base, the outer at the tip.
+    Axial,
 }
 
 /// What a tip bears where its twig rises 45° or more above level, where one card along it would
@@ -719,6 +883,8 @@ impl Default for TipLeaves {
             // Seedling's most common pair, on the shrubs and two hemlocks.
             lateral_droop: (-16.0_f32).to_radians(),
             axial_droop: 17.0_f32.to_radians(),
+            sprig: Sprig::default(),
+            leaf: Leaf::default(),
         }
     }
 }

@@ -5,7 +5,8 @@ use std::f32::consts::TAU;
 use bevy::math::{Vec2, Vec3};
 
 use super::{
-    foliage::{AXIAL_FOLD, card_size},
+    foliage::card_size,
+    leaf::{self, LeafTexture},
     skeleton::{Axis, AxisKind, Frame, Ring, grow, upper_side},
 };
 use crate::species::{Species, TipLeaves};
@@ -35,8 +36,9 @@ impl Geometry {
 #[derive(Debug, Default)]
 pub struct Grown {
     pub bark: Geometry,
-    /// The leaf cards, textured with the leaf.
+    /// The leaf cards, textured with `leaf_texture`.
     pub leaves: Geometry,
+    pub leaf_texture: LeafTexture,
     /// Branch ends bearing leaves, one card each or a rosette.
     pub leafy_tips: usize,
     /// Limbs grown on each grown level.
@@ -44,7 +46,8 @@ pub struct Grown {
 }
 
 /// The whole plant, grown (`grow`) and meshed: the stems and their limbs, none drawn narrower than
-/// the bark's detail threshold, and a card (`card`) for each leaf cluster. Each stem or limb is
+/// the bark's detail threshold, a card (`card`) for each leaf cluster, and the leaf texture
+/// painted (`leaf::paint`), whether or not any leaves grow. Each stem or limb is
 /// drawn as one tube with the limbs carrying it on and its fork's first copy (`chain`), left open
 /// at its base, which stands in the ground or inside its parent, and closed at its tip by a fan.
 pub fn plant(species: &Species) -> Grown {
@@ -73,6 +76,8 @@ pub fn plant(species: &Species) -> Grown {
         }
     }
     let size = card_size(species);
+    let tip_leaves = &species.ornaments.tip_leaves.settings;
+    let sprig = leaf::layout(tip_leaves, species.seed, leaf::OUTLINE);
     let mut leaves = Geometry::default();
     let mut leafy_tips = 0;
     let mut last_axis = None;
@@ -86,11 +91,19 @@ pub fn plant(species: &Species) -> Grown {
             tangent: cluster.direction,
             ..twig
         };
-        card(&mut leaves, &frame, size, &species.ornaments.tip_leaves.settings);
+        card(&mut leaves, &frame, size, sprig.fold, tip_leaves);
     }
+    let leaf_texture = leaf::paint(
+        &sprig,
+        tip_leaves,
+        species.bark_color,
+        species.seed,
+        leaf::OUTLINE,
+    );
     Grown {
         bark,
         leaves,
+        leaf_texture,
         leafy_tips,
         level_limbs,
     }
@@ -103,11 +116,17 @@ pub fn plant(species: &Species) -> Grown {
 ///
 /// The card is two by two quads, after seedling, folded twice: each half turns down about the
 /// midrib by the lateral droop (up, cupping, if negative), and the far half bends down about the
-/// line across at `AXIAL_FOLD` by the axial droop. The folds shape the outline but not the
+/// line across at `fold`, a share of its length, by the axial droop. The folds shape the outline but not the
 /// shading: every quad keeps the flat card's normal, so a facet turned from the light is not cut
 /// dark against its neighbours. The corners go near quads before far, left before right, each
 /// quad's counter-clockwise from its face starting at its corner nearest the base on the left.
-pub(super) fn card(geometry: &mut Geometry, frame: &Frame, size: f32, leaves: &TipLeaves) {
+pub(super) fn card(
+    geometry: &mut Geometry,
+    frame: &Frame,
+    size: f32,
+    fold: f32,
+    leaves: &TipLeaves,
+) {
     let axis = frame.tangent;
     let normal = upper_side(axis, frame.side);
     // Square to both, so corners run counter-clockwise seen from the face.
@@ -116,19 +135,20 @@ pub(super) fn card(geometry: &mut Geometry, frame: &Frame, size: f32, leaves: &T
     let (axial_sin, axial_cos) = leaves.axial_droop.sin_cos();
     // A point on the flat card, `u` across from the midrib and `v` along from the base, both in
     // card widths, folded and placed.
-    let fold = |u: f32, v: f32| {
+    let folded = |u: f32, v: f32| {
         let mut out = Vec3::new(u * lateral_cos, -u.abs() * lateral_sin, v);
-        if v > AXIAL_FOLD {
-            let beyond = Vec2::new(out.z - AXIAL_FOLD, out.y);
-            out.z = AXIAL_FOLD + beyond.x * axial_cos + beyond.y * axial_sin;
+        if v > fold {
+            let beyond = Vec2::new(out.z - fold, out.y);
+            out.z = fold + beyond.x * axial_cos + beyond.y * axial_sin;
             out.y = beyond.y * axial_cos - beyond.x * axial_sin;
         }
         frame.point + (across * out.x + normal * out.y + axis * out.z) * size
     };
-    for (v0, v1) in [(0.0, AXIAL_FOLD), (AXIAL_FOLD, 1.0)] {
+    for (v0, v1) in [(0.0, fold), (fold, 1.0)] {
         for (u0, u1) in [(-0.5, 0.0), (0.0, 0.5)] {
             let first = geometry.positions.len() as u32;
-            let corners = [(u0, v0), (u1, v0), (u1, v1), (u0, v1)].map(|(u, v)| (u, v, fold(u, v)));
+            let corners =
+                [(u0, v0), (u1, v0), (u1, v1), (u0, v1)].map(|(u, v)| (u, v, folded(u, v)));
             for (u, v, position) in corners {
                 geometry.positions.push(position);
                 geometry.normals.push(normal);

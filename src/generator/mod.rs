@@ -6,6 +6,7 @@ mod envelope;
 mod foliage;
 mod fork;
 mod hint;
+mod leaf;
 mod mesh;
 mod placement;
 mod skeleton;
@@ -16,4 +17,5 @@ mod wander;
 mod tests;
 
 pub use envelope::{Envelope, envelope_helper};
+pub use leaf::LeafTexture;
 pub use mesh::{CARD_CORNERS, Geometry, plant};

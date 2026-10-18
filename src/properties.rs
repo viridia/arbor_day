@@ -61,7 +61,7 @@ use bevy_immediate::{
 };
 
 use crate::{
-    fuzzy::{Distribution, Fuzzy},
+    fuzzy::{Distribution, Fuzzy, Interval},
     random::Seed,
     spread_strip::{StripRange, spread_strip},
     toggle::{OperatorState, set_toggle_state, toggle_state},
@@ -397,6 +397,8 @@ fn field_row(
         .checked(flag);
     } else if let Some(fuzzy) = field.try_downcast_mut::<Fuzzy>() {
         fuzzy_row(row, name, caption, attrs, fuzzy);
+    } else if let Some(interval) = field.try_downcast_mut::<Interval>() {
+        interval_row(row, name, caption, attrs, interval);
     } else if let Some(seed) = field.try_downcast_mut::<Seed>() {
         seed_row(row, name, caption, seed);
     } else if let Some(number) = field.try_downcast_mut::<f32>() {
@@ -952,10 +954,8 @@ fn seed_row(row: ImmEntity<CapsPanel>, name: &'static str, caption: &'static str
     });
 }
 
-/// A fuzzy number's row: its center as a slider, its spread as a spinbox, and a button that
-/// toggles the distribution's shape, showing the current one. The field's [`ValueRange`] bounds
-/// the center; the spread goes up to half of it, so a spread can reach across the whole range.
-/// With a range, the center input also shows the spread strip.
+/// A fuzzy number's row: its center and spread (`center_and_spread`), and a button that toggles
+/// the distribution's shape, showing the current one.
 fn fuzzy_row(
     row: ImmEntity<CapsPanel>,
     name: &'static str,
@@ -963,44 +963,10 @@ fn fuzzy_row(
     attrs: &CustomAttributes,
     fuzzy: &mut Fuzzy,
 ) {
-    let center_look = NumberLook::from_attributes::<f32>(attrs);
-    let strip_range = match &center_look.range {
-        Some(NumericRange::F32(range)) => Some(StripRange {
-            start: *range.start(),
-            end: *range.end(),
-        }),
-        _ => None,
-    };
-    let half_range = strip_range.map_or(f32::MAX, |range| (range.end - range.start) * 0.5);
-    let spread_look = NumberLook {
-        range: Some(NumericRange::F32(0.0..=half_range)),
-        slider: false,
-        ..center_look.clone()
-    };
     row.on_spawn_insert(move || row_node(name)).add(|ui| {
         ui.ch().on_spawn_insert(widget_line).add(|ui| {
-            let center = number_input(
-                ui.ch(),
-                "center",
-                Some(caption),
-                center_look,
-                Val::Auto,
-                &mut fuzzy.center,
-            );
-            // Drawn from this frame's center and last frame's spread and shape, a frame behind
-            // when they change.
-            if let Some(range) = strip_range {
-                let drawn = *fuzzy;
-                center.add(|ui| spread_strip(ui, drawn, range));
-            }
-            number_input(
-                ui.ch(),
-                "spread",
-                None,
-                spread_look,
-                px(56),
-                &mut fuzzy.spread,
-            );
+            let (center, spread) = (&mut fuzzy.center, &mut fuzzy.spread);
+            center_and_spread(ui, caption, attrs, center, spread, fuzzy.shape);
             let mut button = ui.ch().on_spawn_apply_scene(|| {
                 bsn! {
                     @FeathersToolButton { @variant: {ButtonVariant::Plain} }
@@ -1026,6 +992,65 @@ fn fuzzy_row(
             });
         });
     });
+}
+
+/// An interval's row: a fuzzy number's, with an empty space where its shape button would be, so
+/// the inputs line up with those of fuzzy rows.
+fn interval_row(
+    row: ImmEntity<CapsPanel>,
+    name: &'static str,
+    caption: &'static str,
+    attrs: &CustomAttributes,
+    interval: &mut Interval,
+) {
+    row.on_spawn_insert(move || row_node(name)).add(|ui| {
+        ui.ch().on_spawn_insert(widget_line).add(|ui| {
+            let (center, spread) = (&mut interval.center, &mut interval.spread);
+            center_and_spread(ui, caption, attrs, center, spread, Distribution::Uniform);
+            // As wide as the shape button: its icon and padding.
+            ui.ch().on_spawn_insert(|| Node {
+                width: px(26),
+                flex_shrink: 0.0,
+                ..default()
+            });
+        });
+    });
+}
+
+/// A center as a slider and a spread as a spinbox, for fuzzy and interval rows. The field's
+/// [`ValueRange`] bounds the center; the spread goes up to half of it, so a spread can reach
+/// across the whole range. With a range, the center input also shows the spread strip, in
+/// `shape`.
+fn center_and_spread(
+    ui: &mut Imm<CapsPanel>,
+    caption: &'static str,
+    attrs: &CustomAttributes,
+    center: &mut f32,
+    spread: &mut f32,
+    shape: Distribution,
+) {
+    let center_look = NumberLook::from_attributes::<f32>(attrs);
+    let strip_range = match &center_look.range {
+        Some(NumericRange::F32(range)) => Some(StripRange {
+            start: *range.start(),
+            end: *range.end(),
+        }),
+        _ => None,
+    };
+    let half_range = strip_range.map_or(f32::MAX, |range| (range.end - range.start) * 0.5);
+    let spread_look = NumberLook {
+        range: Some(NumericRange::F32(0.0..=half_range)),
+        slider: false,
+        ..center_look.clone()
+    };
+    let input = number_input(ui.ch(), "center", Some(caption), center_look, Val::Auto, center);
+    // Drawn from this frame's center and last frame's spread and shape, a frame behind when they
+    // change.
+    if let Some(range) = strip_range {
+        let drawn = Fuzzy::new(*center, *spread, shape);
+        input.add(|ui| spread_strip(ui, drawn, range));
+    }
+    number_input(ui.ch(), "spread", None, spread_look, px(56), spread);
 }
 
 /// A caption with a feathers color input, a swatch that opens a picker, at the row's right end.

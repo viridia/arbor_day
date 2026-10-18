@@ -294,6 +294,7 @@ dependencies = [
  "bevy_remote_driver",
  "serde",
  "serde_json",
+ "tiny-skia",
 ]
 
 [[package]]

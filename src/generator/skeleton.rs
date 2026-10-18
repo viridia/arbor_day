@@ -6,7 +6,7 @@ use bevy::math::Vec3;
 use super::{
     carry_on::carry_on,
     envelope::{ENVELOPE_BISECTIONS, Envelope, inside_envelope},
-    foliage::{AXIAL_FOLD, clusters},
+    foliage::{axial_fold, clusters},
     fork::fork,
     hint::hint,
     placement::{place_scions, stems},
@@ -291,7 +291,7 @@ impl<'a> Level<'a> {
             params: &species.limbs.grown()[number - 1],
             taper: species.taper.clamp(0.0, 1.0),
             spacing: kink_spacing(&envelope),
-            straight: AXIAL_FOLD
+            straight: axial_fold(species)
                 * species.ornaments.tip_leaves.settings.size
                 * envelope.radius.max(0.01),
             envelope,

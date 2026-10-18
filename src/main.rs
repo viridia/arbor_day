@@ -38,6 +38,7 @@ mod fuzzy;
 mod generator;
 mod hud;
 mod keys;
+mod look;
 mod plant;
 mod properties;
 mod random;
@@ -72,6 +73,7 @@ fn main() {
             KeysPlugin,
             PlantPlugin,
             HudPlugin,
+            look::LookPlugin,
         ))
         .insert_resource(UiTheme(create_dark_theme()))
         .add_observer(use_game_fov)

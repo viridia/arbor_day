@@ -36,6 +36,31 @@ impl Fuzzy {
     }
 }
 
+/// A designed value and the most a drawn one strays from it, either way, every value between
+/// equally likely: for values drawn too few times for a shape to show, such as the leaves of one
+/// sprig.
+#[derive(Reflect, Clone, Copy, PartialEq, Debug)]
+pub struct Interval {
+    pub center: f32,
+    pub spread: f32,
+}
+
+impl Interval {
+    pub fn new(center: f32, spread: f32) -> Self {
+        Self { center, spread }
+    }
+
+    /// How far a drawn value strays from the center, within ± spread. Draws one number.
+    pub fn offset(&self, rng: &mut Rng) -> f32 {
+        self.spread * (2.0 * rng.unit() - 1.0)
+    }
+
+    /// A value within center ± spread. Draws one number. A caller with limits clamps it.
+    pub fn sample(&self, rng: &mut Rng) -> f32 {
+        self.center + self.offset(rng)
+    }
+}
+
 /// How values fall within a [`Fuzzy`]'s spread.
 #[derive(Reflect, Clone, Copy, PartialEq, Eq, Hash, Debug, Default)]
 pub enum Distribution {

@@ -48,7 +48,48 @@
       "upright": "Triple",
       "size": 0.25,
       "lateral_droop": -0.27925268,
-      "axial_droop": 0.29670596
+      "axial_droop": 0.29670596,
+      "sprig": {
+        "fan": 2,
+        "angle": {
+          "center": 0.87266463,
+          "spread": 0.15707964
+        },
+        "outer_size": 0.72,
+        "pairs": 2,
+        "spacing": {
+          "center": 0.5,
+          "spread": 0.0
+        }
+      },
+      "leaf": {
+        "base_width": 0.18,
+        "base_taper": 0.0,
+        "tip_width": 0.2,
+        "tip_taper": 0.41,
+        "segments": 1,
+        "serration": 0.0,
+        "rake": 0.0,
+        "jitter": 0.0,
+        "inner_color": {
+          "Srgba": {
+            "red": 0.25490198,
+            "green": 0.57254905,
+            "blue": 0.57254905,
+            "alpha": 1.0
+          }
+        },
+        "outer_color": {
+          "Srgba": {
+            "red": 0.3137255,
+            "green": 0.7882353,
+            "blue": 0.3137255,
+            "alpha": 1.0
+          }
+        },
+        "gradient": "Axial",
+        "variation": 0.18
+      }
     }
   }
 }

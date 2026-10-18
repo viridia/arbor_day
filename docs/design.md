@@ -29,6 +29,11 @@ both in physical pixels, so no scale factor is applied. The UI has a camera of i
 whole window. The view's node is pickable, and the turntable's drag and scroll observers sit on it
 (TD1.3), so the panel's own drags and scrolls never reach the camera.
 
+The view renders as the game does, by one resource, `GameLook` (`src/look.rs`), applied to the 3D
+camera, the sun and `GlobalAmbientLight`: Panoply's, linear tonemapping, so painted colors show as
+picked, a 1,750 lux sun, and ambient light at 700 in the average of its hemisphere light's sky and
+ground colors. Other games' looks are project settings (X6).
+
 ### 1.2 Settings
 
 App state is saved with `bevy_settings` as `org.viridia.arbor_day`; under the driver,
@@ -146,7 +151,10 @@ panel shows it flattened, its levels beside the other subpanes.
 ### 2.2 Varied values
 
 A `Fuzzy` (`src/fuzzy.rs`) is a center, a spread either side and a shape, bell or uniform.
-`Fuzzy::sample` always draws three numbers: the bell is their mean, uniform uses the first.
+`Fuzzy::sample` always draws three numbers: the bell is their mean, uniform uses the first. An
+`Interval` is a center and a spread, always uniform, one draw; `offset` draws how far a value
+strays, for values spaced evenly and then varied, as a sprig's leaves are. Its row is a `Fuzzy`'s
+with an empty space where the shape button would be.
 
 Random numbers come from SplitMix64 (`src/random.rs`). A seed opens named streams,
 `Rng::stream(seed, name)`, one per subsystem (`trunk` for the lean's heading, `branching` for the
@@ -309,7 +317,8 @@ size is a share of the crown radius. Stems bear none. A tip bears one card, unle
 45° or more above level at its tip, when the species' upright tips say: none, one, or a rosette
 of two or three (`cards_at`).
 
-One card lies along the twig, reaching back until its axial fold lies at the tip, or starting at
+One card lies along the twig, reaching back until its axial fold, where the painted sprig's fan
+starts (`axial_fold`, TD3.10), lies at the tip, or starting at
 the twig's base on a twig shorter than that. A rosette's cards start at the tip, spaced evenly
 about world up from the heading the twig points (straight up, the opposite of its upper side).
 Each turns from the twig toward level in its own heading by three quarters of the angle between
@@ -331,5 +340,35 @@ angle. A tube is open at its base and closed at its tip by a fan.
 
 A card is two by two quads, its base where it was placed, its axis along its direction, its face
 toward that axis's upper side. Each half turns down about the midrib by the lateral droop (up, cupping, if negative),
-and the far half bends down across the middle by the axial droop. Every quad keeps the flat card's
-normal. The texture's bottom is the card's base.
+and the far half bends down across the axial fold by the axial droop. Every quad keeps the flat
+card's normal. The texture's bottom is the card's base.
+
+### 3.10 The leaf texture
+
+`leaf.rs` paints the tip leaves' sprig (D29) with `tiny-skia` (D20), 256 pixels square, in leaf
+lengths, the middle leaf's, until fitted. A leaf's right half is a cubic from the base, (0, 0), to
+the tip, (0, 1), its inner control points set by the widths and tapers, cut into segments by
+blossoming; each segment but the last has its end pushed out by the serration, toward the tip by
+the rake in segment lengths, and at random by the jitter (stream `leaf shape`), its control points
+moved in proportion to how far along it they lie, and the tip is raised by the serration. The left
+half is its mirror. The sprig (stream `sprig`) is the middle leaf, the fan either side of it, leaf
+*i* of *n* turned *i*/*n* of the angle's center and scaled by the outer size to the power *i*/*n*,
+and the pairs below, a spacing apart, at the angle and the outer size; each leaf's angle and each
+pair leaf's place stray by their spreads.
+
+`layout` fits the sprig to the texture: symmetric about the stem, so it lies on the card's
+midrib, square, padded by half the outline and a pixel, the tip up. Where the fan starts, as a
+share of the height from the bottom edge, is the card's axial fold. `paint` strokes the stem, from
+below the bottom edge to the fan, and every leaf black, the outline's width wider; then the stem in
+the bark color; then each leaf in turn stroked translucent black and filled with a linear gradient
+in its own frame, lateral (outer, inner at the midrib, outer, across 1.2 times the half's widest
+control point) or axial (inner at the base, outer at the tip), both colors shifted in Oklch
+(stream `leaf color`) by up to 144° of hue and 0.4 of lightness at a variation of 1. The outline
+is 4 pixels until C66. A golden test compares the default species' texture with
+`src/generator/leaf-golden.png`, each channel within 2, and on a difference writes what it painted
+to `target/leaf-golden.png`.
+
+The app (`plant.rs`) gives the leaves' material a new image on each build, with its mipmaps: each
+level a 2 × 2 box filter of the one before, colors weighted by alpha so transparent pixels add none
+of theirs. A new image rather than the old one replaced, since Bevy reuses the GPU texture of an
+image replaced at the same size and writes only its first level (X48).

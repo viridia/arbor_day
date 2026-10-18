@@ -744,7 +744,9 @@ fn branch_ends_run_straight_under_their_cards() {
     // With no bend, a stretch with no kinks keeps no rings, so a branch end's last ring
     // before its tip lies before the stretch its card covers.
     let species = level_limbs(45.0);
-    let straight = AXIAL_FOLD * species.ornaments.tip_leaves.settings.size * Envelope::of(&species).radius;
+    let straight = axial_fold(&species)
+        * species.ornaments.tip_leaves.settings.size
+        * Envelope::of(&species).radius;
     let limbs = limbs(&species);
     let ends: Vec<&Axis> = limbs.iter().filter(|limb| limb.scions.is_empty()).collect();
     assert!(ends.iter().any(|limb| limb.rings.len() > 2));
@@ -1505,7 +1507,7 @@ fn steep_tips_bear_rosettes() {
 }
 
 #[test]
-fn cards_fold_at_the_midrib_and_across_the_middle() {
+fn cards_fold_at_the_midrib_and_across() {
     let frame = Frame {
         point: Vec3::ZERO,
         tangent: Vec3::X,
@@ -1519,7 +1521,7 @@ fn cards_fold_at_the_midrib_and_across_the_middle() {
             axial_droop: axial.to_radians(),
             ..TipLeaves::default()
         };
-        card(&mut geometry, &frame, 2.0, &leaves);
+        card(&mut geometry, &frame, 2.0, 0.5, &leaves);
         geometry
     };
     // A level twig along x, so the card faces up and its left edge lies toward −z.
