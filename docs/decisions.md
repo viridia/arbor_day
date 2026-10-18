@@ -362,3 +362,11 @@ tree, which the tool also makes, by taking them off. Anything with a value
 that does nothing is an operator, however common; the frame keeps only what has no such value,
 as reach and radius, which no species does without. **Reversing it** gives every species the
 default's behaviours to undo, and the panel the rows for them.
+
+### D34 — One file type: the saved file is the glTF
+
+Save writes the exported glTF, the species a JSON extra on its scene (C10's format), and Open
+reads the species back from it (C40, C41). There is no separate species file, so no new extension
+to invent, and no JSON file of another kind to open by mistake: a file that opens is a plant, and
+the mesh the game loads is never out of step with the species that made it. **Reversing it** adds
+a second file type, its extension, and the work of keeping the two in step.

@@ -92,6 +92,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C105  | Carry-on reach (D30, TD3.6): a Shape field per level, the carrier's reach as a share of the level's, 0 to 150%, default 100%, so a leader can stop below the crown's top and a limb's tip short of its last laterals. The parent is cut at its last node whether or not the carrier grows, so one too short leaves a Y rather than a bare post. `plans/shapes.py` screenshots a short leader with Y tips. Output unchanged unless a carrier was too short. |
 | C106  | Size bias (TD3.3, X31 step 6): a limb level operator, off by default, with its icon; its reach at base (0 to 200%) scales the laterals' reach at the parent's first node, changing evenly to 100% at its last, so twigs near a limb's root stay short and their leaves fill the crown's middle, or the lowest limbs are longest, for a cone. By node index, so the start leaves it alone. The carrier keeps its own reach (C105). `plans/shapes.py` screenshots twigs at 30% at the base. Output unchanged. |
 | C107  | Shortcut text, `src/shortcut.rs`, for C40's menus: `shortcut` shows keys dimmed at a menu item's right end (`menu_item`'s `keys`), in the families "Fira Sans, Key Symbols". Key Symbols (`assets/fonts/KeySymbols.ttf`, 12 KB) is DejaVu Sans subset to the key symbols Fira Sans lacks (⌘ ⌥ ⌃ ⇥ ⇤ ↩ ↵ ⇞ ⇟ ↖ ↘ ␣ ⌤), renamed; Parley picks a font per character. ⎋ is in neither, so "Esc". Checked by a screenshot of the add menu with shortcuts, since removed; C40's menus will carry the plan. |
+| C40   | File commands, `src/document.rs`: New, Open, Save and Save As, as keys (D8: ⌘N, ⌘O, ⌘S, ⌘⇧S) and in a file menu (`menu.png`) at the right of a header row above the Plant group, its items showing their shortcuts (C107). The row's left, and the window title, show the document's name, from its file ("Untitled" before the first save), and a dot while the species differs from the one last saved (`Document`). Not a row of buttons, which cannot show shortcuts, nor native menus, whose platform support is not there. New works; Save waits on C41, Open and Save As on the file browser (X2), each logging until then. Commands act on the one `Document`, so tabs (X26) change only which. `plans/file.py`. |
 
 ## Next
 
@@ -117,10 +118,7 @@ slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
    target (D27) widened from world up to a blend of up and the envelope's outward normal, with a
    spread. Card counts multiply with levels, eight triangles each since C39, so look at density
    against the budget too. E[3]
-2. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
-   panel, above the Plant group (C33); the file browser is X2. File commands act on the active document, so that tabs (X26)
-   need not change them. E[3]
-3. **C8 Working document in settings.** A settings group holding the working species and, once
+2. **C8 Working document in settings.** A settings group holding the working species and, once
    set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
    as seedling did. The document's name comes from the file name. Serialized by reflection, as
    `bevy_settings` does. A working document from before a schema change is lost (D32), but not
@@ -128,8 +126,10 @@ slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
    drops a field that fails to deserialize without a word (`load_properties`), so the species is
    read by C10's strict path and its error logged. Stored as a list of open documents holding
    one, and the active one's index, so several (X26) need no change of format. E[3]
-4. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, the species
-    as a JSON extra (C10), and on an outlined species the bark material's `"outline"` extra, the
+3. **C41 glTF export** from the app, which is Save (C40), the saved file being the export
+    (requirements, Parameters): Save writes it to the document's path and marks the document
+    saved, and Open, once the file browser lands (X2), reads the species back from the extra. The
+    bark and leaf meshes, the leaf texture, the species as a JSON extra on the scene (C10), and on an outlined species the bark material's `"outline"` extra, the
     bark outline's width (C66), written from the generator's output (`generator::plant`), never from
     the preview's entities, whose leaf mesh is only hidden while none grow, in the form Panoply loads (requirements, Output; "What Panoply does with the output"). Bark and leaf materials matte (roughness 1.0), as the preview's are. Bevy writes no glTF,
     so this adds a dependency or a writer of our own; propose it before code. The command-line
@@ -154,6 +154,9 @@ slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
 
 ### Quick wins
 
+- **C108 Ask before dropping unsaved changes**: New, and Open once it works, replace an edited
+  species without asking (C40). A feathers dialog (Save, Don't Save, Cancel) while the document
+  has its dot. After C41, so Save in the dialog saves. E[2]
 - **C101 Control-group headings like operators'**: "Arrangement" and "Shape" in `TEXT_MAIN`
   rather than dimmed, each after an icon, as an operator's heading is; the icon an `Icon`
   attribute on the group's first field, the files in `assets/icons/groups/`. Waits on the two
@@ -168,7 +171,8 @@ slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
   its default; `plans/operators.py` (2026-10-17), a ✕ below the fold clicked just after its
   operator was added from the menu not taking, until two frames' wait (the plan keeps it);
   `plans/widgets.py` (2026-10-17), twice, each a typed spread keeping its old value, the reach's
-  0 and the sprig spacing's 10. E[2]
+  0 and the sprig spacing's 10; `plans/cards.py` (2026-10-18), the lateral droop typed as 45
+  becoming 90°, a wrong value rather than the old one, passing on the rerun. E[2]
 - **C88 Landed rows as citations**: each row a line naming the TD section or decision it landed,
   the design the longer rows restate now being `design.md`'s. E[1]
 - **C89 `growth-model.md` against `design.md`**: its Consequences describe the model as built;
@@ -518,6 +522,10 @@ slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
 - **X50** The Pipe model operator (`docs/patches.md`, Stacks; D22): each level's axes narrowed
   by the wood their children take, in place of the taper, run after every level has grown.
   *Gate:* a preset (X18) whose trunk should narrow where many limbs leave it.
+
+- **X51** Key Symbols (C107) upstream in feathers, for the Bevy editor's menus too, the author
+  proposing it. *Gate:* it landing in the Bevy we build against; then `src/shortcut.rs` uses
+  feathers' and `assets/fonts/KeySymbols.ttf` goes.
 
 ## Notes
 

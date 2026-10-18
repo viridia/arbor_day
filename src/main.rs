@@ -24,6 +24,7 @@ use bevy_immediate::{
     attach::{BevyImmediateAttachPlugin, ImmediateAttach},
 };
 use bevy_remote_driver::RemoteDriverPlugin;
+use document::{Document, DocumentPlugin};
 use hud::{Ground, HudPlugin, hud};
 use keys::KeysPlugin;
 use outline::{OutlinePlugin, PlantOutline};
@@ -35,6 +36,7 @@ use turntable::{
     TurntableCamera, TurntablePlugin, TurntableSubject, orbit_on_drag, zoom_on_scroll,
 };
 
+mod document;
 mod fuzzy;
 mod generator;
 mod hud;
@@ -79,6 +81,7 @@ fn main() {
             HudPlugin,
             look::LookPlugin,
             shortcut::ShortcutPlugin,
+            DocumentPlugin,
         ))
         .insert_resource(UiTheme(create_dark_theme()))
         .add_observer(use_game_fov)
@@ -264,12 +267,17 @@ fn shell_ui() -> impl Scene {
 struct PanelParams<'w, 's> {
     species: ResMut<'w, Species>,
     stats: Query<'w, 's, &'static PlantStats>,
+    document: Res<'w, Document>,
+    commands: Commands<'w, 's>,
 }
 
 impl ImmediateAttach<CapsPanel> for ParamPanel {
     type Params = PanelParams<'static, 'static>;
 
     fn construct(ui: &mut Imm<CapsPanel>, params: &mut PanelParams) {
+        if let Some(command) = document::header(ui, &params.document, &params.species) {
+            params.commands.trigger(command);
+        }
         // Edit a copy: writing through `ResMut` every frame would mark the species changed every
         // frame, and the plant would rebuild every frame.
         let mut edited = params.species.clone();

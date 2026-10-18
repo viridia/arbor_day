@@ -571,53 +571,54 @@ fn add_menu(
                     }
                 })
                 .interactions_disabled(off.is_empty() && next.is_none());
-            ui.ch()
-                .on_spawn_apply_scene(|| {
-                    bsn! {
-                        @FeathersMenuPopup
-                        // Right-aligned, since the add button sits at the header's right end.
-                        Popover {
-                            positions: vec![
-                                PopoverPlacement {
-                                    side: PopoverSide::Bottom,
-                                    align: PopoverAlign::End,
-                                    gap: 2.0,
-                                },
-                                PopoverPlacement {
-                                    side: PopoverSide::Top,
-                                    align: PopoverAlign::End,
-                                    gap: 2.0,
-                                },
-                            ],
-                            window_margin: 10.0,
-                        }
+            ui.ch().on_spawn_apply_scene(right_aligned_popup).add(|ui| {
+                let operators = !off.is_empty();
+                for (field, caption) in off {
+                    let item = format!("add_{field}");
+                    if menu_item(ui.ch_id(field), caption.to_string(), None, item) {
+                        picked = Some(Picked::Operator(field));
                     }
-                })
-                .add(|ui| {
-                    let operators = !off.is_empty();
-                    for (field, caption) in off {
-                        let item = format!("add_{field}");
-                        if menu_item(ui.ch_id(field), caption.to_string(), None, item) {
-                            picked = Some(Picked::Operator(field));
-                        }
+                }
+                if let Some(next) = next {
+                    if operators {
+                        ui.ch_id("divider")
+                            .on_spawn_apply_scene(|| bsn! { @FeathersMenuDivider });
                     }
-                    if let Some(next) = next {
-                        if operators {
-                            ui.ch_id("divider")
-                                .on_spawn_apply_scene(|| bsn! { @FeathersMenuDivider });
-                        }
-                        if menu_item(ui.ch_id("add"), next, None, "add".to_string()) {
-                            picked = Some(Picked::Item);
-                        }
+                    if menu_item(ui.ch_id("add"), next, None, "add".to_string()) {
+                        picked = Some(Picked::Item);
                     }
-                });
+                }
+            });
         });
     picked
 }
 
+/// A feathers menu popup aligned to its button's right edge, for a menu button at a row's right
+/// end.
+pub(crate) fn right_aligned_popup() -> impl Scene {
+    bsn! {
+        @FeathersMenuPopup
+        Popover {
+            positions: vec![
+                PopoverPlacement {
+                    side: PopoverSide::Bottom,
+                    align: PopoverAlign::End,
+                    gap: 2.0,
+                },
+                PopoverPlacement {
+                    side: PopoverSide::Top,
+                    align: PopoverAlign::End,
+                    gap: 2.0,
+                },
+            ],
+            window_margin: 10.0,
+        }
+    }
+}
+
 /// A feathers menu item showing `caption`, and its shortcut `keys` at its right end if given,
 /// named `name`. Returns whether it was picked.
-fn menu_item(
+pub(crate) fn menu_item(
     item: ImmEntity<CapsPanel>,
     caption: String,
     keys: Option<&'static str>,

@@ -202,7 +202,8 @@ Requirements:
 - **M** Same parameters and seed, same output, on every platform, in a given tool version.
 - **M** Independent random streams per subsystem (trunk, branching, foliage placement, leaf
   shape, leaf color), so changing one leaves the others unchanged.
-- **M** Parameters saved as a readable source file (RON or JSON), separate from the export.
+- **M** The saved file is the exported glTF, the species embedded as a JSON extra on its scene,
+  as seedling's `.glb` held its parameters; there is no separate source file (D34).
 - **S** A species file plus a seed list for variants, so a biome gets several trees per
   species without hand work.
 - **M** A varied parameter is stored as a center and a spread, not as low and high ends

@@ -12,7 +12,7 @@ use bevy::{
     window::PrimaryWindow,
 };
 
-use crate::turntable::TurntableCamera;
+use crate::{document::FileCommand, turntable::TurntableCamera};
 
 /// Distance factor for one press of +.
 const ZOOM_STEP: f32 = 0.8;
@@ -46,6 +46,19 @@ fn on_key(
     // Cmd+Q on macOS never arrives: the OS quits the app first, so settings rely on their
     // deferred save there.
     if keys.pressed(Key::Super) || keys.pressed(Key::Control) {
+        let file_command = match character.to_lowercase().as_str() {
+            "n" => Some(FileCommand::New),
+            "o" => Some(FileCommand::Open),
+            "s" if keys.pressed(Key::Shift) => Some(FileCommand::SaveAs),
+            "s" => Some(FileCommand::Save),
+            _ => None,
+        };
+        if let Some(command) = file_command {
+            if !event.repeat {
+                commands.trigger(command);
+            }
+            return;
+        }
         if cfg!(not(target_os = "macos"))
             && keys.pressed(Key::Control)
             && character.eq_ignore_ascii_case("q")
