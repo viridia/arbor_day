@@ -91,11 +91,7 @@ fn build_outline(
     species: Res<Species>,
     plant: Single<&Mesh3d, With<Plant>>,
     outlines: Query<
-        (
-            Entity,
-            Option<&Mesh3d>,
-            &MeshMaterial3d<OutlineMaterial>,
-        ),
+        (Entity, Option<&Mesh3d>, &MeshMaterial3d<OutlineMaterial>),
         With<PlantOutline>,
     >,
     mut materials: ResMut<Assets<OutlineMaterial>>,

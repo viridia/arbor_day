@@ -101,7 +101,8 @@ fn build_plant(
         // replaced at the same size and writes only its first mip level.
         let leaf_image = images.add(with_mips(&grown.leaf_texture));
         for (_, _, material) in &leaves {
-            if let Some(mut material) = material.and_then(|material| materials.get_mut(&material.0)) {
+            if let Some(mut material) = material.and_then(|material| materials.get_mut(&material.0))
+            {
                 material.base_color_texture = Some(leaf_image.clone());
             }
         }

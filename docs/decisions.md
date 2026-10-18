@@ -325,7 +325,11 @@ A stem or limb bearing limbs ends at its last node, and one more limb of its chi
 carries it on from there (TD3.6), so the trunk turns into a branch rather than ending in a post, as
 in decurrent trees and an excurrent leader's last shoot, and a limb's tip is a shoot like any
 other, as in sympodial growth: a fork of one, which D31 generalizes. The two are drawn as one
-tube (TD3.9), so the silhouette and normals run unbroken where their sides differ. **Reversing it** gives every bearing limb a bare post past its last node.
+tube (TD3.9), so the silhouette and normals run unbroken where their sides differ. The carrier's
+reach is its level's times a carry-on reach, a field of its own, departing from G1 because no
+field can shorten the leader and the tips without shortening the laterals too: at the same reach a
+leader stands above the crown and every limb ends in a trident. One too short to grow leaves the
+parent ending at its last node, a Y of its last laterals. **Reversing it** gives every bearing limb a bare post past its last node.
 
 ### D31 — Forks after Weber and Penn's splits
 

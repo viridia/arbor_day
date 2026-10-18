@@ -249,8 +249,10 @@ they point out from the plant's axis. Crowding is how near each azimuth is to ea
 raised to the 4th power, and faded to 0.7 a mean gap further along the parent; pointing outward,
 the more so the further the node is from the axis, up to a crown radius, counts 1 against it. Each
 limb then turns by its own random amount up to the level's skew, and leaves at its drawn angle from
-the parent, its reach a drawn share of the distance to the envelope. Its base radius is the level's
-radius share of the parent's radius there.
+the parent, its reach a drawn share of the distance to the envelope. With Size bias on, that share
+is scaled by the node's index: the reach at base at the first node, changing evenly to 1 at the
+last, so the start does not change its meaning. Its base radius is the level's radius share of the
+parent's radius there.
 
 ### 3.4 Tracing
 
@@ -292,9 +294,9 @@ TD3.7) keeps its radii, the cut ring carrying the radius at the cut.
 
 An axis bearing laterals, unless it forked, ends at its last lateral's node, and one more limb of
 the level carries it on from there (`carry_on.rs`): along it, at its radius there, from a stream of
-its own, otherwise grown as its siblings are. The parent is cut there and left open, its last ring
-the carrier's first. If the carrier comes out no longer than it is thick, the parent keeps its full
-length.
+its own, its reach the level's times the carry-on reach, otherwise grown as its siblings are. The
+parent is cut there, its last ring the carrier's first. A carrier no longer than it is thick is
+left out, and the parent ends at the node, capped.
 
 ### 3.7 Forks
 

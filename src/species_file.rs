@@ -174,7 +174,10 @@ mod tests {
         // On in the default, so a file without them is bare.
         let mut species = Species::default();
         let read_bare = edited(&species, |file| {
-            file["ornaments"].as_object_mut().unwrap().remove("tip_leaves");
+            file["ornaments"]
+                .as_object_mut()
+                .unwrap()
+                .remove("tip_leaves");
         })
         .unwrap();
         assert_eq!(read_bare.ornaments.tip_leaves.state, OperatorState::Off);

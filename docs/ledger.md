@@ -89,6 +89,8 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C38   | Leaf texture painting (D29, TD3.10), `src/generator/leaf.rs`: the tip leaves' sprig painted with `tiny-skia` (D20), seedling's poplar-green by default, its fields in Sprig and Leaf subgroups of the tip leaves, the angle and spacing `Interval`s (D10, TD2.2), a fuzzy row without the shape button. The card's axial fold where the sprig's fan starts. Mipmaps built on the CPU, a new image each build (X48). The placeholder texture goes. The view lit and tonemapped as Panoply's, by `GameLook` (TD1.1, X6), which shows the leaf colors as picked. A golden test on the default texture's pixels; `plans/widgets.py` types an interval's spread. Changes every plant's straight runs under cards; breaks files. |
 | C103  | Ornaments as slots (`docs/patches.md`, Stacks; TD3.8): `Ornaments` holds the tip leaves as a `Toggle<TipLeaves>`, on by default (D33), in place of the Leaves checkbox, with the eye, ✕ and the Foliage header's add menu of an operator, and its icon. The file leaves off slots out, so a bare plant has no `tip_leaves`. Reflection paths gain `settings` (`ornaments.tip_leaves.settings.upright`). `plans/levels.py` takes the leaves off with the ✕ and adds them back from the menu. Breaks files. |
 | C66   | Outlines (TD3.9, TD3.10), a switch for the whole plant in the Plant group, on by default, with the bark outline's width in metres (0.01, Panoply's models') and the leaf stroke's in texture pixels (4), in place of `leaf::OUTLINE`. On, the view draws the bark again as an inverted hull, Panoply's `OutlineMaterial` copied to `src/outline.rs`; off, the hull hides and the leaf texture is painted without strokes, the translucent ones between leaves too. Panoply's reading of the width is X49. `plans/widgets.py` clears the checkbox. Output unchanged by default. The envelope helper's lines at 18% opacity, from 60%, less distracting under the game's lighting (C38). |
+| C105  | Carry-on reach (D30, TD3.6): a Shape field per level, the carrier's reach as a share of the level's, 0 to 150%, default 100%, so a leader can stop below the crown's top and a limb's tip short of its last laterals. The parent is cut at its last node whether or not the carrier grows, so one too short leaves a Y rather than a bare post. `plans/shapes.py` screenshots a short leader with Y tips. Output unchanged unless a carrier was too short. |
+| C106  | Size bias (TD3.3, X31 step 6): a limb level operator, off by default, with its icon; its reach at base (0 to 200%) scales the laterals' reach at the parent's first node, changing evenly to 100% at its last, so twigs near a limb's root stay short and their leaves fill the crown's middle, or the lowest limbs are longest, for a cone. By node index, so the start leaves it alone. The carrier keeps its own reach (C105). `plans/shapes.py` screenshots twigs at 30% at the base. Output unchanged. |
 
 ## Next
 
@@ -441,7 +443,7 @@ slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
   5. ~~Panes, each level a feathers pane and its operators subpanes.~~ Withdrawn: C97's
      headings, each with its icon, eye and ✕, read well enough.
   6. New operators, each a chunk, judged by eye as they change output: angle bias (C55), sag
-     and rise (C94, landed), weep (C48), taper per level (X32), size bias.
+     and rise (C94, landed), weep (C48), taper per level (X32), size bias (C106, landed).
 
   *Gate:* step 6, each operator's own item.
 

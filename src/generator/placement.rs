@@ -165,7 +165,8 @@ pub(super) fn place_scions(level: &Level, skeleton: &mut Skeleton) {
 /// Places the laterals on `parent`, the axis at `index`: nodes along the part of the parent
 /// inside the crown, as many as the level's density gives for its length, each placed by
 /// `node_place`, its limbs turned about the parent by `node_azimuths` and their skew, each leaving
-/// at the level's angle from the parent and reaching its share of the way to the envelope. A fork's
+/// at the level's angle from the parent and reaching its share of the way to the envelope, scaled
+/// by its node's `size_bias`. A fork's
 /// copy's nodes start from its base. Each lateral's base radius is the level's share of the
 /// parent's radius where it leaves, so a level's radius changes that level alone.
 fn place_on(level: &Level, index: usize, parent: &Axis, placed: &mut Vec<Axis>) {
@@ -214,7 +215,9 @@ fn place_on(level: &Level, index: usize, parent: &Axis, placed: &mut Vec<Axis>) 
             let (angle_sin, angle_cos) = angle.sin_cos();
             let direction =
                 frame.tangent * angle_cos + (frame.side * cos + across * sin) * angle_sin;
-            let reach = reach * distance_to_envelope(envelope, frame.point, direction);
+            let reach = reach
+                * size_bias(params, node, nodes)
+                * distance_to_envelope(envelope, frame.point, direction);
             let start = Ring {
                 tangent: direction,
                 side: upper_side(direction, frame.side),
@@ -231,6 +234,18 @@ fn place_on(level: &Level, index: usize, parent: &Axis, placed: &mut Vec<Axis>) 
                 rng,
             ));
         }
+    }
+}
+
+/// The share of the reach for laterals at node `node` of `nodes`: with Size bias on, its reach at
+/// base at the first node, changing evenly to 1 at the last; otherwise, and for a lone node, 1.
+pub(super) fn size_bias(params: &LimbLevel, node: u32, nodes: u32) -> f32 {
+    match params.size_bias.get() {
+        Some(bias) if nodes > 1 => {
+            let place = node as f32 / (nodes - 1) as f32;
+            bias.base + (1.0 - bias.base) * place
+        }
+        _ => 1.0,
     }
 }
 

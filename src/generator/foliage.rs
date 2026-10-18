@@ -64,10 +64,7 @@ pub(super) fn clusters(species: &Species, axes: &[Axis]) -> Vec<Card> {
         }
         let length = twig.length();
         let tip = twig.frame_at(length);
-        let count = cards_at(
-            tip.tangent.y.clamp(-1.0, 1.0).asin(),
-            tip_leaves.upright,
-        );
+        let count = cards_at(tip.tangent.y.clamp(-1.0, 1.0).asin(), tip_leaves.upright);
         if count == 1 {
             let back = (fold * size).min(length);
             let t = (1.0 - back / length.max(f32::EPSILON)).clamp(0.0, 1.0);

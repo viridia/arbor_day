@@ -7,6 +7,10 @@ default.
 - wander, turned on for the shots: the first level's limbs zigzag about their course at the most
   wander, 45°, and the second level's shorter twigs kink once or not at all;
 - facing: the second level's limbs to the sides (the default), up, down and around, then skewed;
+- carry-on reach: the leader at 30%, below the crown's top, and the second level's at 0%, each
+  limb ending in a Y of its last twigs rather than a trident;
+- size bias: the second level's twigs at 30% of their reach at each limb's first node, rising to
+  all of it at the last;
 - forks: every first-level limb forking, the Y level, then upright, then three ways, the second
   level to the sides, so the level Y shows whether twigs crowd its crotch (ledger X33);
 - stems: the trunk forked at the ground into three stems splayed from up, then a crown twice the
@@ -82,6 +86,19 @@ def run(driver):
     driver.screenshot("skewed")
     set_number(driver, "levels[1]/skew", "20")
     pick_facing(driver, "Sides")
+
+    # A short leader, and limbs ending in a Y of their last twigs, with none carrying them on.
+    set_number(driver, "levels[0]/carry_on", "30")
+    set_number(driver, "levels[1]/carry_on", "0")
+    driver.screenshot("short_carry_on")
+    set_number(driver, "levels[0]/carry_on", "100")
+    set_number(driver, "levels[1]/carry_on", "100")
+
+    # Twigs short near each limb's root, so their leaves fill the crown's middle.
+    driver.set_resource(SPECIES, "On", at="limbs.levels[1].size_bias.state")
+    set_number(driver, "levels[1]/size_bias/base", "30")
+    driver.screenshot("size_bias")
+    driver.set_resource(SPECIES, "Off", at="limbs.levels[1].size_bias.state")
 
     # Every first-level limb forks: level, upright, then three ways.
     driver.set_resource(SPECIES, "On", at="limbs.levels[0].fork.state")

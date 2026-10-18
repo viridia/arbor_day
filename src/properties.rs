@@ -1043,7 +1043,14 @@ fn center_and_spread(
         slider: false,
         ..center_look.clone()
     };
-    let input = number_input(ui.ch(), "center", Some(caption), center_look, Val::Auto, center);
+    let input = number_input(
+        ui.ch(),
+        "center",
+        Some(caption),
+        center_look,
+        Val::Auto,
+        center,
+    );
     // Drawn from this frame's center and last frame's spread and shape, a frame behind when they
     // change.
     if let Some(range) = strip_range {

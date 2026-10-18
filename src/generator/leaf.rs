@@ -89,7 +89,14 @@ pub(super) fn layout(tip_leaves: &TipLeaves, seed: Seed, outline: Option<f32>) -
     let size = TEXTURE_SIZE as f32;
     let padding = outline.unwrap_or(0.0) * 0.5 + 1.0;
     let scale = (size - 2.0 * padding) / extent;
-    let to_pixels = Transform::from_row(scale, 0.0, 0.0, -scale, size * 0.5, size * 0.5 + middle * scale);
+    let to_pixels = Transform::from_row(
+        scale,
+        0.0,
+        0.0,
+        -scale,
+        size * 0.5,
+        size * 0.5 + middle * scale,
+    );
     Layout {
         half,
         stamps,
@@ -131,18 +138,32 @@ pub(super) fn paint(
 
     if let Some(width) = outline {
         let black = solid(tiny_skia::Color::BLACK);
-        pixmap.stroke_path(&stem, &black, &stroke(stem_width + width, 1.0), layout.to_pixels, None);
+        pixmap.stroke_path(
+            &stem,
+            &black,
+            &stroke(stem_width + width, 1.0),
+            layout.to_pixels,
+            None,
+        );
         for stamp in &layout.stamps {
             let transform = leaf_transform(stamp);
             pixmap.stroke_path(&path, &black, &stroke(width, stamp.scale), transform, None);
         }
     }
     let bark = solid(skia_color(bark_color));
-    pixmap.stroke_path(&stem, &bark, &stroke(stem_width, 1.0), layout.to_pixels, None);
+    pixmap.stroke_path(
+        &stem,
+        &bark,
+        &stroke(stem_width, 1.0),
+        layout.to_pixels,
+        None,
+    );
 
-    let (width, length) = layout.half.iter().flatten().fold((0.0_f32, 0.0_f32), |(w, l), p| {
-        (w.max(p.x), l.max(p.y))
-    });
+    let (width, length) = layout
+        .half
+        .iter()
+        .flatten()
+        .fold((0.0_f32, 0.0_f32), |(w, l), p| (w.max(p.x), l.max(p.y)));
     let mut rng = seed.stream("leaf color");
     let parting = solid(tiny_skia::Color::from_rgba8(0, 0, 0, PARTING_ALPHA));
     for stamp in &layout.stamps {
@@ -175,7 +196,13 @@ pub(super) fn paint(
         };
         let transform = leaf_transform(stamp);
         if let Some(width) = outline {
-            pixmap.stroke_path(&path, &parting, &stroke(width, stamp.scale), transform, None);
+            pixmap.stroke_path(
+                &path,
+                &parting,
+                &stroke(width, stamp.scale),
+                transform,
+                None,
+            );
         }
         pixmap.fill_path(&path, &fill, FillRule::Winding, transform, None);
     }
@@ -208,7 +235,13 @@ fn half_outline(leaf: &Leaf, seed: Seed) -> Vec<Segment> {
     ];
     let count = leaf.segments.max(1) as usize;
     let mut segments: Vec<Segment> = (0..count)
-        .map(|i| part(&whole, i as f32 / count as f32, (i + 1) as f32 / count as f32))
+        .map(|i| {
+            part(
+                &whole,
+                i as f32 / count as f32,
+                (i + 1) as f32 / count as f32,
+            )
+        })
         .collect();
     let mut rng = seed.stream("leaf shape");
     for segment in &mut segments[..count - 1] {
@@ -280,7 +313,10 @@ fn stamps(sprig: &Sprig, seed: Seed) -> Vec<Stamp> {
     let angles = limits::<Sprig>("angle");
     for i in 1..=sprig.pairs.max(0) {
         for side in [1.0, -1.0] {
-            let angle = sprig.angle.sample(&mut rng).clamp(*angles.start(), *angles.end());
+            let angle = sprig
+                .angle
+                .sample(&mut rng)
+                .clamp(*angles.start(), *angles.end());
             let drop = i as f32 * sprig.spacing.center + sprig.spacing.offset(&mut rng);
             stamps.push(Stamp {
                 angle: side * angle,
@@ -354,7 +390,12 @@ mod tests {
 
     #[test]
     fn segments_meet_on_the_curve() {
-        let curve = [Vec2::ZERO, Vec2::new(0.3, 0.1), Vec2::new(0.2, 0.6), Vec2::Y];
+        let curve = [
+            Vec2::ZERO,
+            Vec2::new(0.3, 0.1),
+            Vec2::new(0.2, 0.6),
+            Vec2::Y,
+        ];
         let (first, second) = (part(&curve, 0.0, 0.4), part(&curve, 0.4, 1.0));
         assert_eq!(first[0], curve[0]);
         assert!(first[3].distance(second[0]) < 1e-6);
@@ -392,7 +433,13 @@ mod tests {
         let tip_leaves = &species.ornaments.tip_leaves.settings;
         let stroke = species.leaf_stroke();
         let layout = layout(tip_leaves, species.seed, stroke);
-        let texture = paint(&layout, tip_leaves, species.bark_color, species.seed, stroke);
+        let texture = paint(
+            &layout,
+            tip_leaves,
+            species.bark_color,
+            species.seed,
+            stroke,
+        );
         let golden = std::fs::read(GOLDEN).ok().and_then(|bytes| {
             Image::from_buffer(
                 &bytes,

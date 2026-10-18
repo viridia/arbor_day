@@ -8,7 +8,9 @@ use super::{
 use crate::{
     fuzzy::{Distribution, Fuzzy},
     random::Seed,
-    species::{Facing, Lean, Ornaments, Sag, Profile, Species, TipLeaves, Trunk, Upright, Wander},
+    species::{
+        Facing, Lean, Ornaments, Profile, Sag, SizeBias, Species, TipLeaves, Trunk, Upright, Wander,
+    },
     toggle::{OperatorState, Toggle},
 };
 
@@ -413,6 +415,26 @@ fn limbs_reach_their_share_of_the_way_to_the_envelope() {
 }
 
 #[test]
+fn size_bias_shortens_laterals_toward_the_first_node() {
+    let mut species = straight();
+    species.limbs.levels[0].size_bias = Toggle::on(SizeBias { base: 0.5 });
+    let laterals = side_limbs(&species);
+    let envelope = Envelope::of(&species);
+    let reach = species.limbs.levels[0].reach.center;
+    // One a node, from the first at half the reach to the last at all of it.
+    assert_eq!(laterals.len(), 16);
+    for (node, limb) in laterals.iter().enumerate() {
+        let tip = limb.origin() + limb.direction() * limb.length();
+        let whole = limb.length() + distance_to_envelope(&envelope, tip, limb.direction());
+        let share = 0.5 + 0.5 * node as f32 / 15.0;
+        assert!(
+            (limb.length() - share * reach * whole).abs() < 1e-3,
+            "{node}"
+        );
+    }
+}
+
+#[test]
 fn limbs_leave_the_trunk_at_their_angle() {
     // Upright, the trunk is one straight segment, base to tip.
     let species = regular();
@@ -678,6 +700,14 @@ fn operators_not_on_grow_as_at_zero() {
     upright.trunk.lean.settings.angle = 0.0;
     leaning.trunk.lean.state = OperatorState::Disabled;
     assert_eq!(rings(&leaning), rings(&upright));
+
+    let mut biased = Species::default();
+    biased.limbs.levels[0].size_bias.settings.base = 0.2;
+    let mut even = biased.clone();
+    even.limbs.levels[0].size_bias.state = OperatorState::On;
+    even.limbs.levels[0].size_bias.settings.base = 1.0;
+    biased.limbs.levels[0].size_bias.state = OperatorState::Disabled;
+    assert_eq!(rings(&biased), rings(&even));
 
     let mut unforked = forking(2, 0.0);
     unforked.limbs.levels[0].fork.state = OperatorState::Disabled;
@@ -1069,6 +1099,35 @@ fn a_limb_carries_its_parent_on_from_its_last_node() {
     let carrier = &carriers[0];
     assert_eq!((carrier.level, carrier.rings[0].side), (1, tip.side));
     assert_eq!(carrier.radii().0, trunk.radii().1);
+}
+
+#[test]
+fn the_carry_on_reach_sets_the_carrier_alone() {
+    let mut species = straight();
+    let whole = grow(&species).axes;
+    species.limbs.levels[0].carry_on = 0.5;
+    let half = grow(&species).axes;
+    let carrier =
+        |axes: &[Axis]| (axes.iter().find(|axis| axis.kind == AxisKind::CarryOn)).cloned();
+    let (whole_carrier, half_carrier) = (carrier(&whole).unwrap(), carrier(&half).unwrap());
+    // Half the carry-on reach is half the distance the carrier covers toward the envelope.
+    let tip = whole_carrier.origin();
+    let to_envelope = distance_to_envelope(&Envelope::of(&species), tip, Vec3::Y);
+    let reach = species.limbs.levels[0].reach.center;
+    assert!((whole_carrier.length() - reach * to_envelope).abs() < 1e-3);
+    assert!((half_carrier.length() - 0.5 * reach * to_envelope).abs() < 1e-3);
+    // The trunk and the laterals are as they were.
+    let others = |axes: &[Axis]| -> Vec<Vec<Ring>> {
+        (axes.iter().filter(|axis| axis.kind != AxisKind::CarryOn))
+            .map(|axis| axis.rings.clone())
+            .collect()
+    };
+    assert_eq!(others(&half), others(&whole));
+    // With none, the trunk still ends at its last limb.
+    species.limbs.levels[0].carry_on = 0.0;
+    let none = grow(&species).axes;
+    assert!(carrier(&none).is_none());
+    assert_eq!(none[0].rings, whole[0].rings);
 }
 
 /// `straight`'s first level, every limb forking halfway into `copies` at 60° across, the Y's

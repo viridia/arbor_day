@@ -403,6 +403,17 @@ pub struct LimbLevel {
         @ControlGroup("Shape"),
     )]
     pub reach: Fuzzy,
+    /// The reach of the limb carrying a parent on, as a share of the reach: lower for a short
+    /// leader and a tip that does not outgrow the limbs beside it, higher for one that does. One
+    /// too short to grow leaves the parent ending at its last node.
+    #[reflect(
+        @ValueRange::<f32>(0.0..=1.5),
+        @Precision(0),
+        @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("Carry-on reach"),
+        @ControlGroup("Shape"),
+    )]
+    pub carry_on: f32,
     /// Radius at the base, as a share of the parent's radius where the limb leaves it: 100% is as
     /// thick as the parent there.
     #[reflect(
@@ -422,6 +433,8 @@ pub struct LimbLevel {
     pub rise: Toggle<Rise>,
     #[reflect(@Caption("Wander"))]
     pub wander: Toggle<Wander>,
+    #[reflect(@Caption("Size bias"))]
+    pub size_bias: Toggle<SizeBias>,
     #[reflect(@Caption("Fork"))]
     pub fork: Toggle<Fork>,
 }
@@ -446,11 +459,13 @@ impl Default for LimbLevel {
             start: 0.0,
             angle: degrees(60.0, 10.0),
             reach: Fuzzy::new(0.9, 0.1, Distribution::Bell),
+            carry_on: 1.0,
             radius: 0.5,
             sides: 4,
             sag: Toggle::off(Sag::default()),
             rise: Toggle::off(Rise::default()),
             wander: Toggle::off(Wander::degrees(10.0)),
+            size_bias: Toggle::off(SizeBias::default()),
             fork: Toggle::off(Fork::default()),
         }
     }
@@ -578,6 +593,28 @@ impl Wander {
         Self {
             angle: angle.to_radians(),
         }
+    }
+}
+
+/// Laterals growing longer or shorter along their parent: short near a limb's root, so their
+/// leaves fill the crown's middle, or long low on the trunk, for a cone.
+#[derive(Reflect, Clone, PartialEq)]
+#[reflect(@Icon("icons/operators/size-bias.png"))]
+pub struct SizeBias {
+    /// The reach of the laterals at the parent's first node, as a share of the reach, changing
+    /// evenly to 100% at its last node.
+    #[reflect(
+        @ValueRange::<f32>(0.0..=2.0),
+        @Precision(0),
+        @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("Reach at base"),
+    )]
+    pub base: f32,
+}
+
+impl Default for SizeBias {
+    fn default() -> Self {
+        Self { base: 0.5 }
     }
 }
 
