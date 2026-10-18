@@ -1,5 +1,5 @@
 """File commands: the header row names the document "Untitled" and its file menu lists New, Open,
-Save and Save As. Given a path (Save As waits on the file browser, X2), the row names the document
+Save and Save As. Given a path (Save As's native dialog is out of the driver's reach), the row names the document
 after its file, an edit marks it with a dot, and New from the menu returns to the default species,
 untitled. Saving waits on the glTF writer (C41)."""
 

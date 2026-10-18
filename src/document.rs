@@ -1,8 +1,9 @@
 //! The document: the species being edited and the file it was saved to, and the file commands
 //! (New, Open, Save, Save As), from the keys (`keys.rs`) and the file menu on the panel's header
 //! row. The saved file is the exported glTF, the species a JSON extra on its scene
-//! (requirements, Parameters). Open and Save As wait on the file browser (X2), and Save on the
-//! glTF writer (C41); until then they only log.
+//! (D34). Open and Save As pick the file in a native dialog (`rfd`), run as a task so the app
+//! keeps drawing while it is open. Writing and reading the glTF are C41's; until then Save and
+//! Open log.
 
 use std::path::PathBuf;
 
@@ -10,9 +11,11 @@ use bevy::{
     feathers::controls::{FeathersMenu, FeathersMenuDivider, FeathersMenuToolButton},
     feathers::display::{icon, label},
     prelude::*,
+    tasks::{IoTaskPool, Task, futures::check_ready},
     window::PrimaryWindow,
 };
 use bevy_immediate::{Imm, ui::text::ImmUiText};
+use rfd::{AsyncFileDialog, FileHandle};
 
 use crate::{
     properties::{CapsPanel, menu_item, right_aligned_popup},
@@ -25,7 +28,13 @@ impl Plugin for DocumentPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Document>()
             .add_observer(on_file_command)
-            .add_systems(Update, show_title);
+            .add_systems(
+                Update,
+                (
+                    finish_dialog.run_if(resource_exists::<OpenDialog>),
+                    show_title,
+                ),
+            );
     }
 }
 
@@ -70,22 +79,76 @@ pub enum FileCommand {
     SaveAs,
 }
 
+/// A native file dialog the user has open, and the command it is for.
+#[derive(Resource)]
+struct OpenDialog {
+    task: Task<Option<FileHandle>>,
+    command: FileCommand,
+}
+
 fn on_file_command(
     command: On<FileCommand>,
     mut document: ResMut<Document>,
     mut species: ResMut<Species>,
+    dialog: Option<Res<OpenDialog>>,
+    mut commands: Commands,
 ) {
+    // A dialog already open takes every command until it closes.
+    if dialog.is_some() {
+        return;
+    }
+    let gltf = || AsyncFileDialog::new().add_filter("glTF", &["gltf"]);
     match *command {
         // Unsaved changes are dropped without asking (ledger C108).
         FileCommand::New => {
             *species = Species::default();
             *document = Document::default();
         }
-        FileCommand::Open => warn!("Open needs the file browser (X2)"),
         FileCommand::Save if document.path.is_some() => {
             warn!("Save needs the glTF writer (C41)");
         }
-        FileCommand::Save | FileCommand::SaveAs => warn!("Save As needs the file browser (X2)"),
+        FileCommand::Open => {
+            let pick = gltf().pick_file();
+            commands.insert_resource(OpenDialog {
+                task: IoTaskPool::get().spawn(pick),
+                command: FileCommand::Open,
+            });
+        }
+        FileCommand::Save | FileCommand::SaveAs => {
+            let pick = gltf()
+                .set_file_name(format!("{}.gltf", document.name()))
+                .save_file();
+            commands.insert_resource(OpenDialog {
+                task: IoTaskPool::get().spawn(pick),
+                command: FileCommand::SaveAs,
+            });
+        }
+    }
+}
+
+/// Acts on the file picked in the open dialog once it closes: Save As takes it as the document's
+/// path and saves, and Open reads it. Nothing happens if the user cancels.
+fn finish_dialog(
+    mut dialog: ResMut<OpenDialog>,
+    mut document: ResMut<Document>,
+    mut commands: Commands,
+) {
+    let Some(picked) = check_ready(&mut dialog.task) else {
+        return;
+    };
+    commands.remove_resource::<OpenDialog>();
+    let Some(file) = picked else {
+        return;
+    };
+    match dialog.command {
+        FileCommand::SaveAs => {
+            document.path = Some(file.path().to_path_buf());
+            commands.trigger(FileCommand::Save);
+        }
+        _ => warn!(
+            "Opening {} needs the glTF reader (C41)",
+            file.path().display()
+        ),
     }
 }
 

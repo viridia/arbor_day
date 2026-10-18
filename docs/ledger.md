@@ -93,6 +93,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C106  | Size bias (TD3.3, X31 step 6): a limb level operator, off by default, with its icon; its reach at base (0 to 200%) scales the laterals' reach at the parent's first node, changing evenly to 100% at its last, so twigs near a limb's root stay short and their leaves fill the crown's middle, or the lowest limbs are longest, for a cone. By node index, so the start leaves it alone. The carrier keeps its own reach (C105). `plans/shapes.py` screenshots twigs at 30% at the base. Output unchanged. |
 | C107  | Shortcut text, `src/shortcut.rs`, for C40's menus: `shortcut` shows keys dimmed at a menu item's right end (`menu_item`'s `keys`), in the families "Fira Sans, Key Symbols". Key Symbols (`assets/fonts/KeySymbols.ttf`, 12 KB) is DejaVu Sans subset to the key symbols Fira Sans lacks (⌘ ⌥ ⌃ ⇥ ⇤ ↩ ↵ ⇞ ⇟ ↖ ↘ ␣ ⌤), renamed; Parley picks a font per character. ⎋ is in neither, so "Esc". Checked by a screenshot of the add menu with shortcuts, since removed; C40's menus will carry the plan. |
 | C40   | File commands, `src/document.rs`: New, Open, Save and Save As, as keys (D8: ⌘N, ⌘O, ⌘S, ⌘⇧S) and in a file menu (`menu.png`) at the right of a header row above the Plant group, its items showing their shortcuts (C107). The row's left, and the window title, show the document's name, from its file ("Untitled" before the first save), and a dot while the species differs from the one last saved (`Document`). Not a row of buttons, which cannot show shortcuts, nor native menus, whose platform support is not there. New works; Save waits on C41, Open and Save As on the file browser (X2), each logging until then. Commands act on the one `Document`, so tabs (X26) change only which. `plans/file.py`. |
+| C109  | File dialogs (was X2), with `rfd` (native dialogs, the author's choice): Open and Save As, and Save before the first save, pick a `.gltf` in a dialog run as a task on the IO pool, so the app keeps drawing; Save As's dialog starts with the document's name. A picked path becomes the document's, then Save runs; Open logs the path until C41 reads it. Commands are ignored while a dialog is open. Checked by hand, since the driver cannot work native dialogs. |
 
 ## Next
 
@@ -128,7 +129,7 @@ slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
    one, and the active one's index, so several (X26) need no change of format. E[3]
 3. **C41 glTF export** from the app, which is Save (C40), the saved file being the export
     (requirements, Parameters): Save writes it to the document's path and marks the document
-    saved, and Open, once the file browser lands (X2), reads the species back from the extra. The
+    saved, and Open reads the species back from the extra of the file picked (C109). The
     bark and leaf meshes, the leaf texture, the species as a JSON extra on the scene (C10), and on an outlined species the bark material's `"outline"` extra, the
     bark outline's width (C66), written from the generator's output (`generator::plant`), never from
     the preview's entities, whose leaf mesh is only hidden while none grow, in the form Panoply loads (requirements, Output; "What Panoply does with the output"). Bark and leaf materials matte (roughness 1.0), as the preview's are. Bevy writes no glTF,
@@ -275,9 +276,6 @@ slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
   types with no ECS. The species types need `bevy_reflect` too, and their editor attributes
   (`ValueRange` and the rest, now in `src/properties.rs`) would move with them. *Gate:* the
   command-line export.
-- **X2** A file browser, for Open and Save As: the `rfd` crate (native file dialogs), the
-  author's choice. *Gate:* file handling, after C8 (the working document and its path in
-  settings).
 - **X3** Publishing, or reserving the name on crates.io. A crate with git dependencies cannot be
   published. *Gate:* a Bevy release with what the app uses (0.21), or the author choosing to
   reserve the name with a placeholder.
