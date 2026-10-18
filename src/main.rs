@@ -39,6 +39,7 @@ use turntable::{
 mod document;
 mod fuzzy;
 mod generator;
+mod gltf_file;
 mod hud;
 mod keys;
 mod look;

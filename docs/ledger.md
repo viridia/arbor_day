@@ -94,6 +94,8 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C107  | Shortcut text, `src/shortcut.rs`, for C40's menus: `shortcut` shows keys dimmed at a menu item's right end (`menu_item`'s `keys`), in the families "Fira Sans, Key Symbols". Key Symbols (`assets/fonts/KeySymbols.ttf`, 12 KB) is DejaVu Sans subset to the key symbols Fira Sans lacks (⌘ ⌥ ⌃ ⇥ ⇤ ↩ ↵ ⇞ ⇟ ↖ ↘ ␣ ⌤), renamed; Parley picks a font per character. ⎋ is in neither, so "Esc". Checked by a screenshot of the add menu with shortcuts, since removed; C40's menus will carry the plan. |
 | C40   | File commands, `src/document.rs`: New, Open, Save and Save As, as keys (D8: ⌘N, ⌘O, ⌘S, ⌘⇧S) and in a file menu (`menu.png`) at the right of a header row above the Plant group, its items showing their shortcuts (C107). The row's left, and the window title, show the document's name, from its file ("Untitled" before the first save), and a dot while the species differs from the one last saved (`Document`). Not a row of buttons, which cannot show shortcuts, nor native menus, whose platform support is not there. New works; Save waits on C41, Open and Save As on the file browser (X2), each logging until then. Commands act on the one `Document`, so tabs (X26) change only which. `plans/file.py`. |
 | C109  | File dialogs (was X2), with `rfd` (native dialogs, the author's choice): Open and Save As, and Save before the first save, pick a `.gltf` in a dialog run as a task on the IO pool, so the app keeps drawing; Save As's dialog starts with the document's name. A picked path becomes the document's, then Save runs; Open logs the path until C41 reads it. Commands are ignored while a dialog is open. Checked by hand, since the driver cannot work native dialogs. |
+| C41   | Save and Open (D34), `src/gltf_file.rs`: the plant written from `generator::plant` as a `.gltf` with its `.bin` and leaf `.png` beside it, named after it, their URIs escaped. A scene named after the document, holding the species file under the extra `arbor_day`; bark (`COLOR_0`, linear) and leaf (`TEXCOORD_0`, mask at `LEAF_CUTOFF`, double-sided) meshes, both materials matte and not metallic, the bark's with the `"outline"` extra when outlined. The PNG is the full-size level; the pipeline mipmaps. Open reads the species back from the extra. `gltf-json`, `png` and `percent-encoding` as direct dependencies, `gltf` as a dev-dependency, all already in the lock file; a test validates the output with `gltf`. `FileRequest` (Open or Save As, with a path) is what a dialog's pick writes, and what plans send through the driver's `message`. `plans/panel.py` saves, edits, saves, opens. |
+| C110  | Four launches in place of eight, since each plan is a launch whose window takes focus: `panel.py` (groups, operators, then from a New document the file commands), `levels.py` (levels, then from a New document cards), `smoke.py` and `widgets.py`. The shapes gallery, with no checks, moves to `plans/gallery/`, which `run.py plans` passes over; run it by path when the generator's output changes. Values `levels.py` and the card folds typed are now set by `set_resource`, the number input's typing being checked elsewhere. New resets the species, not the view. |
 
 ## Next
 
@@ -127,31 +129,6 @@ slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
    drops a field that fails to deserialize without a word (`load_properties`), so the species is
    read by C10's strict path and its error logged. Stored as a list of open documents holding
    one, and the active one's index, so several (X26) need no change of format. E[3]
-3. **C41 glTF export** from the app, which is Save (C40), the saved file being the export
-    (requirements, Parameters): Save writes it to the document's path and marks the document
-    saved, and Open reads the species back from the extra of the file picked (C109). The
-    bark and leaf meshes, the leaf texture, the species as a JSON extra on the scene (C10), and on an outlined species the bark material's `"outline"` extra, the
-    bark outline's width (C66), written from the generator's output (`generator::plant`), never from
-    the preview's entities, whose leaf mesh is only hidden while none grow, in the form Panoply loads (requirements, Output; "What Panoply does with the output"). Bark and leaf materials matte (roughness 1.0), as the preview's are. Bevy writes no glTF,
-    so this adds a dependency or a writer of our own; propose it before code. The command-line
-    export is X1. Research so far (2026-10-12), the author also asking skein's author:
-    - `gltf-json` (the `gltf` crate's JSON types, ~11M downloads), with the GLB framing (header,
-      JSON chunk, binary chunk) written here: every byte ours, and `extras` on every object
-      (behind a feature), which the species needs. Leading candidate. The leaf texture needs a PNG
-      encoder (the `png` crate; see whether Bevy already pulls it in).
-    - `mesh-tools` (0.4.0, ~7k downloads): a mesh generator first, with GLB export, vertex
-      colors, alpha mask and embedded images, but extras not shown; half of it duplicates ours.
-    - `gltforge` (0.0.6, ~400 downloads): a reader, exporting through a Unity plugin, too young.
-      Ruled out.
-
-    The export writes `.gltf`, `.bin` and the leaf texture as a separate `.png` (requirements,
-    Output); the pipeline (overrun with gltf-transform) packs, mipmaps and converts. GLB written
-    here is optional. KTX2 in Bevy's glTF loader (`bevy_gltf/src/loader/mod.rs:1227`): any image
-    source goes through `Image::from_buffer` by mime type or extension, so KTX2 loads with
-    Bevy's `ktx2` feature, embedded or by path, and a path is loaded as its own asset, shared
-    across models. But Bevy does not read `KHR_texture_basisu` (`bevy_gltf/src/lib.rs:122`,
-    bevy#19104), which gltf-transform's KTX2 conversion writes; so the pipeline points the image
-    straight at the `.ktx2`, which Bevy accepts though the standard does not. E[2]
 
 ### Quick wins
 
@@ -413,7 +390,7 @@ slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
   750 tokens, so a 3 × 3 sheet near 900 px square is about 1,000, nine designs for the price of
   one screenshot. Uses: interactive selection (a sheet of variants, the author picks, the next
   sheet varies the pick), presets (X18), and comparing card models (X24). The sheets would
-  replace `plans/shapes.py`'s gallery. Unattended exploration runs in a subagent, keeping the
+  replace `plans/gallery/shapes.py`. Unattended exploration runs in a subagent, keeping the
   images out of the main conversation: sweeping parameters needs only writing sweep files and
   running the one command, so a narrow allowlist covers it; trying generator changes (a form,
   say) runs in a git worktree that is thrown away afterwards, the findings written up and built
@@ -527,6 +504,12 @@ slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
 
 ## Notes
 
+- KTX2 for the pipeline (from C41's research): Bevy's glTF loader sends any image through
+  `Image::from_buffer` by mime type or extension (`bevy_gltf/src/loader/mod.rs:1227`), so KTX2
+  loads with Bevy's `ktx2` feature, embedded or by path, a path loaded as its own asset shared
+  across models. Bevy does not read `KHR_texture_basisu` (`bevy_gltf/src/lib.rs:122`,
+  bevy#19104), which gltf-transform's KTX2 conversion writes, so the pipeline points the image
+  straight at the `.ktx2`, which Bevy accepts though the standard does not.
 - Bevy source at the locked commit is in Cargo's git checkout,
   `~/.cargo/git/checkouts/bevy-*/d41bb12`; the local `../bevy` is at the same commit.
 - `plans/smoke.py` once failed at its first orbit hold (`orbit_left`, azimuth still 0) and

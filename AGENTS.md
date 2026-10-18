@@ -37,6 +37,8 @@ growth model.
 - `cargo clippy --all-targets`: no errors, no new warnings. `cargo test`.
 - Runtime: shader and pipeline errors only appear at runtime. Run a plan with the remote driver,
   `python3 ../bevy_remote_driver/client/run.py plans/smoke.py`, which builds and launches the
-  app, runs the steps, saves screenshots under `target/remote-driver/`, and quits. Write a new
-  plan in `plans/` for behaviour a chunk adds, following
-  `../bevy_remote_driver/docs/writing-plans.md`. Screenshots bring the app window to the front.
+  app, runs the steps, saves screenshots under `target/remote-driver/`, and quits. Check the
+  behaviour a chunk adds in the existing plan it fits, following
+  `../bevy_remote_driver/docs/writing-plans.md`: each plan is a launch whose window takes focus,
+  so a new plan only for a new area. `plans/gallery/` holds screenshot galleries with no checks,
+  which `run.py plans` passes over; run one by path when the generator's output changes.

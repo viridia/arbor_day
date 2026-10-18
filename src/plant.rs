@@ -13,6 +13,9 @@ use crate::{
     species::Species,
 };
 
+/// The leaf texture's alpha below which the leaves are cut out, in the view and in the saved file.
+pub const LEAF_CUTOFF: f32 = 0.5;
+
 pub struct PlantPlugin;
 
 impl Plugin for PlantPlugin {
@@ -137,7 +140,7 @@ fn add_leaf_material(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let material = StandardMaterial {
-        alpha_mode: AlphaMode::Mask(0.5),
+        alpha_mode: AlphaMode::Mask(LEAF_CUTOFF),
         double_sided: true,
         cull_mode: None,
         perceptual_roughness: 1.0,

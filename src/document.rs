@@ -1,9 +1,8 @@
 //! The document: the species being edited and the file it was saved to, and the file commands
 //! (New, Open, Save, Save As), from the keys (`keys.rs`) and the file menu on the panel's header
 //! row. The saved file is the exported glTF, the species a JSON extra on its scene
-//! (D34). Open and Save As pick the file in a native dialog (`rfd`), run as a task so the app
-//! keeps drawing while it is open. Writing and reading the glTF are C41's; until then Save and
-//! Open log.
+//! (D34, `gltf_file`). Open and Save As pick the file in a native dialog (`rfd`), run as a task
+//! so the app keeps drawing while it is open.
 
 use std::path::PathBuf;
 
@@ -18,6 +17,7 @@ use bevy_immediate::{Imm, ui::text::ImmUiText};
 use rfd::{AsyncFileDialog, FileHandle};
 
 use crate::{
+    gltf_file,
     properties::{CapsPanel, menu_item, right_aligned_popup},
     species::Species,
 };
@@ -27,13 +27,16 @@ pub struct DocumentPlugin;
 impl Plugin for DocumentPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Document>()
+            .add_message::<FileRequest>()
             .add_observer(on_file_command)
             .add_systems(
                 Update,
                 (
                     finish_dialog.run_if(resource_exists::<OpenDialog>),
+                    on_file_request,
                     show_title,
-                ),
+                )
+                    .chain(),
             );
     }
 }
@@ -91,6 +94,7 @@ fn on_file_command(
     mut document: ResMut<Document>,
     mut species: ResMut<Species>,
     dialog: Option<Res<OpenDialog>>,
+    registry: Res<AppTypeRegistry>,
     mut commands: Commands,
 ) {
     // A dialog already open takes every command until it closes.
@@ -104,8 +108,11 @@ fn on_file_command(
             *species = Species::default();
             *document = Document::default();
         }
-        FileCommand::Save if document.path.is_some() => {
-            warn!("Save needs the glTF writer (C41)");
+        FileCommand::Save if let Some(path) = &document.path => {
+            match gltf_file::write(path, &document.name(), &species, &registry.read()) {
+                Ok(()) => document.saved = species.clone(),
+                Err(error) => error!("Not saved to {}: {error}", path.display()),
+            }
         }
         FileCommand::Open => {
             let pick = gltf().pick_file();
@@ -126,11 +133,20 @@ fn on_file_command(
     }
 }
 
-/// Acts on the file picked in the open dialog once it closes: Save As takes it as the document's
-/// path and saves, and Open reads it. Nothing happens if the user cancels.
+/// A file to open or save as, by path: picked in a dialog, or sent by a plan through the driver's
+/// `message`, which has no dialog to work.
+#[derive(Message, Reflect, Clone, Debug)]
+#[reflect(Message)]
+pub enum FileRequest {
+    Open(PathBuf),
+    SaveAs(PathBuf),
+}
+
+/// Requests the file picked in the open dialog once it closes. Nothing happens if the user
+/// cancels.
 fn finish_dialog(
     mut dialog: ResMut<OpenDialog>,
-    mut document: ResMut<Document>,
+    mut requests: MessageWriter<FileRequest>,
     mut commands: Commands,
 ) {
     let Some(picked) = check_ready(&mut dialog.task) else {
@@ -140,15 +156,39 @@ fn finish_dialog(
     let Some(file) = picked else {
         return;
     };
-    match dialog.command {
-        FileCommand::SaveAs => {
-            document.path = Some(file.path().to_path_buf());
-            commands.trigger(FileCommand::Save);
+    let path = file.path().to_path_buf();
+    requests.write(match dialog.command {
+        FileCommand::SaveAs => FileRequest::SaveAs(path),
+        _ => FileRequest::Open(path),
+    });
+}
+
+/// Save As takes its path as the document's and saves; Open reads the species from its file.
+fn on_file_request(
+    mut requests: MessageReader<FileRequest>,
+    mut document: ResMut<Document>,
+    mut species: ResMut<Species>,
+    registry: Res<AppTypeRegistry>,
+    mut commands: Commands,
+) {
+    for request in requests.read() {
+        match request {
+            FileRequest::SaveAs(path) => {
+                document.path = Some(path.clone());
+                commands.trigger(FileCommand::Save);
+            }
+            // Unsaved changes are dropped without asking (ledger C108).
+            FileRequest::Open(path) => match gltf_file::read(path, &registry.read()) {
+                Ok(opened) => {
+                    *species = opened.clone();
+                    *document = Document {
+                        path: Some(path.clone()),
+                        saved: opened,
+                    };
+                }
+                Err(error) => error!("{} not opened: {error}", path.display()),
+            },
         }
-        _ => warn!(
-            "Opening {} needs the glTF reader (C41)",
-            file.path().display()
-        ),
     }
 }
 

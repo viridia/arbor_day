@@ -47,6 +47,8 @@ impl fmt::Display for ReadError {
     }
 }
 
+impl std::error::Error for ReadError {}
+
 impl From<serde_json::Error> for ReadError {
     fn from(error: serde_json::Error) -> Self {
         Self::Json(error)
@@ -56,10 +58,6 @@ impl From<serde_json::Error> for ReadError {
 /// The species in a species file, read strictly: a key the species lacks fails, naming it. A field
 /// the file leaves out keeps the template's value, the default species with every operator off,
 /// so a level's keeps its depth's (`LimbLevels`), and an operator left out is off.
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "read from a glTF's extra by Open (C41)")
-)]
 pub fn read(json: &str, registry: &TypeRegistry) -> Result<Species, ReadError> {
     let mut file: serde_json::Value = serde_json::from_str(json)?;
     let generator = file
@@ -82,10 +80,6 @@ pub fn read(json: &str, registry: &TypeRegistry) -> Result<Species, ReadError> {
 
 /// `species` as a species file: `generator`, then each of the species' fields by reflection, in the
 /// order they are declared.
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "a glTF's extra, written by C41")
-)]
 pub fn write(species: &Species, registry: &TypeRegistry) -> Result<String, serde_json::Error> {
     serde_json::to_string_pretty(&File { species, registry })
 }

@@ -22,11 +22,21 @@ bevy_remote_driver = { git = "https://github.com/viridia/bevy_remote_driver" }
 # The traits only: the species is written by reflection, with no serde derives (C10).
 serde = "1.0.229"
 serde_json = "1.0.154"
+# The saved file, a glTF (D34): its JSON, its file names escaped as URIs, and the leaf texture
+# encoded. All three already in the lock file through Bevy.
+gltf-json = { version = "1.4.1", features = ["extras", "names"] }
+percent-encoding = "2.3.2"
+png = "0.18.1"
 # Native file dialogs for Open and Save As (ledger X2).
 rfd = "0.17.2"
 # Paints the leaf texture (D20). Already in the lock file through Bevy; without its PNG feature,
 # which would bring a second `png`.
 tiny-skia = { version = "0.11.4", default-features = false, features = ["std", "simd"] }
+
+[dev-dependencies]
+# The reader Bevy's loader uses, to validate the saved glTF. Already in the lock file through Bevy;
+# without `import`, which would bring new crates.
+gltf = { version = "1.4.1", default-features = false, features = ["extras", "names"] }
 
 [profile.dev]
 opt-level = 1
