@@ -150,6 +150,11 @@ Priority: **M** must, **S** should, **C** could.
   and dead trees, shrubs, and crops.
 - **M** Parameters an artist can predict: each one changes one visible thing, with no growth
   mode that turns half of them off.
+- **M** Every tree an artist would want is reachable, including those that need a trick of
+  perception rather than biology to read well at low poly, such as carry-on and folded cards.
+- **S** The trees an artist wants most are few edits away. A mechanism that widens what is
+  reachable but is awkward to steer sits behind controls in the tree's terms (X18's forms), not
+  in front of the artist.
 - **M** Control of the overall silhouette: a crown envelope (cone, ellipsoid, column, or a
   curve) that branches and foliage fill, not only a result of per-level rules.
 - **S** Gravity and phototropism (branches bend down under weight, or up toward light), the

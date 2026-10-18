@@ -131,6 +131,17 @@ slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
    drops a field that fails to deserialize without a word (`load_properties`), so the species is
    read by C10's strict path and its error logged. Stored as a list of open documents holding
    one, and the active one's index, so several (X26) need no change of format. E[3]
+3. **C113 File format freeze**, at D32's gate: from here a change that renames, moves or removes
+   a species field, or changes its type, needs a migration (X15). Before it, each item below
+   either lands, is dropped, or is accepted as a later migration; prune the list as those
+   choices are made. E[1], the items aside.
+   - C70 Card facing, if its blend and spread replace a field rather than add one.
+   - X18 Forms: a species holding every form's parameters with a selector.
+   - X22 Forms as patches: today's species becomes the default patch.
+   - X32 Taper per limb level, in place of the plant's one.
+   - X37 Several sprigs, the tip leaves' one sprig likely becoming a list.
+   - X12 Space colonization, if Arrangement becomes a choice of modes.
+   - X50 The pipe model, if it removes the taper rather than overriding it.
 
 ### Quick wins
 
@@ -191,8 +202,6 @@ slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
   first along its axis, turned 90° about it, so a crown reads from any side (requirements,
   Foliage). Cupped cards are C39's negative lateral droop. *Gate:* the author wanting them
   after C70's facing. E[2]
-- **C43 A varied color** (`Fuzzy<Color>`, D10) with the leaf color, for its hue and lightness
-  shifts. E[3]
 - **C48 Arching stems**, for fountain shrubs: a lean past level, so a stem rises and then droops
   toward the ground, stopping above it. D24 stops the lean at level until a preset needs more
   (X18). The Weep operator on the trunk. E[2]
@@ -236,6 +245,27 @@ slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
   the scale; the bark outline's width and the detail threshold apply in final units, so neither
   scales. Raising the height instead redesigns the plant, since most fields are relative to it,
   and scaling in Panoply thickens or thins outlines with the model. E[2]
+- **C114 The trunk's lean split in two** (was X36): a tilt where the stem leaves the ground, and
+  the curve after it from the bends (C94). Lean's `angle` becomes the tilt at the base, the stem
+  straight from there toward its heading (G1: the field's meaning changes, no field is added);
+  the trunk gains Sag and Rise, as limbs have, acting on the heading the tilt gives, and a fork's
+  stems (C75) turn by them past the fork. Rise then gives a trunk leaning at its base and
+  recovering, as on slopes; sag, a bow; past level, Weep (C48). The heading stays drawn from the
+  seed (D23); a fixed one would do, since Panoply turns placed instances, but changes nothing
+  needed here. Old files read, a leaning trunk growing differently; not a file breaker (C113).
+  TD3.2 rewritten. E[3]
+- **C115 Teeth independent of the leaf's shape**: serration is hard to steer because the tapers
+  and widths reach the teeth three ways in `leaf::half_outline`. The edge is cut at equal steps
+  of the curve's parameter, so a taper moves teeth along it; each tooth is pushed along the edge's
+  direction at its segment's end, so the outline tilts it; and serration is in leaf lengths, so
+  one value makes small teeth on a broad leaf and large ones on a narrow leaf (rake is divided by
+  the count, serration is not). Serration also lengthens the tip. Instead, teeth as a profile
+  laid over the outline: the edge measured by length and cut into `segments` equal teeth, each
+  point pushed out along the edge's normal by a sawtooth whose depth (serration) and lean toward
+  the tip (rake) are in tooth lengths, jitter too. The tapers and widths then shape only the
+  outline; an unserrated leaf keeps its curve. The tip's sharpening goes, a field of its own if
+  missed. Fields keep their names with new meanings (G1), so files read; serrated leaves change.
+  Checked by eye: one serration across several tapers, teeth alike. E[3]
 - **C112 View settings panel**: a gear icon opening a dialog of view settings, saved in
   `ViewSettings` (D28): the lighting and tone mapping (`GameLook`, TD1.1; per-project looks stay
   X6), and a ruler gizmo for judging a plant's size. Two buttons reset the lighting and tone
@@ -416,14 +446,6 @@ slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
   keeps its editing text, so an angle shows `20d` rather than `20°`, beside its interior caption
   (C77). Its text is rewritten only when `NumericValue` changes; leaving edit mode should
   rewrite it in the display form. *Gate:* a fix in the Bevy we build against.
-
-- **X36** The trunk's lean split in two, revising D23: a tilt where the stem leaves the ground,
-  in the Lean operator (C100), and the curve after it from the bends (C94), which need the
-  heading the tilt gives; a fork's stems (C75) turn by the curve past the fork. Rise then gives a trunk leaning at its base and recovering, as on
-  slopes; sag, today's bowing; past level, Weep (C48). The heading may be fixed rather than drawn
-  from the seed, since Panoply turns placed instances anyway. Lean's use so far, steering back a
-  stem the wander sent off course, went with C84, whose wander leaves the tip on its course.
-  *Gate:* C94 landed, and an author wanting a leaning or recovering trunk.
 
 - **X37** Variety among the tips' leaves: several sprigs painted as regions of the one leaf
   texture (requirements, Foliage), each tip's card drawing one from its foliage stream (D16).

@@ -189,7 +189,7 @@ their fixed order:
 2. **Sag** and **Rise**: the course turning down by weight and up toward light (D17, C94).
    Without them the course is straight. On the
    trunk it curves the stem after the tilt it leaves the ground at (the splay, and the lean's
-   tilt, X36), which gives it the heading a bend keeps.
+   tilt, C114), which gives it the heading a bend keeps.
 3. **Weep**: the course allowed past level and below the envelope, for arching stems (C48) and
    pendulous levels (X19).
 4. **Wander**: the course displaced as a lightning bolt (C84), with an amplitude (today's
