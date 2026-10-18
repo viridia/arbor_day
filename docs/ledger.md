@@ -106,7 +106,7 @@ per-type hook, and is retained-mode.
 ### Milestone: the first species exported to Panoply
 
 The foundation, the skeleton (`docs/patches.md`, The abstract plant), tip rosettes, the species
-file (C10), operator stacks (X31's steps 1 to 4, C96 to C99) and colors by part (C69) have
+file (C10), operator stacks (C96 to C99) and colors by part (C69) have
 landed, and forks drawn along the chain (C95) and on stems (C75), sag and rise (C94), ornament
 slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
 
@@ -182,8 +182,8 @@ slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
   becomes "Angle at base". Every level, not only the trunk's as in seedling, so sprays narrow
   toward a limb's tip. A new field under G1, since nothing yet varies with place along the
   parent. Default 0, so species are unchanged; the first level's default chosen by eye or by the
-  share of the envelope's top (outward normal within 45° of up) under cards. Under stacks (X31)
-  an operator, "Angle bias", rather than a field. E[2]
+  share of the envelope's top (outward normal within 45° of up) under cards. An operator, "Angle
+  bias", rather than a field, as size bias is (C106). E[2]
 - **C42 Computed values are rounded where written**, from the first writer (Reset, Randomize,
   values derived from the generator): the number input never rounds what it shows, so round to
   the field's `Precision` in the units shown, as a drag does: through the unit's
@@ -216,7 +216,7 @@ slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
   shifts. E[3]
 - **C48 Arching stems**, for fountain shrubs: a lean past level, so a stem rises and then droops
   toward the ground, stopping above it. D24 stops the lean at level until a preset needs more
-  (X18). Under stacks (X31), the Weep operator on the trunk. E[2]
+  (X18). The Weep operator on the trunk. E[2]
 - **C65 Wireframe toggle on the HUD** (D28), to see where the triangles go: rings along the bark
   (D17's hinting), sides per level (D22), and each leaf card's quad, for card density and
   facing (C39). Bevy's `WireframePlugin` (`bevy_pbr`), drawing lines over the shaded mesh rather
@@ -248,8 +248,8 @@ slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
   ones, which today differ only by length (nodes are a density per crown radius). From the
   parent's radius, already written by the taper (G1): a threshold, parents thinner than it
   bearing none, so only main limbs carry the level; or a weight, density scaled by the parent's
-  base radius over the level's thickest, to a power (0 as now), after the pipe model. Under
-  stacks (X31), a parameter of the Scions operator. E[2]
+  base radius over the level's thickest, to a power (0 as now), after the pipe model. A
+  parameter of the Scions operator. E[2]
 - **C54 Radiating foliage** (was X20, its gate C37 passed): cards radiating from a stem's tip or
   the ground, for palms, rosettes and tufts (agave, grass, fern), with no limbs (growth model,
   How the shapes are covered): C60's tip rosettes (TD3.8) with more cards and their own lean,
@@ -312,8 +312,7 @@ slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
   `PinchGesture`, not as a pointer event, so it needs its own path to the view. *Gate:* scroll
   zoom proves awkward on a trackpad.
 - **X12** Space colonization (`docs/growth-model.md`) choosing the directions of the last limb
-  level only, competing for points in the envelope's shell. Under stacks (X31), a mode of the
-  level's Arrangement (`docs/patches.md`, Stacks). *Gate:* crowns show holes or read as too regular.
+  level only, competing for points in the envelope's shell. A mode of the level's Arrangement (`docs/patches.md`, Stacks). *Gate:* crowns show holes or read as too regular.
 - **X13** Panoply's leaf material keeps the exported normal on back faces: `cull_mode: None`
   with `double_sided: false`, set where flora loads, since Bevy flips a double-sided material's
   back-face normal (`prepare_world_normal`) and crown shading normals would then point inward.
@@ -330,7 +329,7 @@ slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
   purpose, which the export can warn about; (3) an additive change defaults to the old output
   when the file lacks its field (no wander, say), so a new species' default and a missing
   field's default are different things. What remains (fixes, reordered draws) is re-exported
-  deliberately, the earlier export being the record. Under stacks (X31), versioned operators keep
+  deliberately, the earlier export being the record. Versioned operators keep
   most changes out of this; what remains is the skeleton, the global parameters and realization.
   Reading a file with a key this generator retired wants a policy per unknown field (skip, warn
   or error), which `bevy_reflect`'s deserializer lacks: its maintainer wants one configurable in
@@ -351,8 +350,8 @@ slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
   presets for the reference set tried: forms only if tuning presets is still too
   fiddly.
 - **X19** Pendulous levels, for willows: a level whose limbs may hang below the envelope, the
-  envelope guiding rather than clipping them (growth model, How the shapes are covered). Under
-  stacks (X31), the Weep operator. *Gate:* a weeping preset (X18).
+  envelope guiding rather than clipping them (growth model, How the shapes are covered). The
+  Weep operator. *Gate:* a weeping preset (X18).
 - **X21** Find out why `bevy_immediate`'s `.text()` on the subpane headers, called every frame
   with an unchanged string, stopped clicks on the bark's color swatch from opening its picker
   (`plans/bark.py` failed three runs in three), and report it to the fork. The headers use
@@ -363,13 +362,13 @@ slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
   geometry nodes: a file of operators over an abstract plant (axes and the attachments placing
   them, so the trunk and limbs share every operator on composition), each input a formula over
   the author's named controls, evaluated per plant or per element, never per vertex; a Rust
-  library realizes the result. Today's species becomes the default patch. After stacks (X31),
+  library realizes the result. Today's species becomes the default patch. After stacks (C96 to C99),
   the generator split into operators and realization, in Rust, with no language. E[4],
   split as the doc's order of work. *Gate:* the milestone's first species exported, and C10's
   file leaving room for a species to name its patch.
 - **X23** Kinks at the nodes, the limb deflecting away from each child it gives off, as
   sympodial growth zigzags (oak, hawthorn). Nodes are laid out after a limb is traced, so this
-  means laying them out first. Under stacks (X31), an option of Wander. *Gate:* D17's kinks,
+  means laying them out first. An option of Wander. *Gate:* D17's kinks,
   evenly spaced but not placed at the nodes, read as too random.
 
 - **X24** Cards that include their stem and stand in for the finest twigs, one card per twig
@@ -428,27 +427,7 @@ slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
   would crowd the panel, so they wait to be an ornament (C103). *Gate:* a preset
   (X18) that another limb level cannot make dense enough.
 
-- **X31** Operator stacks (`docs/patches.md`, Stacks), the stage between the fixed panel and
-  formulas (X22): each level, the trunk included, a fixed frame and optional operators in a
-  fixed order (bend, or sag and rise after C94, wander, fork, scions and more; the doc lists them), added from a
-  menu on the level's header and removed by ✕. Fewer rows, since a missing operator shows none.
-  The file, versions and stream keys are `docs/patches.md`'s (The file); versions do not cover
-  the skeleton and stage order, the global parameters, or realization, which fall to X15. In
-  steps, each small enough to check by eye in the app and `plans/shapes.py`'s gallery, the first
-  four leaving every plant as it was:
-  1. C96, operator-shaped levels: landed.
-  2. C97, toggles on Wander, with the trunk's: landed.
-  3. C98, Bend and Fork as toggles: landed.
-  4. C99, scions: landed.
-  5. ~~Panes, each level a feathers pane and its operators subpanes.~~ Withdrawn: C97's
-     headings, each with its icon, eye and ✕, read well enough.
-  6. New operators, each a chunk, judged by eye as they change output: angle bias (C55), sag
-     and rise (C94, landed), weep (C48), taper per level (X32), size bias (C106, landed).
-
-  *Gate:* step 6, each operator's own item.
-
-- **X32** A taper per limb level, in place of the plant's one (D22); under stacks (X31), the
-  Taper operator. *Gate:* a preset (X18) whose
+- **X32** A taper per limb level, in place of the plant's one (D22), as the Taper operator. *Gate:* a preset (X18) whose
   twigs taper unlike its limbs.
 
 - **X33** A fork's copies (C30) competing as one parent for their children's places (D26), so
@@ -534,6 +513,10 @@ slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
   `"outline"` extra's presence (`models::process_material_extras`) but not its value, so the
   width the export writes (C41, C66) has no effect. A material per distinct width, cached. An
   item for Panoply's ledger. *Gate:* the first species exported (C41).
+
+- **X50** The Pipe model operator (`docs/patches.md`, Stacks; D22): each level's axes narrowed
+  by the wood their children take, in place of the taper, run after every level has grown.
+  *Gate:* a preset (X18) whose trunk should narrow where many limbs leave it.
 
 ## Notes
 

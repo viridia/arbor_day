@@ -401,7 +401,7 @@ second form is a second file.
    (C79), the skeleton meshed after growing (C80), a radius per vertex (C81), operators as
    functions (C82); then, changing output, hinting as each level's last stage (C83) and wander as a
    displacement (C84). Useful alone: it is most of X1.
-2. Stacks (X31): the operators on the panel, today's per-level fields split between the frames
+2. Stacks (C96 to C99): the operators on the panel, today's per-level fields split between the frames
    and default operators, so the default species grows as before.
 3. Formulas, controls and the patch file; the default patch reproduces step 2's plant.
 4. A second form written as a patch (X18's first preset that dials cannot reach).

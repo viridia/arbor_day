@@ -196,7 +196,7 @@ Radii come top-down from the trunk's, which the author sets (TD3.5): a level's r
 that level alone, as the requirements ask. One taper for all wood, as seedling had. The pipe model
 (a stem's radius raised to an exponent, shared among the limbs leaving it) made raising a level's
 radius thin the trunk past each node and every later limb; it returns as a stack operator writing
-radii (X31), bringing back the trunk narrowing more where many limbs leave it. Bottom-up from the
+radii (X50), bringing back the trunk narrowing more where many limbs leave it. Bottom-up from the
 twigs made the trunk's radius follow the limb count. A taper per level is X32.
 
 Every stem is drawn, none narrower than the bark's detail threshold (2 cm by default, about a pixel
