@@ -1,5 +1,5 @@
 //! Tracing (D17). To trace an axis is to walk its course from its start ring in steps of
-//! `TRACE_STEP`, recording a point at each: a limb's course turns toward its level's bend, and a
+//! `TRACE_STEP`, recording a point at each: a limb's course sags and rises as its level's operators say, and a
 //! stem's is an arc, from its angle from up and its lean. A limb's walk stops at its reach, or before a step
 //! that would leave the envelope. Every point is kept as a ring, so the level's later stages work
 //! on the path as traced, until it is hinted (`hint`); the wander (`wander`) then displaces it.
@@ -44,15 +44,12 @@ pub(super) fn trace(level: &Level, axis: &mut Axis) -> bool {
 }
 
 /// A limb's course, traced from `start` for up to `length`, or to where the next step would leave
-/// the envelope, turning toward its bend if on, else straight.
+/// the envelope, sagging and rising if on, else straight.
 fn trace_limb(envelope: &Envelope, params: &LimbLevel, start: Ring, length: f32) -> Trace {
-    let bend = &params.bend.settings;
-    let (bend_sin, bend_cos) = bend.toward.sin_cos();
-    let amount = params.bend.get().map_or(0.0, |bend| bend.amount);
-    // The share of the angle left to the bend that one step closes. Shares compound, so a run of
-    // steps closes the same share whatever the step.
-    let kept_per_crown = 1.0 - amount.clamp(0.0, 0.99);
     let crown = envelope.radius.max(0.01);
+    let sag_per_crown = params.sag.get().map_or(0.0, |sag| sag.amount);
+    let rise = params.rise.get().map_or(0.0, |rise| rise.amount);
+    let kept_per_crown = 1.0 - rise.clamp(0.0, 0.99);
 
     // The course, and a side square to it carried along without twisting.
     let mut course = start.tangent;
@@ -67,15 +64,17 @@ fn trace_limb(envelope: &Envelope, params: &LimbLevel, start: Ring, length: f32)
         }
         center = next;
         at += step;
-        // Toward the bend, keeping the compass heading; a course pointing straight up or down
+        // Sagging and rising, keeping the compass heading; a course pointing straight up or down
         // takes its side's.
         let heading = Vec3::new(course.x, 0.0, course.z)
             .try_normalize()
             .or_else(|| Vec3::new(course_side.x, 0.0, course_side.z).try_normalize());
         if let Some(heading) = heading {
-            let toward = Vec3::Y * bend_cos + heading * bend_sin;
-            let closed = 1.0 - kept_per_crown.powf(step / crown);
-            let turned = turn_toward(course, toward, course.angle_between(toward) * closed);
+            let from_up = course.angle_between(Vec3::Y);
+            let from_up = sag(from_up, sag_per_crown * step / crown);
+            let from_up = from_up * kept_per_crown.powf(step / crown);
+            let (sin, cos) = from_up.sin_cos();
+            let turned = Vec3::Y * cos + heading * sin;
             course_side = (Quat::from_rotation_arc(course, turned) * course_side)
                 .reject_from_normalized(turned)
                 .normalize_or(course_side);
@@ -86,17 +85,12 @@ fn trace_limb(envelope: &Envelope, params: &LimbLevel, start: Ring, length: f32)
     trace
 }
 
-/// `from` turned toward `toward` by at most `angle`, both unit vectors.
-fn turn_toward(from: Vec3, toward: Vec3, angle: f32) -> Vec3 {
-    let between = from.angle_between(toward);
-    if between < 1e-6 {
-        return from;
-    }
-    let axis = from
-        .cross(toward)
-        .try_normalize()
-        .unwrap_or_else(|| from.any_orthonormal_vector());
-    Quat::from_axis_angle(axis, between.min(angle)) * from
+/// An angle from up, `from_up`, after sagging by `turn`, the turn of a level course: each length
+/// turns it down by `turn` times the sine of the angle, the exact solution of which multiplies
+/// the tangent of the half angle by e to the `turn`, so a run of steps sags as one step would.
+pub(super) fn sag(from_up: f32, turn: f32) -> f32 {
+    let (sin, cos) = (from_up / 2.0).sin_cos();
+    (2.0 * (sin * turn.exp()).atan2(cos)).clamp(0.0, std::f32::consts::PI)
 }
 
 /// A stem's course (`Trace::finish`): an arc (`arc`) turned about the vertical to `heading`, which

@@ -45,9 +45,8 @@
       },
       "radius": 0.5,
       "sides": 4,
-      "bend": {
-        "toward": 1.5707964,
-        "amount": 0.4
+      "sag": {
+        "amount": 0.2617994
       },
       "wander": {
         "angle": 0.17453292

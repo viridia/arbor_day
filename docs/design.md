@@ -246,9 +246,11 @@ radius share of the parent's radius there.
 
 ### 3.4 Tracing
 
-`trace.rs` defines tracing. With Bend on, a limb's course turns toward an angle from world up
-(the bend's toward), keeping its compass heading, closing a share of the angle left over each
-crown radius (its amount); without it, the course is straight. A
+`trace.rs` defines tracing. A limb's course turns in its vertical plane, keeping its compass
+heading. With Sag on, it turns down by the sag's angle per crown radius times the sine of its
+angle from up, solved exactly per step (the tangent of the half angle grows by e to the turn), so
+neither an upright nor a hanging course sags. With Rise on, it then closes the rise's share of
+its angle from up over each crown radius. With neither, the course is straight. A
 limb stops at its reach, or before a step that would leave the envelope. A traced limb no longer
 than it is thick at its base is left out.
 

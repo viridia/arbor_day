@@ -1,4 +1,4 @@
-use std::f32::consts::{FRAC_PI_2, TAU};
+use std::f32::consts::{FRAC_PI_2, PI, TAU};
 
 use bevy::math::{Vec3, Vec3Swizzles};
 
@@ -331,7 +331,7 @@ fn regular() -> Species {
     let mut species = Species::default();
     species.trunk.wander.settings.angle = 0.0;
     for level in &mut species.limbs.levels {
-        level.bend.settings.amount = 0.0;
+        level.sag.settings.amount = 0.0;
         level.wander.settings.angle = 0.0;
         level.skew = 0.0;
         for fuzzy in [
@@ -497,45 +497,58 @@ fn deeper_levels_grow_on_the_level_before() {
     }
 }
 
-#[test]
-fn limbs_bend_toward_their_bend() {
-    let mut species = regular();
-    species.limbs.levels[0].bend.settings.amount = 0.5;
-    let target = species.limbs.levels[0].bend.settings.toward;
+/// Checks each of `species`' first-level limbs: its angle from up at the tip is `expected` of its
+/// angle at the base and its length in crown radii, and its compass heading is kept.
+fn check_tips(species: &Species, expected: impl Fn(f32, f32) -> f32) {
     let crown = species.crown.radius;
-    for limb in limbs(&species) {
+    for limb in limbs(species).iter().filter(|limb| limb.level == 1) {
         let tip = limb.rings[limb.rings.len() - 1].tangent;
-        // Half the angle left is closed over each crown radius of length.
-        let left_at_base = target - limb.direction().angle_between(Vec3::Y);
-        let left_at_tip = target - tip.angle_between(Vec3::Y);
-        let expected = left_at_base * 0.5_f32.powf(limb.length() / crown);
-        assert!(
-            (left_at_tip - expected).abs() < 1e-3,
-            "{left_at_tip} {expected}"
-        );
-        // The compass heading is kept.
+        let at_base = limb.direction().angle_between(Vec3::Y);
+        let at_tip = tip.angle_between(Vec3::Y);
+        let expected = expected(at_base, limb.length() / crown);
+        assert!((at_tip - expected).abs() < 1e-3, "{at_tip} {expected}");
         let heading = |v: Vec3| v.z.atan2(v.x);
         assert!((heading(tip) - heading(limb.direction())).abs() < 1e-3);
     }
 }
 
 #[test]
-fn every_bend_target_moves_the_tip() {
-    let tips = |degrees: f32| {
-        let mut species = regular();
-        species.limbs.levels[0].bend.settings.amount = 0.5;
-        species.limbs.levels[0].bend.settings.toward = degrees.to_radians();
-        limbs(&species)
-            .iter()
-            .map(|limb| limb.rings[limb.rings.len() - 1].tangent)
-            .collect::<Vec<_>>()
-    };
-    let mut previous = tips(90.0);
-    for degrees in [110.0, 130.0, 150.0, 170.0] {
-        let next = tips(degrees);
-        // Each limb's tip droops further, or the limb stops sooner at the envelope.
-        assert_ne!(previous, next, "{degrees}°");
-        previous = next;
+fn limbs_sag_by_the_sine_of_their_angle() {
+    // The turn per crown radius scaled by the sine of the angle from up: the tangent of the half
+    // angle grows by e to the turn.
+    let mut species = regular();
+    species.limbs.levels[0].sag.settings.amount = 0.5;
+    check_tips(&species, |at_base, crowns| {
+        2.0 * ((at_base / 2.0).tan() * (0.5 * crowns).exp()).atan()
+    });
+    // Exactly, whatever the step: half a turn and half again is one turn.
+    let halves = sag(sag(1.0, 0.25), 0.25);
+    assert!((halves - sag(1.0, 0.5)).abs() < 1e-5);
+    // Neither an upright course nor a hanging one sags.
+    assert_eq!(sag(0.0, 1.0), 0.0);
+    assert!((sag(PI, 1.0) - PI).abs() < 1e-5);
+}
+
+#[test]
+fn limbs_rise_toward_up() {
+    // Half the angle from up is closed over each crown radius of length.
+    let mut species = regular();
+    species.limbs.levels[0].sag.state = OperatorState::Off;
+    species.limbs.levels[0].rise.state = OperatorState::On;
+    species.limbs.levels[0].rise.settings.amount = 0.5;
+    check_tips(&species, |at_base, crowns| at_base * 0.5_f32.powf(crowns));
+}
+
+#[test]
+fn an_upright_leader_does_not_tip_over() {
+    // With no lean, the trunk's carry-on rises straight up however much its level sags.
+    let mut species = straight();
+    species.limbs.levels[0].sag.settings.amount = 1.0;
+    let carriers = limbs_of(&species, AxisKind::CarryOn);
+    assert!(!carriers.is_empty());
+    for carrier in carriers.iter().filter(|axis| axis.level == 1) {
+        let tip = carrier.rings[carrier.rings.len() - 1].tangent;
+        assert!(tip.angle_between(Vec3::Y) < 1e-3, "{tip}");
     }
 }
 
@@ -649,12 +662,20 @@ fn operators_not_on_grow_as_at_zero() {
     off.limbs.levels[0].wander.state = OperatorState::Disabled;
     assert_eq!(rings(&off), rings(&level_limbs(0.0)));
 
-    let mut bent = Species::default();
-    bent.limbs.levels[0].bend.settings.amount = 0.8;
-    let mut straight = bent.clone();
-    straight.limbs.levels[0].bend.settings.amount = 0.0;
-    bent.limbs.levels[0].bend.state = OperatorState::Off;
-    assert_eq!(rings(&bent), rings(&straight));
+    let mut sagged = Species::default();
+    sagged.limbs.levels[0].sag.settings.amount = 0.8;
+    let mut straight = sagged.clone();
+    straight.limbs.levels[0].sag.settings.amount = 0.0;
+    sagged.limbs.levels[0].sag.state = OperatorState::Off;
+    assert_eq!(rings(&sagged), rings(&straight));
+
+    let mut risen = Species::default();
+    risen.limbs.levels[0].rise.settings.amount = 0.8;
+    let mut level = risen.clone();
+    level.limbs.levels[0].rise.state = OperatorState::On;
+    level.limbs.levels[0].rise.settings.amount = 0.0;
+    risen.limbs.levels[0].rise.state = OperatorState::Disabled;
+    assert_eq!(rings(&risen), rings(&level));
 
     let mut unforked = forking(2, 0.0);
     unforked.limbs.levels[0].fork.state = OperatorState::Disabled;

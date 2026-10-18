@@ -139,8 +139,11 @@ changing one leaves the others' numbers alone (requirements, Parameters, determi
 
 ### D17 — Tracing in steps, and rings by visible error
 
-A limb's course is traced in 2 cm steps (TD3.4), turning toward its bend as a share of the angle
-left per crown radius, so a species scaled up keeps its form. Wander then displaces the course as
+A limb's course is traced in 2 cm steps (TD3.4), sagging and rising by amounts per crown radius,
+so a species scaled up keeps its form, each step solved exactly, so the step size does not show,
+as seedling's `flex` did. Sag scales with the sine of the angle from up, as a cantilever's load
+does, so an upright limb does not sag; a bend toward a target angle turned an upright limb most,
+and tipped the leader's carry-on over even with no lean. Wander then displaces the course as
 a lightning bolt is drawn, by midpoints between its base and its end, both fixed, so the tip stays
 where the course puts it at any wander, and a limb zigzags about a line it keeps returning to, as a
 tree steers back toward light and up. Kinks fall about one spacing in crown radii apart on every

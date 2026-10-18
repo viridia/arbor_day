@@ -198,10 +198,7 @@ impl Default for LimbLevels {
                     reach: Fuzzy::new(0.6, 0.1, Distribution::Bell),
                     radius: 0.5,
                     sides: 3,
-                    bend: Toggle::on(Bend {
-                        amount: 0.5,
-                        ..Bend::default()
-                    }),
+                    sag: Toggle::on(Sag::degrees(20.0)),
                     wander: Toggle::on(Wander::degrees(15.0)),
                     ..LimbLevel::default()
                 },
@@ -214,10 +211,7 @@ impl Default for LimbLevels {
                     reach: Fuzzy::new(0.5, 0.1, Distribution::Bell),
                     radius: 0.5,
                     sides: 3,
-                    bend: Toggle::on(Bend {
-                        amount: 0.5,
-                        ..Bend::default()
-                    }),
+                    sag: Toggle::on(Sag::degrees(20.0)),
                     wander: Toggle::on(Wander::degrees(20.0)),
                     ..LimbLevel::default()
                 },
@@ -327,7 +321,7 @@ impl SerializeWithRegistry for Trunk {
 
 /// One level of limbs on a parent, the trunk or a limb of the level before, in nodes along the
 /// part of the parent inside the crown. Each limb leaves at an angle from its parent and grows
-/// toward the envelope, bending, wandering and forking as its operators say. A file holds the
+/// toward the envelope, sagging, rising, wandering and forking as its operators say. A file holds the
 /// operators that are on.
 #[derive(Reflect, Clone, PartialEq)]
 #[reflect(SerializeWithRegistry)]
@@ -399,8 +393,10 @@ pub struct LimbLevel {
     /// Sides of each ring.
     #[reflect(@ValueRange::<i32>(3..=8), @Spinbox, @Caption("Sides"), @ControlGroup("Shape"))]
     pub sides: i32,
-    #[reflect(@Caption("Bend"))]
-    pub bend: Toggle<Bend>,
+    #[reflect(@Caption("Sag"))]
+    pub sag: Toggle<Sag>,
+    #[reflect(@Caption("Rise"))]
+    pub rise: Toggle<Rise>,
     #[reflect(@Caption("Wander"))]
     pub wander: Toggle<Wander>,
     #[reflect(@Caption("Fork"))]
@@ -429,7 +425,8 @@ impl Default for LimbLevel {
             reach: Fuzzy::new(0.9, 0.1, Distribution::Bell),
             radius: 0.5,
             sides: 4,
-            bend: Toggle::on(Bend::default()),
+            sag: Toggle::on(Sag::default()),
+            rise: Toggle::off(Rise::default()),
             wander: Toggle::on(Wander::degrees(10.0)),
             fork: Toggle::off(Fork::default()),
         }
@@ -450,24 +447,46 @@ pub fn limits<T: Typed>(name: &str) -> RangeInclusive<f32> {
         })
 }
 
-/// A limb's course turning, as it grows, toward an angle from world up, keeping its compass
-/// heading. Without it the course is straight.
+/// A limb's course turning down under its weight as it grows, keeping its compass heading: most
+/// where it is level, and not at all where it points straight up or down, as a cantilever bends.
 #[derive(Reflect, Clone, PartialEq)]
-#[reflect(@Icon("icons/operators/bend.png"))]
-pub struct Bend {
-    /// The angle from world up the limb bends toward: 0 up, as a poplar's, 90° level, as an oak's,
-    /// 180° down, as a weeping tree's.
+#[reflect(@Icon("icons/operators/sag.png"))]
+pub struct Sag {
+    /// How far a level limb turns down over a length equal to the crown's radius, less the nearer
+    /// it points up or down. Measured against the crown, so a shrub and a tree with the same
+    /// settings sag alike.
     #[reflect(
         @ValueRange::<f32>(0.0..=std::f32::consts::PI),
         @Precision(1),
         @NumberInputUnits::new_static("angle_degrees"),
-        @Caption("Toward"),
+        @Caption("Amount"),
     )]
-    pub toward: f32,
-    /// How much of the angle left to its target the limb turns through over a length equal to
-    /// the crown's radius: 0 keeps it straight. Measured against the crown, so a shrub and a tree
-    /// with the same settings bend alike, and against what is left, so every target moves the
-    /// tip, and longer limbs bend further.
+    pub amount: f32,
+}
+
+impl Sag {
+    /// A sag of `amount` degrees.
+    pub fn degrees(amount: f32) -> Self {
+        Self {
+            amount: amount.to_radians(),
+        }
+    }
+}
+
+impl Default for Sag {
+    fn default() -> Self {
+        Self::degrees(15.0)
+    }
+}
+
+/// A limb's course turning up toward the light as it grows, keeping its compass heading; an
+/// upright limb has no angle left to turn.
+#[derive(Reflect, Clone, PartialEq)]
+#[reflect(@Icon("icons/operators/rise.png"))]
+pub struct Rise {
+    /// How much of its angle from up the limb turns through over a length equal to the crown's
+    /// radius: 0 keeps it as it is. Measured against the crown, so a shrub and a tree with the
+    /// same settings rise alike.
     #[reflect(
         @ValueRange::<f32>(0.0..=0.99),
         @Precision(0),
@@ -477,12 +496,9 @@ pub struct Bend {
     pub amount: f32,
 }
 
-impl Default for Bend {
+impl Default for Rise {
     fn default() -> Self {
-        Self {
-            toward: 90.0_f32.to_radians(),
-            amount: 0.4,
-        }
+        Self { amount: 0.3 }
     }
 }
 

@@ -185,8 +185,8 @@ their fixed order:
 1. **Angle bias**: the angle changing with the node's place along the parent (C55). **Size
    bias** beside it: the reach changing the same way, for a form whose envelope does not
    shorten its upper scions enough.
-2. **Bend**: its toward and amount (D17's course); C94 would make it Sag and Rise. Without it the
-   course is straight. On the
+2. **Sag** and **Rise**: the course turning down by weight and up toward light (D17, C94).
+   Without them the course is straight. On the
    trunk it curves the stem after the tilt it leaves the ground at (the splay, and the lean's
    tilt, X36), which gives it the heading a bend keeps.
 3. **Weep**: the course allowed past level and below the envelope, for arching stems (C48) and
@@ -270,7 +270,7 @@ settings. The default species, abridged, angles in radians:
       "angle": { "center": 1.05, "spread": 0.17, "shape": "Bell" },
       "reach": { "center": 0.9, "spread": 0.1, "shape": "Bell" },
       "radius": 0.5, "sides": 4,
-      "bend": { "toward": 1.57, "amount": 0.4 },
+      "sag": { "amount": 0.26 },
       "wander": { "angle": 0.17 }
     }
   ],
@@ -290,7 +290,7 @@ settings. The default species, abridged, angles in radians:
   not know (`bevy_reflect`'s `visit_struct`). The file is applied onto the template, the species
   with every operator off and each level's frame at its depth's default, so a missing operator is
   off and grows as a file written before it existed did (X15's third measure). The template is
-  not a new species' default, which has Bend and Wander on. A file from a newer generator, naming
+  not a new species' default, which has Sag and Wander on. A file from a newer generator, naming
   an operator this one lacks, fails to load rather than loading wrong.
 - **Versions**: a new version of an operator is another slot beside the old (`wander_2`), at most
   one of the two on; the old one is read and shown while on but left out of the add menu (a

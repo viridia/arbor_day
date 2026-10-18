@@ -57,6 +57,6 @@ such as a bare leader tip.
 A value drawn once per plant is invisible within a tree and differs only from seed to seed, so it
 varies only where trees of one species should differ: the envelope's lean and squash, the trunk's
 lean direction. The trunk varies in nothing else. A limb's angle and reach vary per limb, the most
-visible variety, and its skew is a turn either way of up to its value. Not varied: bend toward and
-bend, since wander already irregularizes; wander, itself the randomness; radius, a share of the
+visible variety, and its skew is a turn either way of up to its value. Not varied: sag and rise,
+since wander already irregularizes; wander, itself the randomness; radius, a share of the
 parent's (D22); sides, which are mesh detail; and start, since each node's jitter varies the places.
