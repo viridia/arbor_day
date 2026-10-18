@@ -254,18 +254,6 @@ slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
   seed (D23); a fixed one would do, since Panoply turns placed instances, but changes nothing
   needed here. Old files read, a leaning trunk growing differently; not a file breaker (C113).
   TD3.2 rewritten. E[3]
-- **C115 Teeth independent of the leaf's shape**: serration is hard to steer because the tapers
-  and widths reach the teeth three ways in `leaf::half_outline`. The edge is cut at equal steps
-  of the curve's parameter, so a taper moves teeth along it; each tooth is pushed along the edge's
-  direction at its segment's end, so the outline tilts it; and serration is in leaf lengths, so
-  one value makes small teeth on a broad leaf and large ones on a narrow leaf (rake is divided by
-  the count, serration is not). Serration also lengthens the tip. Instead, teeth as a profile
-  laid over the outline: the edge measured by length and cut into `segments` equal teeth, each
-  point pushed out along the edge's normal by a sawtooth whose depth (serration) and lean toward
-  the tip (rake) are in tooth lengths, jitter too. The tapers and widths then shape only the
-  outline; an unserrated leaf keeps its curve. The tip's sharpening goes, a field of its own if
-  missed. Fields keep their names with new meanings (G1), so files read; serrated leaves change.
-  Checked by eye: one serration across several tapers, teeth alike. E[3]
 - **C112 View settings panel**: a gear icon opening a dialog of view settings, saved in
   `ViewSettings` (D28): the lighting and tone mapping (`GameLook`, TD1.1; per-project looks stay
   X6), and a ruler gizmo for judging a plant's size. Two buttons reset the lighting and tone
@@ -520,6 +508,23 @@ slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
 - **X51** Key Symbols (C107) upstream in feathers, for the Bevy editor's menus too, the author
   proposing it. *Gate:* it landing in the Bevy we build against; then `src/shortcut.rs` uses
   feathers' and `assets/fonts/KeySymbols.ttf` goes.
+
+- **X52** Teeth independent of the leaf's shape (was C115). Serration is hard to steer because
+  the tapers and widths reach the teeth in `leaf::half_outline`: the edge is cut at equal steps of
+  the curve's parameter, so a taper moves teeth along it; each tooth is pushed square to the edge
+  at its segment's end, so the outline tilts it; and serration is in leaf lengths. Its uses to
+  keep: deep teeth read as pine needles at a distance, on snow-covered trees especially; on a
+  flared base, teeth square to the edge point back, as a maple's lower lobes do; and the tip's
+  spike. Tried and stashed (2026-10-18):
+  - Equal depth square to the edge, in tooth lengths, teeth spaced evenly along it: teeth alike
+    across tapers, but needles needed serration past 1 (to 400%), and the spike, once dropped,
+    was missed. Brought back by lengthening the last segment it was a thin tail; straight-sided,
+    long and thin past 1.5.
+  - The points on the outline inflated about the midrib's middle (the author's expectation: an
+    inflated leaf through the points, spaced as their bases): on a narrow leaf the base teeth
+    became prongs below the stem, the side teeth the shortest, the leaf a spindle. Not kept.
+  Open: rake as an angle from square to the edge, so a lean holds at any depth; inflating across
+  more than along. *Gate:* the author settling what serration should mean.
 
 ## Notes
 
