@@ -63,6 +63,7 @@ use bevy_immediate::{
 use crate::{
     fuzzy::{Distribution, Fuzzy, Interval},
     random::Seed,
+    shortcut::shortcut,
     spread_strip::{StripRange, spread_strip},
     toggle::{OperatorState, set_toggle_state, toggle_state},
 };
@@ -596,7 +597,7 @@ fn add_menu(
                     let operators = !off.is_empty();
                     for (field, caption) in off {
                         let item = format!("add_{field}");
-                        if menu_item(ui.ch_id(field), caption.to_string(), item) {
+                        if menu_item(ui.ch_id(field), caption.to_string(), None, item) {
                             picked = Some(Picked::Operator(field));
                         }
                     }
@@ -605,7 +606,7 @@ fn add_menu(
                             ui.ch_id("divider")
                                 .on_spawn_apply_scene(|| bsn! { @FeathersMenuDivider });
                         }
-                        if menu_item(ui.ch_id("add"), next, "add".to_string()) {
+                        if menu_item(ui.ch_id("add"), next, None, "add".to_string()) {
                             picked = Some(Picked::Item);
                         }
                     }
@@ -614,12 +615,22 @@ fn add_menu(
     picked
 }
 
-/// A feathers menu item showing `caption`, named `name`. Returns whether it was picked.
-fn menu_item(item: ImmEntity<CapsPanel>, caption: String, name: String) -> bool {
+/// A feathers menu item showing `caption`, and its shortcut `keys` at its right end if given,
+/// named `name`. Returns whether it was picked.
+fn menu_item(
+    item: ImmEntity<CapsPanel>,
+    caption: String,
+    keys: Option<&'static str>,
+    name: String,
+) -> bool {
     item.on_spawn_apply_scene(move || {
         let caption = caption.clone();
+        let label: Box<dyn SceneList> = match keys {
+            Some(keys) => Box::new(bsn_list! { Text(caption) ThemedText -- @shortcut(keys) }),
+            None => Box::new(bsn_list! { Text(caption) ThemedText }),
+        };
         bsn! {
-            @FeathersMenuItem { @caption: bsn! { Text(caption) ThemedText } }
+            @FeathersMenuItem { @caption: label }
             Name({name.clone()})
         }
     })

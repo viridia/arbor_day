@@ -45,6 +45,7 @@ mod plant;
 mod properties;
 mod random;
 mod settings;
+mod shortcut;
 mod species;
 mod species_file;
 mod spread_strip;
@@ -77,6 +78,7 @@ fn main() {
             OutlinePlugin,
             HudPlugin,
             look::LookPlugin,
+            shortcut::ShortcutPlugin,
         ))
         .insert_resource(UiTheme(create_dark_theme()))
         .add_observer(use_game_fov)
