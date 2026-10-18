@@ -11,6 +11,9 @@
       "alpha": 1.0
     }
   },
+  "outline": true,
+  "bark_outline": 0.01,
+  "leaf_outline": 4.0,
   "trunk": {
     "height": 5.0,
     "radius": 0.2,

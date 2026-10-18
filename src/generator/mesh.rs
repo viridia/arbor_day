@@ -77,7 +77,7 @@ pub fn plant(species: &Species) -> Grown {
     }
     let size = card_size(species);
     let tip_leaves = &species.ornaments.tip_leaves.settings;
-    let sprig = leaf::layout(tip_leaves, species.seed, leaf::OUTLINE);
+    let sprig = leaf::layout(tip_leaves, species.seed, species.leaf_stroke());
     let mut leaves = Geometry::default();
     let mut leafy_tips = 0;
     let mut last_axis = None;
@@ -98,7 +98,7 @@ pub fn plant(species: &Species) -> Grown {
         tip_leaves,
         species.bark_color,
         species.seed,
-        leaf::OUTLINE,
+        species.leaf_stroke(),
     );
     Grown {
         bark,

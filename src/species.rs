@@ -74,6 +74,26 @@ pub struct Species {
     /// can merge into one mesh in the game.
     #[reflect(@Caption("Bark color"), @ControlGroup("Plant"))]
     pub bark_color: Color,
+    /// Dark outlines, as the rest of the game has: the bark drawn again as an inverted hull, and
+    /// the leaf texture painted with a stroke around the sprig.
+    #[reflect(@Caption("Outline"), @ControlGroup("Plant"))]
+    pub outline: bool,
+    /// How far the bark's outline stands out from its surface, in meters, as the game reads it.
+    #[reflect(
+        @ValueRange::<f32>(0.001..=0.05),
+        @Precision(3),
+        @Caption("Bark outline"),
+        @ControlGroup("Plant"),
+    )]
+    pub bark_outline: f32,
+    /// The width of the leaf texture's stroke, in texture pixels.
+    #[reflect(
+        @ValueRange::<f32>(0.5..=12.0),
+        @Precision(1),
+        @Caption("Leaf outline"),
+        @ControlGroup("Plant"),
+    )]
+    pub leaf_outline: f32,
     #[reflect(@Caption("Trunk"), @Stripe(vec![STRIPE_TRUNK]))]
     pub trunk: Trunk,
     #[reflect(@Caption("Crown"), @Stripe(vec![STRIPE_CROWN]))]
@@ -91,11 +111,22 @@ impl Default for Species {
             detail: 0.02,
             bark_color: Color::srgb(0.42, 0.33, 0.25),
             taper: 0.6,
+            outline: true,
+            // Panoply's models' width.
+            bark_outline: 0.01,
+            leaf_outline: 4.0,
             trunk: Trunk::default(),
             crown: Crown::default(),
             limbs: LimbLevels::default(),
             ornaments: Ornaments::default(),
         }
+    }
+}
+
+impl Species {
+    /// The leaf texture's stroke width in pixels, if outlined.
+    pub fn leaf_stroke(&self) -> Option<f32> {
+        self.outline.then_some(self.leaf_outline)
     }
 }
 

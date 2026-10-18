@@ -15,7 +15,7 @@ use crate::species::{Species, Upright};
 /// sprig's fan starts, as seedling's did.
 pub(super) fn axial_fold(species: &Species) -> f32 {
     let tip_leaves = &species.ornaments.tip_leaves.settings;
-    leaf::layout(tip_leaves, species.seed, leaf::OUTLINE).fold
+    leaf::layout(tip_leaves, species.seed, species.leaf_stroke()).fold
 }
 
 /// The elevation above level from which a tip is steep, where one card along the twig would

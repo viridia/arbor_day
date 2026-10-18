@@ -251,11 +251,11 @@ mod tests {
         .unwrap();
         assert!(error.to_string().contains("wobble"), "{error}");
         let error = edited(&Species::default(), |file| {
-            file["outline"] = true.into();
+            file["roots"] = true.into();
         })
         .err()
         .unwrap();
-        assert!(error.to_string().contains("outline"), "{error}");
+        assert!(error.to_string().contains("roots"), "{error}");
     }
 
     #[test]

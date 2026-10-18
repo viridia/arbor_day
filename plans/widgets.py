@@ -4,6 +4,7 @@
 - an interval's row: a fuzzy number's without the shape toggle;
 - an enum's select: picking a profile redraws the crown envelope, drawn as lines around the
   plant, and picking a limb level's facing sets it;
+- a checkbox: the outline, whose bark hull hides when it is cleared;
 - a color field's row: a swatch that opens a picker, where a typed color tints the trunk."""
 
 from driver import Between
@@ -13,6 +14,7 @@ STATS = "arbor_day::plant::PlantStats"
 ENVELOPE = "arbor_day::plant::EnvelopeStats"
 GROWN_FROM = "arbor_day::plant::GrownFrom"
 SPECIES = "arbor_day::species::Species"
+VISIBILITY = "bevy_camera::visibility::Visibility"
 LIMBS = "Shell/Panel/levels[0]"
 COLOR = "Shell/Panel/bark_color/input"
 SPACING = "Shell/Panel/tip_leaves/sprig/spacing"
@@ -80,6 +82,14 @@ def run(driver):
     pick(driver, "levels[0]/facing", "Up")
     driver.expect("Plant", GROWN_FROM, "Up", at="limbs[0].facing")
     driver.screenshot("picked_variant")
+
+    # A checkbox: the outline, on by default, drawn around the bark and painted around the leaves.
+    driver.expect("Outline", VISIBILITY, "Inherited")
+    driver.screenshot("outlined")
+    driver.click("Shell/Panel/outline")
+    driver.expect("Plant", GROWN_FROM, False, at="outline")
+    driver.expect("Outline", VISIBILITY, "Hidden")
+    driver.screenshot("not_outlined")
 
     # The bark's color, under Plant.
     driver.expect("Plant", STATS, {"bark_color": "#6B5440"})

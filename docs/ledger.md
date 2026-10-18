@@ -88,6 +88,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C102  | A bare default (D33): no operator on in the default species or any level's defaults, the trunk's Wander and each level's Sag and Wander off, their values kept for when they are added; tip leaves stay. `Toggle::on` is for tests only. `plans/operators.py` adds Wander from the menu before the ✕, eye and trunk; `plans/shapes.py` turns Wander on for its wander shots. Changes every plant. |
 | C38   | Leaf texture painting (D29, TD3.10), `src/generator/leaf.rs`: the tip leaves' sprig painted with `tiny-skia` (D20), seedling's poplar-green by default, its fields in Sprig and Leaf subgroups of the tip leaves, the angle and spacing `Interval`s (D10, TD2.2), a fuzzy row without the shape button. The card's axial fold where the sprig's fan starts. Mipmaps built on the CPU, a new image each build (X48). The placeholder texture goes. The view lit and tonemapped as Panoply's, by `GameLook` (TD1.1, X6), which shows the leaf colors as picked. A golden test on the default texture's pixels; `plans/widgets.py` types an interval's spread. Changes every plant's straight runs under cards; breaks files. |
 | C103  | Ornaments as slots (`docs/patches.md`, Stacks; TD3.8): `Ornaments` holds the tip leaves as a `Toggle<TipLeaves>`, on by default (D33), in place of the Leaves checkbox, with the eye, ✕ and the Foliage header's add menu of an operator, and its icon. The file leaves off slots out, so a bare plant has no `tip_leaves`. Reflection paths gain `settings` (`ornaments.tip_leaves.settings.upright`). `plans/levels.py` takes the leaves off with the ✕ and adds them back from the menu. Breaks files. |
+| C66   | Outlines (TD3.9, TD3.10), a switch for the whole plant in the Plant group, on by default, with the bark outline's width in metres (0.01, Panoply's models') and the leaf stroke's in texture pixels (4), in place of `leaf::OUTLINE`. On, the view draws the bark again as an inverted hull, Panoply's `OutlineMaterial` copied to `src/outline.rs`; off, the hull hides and the leaf texture is painted without strokes, the translucent ones between leaves too. Panoply's reading of the width is X49. `plans/widgets.py` clears the checkbox. Output unchanged by default. The envelope helper's lines at 18% opacity, from 60%, less distracting under the game's lighting (C38). |
 
 ## Next
 
@@ -105,7 +106,7 @@ per-type hook, and is retained-mode.
 The foundation, the skeleton (`docs/patches.md`, The abstract plant), tip rosettes, the species
 file (C10), operator stacks (X31's steps 1 to 4, C96 to C99) and colors by part (C69) have
 landed, and forks drawn along the chain (C95) and on stems (C75), sag and rise (C94), ornament
-slots (C103) and the painted leaf (C38); card facing next.
+slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
 
 1. **C70 Card facing**: first measure how far cards are from edge-on to the game's camera (45°
    down), a figure in `PlantStats`, to judge facing and folds by numbers as well as by eye; C60's
@@ -113,17 +114,10 @@ slots (C103) and the painted leaf (C38); card facing next.
    target (D27) widened from world up to a blend of up and the envelope's outward normal, with a
    spread. Card counts multiply with levels, eight triangles each since C39, so look at density
    against the budget too. E[3]
-2. **C66 Outlines**, a switch for the whole plant (requirements, Foliage): in the Plant group
-   (C33), the switch, the bark's width as the game reads it, and the leaf stroke's in texture
-   pixels (growth model, Consequences), in place of `leaf::OUTLINE`, which `layout` and `paint`
-   already take as an `Option`. On, the leaf texture is painted with its strokes (D29),
-   the preview draws the bark with an inverted hull after Panoply's `src/materials/outline.wesl`,
-   and the export writes the `"outline"` material extra (C41). Off, none of these; whether the
-   translucent strokes between leaves stay is judged then. E[3]
-3. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
+2. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
    panel, above the Plant group (C33); the file browser is X2. File commands act on the active document, so that tabs (X26)
    need not change them. E[3]
-4. **C8 Working document in settings.** A settings group holding the working species and, once
+3. **C8 Working document in settings.** A settings group holding the working species and, once
    set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
    as seedling did. The document's name comes from the file name. Serialized by reflection, as
    `bevy_settings` does. A working document from before a schema change is lost (D32), but not
@@ -131,8 +125,9 @@ slots (C103) and the painted leaf (C38); card facing next.
    drops a field that fails to deserialize without a word (`load_properties`), so the species is
    read by C10's strict path and its error logged. Stored as a list of open documents holding
    one, and the active one's index, so several (X26) need no change of format. E[3]
-5. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
-    as a JSON extra (C10), written from the generator's output (`generator::plant`), never from
+4. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, the species
+    as a JSON extra (C10), and on an outlined species the bark material's `"outline"` extra, the
+    bark outline's width (C66), written from the generator's output (`generator::plant`), never from
     the preview's entities, whose leaf mesh is only hidden while none grow, in the form Panoply loads (requirements, Output; "What Panoply does with the output"). Bark and leaf materials matte (roughness 1.0), as the preview's are. Bevy writes no glTF,
     so this adds a dependency or a writer of our own; propose it before code. The command-line
     export is X1. Research so far (2026-10-12), the author also asking skein's author:
@@ -532,6 +527,11 @@ slots (C103) and the painted leaf (C38); card facing next.
   keep their first contents. The leaf texture works around it with a new image each build
   (TD3.10). *Gate:* the author filing it; then a fix in the Bevy we build against, and the
   workaround dropped.
+
+- **X49** Panoply draws every outline at `OutlineMaterial`'s default width, 0.015: it reads the
+  `"outline"` extra's presence (`models::process_material_extras`) but not its value, so the
+  width the export writes (C41, C66) has no effect. A material per distinct width, cached. An
+  item for Panoply's ledger. *Gate:* the first species exported (C41).
 
 ## Notes
 

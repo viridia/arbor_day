@@ -26,6 +26,7 @@ use bevy_immediate::{
 use bevy_remote_driver::RemoteDriverPlugin;
 use hud::{Ground, HudPlugin, hud};
 use keys::KeysPlugin;
+use outline::{OutlinePlugin, PlantOutline};
 use plant::{Plant, PlantEnvelope, PlantLeaves, PlantPlugin, PlantStats};
 use properties::{CapsPanel, HeaderNotes};
 use settings::{AppSettingsPlugin, MIN_PANE_WIDTH, save_panel_width};
@@ -39,6 +40,7 @@ mod generator;
 mod hud;
 mod keys;
 mod look;
+mod outline;
 mod plant;
 mod properties;
 mod random;
@@ -72,6 +74,7 @@ fn main() {
             TurntablePlugin,
             KeysPlugin,
             PlantPlugin,
+            OutlinePlugin,
             HudPlugin,
             look::LookPlugin,
         ))
@@ -101,7 +104,7 @@ struct ParamPanel;
 fn scene() -> impl SceneList {
     // Lines take no light, so the envelope reads the same from every side.
     let envelope_material = StandardMaterial {
-        base_color: Color::srgba(0.6, 0.85, 0.6, 0.6),
+        base_color: Color::srgba(0.6, 0.85, 0.6, 0.18),
         alpha_mode: AlphaMode::Blend,
         unlit: true,
         ..default()
@@ -141,6 +144,9 @@ fn scene() -> impl SceneList {
             perceptual_roughness: 1.0,
             ..default()
         }))
+        --
+        #Outline
+        PlantOutline
         --
         // Not framed: a bare plant has no leaves to bound, and the envelope bounds them.
         #Leaves

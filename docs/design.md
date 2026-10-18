@@ -343,6 +343,11 @@ toward that axis's upper side. Each half turns down about the midrib by the late
 and the far half bends down across the axial fold by the axial droop. Every quad keeps the flat
 card's normal. The texture's bottom is the card's base.
 
+On an outlined species the app (`src/outline.rs`) draws the bark again, sharing its mesh, with
+Panoply's `OutlineMaterial`: an inverted hull, each vertex pushed out along its normal by the bark
+outline's width in the mesh's own units, front faces culled, unlit, black, casting no shadow. Off,
+the hull's entity is hidden.
+
 ### 3.10 The leaf texture
 
 `leaf.rs` paints the tip leaves' sprig (D29) with `tiny-skia` (D20), 256 pixels square, in leaf
@@ -363,8 +368,9 @@ below the bottom edge to the fan, and every leaf black, the outline's width wide
 the bark color; then each leaf in turn stroked translucent black and filled with a linear gradient
 in its own frame, lateral (outer, inner at the midrib, outer, across 1.2 times the half's widest
 control point) or axial (inner at the base, outer at the tip), both colors shifted in Oklch
-(stream `leaf color`) by up to 144° of hue and 0.4 of lightness at a variation of 1. The outline
-is 4 pixels until C66. A golden test compares the default species' texture with
+(stream `leaf color`) by up to 144° of hue and 0.4 of lightness at a variation of 1. The strokes,
+black and translucent, are the leaf outline's width, and painted only on an outlined species. A
+golden test compares the default species' texture with
 `src/generator/leaf-golden.png`, each channel within 2, and on a difference writes what it painted
 to `target/leaf-golden.png`.
 

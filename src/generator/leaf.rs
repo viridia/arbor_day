@@ -18,9 +18,6 @@ use crate::{
 /// The texture's width and height, in pixels.
 pub const TEXTURE_SIZE: u32 = 256;
 
-/// The outline's width in texture pixels, until the species sets it (ledger C66).
-pub const OUTLINE: Option<f32> = Some(4.0);
-
 /// The painted stem's width.
 const STEM_WIDTH: f32 = 0.06;
 
@@ -367,7 +364,7 @@ mod tests {
     #[test]
     fn the_sprig_fits_the_texture_about_its_stem() {
         let tip_leaves = TipLeaves::default();
-        let layout = layout(&tip_leaves, Seed(1), OUTLINE);
+        let layout = layout(&tip_leaves, Seed(1), Some(4.0));
         // Nine leaves: the middle one, two either side in the fan, and two pairs.
         assert_eq!(layout.stamps.len(), 9);
         let mut stem = Point::zero();
@@ -393,8 +390,9 @@ mod tests {
 
         let species = crate::species::Species::default();
         let tip_leaves = &species.ornaments.tip_leaves.settings;
-        let layout = layout(tip_leaves, species.seed, OUTLINE);
-        let texture = paint(&layout, tip_leaves, species.bark_color, species.seed, OUTLINE);
+        let stroke = species.leaf_stroke();
+        let layout = layout(tip_leaves, species.seed, stroke);
+        let texture = paint(&layout, tip_leaves, species.bark_color, species.seed, stroke);
         let golden = std::fs::read(GOLDEN).ok().and_then(|bytes| {
             Image::from_buffer(
                 &bytes,
