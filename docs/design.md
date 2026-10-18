@@ -90,7 +90,8 @@ capability set, `CapsPanel`, is `CapsUiFeathers`' list plus `CapabilityEnumSelec
 
 A `Fuzzy` row (TD2.2) is a center input, a spread input and a shape toggle, with a strip drawn
 along the center input showing center ± spread (`src/spread_strip.rs`). A `ControlGroup`
-attribute gathers a struct's rows under a bold heading where its first field is declared, or into
+attribute gathers a struct's rows under a bold heading where its first field is declared, after
+the `Icon` on that field if it has one, as an operator's heading is, or into
 a subpane of its own at the panel's top level; a nested struct is shown the same way, a subpane at
 the top level and a heading over its rows in a subpane, so panes never nest boxes. Its rows sit in
 a node named after the field, so their paths stay apart from the outer struct's

@@ -353,7 +353,7 @@ pub struct LimbLevel {
     /// bears more than a short one. Measured against the crown, so a shrub and a tree with the
     /// same settings branch alike. A parent's count is rounded up or down at random, up with the
     /// chance of its fraction.
-    #[reflect(@ValueRange::<f32>(0.0..=40.0), @Precision(1), @Caption("Nodes per crown radius"), @ControlGroup("Arrangement"))]
+    #[reflect(@ValueRange::<f32>(0.0..=40.0), @Precision(1), @Caption("Nodes per crown radius"), @ControlGroup("Arrangement"), @Icon("icons/groups/arrangement.png"))]
     pub density: f32,
     /// Limbs at each node: 1 for a spiral, 2 for opposite pairs, more for a whorl. Rounded at
     /// random for each node, so 1.5 makes half the nodes opposite.
@@ -391,6 +391,7 @@ pub struct LimbLevel {
         @NumberInputUnits::new_static("angle_degrees"),
         @Caption("Angle"),
         @ControlGroup("Shape"),
+        @Icon("icons/groups/shape.png"),
     )]
     pub angle: Fuzzy,
     /// Length as a fraction of the distance from the limb's start to the envelope along its

@@ -96,6 +96,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C109  | File dialogs (was X2), with `rfd` (native dialogs, the author's choice): Open and Save As, and Save before the first save, pick a `.gltf` in a dialog run as a task on the IO pool, so the app keeps drawing; Save As's dialog starts with the document's name. A picked path becomes the document's, then Save runs; Open logs the path until C41 reads it. Commands are ignored while a dialog is open. Checked by hand, since the driver cannot work native dialogs. |
 | C41   | Save and Open (D34), `src/gltf_file.rs`: the plant written from `generator::plant` as a `.gltf` with its `.bin` and leaf `.png` beside it, named after it, their URIs escaped. A scene named after the document, holding the species file under the extra `arbor_day`; bark (`COLOR_0`, linear) and leaf (`TEXCOORD_0`, mask at `LEAF_CUTOFF`, double-sided) meshes, both materials matte and not metallic, the bark's with the `"outline"` extra when outlined. The PNG is the full-size level; the pipeline mipmaps. Open reads the species back from the extra. `gltf-json`, `png` and `percent-encoding` as direct dependencies, `gltf` as a dev-dependency, all already in the lock file; a test validates the output with `gltf`. `FileRequest` (Open or Save As, with a path) is what a dialog's pick writes, and what plans send through the driver's `message`. `plans/panel.py` saves, edits, saves, opens. |
 | C110  | Four launches in place of eight, since each plan is a launch whose window takes focus: `panel.py` (groups, operators, then from a New document the file commands), `levels.py` (levels, then from a New document cards), `smoke.py` and `widgets.py`. The shapes gallery, with no checks, moves to `plans/gallery/`, which `run.py plans` passes over; run it by path when the generator's output changes. Values `levels.py` and the card folds typed are now set by `set_resource`, the number input's typing being checked elsewhere. New resets the species, not the view. |
+| C101  | Control-group headings like operators' (TD1.5): in `TEXT_MAIN` rather than dimmed, after an `Icon` on the group's first field, `assets/icons/groups/arrangement.png` (Material's `graph_5`) and `shape.png` (Lucide's `drafting-compass`). A nested struct's heading in a subpane is bright too, with no icon. Checked by eye in `plans/panel.py`'s screenshots. |
 
 ## Next
 
@@ -135,12 +136,6 @@ slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
 - **C108 Ask before dropping unsaved changes**: New, and Open once it works, replace an edited
   species without asking (C40). A feathers dialog (Save, Don't Save, Cancel) while the document
   has its dot. After C41, so Save in the dialog saves. E[2]
-- **C101 Control-group headings like operators'**: "Arrangement" and "Shape" in `TEXT_MAIN`
-  rather than dimmed, each after an icon, as an operator's heading is; the icon an `Icon`
-  attribute on the group's first field, the files in `assets/icons/groups/`. Waits on the two
-  icons, abstract enough to need ideas (a stem with alternating nodes; a limb leaving at an angle
-  with an arc). Select and color captions stay outdented, since moving them means moving
-  checkboxes too. E[1]
 - **C93 Typed values lost in plans** (was X29, its gate passed): find whether a click right after
   Enter lands before the panel has rebuilt, or the typing is lost. Three failures, each once of two
   runs: `plans/levels.py` (2026-10-14) at the second level's density typed as 1.5, the plant

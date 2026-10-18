@@ -173,7 +173,8 @@ fn stripe(attrs: &CustomAttributes, index: usize) -> Color {
         .unwrap_or(Color::NONE)
 }
 
-/// On an operator's settings type: the icon left of its heading, an image path under `assets/`.
+/// On an operator's settings type, or the first field of a [`ControlGroup`]: the icon left of its
+/// heading in a subpane, an image path under `assets/`.
 #[derive(Debug, Clone, Reflect)]
 pub struct Icon(pub &'static str);
 
@@ -318,8 +319,12 @@ fn edit_struct(
             }
         };
         if in_pane {
+            let icon = field_info
+                .custom_attributes()
+                .get::<Icon>()
+                .map(|icon| icon.0);
             ui.ch_id(caption)
-                .on_spawn_apply_scene(move || group_heading(caption));
+                .on_spawn_apply_scene(move || group_heading(caption, icon));
             rows(ui);
         } else {
             let color = stripe(field_info.custom_attributes(), 0);
@@ -418,7 +423,8 @@ fn field_row(
         let row = row.on_spawn_insert(move || Name::new(name));
         if in_pane {
             row.on_spawn_insert(heading_node).add(|ui| {
-                ui.ch().on_spawn_apply_scene(move || group_heading(caption));
+                ui.ch()
+                    .on_spawn_apply_scene(move || group_heading(caption, None));
                 edit_struct(ui, field, notes, true);
             });
         } else {
@@ -815,12 +821,23 @@ fn row_node(name: &'static str) -> (Name, Node) {
     )
 }
 
-/// A control group's heading in a subpane: bold and dimmed, so it reads apart from the row
-/// captions below it, with a gap above that sets it off from the rows before.
-fn group_heading(caption: &'static str) -> impl Scene {
+/// A control group's heading in a subpane, as an operator's is: bold, after `image` if it has one,
+/// with a gap above that sets it off from the rows before.
+fn group_heading(caption: &'static str, image: Option<&'static str>) -> impl Scene {
+    let kind_icon = image.map(|image| {
+        bsn! {
+            @icon(image)
+            ThemeTextColor(tokens::TEXT_MAIN)
+            Name("icon")
+        }
+    });
     bsn! {
-        @heading_text(caption, tokens::TEXT_DIM)
-        Node { margin: UiRect::top(px(6)) }
+        Node { margin: UiRect::top(px(6)), ..widget_line() }
+        Children [
+            {kind_icon}
+            --
+            @heading_text(caption, tokens::TEXT_MAIN)
+        ]
     }
 }
 
