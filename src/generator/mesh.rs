@@ -86,7 +86,7 @@ pub fn plant(species: &Species) -> Grown {
             tangent: cluster.direction,
             ..twig
         };
-        card(&mut leaves, &frame, size, &species.ornaments.tip_leaves);
+        card(&mut leaves, &frame, size, &species.ornaments.tip_leaves.settings);
     }
     Grown {
         bark,

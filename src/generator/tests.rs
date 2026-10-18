@@ -744,7 +744,7 @@ fn branch_ends_run_straight_under_their_cards() {
     // With no bend, a stretch with no kinks keeps no rings, so a branch end's last ring
     // before its tip lies before the stretch its card covers.
     let species = level_limbs(45.0);
-    let straight = AXIAL_FOLD * species.ornaments.tip_leaves.size * Envelope::of(&species).radius;
+    let straight = AXIAL_FOLD * species.ornaments.tip_leaves.settings.size * Envelope::of(&species).radius;
     let limbs = limbs(&species);
     let ends: Vec<&Axis> = limbs.iter().filter(|limb| limb.scions.is_empty()).collect();
     assert!(ends.iter().any(|limb| limb.rings.len() > 2));
@@ -1373,7 +1373,7 @@ fn a_card_at_every_branch_end() {
     let per_tip: Vec<usize> = (ends.iter())
         .map(|limb| {
             let elevation = limb.frame_at(limb.length()).tangent.y.asin();
-            cards_at(elevation, species.ornaments.tip_leaves.upright) as usize
+            cards_at(elevation, species.ornaments.tip_leaves.settings.upright) as usize
         })
         .collect();
     assert_eq!(cards.len(), per_tip.iter().sum::<usize>());
@@ -1385,8 +1385,10 @@ fn a_card_at_every_branch_end() {
         tips.iter()
             .all(|tip| cards.iter().any(|card| spans(card, *tip)))
     );
-    species.ornaments.leaves = false;
-    assert!(plant(&species).leaves.positions.is_empty());
+    for state in [OperatorState::Disabled, OperatorState::Off] {
+        species.ornaments.tip_leaves.state = state;
+        assert!(plant(&species).leaves.positions.is_empty());
+    }
 }
 
 #[test]
@@ -1399,8 +1401,7 @@ fn cards_lie_along_their_twigs_facing_up() {
     let side = tip_leaves.size * Envelope::default().radius;
     let species = Species {
         ornaments: Ornaments {
-            tip_leaves,
-            ..Ornaments::default()
+            tip_leaves: Toggle::on(tip_leaves),
         },
         ..shown(2, regular())
     };
@@ -1417,7 +1418,7 @@ fn cards_lie_along_their_twigs_facing_up() {
     for (cluster, (corners, normals)) in skeleton.cards.iter().zip(cards) {
         let twig = &skeleton.axes[cluster.axis];
         let elevation = twig.frame_at(twig.length()).tangent.y.asin();
-        if cards_at(elevation, species.ornaments.tip_leaves.upright) > 1 {
+        if cards_at(elevation, species.ornaments.tip_leaves.settings.upright) > 1 {
             continue;
         }
         along += 1;
@@ -1461,7 +1462,7 @@ fn steep_tips_bear_rosettes() {
         let mut twig = Axis::placed(1, AxisKind::Lateral, (0, 0.0), ring(0.0), 1.0, stream);
         twig.rings.push(ring(1.0));
         let mut species = Species::default();
-        species.ornaments.tip_leaves.upright = upright;
+        species.ornaments.tip_leaves.settings.upright = upright;
         let cards = clusters(&species, &[twig]);
         assert!(cards.iter().all(|card| card.direction.is_normalized()));
         (cards, tangent)

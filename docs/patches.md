@@ -242,14 +242,12 @@ The crown is fixed at the head, the plant's, not a level's. At the foot is a sec
 **ornaments** (C103): what is placed on the grown skeleton without changing it, so its order
 never moves a limb. Like a level's operators, each ornament is a slot, one of each kind. The
 first is today's foliage, the tip leaves: cards on every branch end, whatever its level (D27),
-with its size, droops and upright tips; the Leaves switch is whether it is on. Others would be
+with its size, droops and upright tips. Others would be
 leaves along twigs (X30), radiating cards (C54) and fruit, each a placement (tips, along a
 level's twigs, at nodes, radiating) and what it draws. Cards draw from regions of one leaf
 texture, since each texture is a material in Panoply and would split its merged flora meshes
 (requirements, Foliage), a constraint on C38's painter; fruit would be small meshes in vertex
-color, merging with the bark. Until ornaments land, `Ornaments` holds the Leaves switch beside
-its one slot, `tip_leaves` (C96), so files change only by losing the switch when the stack
-arrives.
+color, merging with the bark. The Foliage header's add menu lists the slots that are off.
 
 ### The file
 
@@ -286,7 +284,7 @@ settings. The default species, abridged, angles in radians:
 - **Operators**: one that is on is written as its settings, under its slot's name; one disabled,
   as its settings after `"enabled": false`; one that is off is not written. A level leaves out
   the toggles that are off, by type data on the level, as `LimbLevels` has. Ornaments are written the same way, so
-  a bare plant has no `tip_leaves`, in place of the Leaves switch.
+  a bare plant has no `tip_leaves`.
 - **Reading**: reflection reads a struct with fields missing and rejects one with a field it does
   not know (`bevy_reflect`'s `visit_struct`). The file is applied onto the template, the species
   with every operator off and each level's frame at its depth's default, so a missing operator is

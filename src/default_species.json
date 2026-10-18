@@ -44,7 +44,6 @@
     }
   ],
   "ornaments": {
-    "leaves": true,
     "tip_leaves": {
       "upright": "Triple",
       "size": 0.25,

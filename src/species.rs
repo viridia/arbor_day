@@ -24,7 +24,7 @@ use crate::{
         Caption, ControlGroup, Flatten, Icon, Precision, ShownCount, Spinbox, Stripe, ValueRange,
     },
     random::Seed,
-    toggle::{Toggle, all_off, serialize_on},
+    toggle::{OperatorState, Toggle, all_off, serialize_on},
 };
 
 /// Most levels of limbs a species can have.
@@ -628,21 +628,35 @@ fn degrees(center: f32, spread: f32) -> Fuzzy {
     Fuzzy::new(center.to_radians(), spread.to_radians(), Distribution::Bell)
 }
 
-/// What is placed on the grown limbs without changing them: so far the leaves at their tips.
+/// What is placed on the grown limbs without changing them, one slot per kind, added and removed as
+/// a level's operators are: so far the leaves at their tips. A file holds the slots that are not
+/// off.
 #[derive(Reflect, Clone, PartialEq)]
+#[reflect(SerializeWithRegistry)]
 pub struct Ornaments {
-    /// Whether leaves grow; off for a bare plant.
-    #[reflect(@Caption("Leaves"))]
-    pub leaves: bool,
+    /// Off for a bare plant.
     #[reflect(@Caption("Tip leaves"))]
-    pub tip_leaves: TipLeaves,
+    pub tip_leaves: Toggle<TipLeaves>,
+}
+
+impl SerializeWithRegistry for Ornaments {
+    fn serialize<S: Serializer>(
+        &self,
+        serializer: S,
+        registry: &TypeRegistry,
+    ) -> Result<S::Ok, S::Error> {
+        serialize_on(self, serializer, registry)
+    }
 }
 
 impl Default for Ornaments {
     fn default() -> Self {
+        // On, the one slot a new species has on (D33).
         Self {
-            leaves: true,
-            tip_leaves: TipLeaves::default(),
+            tip_leaves: Toggle {
+                state: OperatorState::On,
+                settings: TipLeaves::default(),
+            },
         }
     }
 }
@@ -650,6 +664,7 @@ impl Default for Ornaments {
 /// A leaf cluster at the tip of every limb that bears none, so the leaves follow the branch ends:
 /// a card facing up, or on a steep twig what `Upright` says.
 #[derive(Reflect, Clone, PartialEq)]
+#[reflect(@Icon("icons/operators/tip-leaves.png"))]
 pub struct TipLeaves {
     /// What a steep tip bears.
     #[reflect(@Caption("Upright tips"))]

@@ -24,7 +24,7 @@ const ROSETTE_LEAN: f32 = 0.75;
 
 /// A card's width and length: a share of the crown's radius, so a scaled species keeps its form.
 pub(super) fn card_size(species: &Species) -> f32 {
-    species.ornaments.tip_leaves.size * Envelope::of(species).radius.max(0.01)
+    species.ornaments.tip_leaves.settings.size * Envelope::of(species).radius.max(0.01)
 }
 
 /// How many cards a tip whose twig rises at `elevation` bears: one, unless it is `STEEP`, when
@@ -39,7 +39,7 @@ pub(super) fn cards_at(elevation: f32, upright: Upright) -> u32 {
     }
 }
 
-/// The leaf clusters, unless leaves are off: at the tip of each limb bearing none, wherever it
+/// The leaf clusters, if the tip leaves are on: at the tip of each limb bearing none, wherever it
 /// ends, so no branch end is bare unless the species leaves steep ones so. A tip bears one card,
 /// or on a steep twig what the species' `Upright` says (`cards_at`). One card reaches back along the twig, its fold at the tip, so the sprig's stem
 /// overlaps the twig's end, as seedling's did; on a twig shorter than that, from its base. The
@@ -48,9 +48,9 @@ pub(super) fn cards_at(elevation: f32, upright: Upright) -> u32 {
 /// twig by `ROSETTE_LEAN` of the way to level, keeping its heading, so an upright tip reads as
 /// leaves splayed toward the light rather than one card on end.
 pub(super) fn clusters(species: &Species, axes: &[Axis]) -> Vec<Card> {
-    if !species.ornaments.leaves {
+    let Some(tip_leaves) = species.ornaments.tip_leaves.get() else {
         return Vec::new();
-    }
+    };
     let size = card_size(species);
     let mut cards = Vec::new();
     for (index, twig) in axes.iter().enumerate() {
@@ -61,7 +61,7 @@ pub(super) fn clusters(species: &Species, axes: &[Axis]) -> Vec<Card> {
         let tip = twig.frame_at(length);
         let count = cards_at(
             tip.tangent.y.clamp(-1.0, 1.0).asin(),
-            species.ornaments.tip_leaves.upright,
+            tip_leaves.upright,
         );
         if count == 1 {
             let back = (AXIAL_FOLD * size).min(length);

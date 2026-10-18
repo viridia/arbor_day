@@ -86,6 +86,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C94   | Sag and rise (D17, TD3.4), in place of Bend: Sag turns a limb down by an angle per crown radius times the sine of its angle from up, solved exactly per step, so the leader's carry-on stays upright; Rise closes a share of the angle from up per crown radius. Sag on by default (15°, then 20° on the second and third levels), Rise off, with their icons. Changes every plant's limbs; breaks files. |
 | C100  | Lean as a trunk operator (TD3.2): `Toggle<Lean>` with its angle, before Wander, off by default, so the default trunk grows straight; a fork's stems too. Its icon is `bend.png`, unused since C94. Breaks files. |
 | C102  | A bare default (D33): no operator on in the default species or any level's defaults, the trunk's Wander and each level's Sag and Wander off, their values kept for when they are added; tip leaves stay. `Toggle::on` is for tests only. `plans/operators.py` adds Wander from the menu before the ✕, eye and trunk; `plans/shapes.py` turns Wander on for its wander shots. Changes every plant. |
+| C103  | Ornaments as slots (`docs/patches.md`, Stacks; TD3.8): `Ornaments` holds the tip leaves as a `Toggle<TipLeaves>`, on by default (D33), in place of the Leaves checkbox, with the eye, ✕ and the Foliage header's add menu of an operator, and its icon. The file leaves off slots out, so a bare plant has no `tip_leaves`. Reflection paths gain `settings` (`ornaments.tip_leaves.settings.upright`). `plans/levels.py` takes the leaves off with the ✕ and adds them back from the menu. Breaks files. |
 
 ## Next
 
@@ -102,17 +103,10 @@ per-type hook, and is retained-mode.
 
 The foundation, the skeleton (`docs/patches.md`, The abstract plant), tip rosettes, the species
 file (C10), operator stacks (X31's steps 1 to 4, C96 to C99) and colors by part (C69) have
-landed, and forks drawn along the chain (C95) and on stems (C75), and sag and rise (C94); ornament
-slots next, then leaf painting.
+landed, and forks drawn along the chain (C95) and on stems (C75), sag and rise (C94), and
+ornament slots (C103); leaf painting next.
 
-1. **C103 Ornaments as slots** (was X42, its gate, stacks, passed; `docs/patches.md`,
-   Stacks): the plant-wide stack of what is placed on the grown skeleton, one slot per kind,
-   added and removed as operators are, with the same add menu on the Foliage header. Its first
-   slot is the tip leaves, a `Toggle<TipLeaves>` in place of the Leaves checkbox, on in the
-   default (D33), so a bare plant's file has no `tip_leaves`. Before C38, whose leaf fields go
-   in the tip leaves. Later kinds: leaves along twigs (X30), radiating cards (C54), fruit and
-   flowers (C104). Breaks files. E[2]
-2. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's leaf, as D29 has it, its
+1. **C38 Leaf texture painting** with `tiny-skia` (D20): seedling's leaf, as D29 has it, its
    fields in a "Sprig" and a "Leaf" group in the tip leaves (`TipLeaves`, C96), and the `Interval` type (D10) for its
    variations. The painter takes the outline as an
    argument, a width in texture pixels or none, which C38 fixes at a constant until C66 makes it
@@ -123,22 +117,22 @@ slots next, then leaf painting.
    with a tolerance, since SIMD can move a channel by a level. The card's axial fold
    (`AXIAL_FOLD` in `src/generator/foliage.rs`, halfway) moves to where the painted sprig's fan starts, as
    seedling's did. E[3]
-3. **C70 Card facing**: first measure how far cards are from edge-on to the game's camera (45°
+2. **C70 Card facing**: first measure how far cards are from edge-on to the game's camera (45°
    down), a figure in `PlantStats`, to judge facing and folds by numbers as well as by eye; C60's
    rosettes took the steepest cards off edge-on. Then, if the figure still calls for it, the face
    target (D27) widened from world up to a blend of up and the envelope's outward normal, with a
    spread. Card counts multiply with levels, eight triangles each since C39, so look at density
    against the budget too. E[3]
-4. **C66 Outlines**, a switch for the whole plant (requirements, Foliage): in the Plant group
+3. **C66 Outlines**, a switch for the whole plant (requirements, Foliage): in the Plant group
    (C33), the switch, the bark's width as the game reads it, and the leaf stroke's in texture
    pixels (growth model, Consequences). On, the leaf texture is painted with its strokes (D29),
    the preview draws the bark with an inverted hull after Panoply's `src/materials/outline.wesl`,
    and the export writes the `"outline"` material extra (C41). Off, none of these; whether the
    translucent strokes between leaves stay is judged then. E[3]
-5. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
+4. **C40 File handling**: Save, Save As and Open, as keys (D8) and as buttons at the top of the
    panel, above the Plant group (C33); the file browser is X2. File commands act on the active document, so that tabs (X26)
    need not change them. E[3]
-6. **C8 Working document in settings.** A settings group holding the working species and, once
+5. **C8 Working document in settings.** A settings group holding the working species and, once
    set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
    as seedling did. The document's name comes from the file name. Serialized by reflection, as
    `bevy_settings` does. A working document from before a schema change is lost (D32), but not
@@ -146,7 +140,7 @@ slots next, then leaf painting.
    drops a field that fails to deserialize without a word (`load_properties`), so the species is
    read by C10's strict path and its error logged. Stored as a list of open documents holding
    one, and the active one's index, so several (X26) need no change of format. E[3]
-7. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
+6. **C41 glTF export** from the app: the bark and leaf meshes, the leaf texture, and the species
     as a JSON extra (C10), written from the generator's output (`generator::plant`), never from
     the preview's entities, whose leaf mesh is only hidden while none grow, in the form Panoply loads (requirements, Output; "What Panoply does with the output"). Bark and leaf materials matte (roughness 1.0), as the preview's are. Bevy writes no glTF,
     so this adds a dependency or a writer of our own; propose it before code. The command-line

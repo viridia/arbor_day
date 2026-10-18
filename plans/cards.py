@@ -46,10 +46,10 @@ def run(driver):
     driver.screenshot("bent")
 
     # Upright tips: one card each, then none on the steep ones, which the default tree has.
-    driver.set_resource(SPECIES, "Single", at="ornaments.tip_leaves.upright")
+    driver.set_resource(SPECIES, "Single", at="ornaments.tip_leaves.settings.upright")
     driver.expect("Plant", STATS, {"leafy_tips": Between(10, 11), "cards": Between(10, 11)})
     driver.screenshot("upright_single")
-    driver.set_resource(SPECIES, "Bare", at="ornaments.tip_leaves.upright")
+    driver.set_resource(SPECIES, "Bare", at="ornaments.tip_leaves.settings.upright")
     driver.expect("Plant", STATS, {"leafy_tips": Between(1, 10), "cards": Between(1, 10)})
     driver.screenshot("upright_bare")
     driver.exit()

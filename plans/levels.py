@@ -1,7 +1,7 @@
 """Limb levels: the last level's add menu shows the next, growing on the limbs of the one before,
 and a level's ✕ hides it and those after it. A hidden level keeps its parameters, so showing it
-again brings it back as it was. A leaf card grows at each branch end, and unchecking Leaves leaves
-the tree bare until it is checked again."""
+again brings it back as it was. A leaf card grows at each branch end, and the tip leaves' ✕ leaves
+the tree bare until Foliage's add menu brings them back."""
 
 from driver import Between
 
@@ -56,9 +56,12 @@ def run(driver):
     driver.expect("Plant", STATS, {"limbs": Between(10 + 5 + 1, 11 + 55 + 55 * (2 * 4 + 1))})
     driver.screenshot("three_levels")
 
-    driver.click("Shell/Panel/ornaments/leaves")
+    driver.click("Shell/Panel/ornaments/tip_leaves/off")
     driver.expect("Plant", STATS, {"cards": 0})
     driver.expect("Leaves", VISIBILITY, "Hidden")
+    driver.absent("Shell/Panel/ornaments/tip_leaves")
+    ornaments = driver.get("Plant", GROWN_FROM, at="ornaments")
+    assert "tip_leaves" not in ornaments, ornaments
     # Bare, with every stem drawn at least 10 cm wide: the twigs thicken, the limbs stay.
     driver.click("Shell/Panel/detail/input")
     driver.key("End")
@@ -69,8 +72,9 @@ def run(driver):
     driver.expect("Plant", GROWN_FROM, Between(0.099, 0.101), at="detail")
     driver.screenshot("thick_detail")
 
-    # Leaves come back, and show, when checked again.
-    driver.click("Shell/Panel/ornaments/leaves")
+    # Leaves come back, and show, when added again from Foliage's menu.
+    driver.click("Shell/Panel/ornaments/add_operator")
+    driver.click("Shell/Panel/ornaments/add_operator/add_tip_leaves")
     driver.expect("Plant", STATS, {"cards": Between(20, 1000)})
     driver.expect("Leaves", VISIBILITY, "Inherited")
     driver.screenshot("leaves_again")

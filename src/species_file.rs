@@ -164,9 +164,24 @@ mod tests {
         species.limbs.levels[2].fork.state = OperatorState::On;
         species.limbs.levels[2].fork.settings.chance = 0.5;
         species.trunk.wander = Toggle::on(Wander { angle: 0.3 });
-        species.ornaments.leaves = false;
+        species.ornaments.tip_leaves.state = OperatorState::Off;
         let written = write(&species, &registry).unwrap();
         assert!(read(&written, &registry).unwrap() == species);
+    }
+
+    #[test]
+    fn a_bare_plant_has_no_tip_leaves() {
+        // On in the default, so a file without them is bare.
+        let mut species = Species::default();
+        let read_bare = edited(&species, |file| {
+            file["ornaments"].as_object_mut().unwrap().remove("tip_leaves");
+        })
+        .unwrap();
+        assert_eq!(read_bare.ornaments.tip_leaves.state, OperatorState::Off);
+        species.ornaments.tip_leaves.state = OperatorState::Off;
+        let written = write(&species, &registry()).unwrap();
+        let file: serde_json::Value = serde_json::from_str(&written).unwrap();
+        assert!(file["ornaments"].get("tip_leaves").is_none());
     }
 
     #[test]

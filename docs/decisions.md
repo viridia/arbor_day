@@ -256,8 +256,8 @@ which stays deferred. **Reversing it** changes every plant's arrangement and the
 A card is a sprig of leaves on a painted stem, lined up with a real twig, after seedling
 (growth-model.md, Foliage): its base on the twig, its axis along it, its face as near world up as
 the axis allows (TD3.8, TD3.9). Seen edge-on, a card then loses leaves but never a twig. One cluster
-grows at the tip of every branch end, whatever its level, so no visible end is bare; a "Leaves"
-switch turns them all off. Card size is a share of the crown radius, so a scaled species keeps its
+grows at the tip of every branch end, whatever its level, so no visible end is bare; taking off
+the tip leaves leaves them all bare. Card size is a share of the crown radius, so a scaled species keeps its
 form (D21). Denser foliage comes from another limb level. The tip's card reaches back so its axial
 fold lies at the tip, as seedling's did, and the twig runs straight under it (D17).
 
@@ -353,8 +353,7 @@ from C10 on, for files that are only test artifacts.
 A new species, and a limb level added to one, starts with no operator on: no lean, sag, rise,
 wander or fork. An author adds each behaviour a species needs, so a species with straight limbs
 carries no rows or concepts for bending ones, and every behaviour in a species was chosen rather
-than inherited. Tip leaves are the exception, on in the default once they become an ornament
-slot like any other (C103), since leaves are what make a plant read as alive; a bare one is a dead
+than inherited. Tip leaves are the exception, an ornament slot on in the default, since leaves are what make a plant read as alive; a bare one is a dead
 tree, which the tool also makes, by taking them off. Anything with a value
 that does nothing is an operator, however common; the frame keeps only what has no such value,
 as reach and radius, which no species does without. **Reversing it** gives every species the

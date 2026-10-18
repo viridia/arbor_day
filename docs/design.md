@@ -303,7 +303,8 @@ parent where it left. Stems fork the same way (TD3.2).
 
 ### 3.8 Foliage
 
-`clusters` places cards at the tip of each limb bearing no scions, unless leaves are off. Their
+`clusters` places cards at the tip of each limb bearing no scions, while the tip leaves are on, an
+ornament slot (`docs/patches.md`, Stacks) whose panel and file are an operator's (TD1.5, TD2.3). Their
 size is a share of the crown radius. Stems bear none. A tip bears one card, unless its twig rises
 45° or more above level at its tip, when the species' upright tips say: none, one, or a rosette
 of two or three (`cards_at`).
