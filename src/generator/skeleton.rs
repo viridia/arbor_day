@@ -7,6 +7,7 @@ use super::{
     envelope::{ENVELOPE_BISECTIONS, Envelope, inside_envelope},
     foliage::{clusters, straight_run},
     fork::fork,
+    ground::{flare, sink},
     hint::hint,
     placement::{place_scions, stems},
     trace::{TRACE_STEP, kink_spacing, trace_scions},
@@ -300,6 +301,7 @@ pub(super) fn grow(species: &Species) -> Skeleton {
         cards: Vec::new(),
     };
     hint(0, species.detail, &mut skeleton);
+    flare(species, &mut skeleton);
     for number in 1..=species.limbs.grown().len() {
         let level = Level::new(species, number);
         place_scions(&level, &mut skeleton);
@@ -310,6 +312,7 @@ pub(super) fn grow(species: &Species) -> Skeleton {
         hint(number, species.detail, &mut skeleton);
     }
     skeleton.cards = clusters(species, &skeleton.axes);
+    sink(&mut skeleton);
     skeleton
 }
 

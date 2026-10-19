@@ -259,6 +259,15 @@ is the height from the ground along the stems. Forked at its base, its copies ar
 from the ground, a clump. Every stem bears the first level. The crown is measured against the
 trunk's height: its top a multiple, its base a share.
 
+Where stems meet the ground (`ground.rs`): with Flare on, each stem rising from the ground is
+wider by the flare's width share of its base radius at the ground, the widening falling off as
+the square of the way up to three base radii, so it meets the taper without a crease. It is added
+after the stems are hinted and before the first level is placed, so limbs low on the trunk take
+its radius; rings are added along its curve where it lies further than the detail threshold from
+the rings either side. Last of all, each such stem reaches straight down below the ground by its
+ground radius, the tangent of the steepest slope a plant stands on (45°), so a plant on a slope
+meets the ground on its low side; that ring's distance along the axis is below 0.
+
 ### 3.3 Placing laterals
 
 `place_scions` places a level's laterals on each axis of the level before, along the part of it

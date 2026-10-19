@@ -326,6 +326,8 @@ pub struct Trunk {
     /// Each stem zigzagging about the course the lean sets, as a limb does.
     #[reflect(@Caption("Wander"))]
     pub wander: Toggle<Wander>,
+    #[reflect(@Caption("Flare"))]
+    pub flare: Toggle<Flare>,
     /// The trunk splitting into stems, as codominant trunks do (a vase elm, an old oak), or at the
     /// ground into a clump.
     #[reflect(@Caption("Fork"))]
@@ -514,6 +516,28 @@ impl Lean {
 impl Default for Lean {
     fn default() -> Self {
         Self::degrees(15.0)
+    }
+}
+
+/// The stems widening toward the ground, as a mature tree's do where the roots spread, over a few
+/// times their base radius.
+#[derive(Reflect, Clone, PartialEq)]
+#[reflect(@Icon("icons/operators/taper.png"))]
+pub struct Flare {
+    /// How much wider a stem is at the ground than the taper makes it, as a share of its base
+    /// radius: 100% is twice as wide.
+    #[reflect(
+        @ValueRange::<f32>(0.0..=2.0),
+        @Precision(0),
+        @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("Width"),
+    )]
+    pub width: f32,
+}
+
+impl Default for Flare {
+    fn default() -> Self {
+        Self { width: 0.5 }
     }
 }
 
@@ -980,6 +1004,7 @@ impl Default for Trunk {
             sides: 6,
             lean: Toggle::off(Lean::default()),
             wander: Toggle::off(Wander::degrees(8.0)),
+            flare: Toggle::off(Flare::default()),
             // Turned on, a trunk splits: there is only one to fork.
             fork: Toggle::off(Fork {
                 chance: 1.0,

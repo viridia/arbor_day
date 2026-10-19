@@ -103,6 +103,8 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C119  | End, beside Start (D30, TD3.3), default 85%. |
 | C120  | Wander up to the tip: the tip pinned, no kink inside the tip's straight run (D17, TD3.4). |
 | C116  | Bias in place of Size bias: size and angle by node index about the middle node, neutral when added (TD3.3); a fork's copies reach what their limb had left (TD3.7); a fork's roll is `Fuzzy`, and its chance 50% when added. |
+| C58   | Stems below the ground (TD3.2). |
+| C122  | Flare as a trunk operator (TD3.2), from X45. |
 
 ## Next
 
@@ -185,6 +187,8 @@ next.
 - **C67 The leaf texture on the HUD** (D28), for tuning the leaf (requirements, Authoring app):
   the painted texture as an inset over a checkerboard, so its transparency shows, behind a
   toggle saved in `ViewSettings`. After C38. E[2]
+- **C123 Flare's icon**: Flare (C122) borrows `icons/operators/taper.png`; an icon of its own.
+  E[0]
 
 ### Later
 
@@ -203,10 +207,6 @@ next.
 - **C48 Arching stems**, for fountain shrubs: a lean past level, so a stem rises and then droops
   toward the ground, stopping above it. D24 stops the lean at level until a preset needs more
   (X18). The Weep operator on the trunk. E[2]
-- **C58 Trunk below ground**, so a tree placed on a slope still meets the ground on its low side:
-  the stems start below the origin by their base radius times the tangent of the steepest slope
-  a tree stands on, a constant rather than a species field. At 45° the depth is the base radius.
-  *Gate:* trees on slopes in Panoply showing a gap.
 - **C7 Undo and redo** (requirements, Authoring app). Take the `bevy_undo_redo` crate from the
   author's Bevy PR #23373 (never merged; branch `bevy_undo` in `../bevy`) as `src/undo.rs`, its
   API unchanged and its origin noted: an `UndoAction` trait (`apply` returns the inverse;
@@ -469,11 +469,10 @@ next.
   rings as bands of bark color. Triangles grow with the count, so judge against the budget.
   *Gate:* a preset (X18) needing a clump the stems cannot make.
 
-- **X45** A radius profile along an axis, beside the even taper (D22, X32): the radius from a
-  curve rather than a line, for the flare at the base of a mature trunk, bottle trunks
-  (baobab), and bulging stems. Rings carry their own radii (C81), so it is the taper stage
-  written another way. Base flare first, which shows on most mature trees at game scale.
-  *Gate:* trunks reading as poles where they meet the ground, or a preset needing a bulge.
+- **X45** A radius profile along an axis, beside the even taper (D22, X32) and the flare (C122):
+  the radius from a curve rather than a line, for bottle trunks (baobab) and bulging stems.
+  Rings carry their own radii (C81), so it is the taper stage written another way. *Gate:* a
+  preset needing a bulge.
 
 - **X46** Roots as axes: buttress roots from a stem's base, and prop and aerial roots from its
   limbs (mangrove, banyan), each a scion traced down toward the ground and stopped there, rather

@@ -9,7 +9,7 @@ use crate::{
     fuzzy::{Distribution, Fuzzy},
     random::Seed,
     species::{
-        Bias, Facing, Lean, Ornaments, Profile, Sag, Species, TipLeaves, Trunk, Upright, Wander,
+        Bias, Facing, Flare, Lean, Ornaments, Profile, Sag, Species, TipLeaves, Trunk, Upright, Wander,
     },
     toggle::{OperatorState, Toggle},
 };
@@ -1099,14 +1099,46 @@ fn a_tube_is_drawn_at_its_rings_radii() {
         &vec![sides; trunk.rings.len()],
         0.0,
     );
-    // The upright trunk narrows evenly over its height.
+    // The upright trunk narrows evenly over its height, and keeps its base radius below the ground.
     let per_metre = species.trunk.radius * species.taper / species.trunk.height;
     for (i, ring) in trunk.rings.iter().enumerate() {
-        let expected = species.trunk.radius - per_metre * ring.at;
+        let expected = species.trunk.radius - per_metre * ring.at.max(0.0);
         assert!((ring.radius - expected).abs() < 1e-5, "{ring:?}");
         let vertex = geometry.positions[i * sides as usize];
         assert!(((vertex - ring.center).length() - ring.radius).abs() < 1e-5);
     }
+}
+
+#[test]
+fn stems_reach_below_the_ground_by_their_base_radius() {
+    let mut species = straight();
+    species.trunk.lean = Toggle::on(Lean::degrees(30.0));
+    let trunk = &grow(&species).axes[0];
+    let (below, ground) = (trunk.rings[0], trunk.rings[1]);
+    assert_eq!(ground.center, Vec3::ZERO);
+    assert!((below.center - Vec3::new(0.0, -species.trunk.radius, 0.0)).length() < 1e-5);
+    assert_eq!(below.radius, ground.radius);
+}
+
+#[test]
+fn a_flare_widens_the_base_and_meets_the_taper() {
+    let mut species = straight();
+    let bare = grow(&species).axes[0].clone();
+    species.trunk.flare = Toggle::on(Flare { width: 1.0 });
+    let flared = &grow(&species).axes[0];
+    let radius = species.trunk.radius;
+    // Twice as wide at the ground, and below it.
+    assert!((flared.frame_at(0.0).radius - 2.0 * radius).abs() < 1e-5);
+    assert!((flared.rings[0].radius - 2.0 * radius).abs() < 1e-5);
+    // Rings added along the curve, narrowing all the way, and unchanged past three base radii.
+    assert!(flared.rings.len() >= bare.rings.len() + 2);
+    for pair in flared.rings.windows(2) {
+        assert!(pair[1].radius <= pair[0].radius + 1e-6, "{pair:?}");
+    }
+    let above = |axis: &Axis| -> Vec<Ring> {
+        (axis.rings.iter().filter(|ring| ring.at > 3.0 * radius + 1e-4)).copied().collect()
+    };
+    assert_eq!(above(flared), above(&bare));
 }
 
 #[test]
