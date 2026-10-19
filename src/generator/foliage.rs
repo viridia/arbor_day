@@ -7,7 +7,7 @@ use bevy::math::{Quat, Vec3};
 use super::{
     envelope::Envelope,
     leaf,
-    skeleton::{Axis, Card, upper_side},
+    skeleton::{Axis, AxisKind, Card, upper_side},
 };
 use crate::species::{Species, Upright};
 
@@ -16,6 +16,12 @@ use crate::species::{Species, Upright};
 pub(super) fn axial_fold(species: &Species) -> f32 {
     let tip_leaves = &species.ornaments.tip_leaves.settings;
     leaf::layout(tip_leaves, species.seed, species.leaf_stroke()).fold
+}
+
+/// How far back from its tip an axis runs straight, under its tip's card (D17), whether or not
+/// leaves grow, so turning them off leaves the branches alone.
+pub(super) fn straight_run(species: &Species) -> f32 {
+    axial_fold(species) * card_size(species)
 }
 
 /// The elevation above level from which a tip is steep, where one card along the twig would
@@ -43,8 +49,8 @@ pub(super) fn cards_at(elevation: f32, upright: Upright) -> u32 {
     }
 }
 
-/// The leaf clusters, if the tip leaves are on: at the tip of each limb bearing none, wherever it
-/// ends, so no branch end is bare unless the species leaves steep ones so. A tip bears one card,
+/// The leaf clusters, if the tip leaves are on: at the tip of each stem or limb that did not fork,
+/// whether or not it bears limbs, so no branch end is bare unless the species leaves steep ones so. A tip bears one card,
 /// or on a steep twig what the species' `Upright` says (`cards_at`). One card reaches back along the twig, its fold at the tip, so the sprig's stem
 /// overlaps the twig's end, as seedling's did; on a twig shorter than that, from its base. The
 /// twig runs straight there (`wander_axis`), so the card lies along it. A rosette's cards start at
@@ -59,7 +65,7 @@ pub(super) fn clusters(species: &Species, axes: &[Axis]) -> Vec<Card> {
     let fold = axial_fold(species);
     let mut cards = Vec::new();
     for (index, twig) in axes.iter().enumerate() {
-        if twig.level == 0 || !twig.scions.is_empty() {
+        if twig.bears(axes, AxisKind::ForkCopy) {
             continue;
         }
         let length = twig.length();

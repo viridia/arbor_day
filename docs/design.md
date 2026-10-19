@@ -140,6 +140,31 @@ holds the triangle count. The buttons are `bevy_ui_widgets` `Button`s the size o
 button, in fixed translucent grays; the grid stops `PointerDrag` bubbling up from a button, which
 `Button` does not. Icons are Material Symbols, 48 px white PNGs in `assets/icons/`.
 
+### 1.7 Documents
+
+File commands (`src/document.rs`) act on the one `Document`: its file's path and name, and the
+species last saved. New, Open, Save and Save As are keys (⌘N, ⌘O, ⌘S, ⌘⇧S) and items of a file
+menu (`menu.png`) at the right of a header row above the Plant group. The row's left, and the
+window title, show the document's name, from its file ("Untitled" before the first save), and a dot
+while the species differs from the one saved. New resets the species, not the view.
+
+Open and Save As, and Save before the first save, pick a `.gltf` in a native dialog (`rfd`), run
+as a task on the IO pool so the app keeps drawing; Save As's starts with the document's name.
+Commands are ignored while a dialog is open. A pick writes a `FileRequest` (Open or Save As, with a
+path), which plans send through the driver's `message`; the path becomes the document's.
+
+Save (`src/gltf_file.rs`) writes the plant from `generator::plant` as a `.gltf` with its `.bin`
+and leaf `.png` beside it, named after it, their URIs escaped: a scene named after the document,
+holding the species file (TD2.3) under the extra `arbor_day`; a bark mesh (`COLOR_0`, linear) and a
+leaf mesh (`TEXCOORD_0`, masked at `LEAF_CUTOFF`, double-sided), both materials matte and not
+metallic, the bark's with the `"outline"` extra when outlined. The PNG is the texture's full-size
+level; the pipeline mipmaps. Open reads the species back from the extra.
+
+A menu item shows its keys dimmed at its right end (`src/shortcut.rs`), in the families "Fira
+Sans, Key Symbols". Key Symbols (`assets/fonts/KeySymbols.ttf`) is DejaVu Sans subset to the key
+symbols Fira Sans lacks, renamed; Parley picks a font per character. ⎋ is in neither, so Escape
+shows as "Esc".
+
 ## 2. The species
 
 ### 2.1 One resource
@@ -165,7 +190,7 @@ Random numbers come from SplitMix64 (`src/random.rs`). A seed opens named stream
 `Rng::stream(seed, name)`, one per subsystem (`trunk` for the lean's heading, `branching` for the
 stems), and a stream forks by index: an axis's scions fork from its stream by their index from 0,
 and fixed streams take indices from `u64::MAX` down (wander, the axis's own values, layout,
-carry-on, fork), so they never meet a scion's. A count given as a fraction is rounded at random,
+fork), so they never meet a scion's. A count given as a fraction is rounded at random,
 `Rng::round`, always one draw.
 
 A level's varied fields are drawn where they belong: each node's jitter and limb count once per
@@ -211,16 +236,15 @@ a skeleton; `plant` meshes it.
 
 A `Skeleton` is a list of axes and a list of cards (`skeleton.rs`). An `Axis` is one stem of any
 order, the trunk or a limb: its level (0 for a stem, 1 to 3 for the limb levels), its kind (stem,
-lateral, carry-on, fork copy), its parent and the distance along it where it leaves, its rings,
-its reach, its stream and its scions, by index. An axis bearing no scions bears leaves. A `Ring` is
+lateral, fork copy), its parent and the distance along it where it leaves, its rings,
+its reach, its stream and its scions, by index. A stem or limb that did not fork bears leaves at its tip. A `Ring` is
 a point on an axis, one at every trace step until the axis is hinted (TD3.4): center, tangent, side (carried along without twisting, setting the
 ring's roll and its children's azimuth 0), distance along the axis and radius. A `Card` is a leaf
 card: an axis, the distance along it of the card's base, and the card's direction.
 
 `grow` makes the stems (TD3.2) and hints them (TD3.4), then grows each level in stages over a
 `Level`, which holds the level's parameters and what every stage reads: place its laterals (TD3.3),
-trace them (TD3.4), carry each parent bearing them on (TD3.6), wander (TD3.4), taper (TD3.5), fork
-(TD3.7), and hint. Then it places the leaf clusters (TD3.8).
+trace them (TD3.4), wander (TD3.4), taper (TD3.5), fork (TD3.7), and hint. Then it places the leaf clusters (TD3.8).
 
 ### 3.2 Stems
 
@@ -269,10 +293,10 @@ its angle from up over each crown radius. With neither, the course is straight. 
 limb stops at its reach, or before a step that would leave the envelope. A traced limb no longer
 than it is thick at its base is left out.
 
-The level then wanders (`wander.rs`), after carrying on and before the taper; a fork's copies
+The level then wanders (`wander.rs`), after tracing and before the taper; a fork's copies
 wander as they are added, and stems as they are made. The course is displaced between two fixed
 points, the end of a straight run at its base, a kink spacing (0.15 crown radii) give or take 40%,
-and the start of the straight run under a tip's card (TD3.8; a stem's end): a segment longer than
+and the start of the straight run under a tip's card (TD3.8): a segment longer than
 1.5 spacings is split within 20% of its middle, and the split point moves square to the segment,
 in a random direction, by a random share of the shorter half's length, or a spacing if less, times
 the tangent of the wander, halved until neither half points further off the course than the
@@ -292,16 +316,14 @@ placed on the rings kept, so its laterals start inside the bark as meshed.
 
 Every axis narrows evenly by the plant's one taper, from its base radius at its start to its tip
 as grown, written on its rings (`taper_rings`). A lateral's base radius is set where it is placed
-(TD3.3); an axis carrying another on starts at that one's radius there. Cutting an axis (TD3.6,
-TD3.7) keeps its radii, the cut ring carrying the radius at the cut.
+(TD3.3); a fork's copy starts at its axis's radius at the fork. Cutting an axis at a fork (TD3.7)
+keeps its radii, the cut ring carrying the radius at the cut.
 
-### 3.6 Carrying on
+### 3.6 Branch ends
 
-An axis bearing laterals, unless it forked, ends at its last lateral's node, and one more limb of
-the level carries it on from there (`carry_on.rs`): along it, at its radius there, from a stream of
-its own, its reach the level's times the carry-on reach, otherwise grown as its siblings are. The
-parent is cut there, its last ring the carrier's first. A carrier no longer than it is thick is
-left out, and the parent ends at the node, capped.
+An axis bearing laterals runs on past its last node to its own tip, as traced, its sag, sides and
+wander its own level's throughout. Its last node lies within a gap of the tip (TD3.3). Unless it
+forked, its tip bears leaves as a twig's does (TD3.8). Only a fork cuts an axis (TD3.7).
 
 ### 3.7 Forks
 
@@ -310,17 +332,16 @@ there. Copies carry the axis on, 2 to 5, of the same level: spread evenly around
 direction, each turned half the drawn fork angle from it, the first toward its flank turned up by
 the roll (`copy_directions`). Each copy starts at the axis's radius at the fork and draws its reach, wander and limbs
 from a stream of the fork's; it is traced and tapered as it is added. A copy no longer than it is
-thick is left out; with none the axis does not fork. A forked axis bears neither a carrier nor
-leaves at its tip, and copies do not fork again. A copy's limbs compete among themselves alone.
+thick is left out; with none the axis does not fork. A forked axis bears no leaves at its tip, and copies do not fork again. A copy's limbs compete among themselves alone.
 A fork nearer the axis's base than its radius (`at_base`) leaves no stub: the copies take the
 axis's place, the first in its slot and kind, the rest as laterals beside it, all from the axis's
 parent where it left. Stems fork the same way (TD3.2).
 
 ### 3.8 Foliage
 
-`clusters` places cards at the tip of each limb bearing no scions, while the tip leaves are on, an
+`clusters` places cards at the tip of each stem or limb that did not fork, while the tip leaves are on, an
 ornament slot (`docs/patches.md`, Stacks) whose panel and file are an operator's (TD1.5, TD2.3). Their
-size is a share of the crown radius. Stems bear none. A tip bears one card, unless its twig rises
+size is a share of the crown radius. A tip bears one card, unless its twig rises
 45° or more above level at its tip, when the species' upright tips say: none, one, or a rosette
 of two or three (`cards_at`).
 
@@ -334,15 +355,15 @@ and the one behind, turned over the top, 30°.
 
 ### 3.9 Meshing
 
-`plant` meshes the skeleton (`mesh.rs`). Each stem or limb, with the limbs carrying it on in turn
-(`chain`), its carrier or, if it forked, its first copy (`carrier`), is one tube through their rings, each ring turned to its side, with its axis's level's
+`plant` meshes the skeleton (`mesh.rs`). Each stem or limb, with its fork's first copy and so on
+(`chain`), is one tube through their rings, each ring turned to its side, with its axis's level's
 sides (the trunk's for stems), drawn at its ring's radius but none narrower than half the detail
 threshold; each ring's normals lean forward by the slope between the radii either side, distances
-running on along the chain. A join's ring is drawn once, with the carrying limb's sides, facing
-halfway between the segments meeting there, so a fork's turn is an elbow. A fork's other copies
+running on along the chain. A join's ring is drawn once, facing halfway between the segments
+meeting there, so a fork's turn is an elbow. A fork's other copies
 are tubes of their own, open at their base inside the chain's, as laterals are inside their
 parents'. A segment between rings of equal sides is a band of
-quads; between N and M, so the parent's last, a stitch of N + M triangles walking both rings by
+quads; between N and M, a stitch of N + M triangles walking both rings by
 angle. A tube is open at its base and closed at its tip by a fan.
 
 A card is two by two quads, its base where it was placed, its axis along its direction, its face

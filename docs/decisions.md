@@ -142,8 +142,7 @@ changing one leaves the others' numbers alone (requirements, Parameters, determi
 A limb's course is traced in 2 cm steps (TD3.4), sagging and rising by amounts per crown radius,
 so a species scaled up keeps its form, each step solved exactly, so the step size does not show,
 as seedling's `flex` did. Sag scales with the sine of the angle from up, as a cantilever's load
-does, so an upright limb does not sag; a bend toward a target angle turned an upright limb most,
-and tipped the leader's carry-on over even with no lean. Wander then displaces the course as
+does, so an upright limb does not sag; a bend toward a target angle turned an upright limb most. Wander then displaces the course as
 a lightning bolt is drawn, by midpoints between its base and its end, both fixed, so the tip stays
 where the course puts it at any wander, and a limb zigzags about a line it keeps returning to, as a
 tree steers back toward light and up. Kinks fall about one spacing in crown radii apart on every
@@ -267,8 +266,7 @@ one card models; an upright one bears them all around, each blade turned toward 
 card along it showed on end, dark from the game's camera, with nothing on its other sides. The
 choice is a rosette of two or three, one card as on a level twig, for crops and shrubs seen from
 above, or none. A count rising with steepness, two from 45° and three from 75°, was rejected:
-the leader's carry-on bends toward level as its siblings do (D17), so a third card showed only
-in a narrow range of settings.
+a third card showed only in a narrow range of settings.
 
 Rejected: clusters at a density along each twig within a shell of the envelope, where any density
 put cards along twigs, none made the plant bare, and those near a tip ran past the tip's card
@@ -319,17 +317,18 @@ The fan's angle still sets the pairs', until a preset needs them apart. The droo
 not the texture. Seedling's 47 models used every field, jitter least (3). **Reversing it** loses
 the look the author tuned.
 
-### D30 — A parent ends at its last node, and a limb carries it on
+### D30 — A parent runs on to its own tip
 
-A stem or limb bearing limbs ends at its last node, and one more limb of its children's level
-carries it on from there (TD3.6), so the trunk turns into a branch rather than ending in a post, as
-in decurrent trees and an excurrent leader's last shoot, and a limb's tip is a shoot like any
-other, as in sympodial growth: a fork of one, which D31 generalizes. The two are drawn as one
-tube (TD3.9), so the silhouette and normals run unbroken where their sides differ. The carrier's
-reach is its level's times a carry-on reach, a field of its own, departing from G1 because no
-field can shorten the leader and the tips without shortening the laterals too: at the same reach a
-leader stands above the crown and every limb ends in a trident. One too short to grow leaves the
-parent ending at its last node, a Y of its last laterals. **Reversing it** gives every bearing limb a bare post past its last node.
+A stem or limb bearing limbs runs on past its last node to its own tip, its nodes spread from
+its level's start to there, and the tip bears leaves as any branch end does (D27, TD3.6). Only a
+fork cuts an axis (D31). Rejected: a carry-on, the parent ending at its last node and one more
+limb of its children's level carrying it on, so the trunk turned into a branch rather than ending
+in a post. It switched the axis's sag, sides, wander and reach at the joint, started the next
+level's laterals at that level's start, leaving a bare stretch at each joint, and needed a reach
+of its own, since at the level's reach a leader stood above the crown and every limb ended in a
+trident. Placement settings varying along the parent (X53, C116) are to shorten and steepen the
+upper laterals instead. **Reversing it** brings back the carrier, its reach and the switch at
+each joint.
 
 ### D31 — Forks after Weber and Penn's splits
 

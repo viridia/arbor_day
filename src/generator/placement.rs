@@ -10,6 +10,7 @@ use bevy::{
 
 use super::{
     envelope::{Envelope, distance_to_envelope},
+    foliage::straight_run,
     fork::{at_base, copy_directions, draw_fork},
     skeleton::{
         Axis, AxisKind, Frame, LAYOUT_STREAM, Level, OWN_VALUES_STREAM, Ring, Skeleton,
@@ -119,7 +120,8 @@ pub(super) fn stems(species: &Species) -> Vec<Axis> {
 /// A stem's rings from `base`, `length` long: leaving `from_up` radians from up toward `heading`
 /// and turning toward it by `lean`, but never past level, where it would sink again, then
 /// zigzagging about that course by the trunk's wander, if on (`displace`), its tip where the
-/// course ends, and narrowing from `radius` by the plant's taper.
+/// course ends and straight under its tip's card (`straight_run`), and narrowing from `radius` by
+/// the plant's taper.
 fn stem_course(
     species: &Species,
     base: Vec3,
@@ -142,7 +144,7 @@ fn stem_course(
             rng.fork(WANDER_STREAM),
             wander.angle,
             spacing,
-            length,
+            length - straight_run(species),
             None,
         );
     }

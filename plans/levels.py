@@ -5,7 +5,7 @@ leaves' ✕ leaves the tree bare until Foliage's add menu brings them back.
 
 Then, from a new document, card folds: the lateral droop turns each half of a card down about its
 midrib, or up, cupping it, when negative; the axial droop bends its far half down. Checked by eye
-in the screenshots. Upright tips bear one card each, or none."""
+in the screenshots. Upright tips bear a rosette, one card each, or none."""
 
 import math
 
@@ -36,15 +36,15 @@ def run(driver):
 
 
 def levels(driver):
-    # Nine or ten, and the one carrying the trunk on, each bearing a card at its tip, or up to
-    # three where it is steep.
-    first = Between(10, 11)
-    leaves = {"leafy_tips": first, "cards": Between(10, 33)}
+    # Nine or ten, each bearing a card at its tip, none of them steep, and the trunk's upright
+    # tip a rosette of three.
+    first = Between(9, 10)
+    leaves = {"leafy_tips": Between(10, 11), "cards": Between(9 + 3, 10 + 3)}
     driver.expect("Plant", STATS, {"limbs": first, "level_limbs": [first], **leaves})
     add_level(driver, 0)
-    # One to six nodes of one or two on each of the first level's ten or eleven limbs, 1 to 3 m
-    # long, and one carrying each on. Each level's count shows in its header.
-    second = Between(10 * 2, 11 * (2 * 6 + 1))
+    # One to six nodes of one or two on each of the first level's nine or ten limbs, 1 to 3 m
+    # long. Each level's count shows in its header.
+    second = Between(9 * 2, 10 * 2 * 6)
     driver.expect("Plant", STATS, {"level_limbs": [first, second]})
     driver.absent("Shell/Panel/levels[0]/add")  # the next level is offered by the last only
     driver.absent("Shell/Panel/levels[0]/remove")  # the first level stays
@@ -52,7 +52,7 @@ def levels(driver):
 
     # Fewer nodes: up to two on each first-level limb, and some bearing none.
     driver.set_resource(SPECIES, 1.5, at="limbs.levels[1].density")
-    fewer = {"level_limbs": [first, Between(5, 11 * (2 * 2 + 1))]}
+    fewer = {"level_limbs": [first, Between(5, 10 * 2 * 2)]}
     driver.expect("Plant", STATS, fewer)
 
     driver.click("Shell/Panel/levels[1]/remove")
@@ -63,8 +63,8 @@ def levels(driver):
 
     add_level(driver, 1)
     # A few nodes of two on each second-level limb, less those that start outside the envelope or
-    # would be too short, and one carrying each on.
-    driver.expect("Plant", STATS, {"limbs": Between(10 + 5 + 1, 11 + 55 + 55 * (2 * 4 + 1))})
+    # would be too short.
+    driver.expect("Plant", STATS, {"limbs": Between(9 + 5 + 1, 10 + 40 + 40 * 2 * 4)})
     driver.screenshot("three_levels")
 
     driver.click("Shell/Panel/ornaments/tip_leaves/off")
@@ -92,9 +92,9 @@ def levels(driver):
 
 
 def cards(driver):
-    # A card at each of the ten or eleven limbs' tips, or up to three where it is steep, eight
-    # triangles each.
-    leaves = {"leafy_tips": Between(10, 11), "cards": Between(10, 33)}
+    # A card at each of the nine or ten limbs' tips, and three at the trunk's, eight triangles
+    # each.
+    leaves = {"leafy_tips": Between(10, 11), "cards": Between(9 + 3, 10 + 3)}
     driver.expect("Plant", STATS, {**leaves, "triangles": Between(150, 2000)})
     driver.screenshot("default_folds")
 
@@ -105,12 +105,16 @@ def cards(driver):
     droop(driver, lateral=0, axial=60)
     driver.screenshot("bent")
 
-    # Upright tips: one card each, then none on the steep ones, which the default tree has.
+    # Upright tips, on the trunk and on limbs 10° to 30° from it: a rosette of three each by
+    # default, then one card each, then none.
+    driver.set_resource(SPECIES, math.radians(20), at="limbs.levels[0].angle.center")
+    driver.expect("Plant", STATS, {"leafy_tips": Between(10, 11), "cards": Between(10 * 3, 11 * 3)})
+    driver.screenshot("upright_rosettes")
     driver.set_resource(SPECIES, "Single", at=f"{TIP_LEAVES}.upright")
     driver.expect("Plant", STATS, {"leafy_tips": Between(10, 11), "cards": Between(10, 11)})
     driver.screenshot("upright_single")
     driver.set_resource(SPECIES, "Bare", at=f"{TIP_LEAVES}.upright")
-    driver.expect("Plant", STATS, {"leafy_tips": Between(1, 10), "cards": Between(1, 10)})
+    driver.expect("Plant", STATS, {"leafy_tips": 0, "cards": 0})
     driver.screenshot("upright_bare")
 
 

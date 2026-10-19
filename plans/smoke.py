@@ -30,9 +30,8 @@ def run(driver):
     driver.present("Shell", ready=True)  # wait for the UI scene to finish spawning
     driver.present("Shell/Panel/trunk/sides/input")  # the immediate-mode panel has built its rows
     driver.present("Shell/Panel/Scrollbar")
-    # The default plant: one level of nine or ten limbs and the one carrying the trunk on, in the
-    # low hundreds of triangles.
-    driver.expect("Plant", STATS, {"limbs": Between(10, 11), "triangles": Between(100, 1000)})
+    # The default plant: one level of nine or ten limbs, in the low hundreds of triangles.
+    driver.expect("Plant", STATS, {"limbs": Between(9, 10), "triangles": Between(100, 1000)})
     driver.expect("Plant", GROWN_FROM, 1, at="seed")
     # The default width, whatever the developer last dragged it to: a run gets fresh settings.
     driver.expect("Shell/Panel", PANE, {"size": 320.0})
@@ -94,9 +93,9 @@ def run(driver):
     set_number(driver, "trunk/sides", "6")
     driver.expect("Plant", GROWN_FROM, 6, at="trunk.sides")
     # Editing the species rebuilds the plant: four or five nodes on the trunk's 1.2 crown radii
-    # inside the crown, and the limb carrying it on.
+    # inside the crown.
     set_number(driver, "levels[0]/density", "4")
-    driver.expect("Plant", STATS, {"limbs": Between(5, 6)})
+    driver.expect("Plant", STATS, {"limbs": Between(4, 5)})
     driver.screenshot("four_nodes")
     # The camera does not follow the subject: a taller tree grows out of the frame (compare the
     # screenshots), until Frame fits it again.

@@ -4,9 +4,8 @@
 use bevy::math::Vec3;
 
 use super::{
-    carry_on::carry_on,
     envelope::{ENVELOPE_BISECTIONS, Envelope, inside_envelope},
-    foliage::{axial_fold, clusters},
+    foliage::{clusters, straight_run},
     fork::fork,
     hint::hint,
     placement::{place_scions, stems},
@@ -25,8 +24,6 @@ pub(super) const WANDER_STREAM: u64 = u64::MAX;
 pub(super) const OWN_VALUES_STREAM: u64 = u64::MAX - 1;
 /// The layout of an axis's limbs: their count, and each node's turn, limb count and place.
 pub(super) const LAYOUT_STREAM: u64 = u64::MAX - 2;
-/// The limb carrying an axis on past its last node.
-pub(super) const CARRY_ON_STREAM: u64 = u64::MAX - 4;
 /// A limb's fork: whether it forks, where and how widely, and its copies.
 pub(super) const FORK_STREAM: u64 = u64::MAX - 5;
 
@@ -61,8 +58,7 @@ pub(super) struct Frame {
 }
 
 impl Frame {
-    /// A ring here, `at` metres along the axis: where it is cut, or where an axis carrying it on
-    /// starts.
+    /// A ring here, `at` metres along the axis: where it is cut, or where a fork's copy starts.
     pub fn ring(&self, at: f32) -> Ring {
         Ring {
             center: self.point,
@@ -81,8 +77,6 @@ pub(super) enum AxisKind {
     Stem,
     /// Leaving its parent's side at a node.
     Lateral,
-    /// Carrying its parent on from the parent's last node, along it (D30).
-    CarryOn,
     /// One of the copies carrying a forked parent on (D31).
     ForkCopy,
 }
@@ -102,8 +96,8 @@ pub(super) struct Axis {
     pub reach: f32,
     /// The axis's own random stream, before any draw; its scions' streams fork from it.
     pub rng: Rng,
-    /// The axes growing from it, as indices in the plant's: its limbs and the one carrying it on,
-    /// or its fork's copies and the limbs before the fork. An axis bearing none bears leaves.
+    /// The axes growing from it, as indices in the plant's: its limbs, and its fork's copies. A
+    /// limb that did not fork bears leaves at its tip.
     pub scions: Vec<usize>,
 }
 
@@ -278,8 +272,7 @@ pub(super) struct Level<'a> {
     pub taper: f32,
     /// The distance between kinks (`kink_spacing`).
     pub spacing: f32,
-    /// How far back from its tip a limb runs straight, under its tip's card (D17), whether or not
-    /// leaves grow, so turning them off leaves the branches alone.
+    /// How far back from its tip a limb runs straight (`straight_run`).
     pub straight: f32,
 }
 
@@ -291,9 +284,7 @@ impl<'a> Level<'a> {
             params: &species.limbs.grown()[number - 1],
             taper: species.taper.clamp(0.0, 1.0),
             spacing: kink_spacing(&envelope),
-            straight: axial_fold(species)
-                * species.ornaments.tip_leaves.settings.size
-                * envelope.radius.max(0.01),
+            straight: straight_run(species),
             envelope,
         }
     }
@@ -301,9 +292,8 @@ impl<'a> Level<'a> {
 
 /// The stems, hinted (`hint`), their limbs level by level, each level on the axes of the one
 /// before, and the leaf clusters (`clusters`). Each level grows in stages, in a fixed order: its
-/// laterals are placed (`place_scions`) and traced (`trace_scions`), one more limb carries each
-/// parent bearing them on (`carry_on`), the level wanders (`wander`) and is tapered (`taper`), its
-/// limbs may fork (`fork`), and it is hinted.
+/// laterals are placed (`place_scions`) and traced (`trace_scions`), the level wanders (`wander`)
+/// and is tapered (`taper`), its limbs may fork (`fork`), and it is hinted.
 pub(super) fn grow(species: &Species) -> Skeleton {
     let mut skeleton = Skeleton {
         axes: stems(species),
@@ -314,7 +304,6 @@ pub(super) fn grow(species: &Species) -> Skeleton {
         let level = Level::new(species, number);
         place_scions(&level, &mut skeleton);
         trace_scions(&level, &mut skeleton);
-        carry_on(&level, &mut skeleton);
         wander(&level, &mut skeleton);
         taper(&level, &mut skeleton);
         fork(&level, &mut skeleton);

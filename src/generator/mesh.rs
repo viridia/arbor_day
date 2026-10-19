@@ -48,7 +48,7 @@ pub struct Grown {
 /// The whole plant, grown (`grow`) and meshed: the stems and their limbs, none drawn narrower than
 /// the bark's detail threshold, a card (`card`) for each leaf cluster, and the leaf texture
 /// painted (`leaf::paint`), whether or not any leaves grow. Each stem or limb is
-/// drawn as one tube with the limbs carrying it on and its fork's first copy (`chain`), left open
+/// drawn as one tube with its fork's first copy (`chain`), left open
 /// at its base, which stands in the ground or inside its parent, and closed at its tip by a fan.
 pub fn plant(species: &Species) -> Grown {
     let skeleton = grow(species);
@@ -161,20 +161,19 @@ pub(super) fn card(
     }
 }
 
-/// The scion of `axis`, among `axes`, drawn in one tube with it: the limb carrying it on (D30), or
-/// if it forked, its first copy (D31).
+/// The scion of `axis`, among `axes`, drawn in one tube with it: if it forked, its first copy
+/// (D31).
 fn carrier(axes: &[Axis], axis: &Axis) -> Option<usize> {
-    let of_kind = |kind| (axis.scions.iter()).find(|&&scion| axes[scion].kind == kind);
-    of_kind(AxisKind::CarryOn)
-        .or_else(|| of_kind(AxisKind::ForkCopy))
+    (axis.scions.iter())
+        .find(|&&scion| axes[scion].kind == AxisKind::ForkCopy)
         .copied()
 }
 
-/// The rings of `axis` and of each limb carrying it on in turn (`carrier`), as one path, with the
-/// sides each ring is drawn with: its axis's (`sides_of`). Each limb carrying another on starts on
-/// the ring where that one was cut, which the path keeps once, with the carrying limb's sides, so
-/// the parent's last segment adapts one count to the other, and facing halfway between the
-/// segments meeting there, so a fork's turn is an elbow. Distances run on along the path.
+/// The rings of `axis` and of each first copy carrying it on in turn (`carrier`), as one path,
+/// with the sides each ring is drawn with: its axis's (`sides_of`). Each copy starts on the ring
+/// where its axis was cut, which the path keeps once, with the copy's sides, facing halfway
+/// between the segments meeting there, so a fork's turn is an elbow. Distances run on along the
+/// path.
 pub(super) fn chain(
     axes: &[Axis],
     axis: &Axis,

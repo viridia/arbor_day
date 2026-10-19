@@ -42,7 +42,6 @@
         "spread": 0.1,
         "shape": "Bell"
       },
-      "carry_on": 1.0,
       "radius": 0.5,
       "sides": 4
     }

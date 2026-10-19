@@ -220,13 +220,12 @@ fn a_trunk_forked_partway_splits_into_stems() {
         let from_up = |direction: Vec3| direction.angle_between(Vec3::Y);
         assert!(from_up(copy.rings[copy.rings.len() - 1].tangent) > from_up(copy.direction()));
     }
-    // Grown, the limbs grow on the copies, and the trunk's tube runs on into the first.
+    // Grown, the limbs grow on the copies.
     let axes = grow(&species).axes;
     assert!(
         axes.iter()
             .any(|limb| limb.parent.is_some_and(|(parent, _)| parent == 1))
     );
-    assert!(!axes[0].bears(&axes, AxisKind::CarryOn));
 }
 
 #[test]
@@ -403,8 +402,7 @@ fn the_straight_stem_is_inside_where_it_says() {
 fn limbs_reach_their_share_of_the_way_to_the_envelope() {
     let species = straight();
     let limbs = limbs(&species);
-    // Sixteen, and the one carrying the stem on, which reaches the same way.
-    assert_eq!(limbs.len(), 17);
+    assert_eq!(limbs.len(), 16);
     for limb in &limbs {
         assert_eq!(limb.rings.len(), 2, "a straight limb is one segment");
         let tip = limb.origin() + limb.direction() * limb.length();
@@ -554,19 +552,6 @@ fn limbs_rise_toward_up() {
     species.limbs.levels[0].rise.state = OperatorState::On;
     species.limbs.levels[0].rise.settings.amount = 0.5;
     check_tips(&species, |at_base, crowns| at_base * 0.5_f32.powf(crowns));
-}
-
-#[test]
-fn an_upright_leader_does_not_tip_over() {
-    // With no lean, the trunk's carry-on rises straight up however much its level sags.
-    let mut species = straight();
-    species.limbs.levels[0].sag.settings.amount = 1.0;
-    let carriers = limbs_of(&species, AxisKind::CarryOn);
-    assert!(!carriers.is_empty());
-    for carrier in carriers.iter().filter(|axis| axis.level == 1) {
-        let tip = carrier.rings[carrier.rings.len() - 1].tangent;
-        assert!(tip.angle_between(Vec3::Y) < 1e-3, "{tip}");
-    }
 }
 
 #[test]
@@ -1035,20 +1020,14 @@ fn limbs_take_their_share_of_the_parent_where_they_leave() {
     let height = species.trunk.height;
     let axes = grow(&species).axes;
     let (stems, limbs) = axes.split_at(1);
-    // Two, and the one carrying the trunk on.
-    assert_eq!(limbs.len(), 3);
-    // The upright trunk narrows evenly over its height as grown, so its radius at a height is
-    // its base radius less that share of the taper.
+    assert_eq!(limbs.len(), 2);
+    // The upright trunk narrows evenly over its height, so its radius at a height is its base
+    // radius less that share of the taper.
     let trunk_at = |y: f32| trunk * (1.0 - taper * y / height);
-    for limb in &limbs[..2] {
+    for limb in limbs {
         let expected = 0.6 * trunk_at(limb.origin().y);
         assert!((limb.radii().0 - expected).abs() < 1e-5, "{limb:?}");
     }
-    // Cut at its last limb, the trunk keeps its radius there, and the limb carrying it on
-    // starts at it.
-    let tip = stems[0].rings[stems[0].rings.len() - 1].center;
-    assert!((stems[0].radii().1 - trunk_at(tip.y)).abs() < 1e-5);
-    assert_eq!(limbs[2].radii().0, stems[0].radii().1);
     // A level's radius thickens that level and nothing else.
     species.limbs.levels[0].radius = 1.0;
     assert_eq!(grow(&species).axes[0].rings, stems[0].rings);
@@ -1066,7 +1045,7 @@ fn a_tube_is_drawn_at_its_rings_radii() {
         &vec![sides; trunk.rings.len()],
         0.0,
     );
-    // The upright trunk narrows evenly over its height as grown, though cut shorter.
+    // The upright trunk narrows evenly over its height.
     let per_metre = species.trunk.radius * species.taper / species.trunk.height;
     for (i, ring) in trunk.rings.iter().enumerate() {
         let expected = species.trunk.radius - per_metre * ring.at;
@@ -1077,57 +1056,23 @@ fn a_tube_is_drawn_at_its_rings_radii() {
 }
 
 #[test]
-fn a_limb_carries_its_parent_on_from_its_last_node() {
+fn a_parent_runs_on_past_its_last_node_to_its_tip() {
     let mut species = straight();
     species.limbs.shown = 2;
     let axes = grow(&species).axes;
-    let sides = side_limbs(&species);
-    let carriers = limbs_of(&species, AxisKind::CarryOn);
-    // The trunk ends where its last limb leaves it.
+    // The trunk keeps its height, its last limb leaving below the tip.
     let trunk = &axes[0];
-    let tip = trunk.rings[trunk.rings.len() - 1];
-    let last = sides.iter().rfind(|limb| limb.level == 1).unwrap();
-    assert!(trunk.bears(&axes, AxisKind::CarryOn));
-    assert_eq!(tip.center, last.origin());
-    // One limb carries on each parent bearing limbs: the trunk, and each first-level limb
-    // that does.
-    let bearing = (axes[1..].iter())
-        .filter(|limb| limb.bears(&axes, AxisKind::Lateral))
-        .count();
-    assert_eq!(carriers.len(), 1 + bearing);
-    // The trunk's starts on its tip, along it, at its top radius.
-    let carrier = &carriers[0];
-    assert_eq!((carrier.level, carrier.rings[0].side), (1, tip.side));
-    assert_eq!(carrier.radii().0, trunk.radii().1);
-}
-
-#[test]
-fn the_carry_on_reach_sets_the_carrier_alone() {
-    let mut species = straight();
-    let whole = grow(&species).axes;
-    species.limbs.levels[0].carry_on = 0.5;
-    let half = grow(&species).axes;
-    let carrier =
-        |axes: &[Axis]| (axes.iter().find(|axis| axis.kind == AxisKind::CarryOn)).cloned();
-    let (whole_carrier, half_carrier) = (carrier(&whole).unwrap(), carrier(&half).unwrap());
-    // Half the carry-on reach is half the distance the carrier covers toward the envelope.
-    let tip = whole_carrier.origin();
-    let to_envelope = distance_to_envelope(&Envelope::of(&species), tip, Vec3::Y);
-    let reach = species.limbs.levels[0].reach.center;
-    assert!((whole_carrier.length() - reach * to_envelope).abs() < 1e-3);
-    assert!((half_carrier.length() - 0.5 * reach * to_envelope).abs() < 1e-3);
-    // The trunk and the laterals are as they were.
-    let others = |axes: &[Axis]| -> Vec<Vec<Ring>> {
-        (axes.iter().filter(|axis| axis.kind != AxisKind::CarryOn))
-            .map(|axis| axis.rings.clone())
-            .collect()
-    };
-    assert_eq!(others(&half), others(&whole));
-    // With none, the trunk still ends at its last limb.
-    species.limbs.levels[0].carry_on = 0.0;
-    let none = grow(&species).axes;
-    assert!(carrier(&none).is_none());
-    assert_eq!(none[0].rings, whole[0].rings);
+    assert!((trunk.length() - species.trunk.height).abs() < 1e-4);
+    let last = (axes.iter().filter(|limb| limb.level == 1))
+        .map(|limb| limb.parent.unwrap().1)
+        .fold(0.0, f32::max);
+    assert!(last < trunk.length());
+    // Every tip bears leaves, the trunk's and those of limbs bearing limbs too.
+    let bearing = (axes[1..].iter()).filter(|limb| limb.bears(&axes, AxisKind::Lateral));
+    assert!(bearing.count() > 0);
+    let mut leafy: Vec<usize> = grow(&species).cards.iter().map(|card| card.axis).collect();
+    leafy.dedup();
+    assert_eq!(leafy, (0..axes.len()).collect::<Vec<_>>());
 }
 
 /// `straight`'s first level, every limb forking halfway into `copies` at 60° across, the Y's
@@ -1193,33 +1138,21 @@ fn a_fork_spreads_its_copies_from_its_tip() {
 }
 
 #[test]
-fn a_forked_limb_is_carried_on_by_its_copies_alone() {
-    // No leaves at a fork: one card at each tip of the first level, forks left out.
+fn a_forked_limb_bears_no_leaves_at_its_fork() {
+    // One card at each tip, forks left out, with one level and with two.
     let mut species = forking(2, 0.0);
-    let axes = grow(&species).axes;
-    let tips: Vec<usize> = (1..axes.len())
-        .filter(|&index| !axes[index].bears(&axes, AxisKind::ForkCopy))
-        .collect();
-    let mut leafy: Vec<usize> = grow(&species).cards.iter().map(|card| card.axis).collect();
-    leafy.dedup();
-    assert_eq!(leafy, tips);
-    // Carried on are the trunk and each unforked first-level limb bearing limbs, but no
-    // forked one.
-    species.limbs.shown = 2;
-    let axes = grow(&species).axes;
-    let bearing = |forked| {
-        (axes[1..].iter())
-            .filter(|limb| {
-                limb.bears(&axes, AxisKind::Lateral)
-                    && limb.bears(&axes, AxisKind::ForkCopy) == forked
-            })
-            .count()
-    };
-    assert!(bearing(true) > 0);
-    assert_eq!(
-        limbs_of(&species, AxisKind::CarryOn).len(),
-        1 + bearing(false)
-    );
+    for shown in [1, 2] {
+        species.limbs.shown = shown;
+        let skeleton = grow(&species);
+        let axes = &skeleton.axes;
+        assert!(!forks(axes).is_empty());
+        let tips: Vec<usize> = (0..axes.len())
+            .filter(|&index| !axes[index].bears(axes, AxisKind::ForkCopy))
+            .collect();
+        let mut leafy: Vec<usize> = skeleton.cards.iter().map(|card| card.axis).collect();
+        leafy.dedup();
+        assert_eq!(leafy, tips, "{shown}");
+    }
 }
 
 #[test]
@@ -1247,32 +1180,19 @@ fn a_forked_limb_is_one_tube_with_its_first_copy() {
         // The other copy is a tube of its own.
         assert_eq!(chain(&axes, copies[1], sides_of).0, copies[1].rings);
     }
-    // No axis drawn twice: a tube from each axis no other carries on, each with a ring of
+    // No axis drawn twice: a tube from each axis but the first copies, each with a ring of
     // vertices per ring and its cap's center.
     let first_copies: Vec<&Axis> = forks.iter().map(|(_, copies)| copies[0]).collect();
     let vertices: usize = (axes.iter())
-        .filter(|&axis| axis.kind != AxisKind::CarryOn && !first_copies.contains(&axis))
+        .filter(|&axis| !first_copies.contains(&axis))
         .map(|axis| chain(&axes, axis, sides_of).1.iter().sum::<u32>() as usize + 1)
         .sum();
     assert_eq!(plant(&species).bark.positions.len(), vertices);
 }
 
 #[test]
-fn a_limb_carrying_another_on_is_one_tube_with_it() {
-    let mut species = straight();
-    species.limbs.levels[0].density = 1.0;
-    // The trunk's one segment stitches its six sides to the four of the limb carrying it on, which
-    // has one segment of four quads and a cap; two straight limbs of four quads and a cap.
-    let bark = plant(&species).bark;
-    assert_eq!(bark.triangles(), (6 + 4) + (4 * 2 + 4) + 2 * (4 * 2 + 4));
-    // The ring where they meet is drawn once: the trunk's base of six, then the join's four, the
-    // carrier's tip ring and its cap's center.
-    assert_eq!(bark.positions.len(), (6 + 4 + 4 + 1) + 2 * (4 + 4 + 1));
-}
-
-#[test]
 fn a_chain_shares_its_joins() {
-    // A trunk of six sides bent 90° at its tip, carried on level by a limb of three.
+    // A trunk of six sides bent 90° at its tip, carried on level by a copy of three.
     let ring = |center: Vec3, tangent: Vec3, at: f32| Ring {
         center,
         tangent,
@@ -1287,7 +1207,7 @@ fn a_chain_shares_its_joins() {
     );
     let mut carrier = Axis::placed(
         1,
-        AxisKind::CarryOn,
+        AxisKind::ForkCopy,
         (0, 1.0),
         ring(Vec3::Y, Vec3::Y, 0.0),
         1.0,
@@ -1420,13 +1340,14 @@ const TIP: usize = 10;
 
 #[test]
 fn a_card_at_every_branch_end() {
-    // Two levels, whose twigs kink near their tips.
+    // Two levels, whose twigs kink near their tips, the second's rising from their parents' upper
+    // sides, so their tips are steep and the first's are not.
     let mut species = shown(2, Species::default());
+    species.limbs.levels[1].facing = Facing::Up;
     let leaves = plant(&species).leaves;
     let cards: Vec<&[Vec3]> = leaves.positions.chunks(CARD_CORNERS).collect();
-    let ends: Vec<Axis> = (limbs(&species).into_iter())
-        .filter(|limb| limb.scions.is_empty())
-        .collect();
+    // Every tip, the trunk's and those of limbs bearing limbs too.
+    let ends = grow(&species).axes;
     let tips: Vec<Vec3> = (ends.iter())
         .map(|limb| limb.rings[limb.rings.len() - 1].center)
         .collect();
@@ -1466,8 +1387,7 @@ fn cards_lie_along_their_twigs_facing_up() {
         },
         ..shown(2, regular())
     };
-    let limbs = limbs(&species);
-    let twigs: Vec<&Axis> = limbs.iter().filter(|limb| limb.scions.is_empty()).collect();
+    let twigs = limbs(&species);
     let skeleton = grow(&species);
     let leaves = plant(&species).leaves;
     assert!(!leaves.positions.is_empty());

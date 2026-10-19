@@ -3,7 +3,7 @@
 What has landed, what is next, and what is deferred and why. What the tool must do is in
 [requirements.md](requirements.md), how it works in [design.md](design.md) (`TD<n>`), why in
 [decisions.md](decisions.md) (`D<n>`), and the judgements made repeatedly in
-[guidelines.md](guidelines.md) (`G<n>`). Chunks are `C<n>`, deferrals `X<n>`. An id is assigned once and never reused or renumbered; Next lists chunks in the
+[guidelines.md](guidelines.md) (`G<n>`). Chunks are `C<n>`, deferrals `X<n>`. A Landed row names what landed and cites where it is described. An id is assigned once and never reused or renumbered; Next lists chunks in the
 order they are meant to land, which their ids need not follow. Panoply's ledger
 (`../panoply/docs/migration.md`) is cited as "Panoply's".
 
@@ -11,93 +11,95 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 
 | Chunk | Change                                                                                  |
 | ----- | --------------------------------------------------------------------------------------- |
-| —     | Repo started: `AGENTS.md`, `CLAUDE.md`, this ledger; requirements moved from Panoply.  |
-| C1    | Minimal shell (D5): split pane, `bevy_immediate` panel, viewport following the view pane; `plans/smoke.py`. |
-| C2    | Settings (D6), `src/settings.rs`: window state and panel width.                      |
-| C4    | Turntable camera (D7), `src/turntable.rs`.                                           |
-| C3    | Keys (D8), `src/keys.rs`: frame, zoom, quit.                                         |
-| C5    | Property editor by reflection, `src/properties.rs`: booleans; `Placeholder` stands in for the species. |
-| C9    | Numbers (D9): feathers number inputs shaped by field attributes.                     |
-| C11   | The panel scrolls, as feathers' list view does.                                     |
-| C12   | Fuzzy numbers (D10), `src/fuzzy.rs`: center, spread and a shape toggle; `plans/fuzzy.py`. |
-| C13   | Captions above fields, so a fuzzy row's center input gets the panel's width.        |
-| C14   | Spread strip, `src/spread_strip.rs`: center ± spread drawn along the center input.  |
-| C6    | Growth-model survey, `docs/growth-model.md` (D11).                                   |
-| C15   | A trunk generated from the species (D12): `src/species.rs`, `generator.rs`, `plant.rs`. |
-| C16   | Crown envelope and enum selects (D13); `plans/envelope.py`.                         |
-| C17   | Nested structs as subpanes (`properties::group`).                                   |
-| C21   | Turntable feel (D7): one-shot framing, one axis per gesture.                        |
-| C20   | Bark color, and feathers' color input for `Color` fields; `plans/bark.py`.          |
-| C22   | Literal names in `bsn!` as `#name`.                                                 |
-| C18   | One level of limbs (D14), reaching toward the envelope; `plans/limbs.py`.           |
-| C19   | Up to three limb levels (D15), each at an angle from its parent; `plans/levels.py`. |
-| C26   | Random streams and `Fuzzy::sample` (D16), `src/random.rs`.                          |
-| C23   | Curved limbs (D17): bend and wander per metre, and the seed; `plans/growth.py`.     |
-| C28   | Varied level fields (D18): span, divergence, angle and reach are `Fuzzy`.           |
-| C31   | Bend in proportion (D17): a share of the angle left, per crown radius; the trunk's `bend` is now `lean`. |
-| C34   | Fractions as percentages: the `ratio_percent` unit (`properties::RatioPercent`).  |
-| C36   | Nodes by density (D21): nodes per crown radius of span, and per node, rounded at random (`Rng::round`). |
-| C35   | Span as middle and length (D19), in place of start and end.                       |
-| C29   | Pipe-model radii (D22), and limbs under the thinnest meshed radius left unmeshed; `plans/levels.py` checks the cut-off. |
-| C24   | Stems (D23): count, splay and leader; the lean's heading from the seed; `plans/stems.py`. |
-| C44   | Spans inside the crown (D24); stems keep their length when they lean, and never turn past level; each limb level's header shows its count. |
-| C46   | Node bias (D25) in place of the span, and nodes moved from their even places by a constant jitter; `plans/bias.py`. |
-| C51   | Children placed by competition and facing, with a skew per limb (D26), in place of the divergence; `plans/facing.py`. |
-| C50   | Wander as kinks about the course, for limbs and now the trunk (D17); lighter second and third levels by default; `plans/wander.py`. |
-| C37   | Foliage placement (D27): sprig cards along the last level's twigs in the crown's shell, seedling's leaf texture as a placeholder (`assets/leaf-placeholder.png`); `plans/foliage.py`. |
-| C61   | Trunk as the source of truth (D23): the trunk's height in metres, and a "Crown" group (top and base measured against it) in place of the envelope's height and the leader. |
-| C53   | Four plans in place of twelve: `smoke.py` (with the seed), `widgets.py` (fuzzy rows, selects, color), `levels.py` (with foliage), and `shapes.py`, a gallery of screenshots with no checks. C59 Header counts in parentheses ("Limbs 1 (8)"). |
-| C56   | A HUD over the view (D28), `src/hud.rs`: the triangle count, and toggles for the envelope and the ground, which leaves `Placeholder`. |
-| C64   | The HUD's toggles saved, as `ViewSettings` (D28). |
-| C57   | Camera buttons on the HUD (D28): orbit, zoom, tilt and Frame, moving while held; the panel's "View" group goes. Needs `bevy_remote_driver`'s press and hold. |
-| C27   | `Placeholder` removed, and `Wrap` with it (D9). The plant carries the species it was grown from (`GrownFrom`, D12), which plans read with the driver's `expect(…, at="limbs[0].angle")`; `PlantStats` drops the seed. The Bark group moves up under Trunk. X25 (`bevy::annotations`) and C65 (wireframe toggle) recorded. |
-| C63   | Branch ends: a level's nodes from a start in place of the bias (D25); a parent ends at its last node and one limb carries it on (D30); leaves on every branch end, one at each tip (D27); every stem drawn, none narrower than the bark's detail threshold, in place of the thinnest meshed (D22). Sparser defaults (D17). |
-| C52   | Hinting (D17): rings by visible error, the traced path simplified to the bark's detail threshold (Ramer–Douglas–Peucker); kinks at one spacing on every level, 0.15 crown radii on average, each stretch varied by up to 40%. A limb's radius is a share of the stem past it, so 100% is an even fork (D22); a stem keeps its radius to its first limb. The budget test allows 2,500 bark triangles for two levels and 3,500 for three. |
-| C39   | Card folds: each card two by two quads, after seedling, its halves turned about the midrib by a lateral droop (negative cups) and its far half bent across the middle by an axial droop, plain angles per species, defaulting to seedling's most common pair (−16°, 17°). Every quad keeps the flat card's normal, so folds shape the outline but not the shading. The tip's card reaches back along the twig to its fold (D27). Leaves with no density are hidden rather than their mesh removed, since a `Mesh3d` inserted again was never drawn; `plans/levels.py` checks they come back. Facing went to C70, crown softness to C71, crossed cards to C72. Foliage's rows in Clusters and Card groups. `plans/cards.py`. |
-| C33   | Control groups: a `ControlGroup` field attribute gathers a struct's rows under a bold heading where its first field is declared, or into a subpane of its own at the panel's top level, so panes never nest boxes; the data stays flat, so paths are unchanged within a struct. A limb level's rows in Arrangement, Direction (with wander) and Shape (reach, radius, sides). A Plant group at the top: the seed and the detail threshold, now `Species::detail`. `Bark` becomes `Wood` ("Bark color", pipe exponent). `plans/groups.py`, screenshots only. A pattern for Panoply's editor (D3). |
-| C74   | Leaves at branch ends only (D27): one card at each limb's tip that bears none, and none along the twigs. A "Leaves" checkbox, the first species `bool`, replaces the cluster density; the density, the shell and `depth_in_envelope` go. No limb kinks in its last stretch under a tip's card (D17), so the card lies along the twig and its fold on the tip; a kink there had turned the fold up to 10 cm off the tip, which the cards along twigs had hidden from C39's test. The Foliage requirement is rewritten. `plans/levels.py` toggles Leaves. |
-| C73   | Radii by taper (D22): every stem and limb narrows evenly by one taper, now in the Plant group, beside the bark color, in place of the trunk's taper and the pipe exponent; the Wood group goes, and a limb starts at its level's share of the parent's radius where it leaves. C68 (end taper) folded in. C30 scoped (one fork point, 2 to 4 copies), stem forks split off as C75; X32, X33 recorded. |
-| C30   | Forks (D31): a limb of a level with a fork chance ends partway along, and 2 to 4 copies of it carry it on, spread around it by the fork angle and roll; a Fork group per level. `plans/shapes.py` screenshots a level Y, an upright Y and a three-way fork. |
-| C76   | Bevy main bumped to `d41bb12` with the family (D1), bringing feathers' number-input chevrons, rounding in the units shown, and interior captions. Feathers' `ratio_percent` replaces ours (X17). `Precision` counts in the units shown: angles drag to a tenth of a degree, percentages to whole ones. The color picker's mode and recent colors are saved (X14), with a deferred save on change in `src/settings.rs`, since Cmd+Q skips the exit save (D6). |
-| C77   | One line per row (was X34), in place of C13's stacked captions: number inputs carry their caption inside (feathers' `interior_label_text`), and enum selects sit right of theirs, as colors do. The panel is about half as tall. |
-| C78   | Golden meshes (X15), `src/golden.rs`: a hash of the bark and leaf meshes of four species (the default, three levels, forks, three stems), bit for bit, failing with the new table to paste when output changes. |
-| C79   | One axis type (`docs/patches.md`, The abstract plant): `Stem` and `Limb` become `Axis`, level 0 for stems and 1 to 3 for the limb levels, with an `AxisKind` (stem, lateral, carry-on, fork copy). The plant grows as one list, stems first, each axis naming its scions by index, in place of the `children`, `carried_on`, `forked` and `copy` flags; `Parent` goes. `src/generator/` in place of `generator.rs`: skeleton, placement, trace, fork, foliage, mesh, envelope, and the tests together in `tests.rs`. The envelope's preview lines are its helper (`envelope_helper`), so "outline" means only the ink outline (C66). Golden hashes unchanged. |
-| C80   | Skeleton, then meshes: `grow` returns a `Skeleton` of axes and `Card`s, a leaf cluster each (an axis and a distance along it), and `plant` meshes it, the card quads now in `mesh.rs`. The Leaves switch acts on the clusters, so a bare plant has none. Rings stay simplified at trace time, since scions attach to the path as meshed (C83). Golden hashes unchanged. |
-| C81   | A radius per ring (D22), written by the taper (`taper_rings`) once an axis is traced, in place of an axis's base and top radii; `tube` draws each ring at its own radius, none narrower than the detail threshold, and leans each ring's normals by the radii either side. So a twig thinner than the threshold keeps its taper until it reaches it, rather than being thickened along its length, and a limb takes its parent's radius from the parent's rings, which fixes a forked limb's limbs, which had started thinner than the limb where they leave it. New bark hashes, leaves unchanged; at game scale, screenshots show no difference. |
-| C82   | Stages as functions: each level grows by `place_scions`, `trace_scions`, `carry_on`, the taper and `fork`, each over a `Level` (its parameters and what every stage reads) and the `Skeleton`, in that order, the taper before forks since copies start at the limb's radius at the fork. Placement records what the trace reads on the axis: its start ring at its own base radius, its reach, and its parent and where along it (`docs/patches.md`'s `parent`). Wander stays inside the trace. Axes are now added stage by stage, so the golden test hashed each mesh's triangles as a set, each from its least corner with its winding kept; hashes taken before the change held after it. Its work done, the golden test was then removed (X15). `trace.rs` defines tracing in its module doc. |
-| C86   | Decisions out of the ledger, after `../ldd_template`: `docs/decisions.md` holds each decision as it now stands, what it rules out and what reversing it costs, with no revision history; `docs/design.md` holds the mechanism, numbered `TD<n>.<m>`. D4, D13, D14 and D18 are withdrawn, struck and pointing where their content went. Ledger 13,056 words to 7,816; Decisions 5,431 to 3,628 and design 2,598. |
-| C83   | Hinting as each level's last stage (TD3.4), `src/generator/hint.rs`, in place of at trace time: an axis keeps a ring at every trace step through its level's stages, so C84's displacement works on the full path, and the next level is placed on the hinted rings, so scions start inside the bark as meshed. |
-| C84   | Wander as a lightning bolt (D17, TD3.4), `src/generator/wander.rs`, in place of kinks: the trace follows the course alone, and a stage after carrying on displaces it by midpoints between fixed ends, past a straight run at the base, each stretch within the wander of its course and no move larger than at two spacings, so tips stay where the course puts them and a stem's height is reached at any wander (D23). `frame_at` takes the chord after a ring a point sits on. |
-| C87   | `docs/guidelines.md` after `../ldd_template`'s: G1 (change a field's meaning before adding a field) and G2 (vary a value where its instances are many), from D25 and D19, now struck, and G3, the effort scale, after `../ldd_template`'s G7. AGENTS.md says which doc each change updates, and to read the guidelines before adding to the species. |
-| C60   | Tip rosettes (D27, TD3.8), in place of sprig pitch and roll: a tip 45° or more above level bears what "Upright tips" says, a Foliage select: none, one card, or a rosette of two or three (the default) splayed toward level, so the crown's upright tips no longer stand on end. `PlantStats` counts leafy tips beside cards. Roll is X40; C94 recorded. |
-| C85   | One tube along a carry-on chain (TD3.9, D30): a stem or limb drawn with the limbs carrying it on, sharing each join's ring, and a stitch of N + M triangles where the sides change. Forks split off as C95. |
-| C91   | The stacks file, on paper (`docs/patches.md`, The file): operators that are off left out and read from a template with all off; versions as slots, stream keys by kind; slots, not a list; C10 lands flat after C96 groups fields into operators. |
-| C96   | Operator-shaped levels (`docs/patches.md`, The file): a level's fields as its frame (Arrangement, and Shape with the angle) and its operators' structs, always on: `Bend` (toward, amount), `Wander` (angle), `Fork` (chance, at, copies, angle, roll); the trunk's wander a `Wander`; `Foliage` becomes `Ornaments`, the Leaves switch beside its one slot, `TipLeaves`. A struct nested in a subpane shows as a heading over its rows, in a node named after the field (TD1.5). Fuzzy draws are clamped by the owning struct's limits (`species::limits`). Plans' paths follow (`limbs[0]/fork/chance`, `ornaments.tip_leaves.upright`). Output unchanged. |
-| C10a  | `LimbLevels { shown, levels }` (D15) in place of `limb_levels` and the `limbs` array, each depth's defaults in its `Default`; the generator reads `limbs.grown()`. A `Flatten` attribute shows a struct's rows in place of its own (TD1.5), so the levels stay beside the other subpanes. Paths: `limbs.levels[0].angle` in reflection, `levels[0]/…` in the panel and header notes. Output unchanged. |
-| C10b  | Writing the species file (TD2.3), `src/species_file.rs`: JSON with `generator: 1` first, then the species' fields by reflection, streamed in declared order since serde_json's `Value` sorts keys; `LimbLevels` writes its shown levels as a list (`SerializeWithRegistry`). `serde` (traits only) and `serde_json` as direct dependencies, already in the lock file through Bevy. A golden test against `src/default_species.json`, failing with the JSON to paste. Not yet called by the app (C40, C41). BRP writes through the same type data, so plans read `GrownFrom` in the file's shape (`at="limbs[0].facing"`) and write by reflection path. |
-| C10c  | Reading the species file (TD2.3), `species_file::read`: `generator` taken off and checked (none, or newer than this one, refused), the rest read strictly by reflection, a key the species lacks failing with its name (D32), and applied onto the default species, so a field left out keeps its default. `LimbLevels` reads one to three levels (`DeserializeWithRegistry`), each onto its depth's defaults. Tests: a round trip, a hidden level not kept, defaults at depth, unknown keys at the top and in a level, newer and missing generators, zero and four levels. C10 complete; X31's steps 2 to 4 move onto the milestone path as C97 to C99. |
-| C97   | Toggles (TD1.5, TD2.3), `src/toggle.rs`: Wander on the trunk and each limb level is a `Toggle<Wander>`, its state off, disabled or on, after Blender's modifiers. A heading's eye switches it between on and disabled, its ✕ turns it off, and the header's add menu (a feathers menu behind a boxed plus) turns it back on. The generator runs it only when on; the file leaves it out when off and marks it `"enabled": false` when disabled, read onto a template with every operator off. Reflection paths gain `settings` (`limbs.levels[0].wander.settings.angle`); panel and file paths do not. An operator's heading starts with its kind's icon (`Icon` on its settings type), an icon for every operator and ornament in `assets/icons/operators/`, named after it (`wander.png`, `fork.png`). Icons `add_box`, `visibility`, `visibility_off`, and `deployed_code` for C65. `plans/operators.py`. Output unchanged. |
-| C98   | Bend and Fork as toggles (TD1.5, TD3.4, TD3.7), with their icons: Bend on by default at every depth, Fork off, so the default species file loses each level's `fork`. `Toggle::off`. A test that each operator, disabled or off, grows as its value that does nothing. `plans/widgets.py` and `plans/shapes.py` turn Fork on with `set_resource` before using it; `plans/operators.py` checks the add menu lists it. Output unchanged. |
-| C99   | Scions (TD1.5): the last limb level's add menu ends, below a divider, with the next level ("Limbs 2"), and each level past the first has a ✕ hiding it and those after it, in place of D15's − and +. `plans/levels.py` and `plans/shapes.py` add levels through the menu; `levels.py` checks a middle level's ✕. Operator stacks (X31) steps 1 to 4 complete. |
-| C69   | A color per part (TD1.5): a `Stripe` attribute colors a stripe down a top-level subpane's left side, from bark brown to light green for Plant, Trunk, Limbs 1 to 3 and Foliage, grey for Crown. A pattern for Panoply's editor (D3). |
-| C95   | Forks along the chain (TD3.9): a forked limb's first copy continues its tube as a carry-on does, the shared ring an elbow, so the limb is no longer capped at the fork; the other copies are tubes of their own, open inside the chain. No fan on their bases, the geometry keeping their rims within the chain's surface. |
-| C75   | Stem forks (D31, TD3.2, TD3.7): the trunk's Fork operator, off by default, its copies stems following the lean's arc from the fork, so the trunk splits partway up (a vase elm) or, forked at its base, rises as a clump; this replaces the stem count and splay. A fork at any axis's base leaves no stub, its copies taking the axis's place. Fork's `at` from 0%, its copies up to five. `plans/shapes.py` screenshots a clump and a split trunk; `plans/smoke.py` checks the hard limit on the trunk's sides. Breaks files. |
-
-| C94   | Sag and rise (D17, TD3.4), in place of Bend: Sag turns a limb down by an angle per crown radius times the sine of its angle from up, solved exactly per step, so the leader's carry-on stays upright; Rise closes a share of the angle from up per crown radius. Sag on by default (15°, then 20° on the second and third levels), Rise off, with their icons. Changes every plant's limbs; breaks files. |
-| C100  | Lean as a trunk operator (TD3.2): `Toggle<Lean>` with its angle, before Wander, off by default, so the default trunk grows straight; a fork's stems too. Its icon is `bend.png`, unused since C94. Breaks files. |
-| C102  | A bare default (D33): no operator on in the default species or any level's defaults, the trunk's Wander and each level's Sag and Wander off, their values kept for when they are added; tip leaves stay. `Toggle::on` is for tests only. `plans/operators.py` adds Wander from the menu before the ✕, eye and trunk; `plans/shapes.py` turns Wander on for its wander shots. Changes every plant. |
-| C38   | Leaf texture painting (D29, TD3.10), `src/generator/leaf.rs`: the tip leaves' sprig painted with `tiny-skia` (D20), seedling's poplar-green by default, its fields in Sprig and Leaf subgroups of the tip leaves, the angle and spacing `Interval`s (D10, TD2.2), a fuzzy row without the shape button. The card's axial fold where the sprig's fan starts. Mipmaps built on the CPU, a new image each build (X48). The placeholder texture goes. The view lit and tonemapped as Panoply's, by `GameLook` (TD1.1, X6), which shows the leaf colors as picked. A golden test on the default texture's pixels; `plans/widgets.py` types an interval's spread. Changes every plant's straight runs under cards; breaks files. |
-| C103  | Ornaments as slots (`docs/patches.md`, Stacks; TD3.8): `Ornaments` holds the tip leaves as a `Toggle<TipLeaves>`, on by default (D33), in place of the Leaves checkbox, with the eye, ✕ and the Foliage header's add menu of an operator, and its icon. The file leaves off slots out, so a bare plant has no `tip_leaves`. Reflection paths gain `settings` (`ornaments.tip_leaves.settings.upright`). `plans/levels.py` takes the leaves off with the ✕ and adds them back from the menu. Breaks files. |
-| C66   | Outlines (TD3.9, TD3.10), a switch for the whole plant in the Plant group, on by default, with the bark outline's width in metres (0.01, Panoply's models') and the leaf stroke's in texture pixels (4), in place of `leaf::OUTLINE`. On, the view draws the bark again as an inverted hull, Panoply's `OutlineMaterial` copied to `src/outline.rs`; off, the hull hides and the leaf texture is painted without strokes, the translucent ones between leaves too. Panoply's reading of the width is X49. `plans/widgets.py` clears the checkbox. Output unchanged by default. The envelope helper's lines at 18% opacity, from 60%, less distracting under the game's lighting (C38). |
-| C105  | Carry-on reach (D30, TD3.6): a Shape field per level, the carrier's reach as a share of the level's, 0 to 150%, default 100%, so a leader can stop below the crown's top and a limb's tip short of its last laterals. The parent is cut at its last node whether or not the carrier grows, so one too short leaves a Y rather than a bare post. `plans/shapes.py` screenshots a short leader with Y tips. Output unchanged unless a carrier was too short. |
-| C106  | Size bias (TD3.3, X31 step 6): a limb level operator, off by default, with its icon; its reach at base (0 to 200%) scales the laterals' reach at the parent's first node, changing evenly to 100% at its last, so twigs near a limb's root stay short and their leaves fill the crown's middle, or the lowest limbs are longest, for a cone. By node index, so the start leaves it alone. The carrier keeps its own reach (C105). `plans/shapes.py` screenshots twigs at 30% at the base. Output unchanged. |
-| C107  | Shortcut text, `src/shortcut.rs`, for C40's menus: `shortcut` shows keys dimmed at a menu item's right end (`menu_item`'s `keys`), in the families "Fira Sans, Key Symbols". Key Symbols (`assets/fonts/KeySymbols.ttf`, 12 KB) is DejaVu Sans subset to the key symbols Fira Sans lacks (⌘ ⌥ ⌃ ⇥ ⇤ ↩ ↵ ⇞ ⇟ ↖ ↘ ␣ ⌤), renamed; Parley picks a font per character. ⎋ is in neither, so "Esc". Checked by a screenshot of the add menu with shortcuts, since removed; C40's menus will carry the plan. |
-| C40   | File commands, `src/document.rs`: New, Open, Save and Save As, as keys (D8: ⌘N, ⌘O, ⌘S, ⌘⇧S) and in a file menu (`menu.png`) at the right of a header row above the Plant group, its items showing their shortcuts (C107). The row's left, and the window title, show the document's name, from its file ("Untitled" before the first save), and a dot while the species differs from the one last saved (`Document`). Not a row of buttons, which cannot show shortcuts, nor native menus, whose platform support is not there. New works; Save waits on C41, Open and Save As on the file browser (X2), each logging until then. Commands act on the one `Document`, so tabs (X26) change only which. `plans/file.py`. |
-| C109  | File dialogs (was X2), with `rfd` (native dialogs, the author's choice): Open and Save As, and Save before the first save, pick a `.gltf` in a dialog run as a task on the IO pool, so the app keeps drawing; Save As's dialog starts with the document's name. A picked path becomes the document's, then Save runs; Open logs the path until C41 reads it. Commands are ignored while a dialog is open. Checked by hand, since the driver cannot work native dialogs. |
-| C41   | Save and Open (D34), `src/gltf_file.rs`: the plant written from `generator::plant` as a `.gltf` with its `.bin` and leaf `.png` beside it, named after it, their URIs escaped. A scene named after the document, holding the species file under the extra `arbor_day`; bark (`COLOR_0`, linear) and leaf (`TEXCOORD_0`, mask at `LEAF_CUTOFF`, double-sided) meshes, both materials matte and not metallic, the bark's with the `"outline"` extra when outlined. The PNG is the full-size level; the pipeline mipmaps. Open reads the species back from the extra. `gltf-json`, `png` and `percent-encoding` as direct dependencies, `gltf` as a dev-dependency, all already in the lock file; a test validates the output with `gltf`. `FileRequest` (Open or Save As, with a path) is what a dialog's pick writes, and what plans send through the driver's `message`. `plans/panel.py` saves, edits, saves, opens. |
-| C110  | Four launches in place of eight, since each plan is a launch whose window takes focus: `panel.py` (groups, operators, then from a New document the file commands), `levels.py` (levels, then from a New document cards), `smoke.py` and `widgets.py`. The shapes gallery, with no checks, moves to `plans/gallery/`, which `run.py plans` passes over; run it by path when the generator's output changes. Values `levels.py` and the card folds typed are now set by `set_resource`, the number input's typing being checked elsewhere. New resets the species, not the view. |
-| C101  | Control-group headings like operators' (TD1.5): in `TEXT_MAIN` rather than dimmed, after an `Icon` on the group's first field, `assets/icons/groups/arrangement.png` (Material's `graph_5`) and `shape.png` (Lucide's `drafting-compass`). A nested struct's heading in a subpane is bright too, with no icon. Checked by eye in `plans/panel.py`'s screenshots. |
-| C65   | Wireframe toggle on the HUD (TD1.6, D28), the third in the upper left (`deployed_code.png`): Bevy's `WireframePlugin`, lines in orange over the shaded bark and leaves, apart from the envelope's green. The GPU features need no request on Metal; the plugin's "GPU lacks support" warning does not appear. `plans/smoke.py` turns it on and off. |
+| —     | Repo started; requirements moved from Panoply. |
+| C1    | Shell (D5, TD1.1). |
+| C2    | Settings (D6, TD1.2). |
+| C4    | Turntable (D7, TD1.3). |
+| C3    | Keys (D8, TD1.4). |
+| C5    | Property editor by reflection (TD1.5). |
+| C9    | Number inputs shaped by field attributes (D9, TD1.5). |
+| C11   | The panel scrolls. |
+| C12   | Fuzzy numbers (D10, TD2.2). |
+| C13   | Captions above fields; replaced by C77. |
+| C14   | Spread strip (TD1.5). |
+| C6    | Growth-model survey, `docs/growth-model.md` (D11). |
+| C15   | A trunk from the species (D12, TD2.1). |
+| C16   | Crown envelope and enum selects (TD1.5). |
+| C17   | Nested structs as subpanes (TD1.5). |
+| C21   | Turntable feel: one-shot framing, one axis per gesture (D7, TD1.3). |
+| C20   | Bark color, a feathers color input (TD1.5). |
+| C22   | Literal names in `bsn!` as `#name`. |
+| C18   | One limb level; D14, withdrawn. |
+| C19   | Up to three limb levels (D15). |
+| C26   | Random streams (D16, TD2.2). |
+| C23   | Curved limbs (D17); replaced by C94 and C84. |
+| C28   | Varied level fields (G2). |
+| C31   | Bend in proportion; replaced by C94. |
+| C34   | Fractions as percentages; feathers' since C76. |
+| C36   | Nodes by density (D21, TD3.3). |
+| C35   | Span as middle and length; replaced by C46. |
+| C29   | Pipe-model radii; replaced by C73. |
+| C24   | Stems (D23); count and splay replaced by C75. |
+| C44   | Spans inside the crown (D24, TD3.3). |
+| C46   | Node bias; replaced by C63. |
+| C51   | Placement by competition and facing (D26, TD3.3). |
+| C50   | Wander as kinks; replaced by C84. |
+| C37   | Foliage along twigs in a shell; replaced by C74. |
+| C61   | The trunk's height as the plant's size, and the Crown group (D23, TD3.2). |
+| C53   | Four plans in place of twelve; header counts (C59). |
+| C56   | The HUD (D28, TD1.6). |
+| C64   | The HUD's toggles saved (TD1.6). |
+| C57   | Camera buttons on the HUD (TD1.6). |
+| C27   | `Placeholder` removed; the plant carries `GrownFrom` (D12). |
+| C63   | Nodes from a start, leaves at every branch end, every stem drawn (D22, D27). |
+| C52   | Hinting (D17, TD3.4); limb radii as shares (D22). |
+| C39   | Card folds (TD3.9). |
+| C33   | Control groups (TD1.5), a pattern for Panoply's editor (D3). |
+| C74   | Leaves at branch ends only (D27, TD3.8). |
+| C73   | Radii by one taper (D22, TD3.5). |
+| C30   | Forks (D31, TD3.7). |
+| C76   | Bevy main at `d41bb12` (D1): feathers' chevrons, rounding and interior captions. |
+| C77   | One line per row (TD1.5). |
+| C78   | Golden meshes; removed in C82 (X15). |
+| C79   | One axis type, and `src/generator/` (TD3.1). |
+| C80   | Skeleton, then meshes (TD3.1). |
+| C81   | A radius per ring (TD3.5, TD3.9). |
+| C82   | Stages as functions (TD3.1). |
+| C86   | Decisions and design out of the ledger. |
+| C83   | Hinting as each level's last stage (TD3.4). |
+| C84   | Wander as a lightning bolt (D17, TD3.4). |
+| C87   | Guidelines (G1 to G3). |
+| C60   | Tip rosettes (D27, TD3.8). |
+| C85   | One tube along a chain (TD3.9). |
+| C91   | The stacks file, on paper (`docs/patches.md`). |
+| C96   | Operator-shaped levels (TD1.5). |
+| C10a  | `LimbLevels` and `Flatten` (D15, TD1.5). |
+| C10b  | Writing the species file (TD2.3). |
+| C10c  | Reading the species file (D32, TD2.3). |
+| C97   | Toggles (TD1.5, TD2.3). |
+| C98   | Bend and Fork as toggles (TD1.5). |
+| C99   | Levels added and hidden from the menu (TD1.5). |
+| C69   | A color per part (TD1.5), a pattern for Panoply's editor (D3). |
+| C95   | Forks along the chain (TD3.9). |
+| C75   | Stem forks (D31, TD3.2). |
+| C94   | Sag and rise (D17, TD3.4). |
+| C100  | Lean as a trunk operator (TD3.2). |
+| C102  | A bare default (D33). |
+| C38   | Leaf texture painting (D20, D29, TD3.10), and `GameLook` (TD1.1). |
+| C103  | Ornaments as slots (TD3.8). |
+| C66   | Outlines (TD3.9, TD3.10). |
+| C105  | Carry-on reach; removed in C117. |
+| C106  | Size bias (TD3.3). |
+| C107  | Shortcut text (TD1.7). |
+| C40   | File commands (D8, TD1.7). |
+| C109  | File dialogs, with `rfd` (TD1.7). |
+| C41   | Save and Open as glTF (D34, TD1.7). |
+| C110  | Four plan launches in place of eight; the gallery in `plans/gallery/`. |
+| C101  | Control-group headings like operators' (TD1.5). |
+| C65   | Wireframe toggle (TD1.6). |
+| C117  | No carry-on (D30, TD3.6); every unforked tip bears leaves, the trunk's too (TD3.8). |
+| C118  | Branch ends judged by eye: C119, C120, X54, and X53's depth in the crown. |
+| C88   | Landed rows as citations; the file commands in TD1.7. |
 
 ## Next
 
@@ -115,7 +117,8 @@ per-type hook, and is retained-mode.
 The foundation, the skeleton (`docs/patches.md`, The abstract plant), tip rosettes, the species
 file (C10), operator stacks (C96 to C99) and colors by part (C69) have
 landed, and forks drawn along the chain (C95) and on stems (C75), sag and rise (C94), ornament
-slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
+slots (C103), the painted leaf (C38), outlines (C66) and carry-on's removal (C117); card facing
+next.
 
 1. **C70 Card facing**: first measure how far cards are from edge-on to the game's camera (45°
    down), a figure in `PlantStats`, to judge facing and folds by numbers as well as by eye; C60's
@@ -142,12 +145,28 @@ slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
    - X37 Several sprigs, the tip leaves' one sprig likely becoming a list.
    - X12 Space colonization, if Arrangement becomes a choice of modes.
    - X50 The pipe model, if it removes the taper rather than overriding it.
+   - C116 Bias, in place of Size bias.
 
 ### Quick wins
 
 - **C108 Ask before dropping unsaved changes**: New, and Open once it works, replace an edited
   species without asking (C40). A feathers dialog (Save, Don't Save, Cancel) while the document
   has its dot. After C41, so Save in the dialog saves. E[2]
+- **C119 End** (from C118): a field in Arrangement beside Start, a share of the parent's part
+  inside the crown like it, nodes spread evenly from Start to End, so children stop short of
+  the tip and the tip reads as a leader past its last laterals rather than a trident's third
+  prong. Fork copies too, their start 0. Departs from G1: the author wants to steer it, and the
+  panel has room again. A plain slider, not an `Interval`, which is a draw per instance (TD2.2).
+  An End below Start bears every node at Start, clamped in the generator, a small cost of two
+  free ends, accepted. Default chosen by eye, about 85%, so the default tree gains a bare tip.
+  Old files read, a missing End taking the default. E[1]
+- **C120 Wander up to the tip** (from C118): `displace` pins the offset to 0 at the start of
+  the tip's straight run, so the run lies on the unbent course, and an axis kinks only past the
+  base run, the tip run and 1.5 spacings; short axes, fork copies most, barely wander. Instead
+  pin the tip itself (D17: it stays where the course puts it) and allow no split point inside
+  the tip run, so the last segment runs straight from the last kink to the tip at whatever
+  angle; the card lies along it, taking that segment's direction. Stems too (`straight_run`).
+  Changes every wandering plant. TD3.4. E[2]
 - **C93 Typed values lost in plans** (was X29, its gate passed): find whether a click right after
   Enter lands before the panel has rebuilt, or the typing is lost. Three failures, each once of two
   runs: `plans/levels.py` (2026-10-14) at the second level's density typed as 1.5, the plant
@@ -158,22 +177,21 @@ slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
   `plans/widgets.py` (2026-10-17), twice, each a typed spread keeping its old value, the reach's
   0 and the sprig spacing's 10; `plans/cards.py` (2026-10-18), the lateral droop typed as 45
   becoming 90°, a wrong value rather than the old one, passing on the rerun. E[2]
-- **C88 Landed rows as citations**: each row a line naming the TD section or decision it landed,
-  the design the longer rows restate now being `design.md`'s. E[1]
 - **C89 `growth-model.md` against `design.md`**: its Consequences describe the model as built;
   keep the survey and the reasons, citing TD for the mechanism. E[2]
 - **C90 `show.py`** from `../ldd_template`, printing a D, TD or X entry by its number, so a session
   reads the entries it needs rather than whole files. Propose it before code. E[2]
-- **C55 Angle by place**, seedling's `angleBias` (`MeshGenerator.ts:593`), for crowns bald on
-  top: twigs radiate outward, their leaves with them (D27), and the envelope's top stays empty. A
-  field per level, "Angle at tip", −90° to 90°: the change in angle from a node at the base of
-  the parent's part inside the crown to one at its tip, scaled by the node's place, added to each
-  limb's drawn angle before it is clamped, so upper limbs leave steeper. The angle's caption
-  becomes "Angle at base". Every level, not only the trunk's as in seedling, so sprays narrow
-  toward a limb's tip. A new field under G1, since nothing yet varies with place along the
-  parent. Default 0, so species are unchanged; the first level's default chosen by eye or by the
-  share of the envelope's top (outward normal within 45° of up) under cards. An operator, "Angle
-  bias", rather than a field, as size bias is (C106). E[2]
+- **C116 Bias** (in place of C106's Size bias and C55's angle by place; after C117): one
+  limb level operator varying the laterals by their node's index along the parent, the middle
+  node keeping the level's values, so the mean holds and the level's angle and reach read as the
+  middle limb's. Size scales reach in proportion, more at one end and less at the other (±60%:
+  1.6 at the base, 0.4 at the tip, seedling's conifers' 4:1); Angle adds at one end and takes away
+  at the other, so at 0 the limbs leave parallel and either way they fan apart or close in.
+  For conifers (upper laterals shorter and steeper) and for crowns bald on top (C55: twigs
+  radiating outward, the envelope's top empty, after seedling's `angleBias`,
+  `MeshGenerator.ts:593`). Size bias's "reach at base" scaled from the tip's lateral, the hardest
+  to see. Every level, so sprays narrow toward a limb's tip. Size bias's icon. Breaks files.
+  E[2]
 - **C42 Computed values are rounded where written**, from the first writer (Reset, Randomize,
   values derived from the generator): the number input never rounds what it shows, so round to
   the field's `Precision` in the units shown, as a drag does: through the unit's
@@ -525,6 +543,41 @@ slots (C103), the painted leaf (C38) and outlines (C66); card facing next.
     became prongs below the stem, the side teeth the shortest, the leaf a spindle. Not kept.
   Open: rake as an angle from square to the edge, so a lean holds at any depth; inflating across
   more than along. *Gate:* the author settling what serration should mean.
+
+- **X53** Values by place along the parent, in place of carry-on, revising D30. Placement works
+  near the crown's base and not further up. Carry-on (TD3.6) switches level at the parent's last
+  node: from the cut the axis takes the child level's sag, sides, wander and reach, and its
+  laterals start at the grandchild level's start, leaving a bare stretch at each joint. Instead,
+  placement settings vary with `t`, the node's place along the parent inside the crown (X22's
+  `t`): angle, reach, and a leafy share, how much of a lateral bears foliage; perhaps density and
+  fork chance. Nodes run to the tip, which is the smallest shoot, so no post or trident (D30's
+  reasons); carry-on went in C117. Bias (C116) varies size and angle by node index.
+  - Leafy share, after seedling's conifers: cards shrink only to about half before their baked
+    outlines show, but lower laterals bare before their foliage and upper ones leafy throughout
+    give about 4:1. Built on cards along the twig (X30). A card's back may poke past its
+    lateral's base, which shows close up but not at game distance.
+  - The reference value is the midpoint's (C116), so the mean holds as the gradient changes;
+    the base's, easiest to see, was the other choice.
+  - Test cases: seedling's conifer (`artwork/reference/seedling/conifer.png`): upper laterals
+    shorter, steeper and leafy throughout. A maple: forks at about a fifth of its height into
+    risers that split, under a hemispherical crown, sprigs radiating outward near its surface,
+    few leaves inside. A fig: floppy, drooping leaves throughout, forking near the surface. A
+    citrus: many small shoots rising straight up, leaves along their whole length.
+  - Not covered: depth in the crown, for the maple's shell (sprigs only in an outer shell,
+    facing outward; X12 aimed at it), a later step. In a real tree the small branches fork
+    just inside the crown, rather than every level stopping at it (C118): forks drawn by
+    distance from the envelope rather than share of length, or each level's reach stopping
+    a shell's depth short of it.
+  - Open: which settings vary; the panel's control (a row split into base and tip, or a center
+    and a change); how the leafy share and X30 meet; what Start becomes; sag, wander and sides
+    along a limb, which stay per level.
+  E[4], split before it is written. *Gate:* the author agreeing the proposal; before C113.
+
+- **X54** Apical dominance: a lateral's reach no more than the parent's length left past its
+  node, so laterals shorten toward the tip and those near it, no longer than thick, drop out;
+  no field (G1). Every parent then dominant, as excurrent trees are, decurrent forms coming
+  from forks; a share in place of the 1 if too strong. Under C116's Bias, which shapes the
+  laterals below the cap. E[2] *Gate:* tridents still showing once End (C119) is in.
 
 ## Notes
 

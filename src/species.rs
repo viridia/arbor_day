@@ -374,7 +374,7 @@ pub struct LimbLevel {
     pub skew: f32,
     /// Where nodes start along the part of the parent inside the crown, as a share of it: 0 from
     /// its base, higher to keep the limbs toward its tip, as a tree's are. Nodes are spread evenly
-    /// from there to the tip, where one limb carries the parent on.
+    /// from there to the tip.
     #[reflect(
         @ValueRange::<f32>(0.0..=0.9),
         @Precision(0),
@@ -404,17 +404,6 @@ pub struct LimbLevel {
         @ControlGroup("Shape"),
     )]
     pub reach: Fuzzy,
-    /// The reach of the limb carrying a parent on, as a share of the reach: lower for a short
-    /// leader and a tip that does not outgrow the limbs beside it, higher for one that does. One
-    /// too short to grow leaves the parent ending at its last node.
-    #[reflect(
-        @ValueRange::<f32>(0.0..=1.5),
-        @Precision(0),
-        @NumberInputUnits::new_static("ratio_percent"),
-        @Caption("Carry-on reach"),
-        @ControlGroup("Shape"),
-    )]
-    pub carry_on: f32,
     /// Radius at the base, as a share of the parent's radius where the limb leaves it: 100% is as
     /// thick as the parent there.
     #[reflect(
@@ -460,7 +449,6 @@ impl Default for LimbLevel {
             start: 0.0,
             angle: degrees(60.0, 10.0),
             reach: Fuzzy::new(0.9, 0.1, Distribution::Bell),
-            carry_on: 1.0,
             radius: 0.5,
             sides: 4,
             sag: Toggle::off(Sag::default()),

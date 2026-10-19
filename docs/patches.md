@@ -70,11 +70,11 @@ pub struct Axis {
     pub reach: f32,
     /// Before any draw; each operator forks its own stream from it (D16).
     pub rng: Rng,
-    /// By index: its limbs, the one carrying it on, or its fork's copies.
+    /// By index: its limbs, or its fork's copies.
     pub scions: Vec<usize>,
 }
 
-pub enum AxisKind { Stem, Lateral, CarryOn, ForkCopy }
+pub enum AxisKind { Stem, Lateral, ForkCopy }
 
 pub struct Ring {
     pub center: Vec3,
@@ -127,7 +127,7 @@ Operators come in three kinds:
 - **Displacing**: wander moves rings, then carries the sides along again, which the skeleton
   provides as one function for every operator that moves rings. Wander clips at the envelope
   again.
-- **Restructuring**: scions add axes, carry-on (D30) and fork (D31) cut an axis and add others.
+- **Restructuring**: scions add axes, and a fork (D31) cuts an axis and adds others.
   These grow the list while walking it, so axes are named by index, not borrowed.
 
 Operators run level by level, since scions are placed on their parent's finished path; the pipe
@@ -156,8 +156,6 @@ Composition:
   course), stopping at the envelope.
 - `wander`: displaces each path between its base and the end of its course, both fixed, by
   midpoints, as a lightning bolt (C84), on straight or bent paths alike.
-- `carry_on`: cuts each axis `on` at its last node and grows one more of its children's tag on
-  along it (D30).
 
 Whole plant:
 - `pipe`: radii top-down from the stems (D22), each axis taking its `share` attribute, in
@@ -183,9 +181,9 @@ the frame's, and an
 operator's own settings (a foliage card's facing and shape) are its fields. The operators, in
 their fixed order:
 
-1. **Angle bias**: the angle changing with the node's place along the parent (C55). **Size
-   bias** beside it: the reach changing the same way, for a form whose envelope does not
-   shorten its upper scions enough.
+1. **Bias** (C116): the angle and the reach changing with the node's place along the parent,
+   about the middle node's, for a form whose envelope does not shorten or steepen its upper
+   scions enough.
 2. **Sag** and **Rise**: the course turning down by weight and up toward light (D17, C94).
    Without them the course is straight. On the
    trunk it curves the stem after the tilt it leaves the ground at (the splay, and the lean's
@@ -329,7 +327,7 @@ An input is a number or a string formula:
 - Draws: `bell(center, spread)` and `uniform(center, spread)`, drawn per element, replacing
   `Fuzzy` (D10) as values.
 
-`t` is what X22 once called a curve over the parent's length: angle by place (C55) is
+`t` is what X22 once called a curve over the parent's length: angle by place (C116's Bias) is
 `angle: "lerp(70°, 40°, t)"`, with no field of its own.
 
 ## A patch
@@ -358,7 +356,6 @@ An input is a number or a string formula:
                 "reach": "bell(0.9, 0.1)",
                 "bend_toward": "lerp(80°, 130°, droop)", "bend": "0.4" } },
     { "wander": { "on": "bough", "angle": "10°" } },
-    { "carry_on": { "on": "trunk" } },
     { "pipe": { "exponent": 2.5, "share": "if(depth == 0, 1, 0.5)" } },
     { "clusters": { "on": "ends" } }
   ]
