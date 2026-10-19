@@ -159,7 +159,24 @@ next.
 - **C121 Frame on the trunk's middle** (TD1.3): zooming in cuts off the roots or the crown first,
   since the view centres on the subject's bounding sphere and zoom moves the focus toward the
   height under the pointer. Frame looking at the middle of the trunk's height, or of the whole
-  plant's, so both ends leave the view together. E[1]
+  plant's, so both ends leave the view together. Zoom's pull toward the height under the pointer
+  is taken where the pointer's ray meets a vertical plane through the axis, which a steep view
+  meets at a grazing angle: looking straight down, it swings to the root or the top and clamps
+  there, and at the home elevation a pointer just above centre pulls well above the focus. Fade
+  the pull with the tilt, by cos(elevation). E[2]
+- **C124 Best-effort open**: before the freeze (C113), any renamed or removed field breaks every
+  saved file. A file that fails the strict read is read again with each key the species lacks,
+  and each value of the wrong type, pruned from the JSON, the pruned paths listed in the log and
+  a toast; the plant opens with defaults in their place, marked edited. C8's working document
+  reads the same way. E[2]
+- **C125 Steady nodes**: moving Start or End moves each node, which jumps limbs about in two
+  ways. A lateral's length changes, so its own node count steps; its nodes draw in order from
+  one `layout` stream and its limbs' streams are numbered by a running count, so one node more
+  re-deals every node after it, and every level below. Each node from a stream of its own
+  (`layout.fork(node)`), and each limb's from its node and slot, so a count change adds or
+  drops one node. And a node's azimuth is the cheapest of its candidates (`node_azimuths`),
+  which flips as crowding changes with the nodes' spacing; blend the two cheapest when their
+  costs are near. Changes every plant's layout (X15's generator version). E[2]
 - **C93 Typed values lost in plans** (was X29, its gate passed): find whether a click right after
   Enter lands before the panel has rebuilt, or the typing is lost. Three failures, each once of two
   runs: `plans/levels.py` (2026-10-14) at the second level's density typed as 1.5, the plant
@@ -181,9 +198,10 @@ next.
   private).
   Defaults are written in the units shown
   (`15.0_f32.to_radians()`, not `0.3`). E[2]
-- **C47 A sense of scale**: metre rings on the ground disc (`src/main.rs`, `Circle::new(4.0)`),
-  since Frame fits any plant to the view and hides how big it is. Seedling never zoomed, so its
-  plants showed their size. E[1]
+- **C47 A sense of scale**, since Frame fits any plant to the view and hides how big it is
+  (seedling never zoomed, so its plants showed their size): a 5 m stick rising from the ground
+  about 2 m from the axis, ticked and numbered each metre in gizmos (`Gizmos::text`, a stroke
+  font), and beside it a human silhouette, a flat cutout. Shown with the crown helper. E[2]
 - **C67 The leaf texture on the HUD** (D28), for tuning the leaf (requirements, Authoring app):
   the painted texture as an inset over a checkerboard, so its transparency shows, behind a
   toggle saved in `ViewSettings`. After C38. E[2]
@@ -254,8 +272,12 @@ next.
   TD3.2 rewritten. E[3]
 - **C112 View settings panel**: a gear icon opening a dialog of view settings, saved in
   `ViewSettings` (D28): the lighting and tone mapping (`GameLook`, TD1.1; per-project looks stay
-  X6), and a ruler gizmo for judging a plant's size. Two buttons reset the lighting and tone
+  X6). Two buttons reset the lighting and tone
   mapping: one to Bevy's defaults, one to Panoply's. E[3]
+- **C126 No crown**: a Profile of Off, the envelope unbounded, for growing a plant by its levels
+  alone; the crown helper hidden. A lateral's reach is then a share of the parent's length
+  rather than of the distance to the envelope (X54's measure), and the node density, per crown
+  radius today, per metre of the parent. E[3]
 
 ## Deferred
 
@@ -535,6 +557,12 @@ next.
     outlines show, but lower laterals bare before their foliage and upper ones leafy throughout
     give about 4:1. Built on cards along the twig (X30). A card's back may poke past its
     lateral's base, which shows close up but not at game distance.
+  - Leaf size by Bias, for a conifer's smaller leaves near the top: each limb's Bias size
+    factor multiplied down its subtree, so the levels below a short upper limb keep its share,
+    and the leaves' size, uniform over the plant today, scaled by that product, through a
+    per-level control of how much Bias reaches the leaves. Leaves only: the children's reach
+    stays a share of the distance to the envelope, since filling a hemisphere with Bias needs
+    short limbs bearing long children (the author, 2026-10-19).
   - The reference value is the midpoint's (C116), so the mean holds as the gradient changes;
     the base's, easiest to see, was the other choice.
   - Test cases: seedling's conifer (`artwork/reference/seedling/conifer.png`): upper laterals
