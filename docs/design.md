@@ -264,7 +264,7 @@ trunk's height: its top a multiple, its base a share.
 `place_scions` places a level's laterals on each axis of the level before, along the part of it
 inside the crown. Nodes are a density per crown radius of that part, the count rounded at random;
 they spread evenly from the level's start (a share of the part; a fork's copy starts from its base)
-to the tip, each moved from its even place by up to 30% of the gap. A node holds `per_node` limbs,
+to its end (a share too; below the start, every node is at the start), each moved from its even place by up to 30% of the gap. A node holds `per_node` limbs,
 rounded at random.
 
 A node's limbs are turned about the parent by its facing, measured from the parent's upper side,
@@ -296,8 +296,9 @@ than it is thick at its base is left out.
 The level then wanders (`wander.rs`), after tracing and before the taper; a fork's copies
 wander as they are added, and stems as they are made. The course is displaced between two fixed
 points, the end of a straight run at its base, a kink spacing (0.15 crown radii) give or take 40%,
-and the start of the straight run under a tip's card (TD3.8): a segment longer than
-1.5 spacings is split within 20% of its middle, and the split point moves square to the segment,
+and the tip: a segment longer than 1.5 spacings is split within 20% of its middle, but never
+inside the straight run under a tip's card (TD3.8), where the split falls at the run's start, so
+the last segment runs straight to the tip at whatever angle; and the split point moves square to the segment,
 in a random direction, by a random share of the shorter half's length, or a spacing if less, times
 the tangent of the wander, halved until neither half points further off the course than the
 wander; then each half likewise. An axis too short for both runs does not wander. Offsets between split points are
@@ -322,7 +323,7 @@ keeps its radii, the cut ring carrying the radius at the cut.
 ### 3.6 Branch ends
 
 An axis bearing laterals runs on past its last node to its own tip, as traced, its sag, sides and
-wander its own level's throughout. Its last node lies within a gap of the tip (TD3.3). Unless it
+wander its own level's throughout. Its nodes stop at its level's end (TD3.3), so the tip runs on bare past them. Unless it
 forked, its tip bears leaves as a twig's does (TD3.8). Only a fork cuts an axis (TD3.7).
 
 ### 3.7 Forks

@@ -144,7 +144,7 @@ fn stem_course(
             rng.fork(WANDER_STREAM),
             wander.angle,
             spacing,
-            length - straight_run(species),
+            straight_run(species),
             None,
         );
     }
@@ -194,7 +194,7 @@ fn place_on(level: &Level, index: usize, parent: &Axis, placed: &mut Vec<Axis>) 
         } else {
             params.start
         };
-        let place = node_place(node, nodes, start, layout.unit());
+        let place = node_place(node, nodes, start, params.end, layout.unit());
         let t = inside_start + inside * place;
         let at = t * length;
         let frame = parent.frame(t);
@@ -252,13 +252,14 @@ pub(super) fn size_bias(params: &LimbLevel, node: u32, nodes: u32) -> f32 {
 }
 
 /// Where node `node` of `nodes` sits, as a fraction of the stretch bearing them: centred in its
-/// equal share of the stretch past `start`, moved by up to `NODE_JITTER` of a share by `unit` (0
-/// to 1).
-pub(super) fn node_place(node: u32, nodes: u32, start: f32, unit: f32) -> f32 {
+/// equal share of the stretch from `start` to `end`, moved by up to `NODE_JITTER` of a share by
+/// `unit` (0 to 1). An end below the start puts every node at the start.
+pub(super) fn node_place(node: u32, nodes: u32, start: f32, end: f32, unit: f32) -> f32 {
     let jitter = (unit * 2.0 - 1.0) * NODE_JITTER;
     let even = (node as f32 + 0.5 + jitter) / nodes as f32;
     let start = start.clamp(0.0, 1.0);
-    start + (1.0 - start) * even
+    let end = end.clamp(start, 1.0);
+    start + (end - start) * even
 }
 
 /// The limbs already on a parent, as a node about to be placed at `at` metres along it sees them.

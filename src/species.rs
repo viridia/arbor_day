@@ -374,7 +374,7 @@ pub struct LimbLevel {
     pub skew: f32,
     /// Where nodes start along the part of the parent inside the crown, as a share of it: 0 from
     /// its base, higher to keep the limbs toward its tip, as a tree's are. Nodes are spread evenly
-    /// from there to the tip.
+    /// from there to the end.
     #[reflect(
         @ValueRange::<f32>(0.0..=0.9),
         @Precision(0),
@@ -383,6 +383,17 @@ pub struct LimbLevel {
         @ControlGroup("Arrangement"),
     )]
     pub start: f32,
+    /// Where nodes end along the part of the parent inside the crown, as a share of it: lower to
+    /// leave the parent's tip bare, so it leads past its last limbs. Below the start, every node is
+    /// at the start.
+    #[reflect(
+        @ValueRange::<f32>(0.1..=1.0),
+        @Precision(0),
+        @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("End"),
+        @ControlGroup("Arrangement"),
+    )]
+    pub end: f32,
     /// The angle from the parent's direction where the limb starts: 0 runs along it, 90° square
     /// to it. Drawn for each limb.
     #[reflect(
@@ -447,6 +458,7 @@ impl Default for LimbLevel {
             facing: Facing::Around,
             skew: 20.0_f32.to_radians(),
             start: 0.0,
+            end: 0.85,
             angle: degrees(60.0, 10.0),
             reach: Fuzzy::new(0.9, 0.1, Distribution::Bell),
             radius: 0.5,

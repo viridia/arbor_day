@@ -32,6 +32,7 @@
       "facing": "Around",
       "skew": 0.34906584,
       "start": 0.0,
+      "end": 0.85,
       "angle": {
         "center": 1.0471976,
         "spread": 0.17453292,

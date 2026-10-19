@@ -755,6 +755,44 @@ fn wander_leaves_tips_where_their_course_ends() {
 }
 
 #[test]
+fn a_short_axis_wanders_up_to_its_tip_run() {
+    // Three spacings long, a spacing of it the tip's straight run: the stretch between the base
+    // run and the tip run is under the 1.5 spacings a split needs, but with the tip run it is
+    // over them, so it kinks, never inside the tip run, its tip where its course ends.
+    let (spacing, straight) = (1.0, 1.0);
+    let course = stem_rings(3.0, 0.0, 0.0, 0.0);
+    let tip = course[course.len() - 1].center;
+    let kinked = (0..8).filter(|&seed| {
+        let mut rings = course.clone();
+        let rng = Seed(seed).stream("test");
+        displace(
+            &mut rings,
+            rng,
+            30.0_f32.to_radians(),
+            spacing,
+            straight,
+            None,
+        );
+        let last = rings[rings.len() - 1];
+        assert!((last.center - tip).length() < 1e-4);
+        // Its last corner at least the tip run back from the tip.
+        let mut corners = rings.windows(3).filter(|three| {
+            let into = three[1].center - three[0].center;
+            into.angle_between(three[2].center - three[1].center) > 1e-3
+        });
+        if let Some(corner) = corners.next_back() {
+            assert!(
+                corner[1].at <= last.at - straight + 1e-3,
+                "{}",
+                corner[1].at
+            );
+        }
+        rings.iter().any(|ring| ring.center.xz().length() > 1e-3)
+    });
+    assert!(kinked.count() > 0);
+}
+
+#[test]
 fn branch_ends_run_straight_under_their_cards() {
     // With no bend, a stretch with no kinks keeps no rings, so a branch end's last ring
     // before its tip lies before the stretch its card covers.
@@ -963,8 +1001,9 @@ fn splayed_stems_send_their_limbs_outward() {
 fn nodes_lie_near_their_even_places_inside_the_crown() {
     let mut species = straight();
     // Five nodes along the stem's two crown radii inside the crown, each within 30% of the
-    // 0.8 m gap of 1.65, 2.45, 3.25, 4.05 and 4.85 m.
+    // 0.8 m gap of 1.65, 2.45, 3.25, 4.05 and 4.85 m, ending at the tip.
     species.limbs.levels[0].density = 2.5;
+    species.limbs.levels[0].end = 1.0;
     let heights: Vec<f32> = side_limbs(&species)
         .iter()
         .map(|limb| limb.origin().y)
@@ -981,34 +1020,38 @@ fn nodes_lie_near_their_even_places_inside_the_crown() {
 }
 
 #[test]
-fn nodes_spread_from_their_start_to_the_tip() {
+fn nodes_spread_from_their_start_to_their_end() {
     let mut species = straight();
     species.limbs.levels[0].density = 2.5;
     species.limbs.levels[0].start = 0.5;
-    // The stem inside the crown is 1.25 to 5.25 m, so nodes start at 3.25 m: five in its
-    // upper 2 m, each within 30% of the 0.4 m gap of 3.45, 3.85, 4.25, 4.65 and 5.05 m.
+    species.limbs.levels[0].end = 0.9;
+    // The stem inside the crown is 1.25 to 5.25 m, so nodes run from 3.25 to 4.85 m: five in
+    // those 1.6 m, each within 30% of the 0.32 m gap of 3.41, 3.73, 4.05, 4.37 and 4.69 m.
     let heights: Vec<f32> = side_limbs(&species)
         .iter()
         .map(|limb| limb.origin().y)
         .collect();
     assert_eq!(heights.len(), 5);
-    for (height, expected) in heights.iter().zip([3.45, 3.85, 4.25, 4.65, 5.05]) {
-        assert!((height - expected).abs() <= 0.12 + 1e-3, "{heights:?}");
+    for (height, expected) in heights.iter().zip([3.41, 3.73, 4.05, 4.37, 4.69]) {
+        assert!((height - expected).abs() <= 0.096 + 1e-3, "{heights:?}");
     }
 }
 
 #[test]
 fn node_places_keep_their_ends_and_order() {
-    for start in [0.0, 0.3, 0.9] {
+    for (start, end) in [(0.0, 1.0), (0.3, 0.85), (0.9, 1.0)] {
         // Pushed as far as jitter goes, the first node down and the last up.
-        let first = node_place(0, 4, start, 0.0);
-        let last = node_place(3, 4, start, 1.0);
-        assert!(first > start && last < 1.0, "{start}: {first} {last}");
+        let first = node_place(0, 4, start, end, 0.0);
+        let last = node_place(3, 4, start, end, 1.0);
+        assert!(first > start && last < end, "{start}: {first} {last}");
         // Neighbours pushed toward each other stay in order.
         for node in 0..3 {
-            assert!(node_place(node, 4, start, 1.0) < node_place(node + 1, 4, start, 0.0));
+            let (this, next) = (node_place(node, 4, start, end, 1.0), node);
+            assert!(this < node_place(next + 1, 4, start, end, 0.0));
         }
     }
+    // An end below the start puts every node at the start.
+    assert_eq!(node_place(2, 4, 0.5, 0.2, 0.7), 0.5);
 }
 
 #[test]

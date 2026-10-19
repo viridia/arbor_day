@@ -320,8 +320,10 @@ the look the author tuned.
 ### D30 — A parent runs on to its own tip
 
 A stem or limb bearing limbs runs on past its last node to its own tip, its nodes spread from
-its level's start to there, and the tip bears leaves as any branch end does (D27, TD3.6). Only a
-fork cuts an axis (D31). Rejected: a carry-on, the parent ending at its last node and one more
+its level's start to its end, and the tip bears leaves as any branch end does (D27, TD3.6). The
+end is a field beside the start, departing from G1 since the author steers it: a bare tip past
+the last laterals reads as a leader rather than a trident's third prong. Only a fork cuts an axis
+(D31). Rejected: a carry-on, the parent ending at its last node and one more
 limb of its children's level carrying it on, so the trunk turned into a branch rather than ending
 in a post. It switched the axis's sag, sides, wander and reach at the joint, started the next
 level's laterals at that level's start, leaving a bare stretch at each joint, and needed a reach

@@ -100,6 +100,8 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C117  | No carry-on (D30, TD3.6); every unforked tip bears leaves, the trunk's too (TD3.8). |
 | C118  | Branch ends judged by eye: C119, C120, X54, and X53's depth in the crown. |
 | C88   | Landed rows as citations; the file commands in TD1.7. |
+| C119  | End, beside Start (D30, TD3.3), default 85%. |
+| C120  | Wander up to the tip: the tip pinned, no kink inside the tip's straight run (D17, TD3.4). |
 
 ## Next
 
@@ -152,21 +154,6 @@ next.
 - **C108 Ask before dropping unsaved changes**: New, and Open once it works, replace an edited
   species without asking (C40). A feathers dialog (Save, Don't Save, Cancel) while the document
   has its dot. After C41, so Save in the dialog saves. E[2]
-- **C119 End** (from C118): a field in Arrangement beside Start, a share of the parent's part
-  inside the crown like it, nodes spread evenly from Start to End, so children stop short of
-  the tip and the tip reads as a leader past its last laterals rather than a trident's third
-  prong. Fork copies too, their start 0. Departs from G1: the author wants to steer it, and the
-  panel has room again. A plain slider, not an `Interval`, which is a draw per instance (TD2.2).
-  An End below Start bears every node at Start, clamped in the generator, a small cost of two
-  free ends, accepted. Default chosen by eye, about 85%, so the default tree gains a bare tip.
-  Old files read, a missing End taking the default. E[1]
-- **C120 Wander up to the tip** (from C118): `displace` pins the offset to 0 at the start of
-  the tip's straight run, so the run lies on the unbent course, and an axis kinks only past the
-  base run, the tip run and 1.5 spacings; short axes, fork copies most, barely wander. Instead
-  pin the tip itself (D17: it stays where the course puts it) and allow no split point inside
-  the tip run, so the last segment runs straight from the last kink to the tip at whatever
-  angle; the card lies along it, taking that segment's direction. Stems too (`straight_run`).
-  Changes every wandering plant. TD3.4. E[2]
 - **C93 Typed values lost in plans** (was X29, its gate passed): find whether a click right after
   Enter lands before the panel has rebuilt, or the typing is lost. Three failures, each once of two
   runs: `plans/levels.py` (2026-10-14) at the second level's density typed as 1.5, the plant

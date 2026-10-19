@@ -1,7 +1,7 @@
 //! Wander (D17), as a lightning bolt is drawn: an axis traced along its course is displaced by
 //! midpoints between two fixed points, the end of a straight run at its base, so it leaves along
-//! its course, and the end of its course, or the start of the straight run under a tip's card.
-//! The middle of each segment moves square to it, a random amount in a random direction, then each
+//! its course, and its tip. No midpoint falls in the straight run under a tip's card, so the last
+//! segment runs straight to the tip, at whatever angle. The middle of each segment moves square to it, a random amount in a random direction, then each
 //! half likewise, down to segments of about one kink spacing. No move is larger than a segment of
 //! two spacings would get, so a long axis zigzags evenly about its course rather than turning on
 //! one large corner, and its tip stays where the course puts it, at any wander.
@@ -38,22 +38,29 @@ pub(super) fn wander(level: &Level, skeleton: &mut Skeleton) {
     }
 }
 
-/// Displaces a limb of `level` by its wander (`displace`), if on, from its own wander stream, short
-/// of its straight run and inside the envelope.
+/// Displaces a limb of `level` by its wander (`displace`), if on, from its own wander stream,
+/// straight under its tip's card and inside the envelope.
 pub(super) fn wander_axis(level: &Level, axis: &mut Axis) {
     let Some(wander) = level.params.wander.get() else {
         return;
     };
-    let end = axis.length() - level.straight;
     let rng = axis.rng.fork(WANDER_STREAM);
     let wander = wander.angle;
     let envelope = Some(&level.envelope);
-    displace(&mut axis.rings, rng, wander, level.spacing, end, envelope);
+    displace(
+        &mut axis.rings,
+        rng,
+        wander,
+        level.spacing,
+        level.straight,
+        envelope,
+    );
 }
 
 /// Displaces `rings`, traced along a course, from about a kink spacing along them (`BASE_JITTER`)
-/// to `end` metres along them, by midpoints (`split`); rings before and after stay on the course. Each stretch points no further off the
-/// course than `wander`. Rings displaced outside `envelope`, if given, are pulled back toward the
+/// to their tip, by midpoints (`split`), none in the last `straight` metres, so the last segment
+/// runs straight to the tip; rings before the start and the tip stay on the course. Each stretch
+/// points no further off the course than `wander`. Rings displaced outside `envelope`, if given, are pulled back toward the
 /// course until inside. The rings are then laid again (`rings_through`) through a point at each
 /// ring and each split, each `at` the distance along them.
 pub(super) fn displace(
@@ -61,11 +68,13 @@ pub(super) fn displace(
     mut rng: Rng,
     wander: f32,
     spacing: f32,
-    end: f32,
+    straight: f32,
     envelope: Option<&Envelope>,
 ) {
     let start = spacing * (1.0 + (rng.unit() * 2.0 - 1.0) * BASE_JITTER);
-    if wander <= 0.0 || rings.len() < 2 || end <= start {
+    let end = rings.last().map_or(0.0, |ring| ring.at);
+    let last_split = end - straight;
+    if wander <= 0.0 || rings.len() < 2 || last_split <= start {
         return;
     }
     let course = Course(rings);
@@ -74,6 +83,7 @@ pub(super) fn displace(
         wander,
         tan: wander.tan(),
         spacing,
+        last_split,
     };
     split(
         &course,
@@ -140,17 +150,19 @@ impl Course<'_> {
     }
 }
 
-/// What every split reads: the wander and its tangent, and the kink spacing.
+/// What every split reads: the wander and its tangent, the kink spacing, and the furthest a split
+/// point may lie along the course.
 struct Bounds {
     wander: f32,
     tan: f32,
     spacing: f32,
+    last_split: f32,
 }
 
 /// Splits the segment from `a` to `b`, each a distance along the course and the offset from it
 /// there, if it is longer than `SPLIT_LENGTH` spacings, pushing the split points onto `splits` in
-/// order along the course. The split point lies within `KINK_JITTER` of the segment's middle, and
-/// moves square to the segment by up to the shorter half's length, or a spacing if less, times the
+/// order along the course. The split point lies within `KINK_JITTER` of the segment's middle, but
+/// no further along than `last_split`, and moves square to the segment by up to the shorter half's length, or a spacing if less, times the
 /// tangent of the wander, in a random direction, halved until neither half points further off the course than
 /// the wander.
 fn split(
@@ -169,7 +181,11 @@ fn split(
     let around = rng.unit() * TAU;
     let amount = rng.unit();
 
-    let at = a.0 + length * share;
+    let at = (a.0 + length * share).min(bounds.last_split);
+    if at <= a.0 {
+        return;
+    }
+    let share = (at - a.0) / length;
     let (_, side) = course.at(at);
     let point = |(at, offset): (f32, Vec3)| course.at(at).0 + offset;
     let chord = (point(b) - point(a)).normalize_or(Vec3::Y);
