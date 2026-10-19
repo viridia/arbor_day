@@ -1293,6 +1293,27 @@ fn a_forked_limb_is_one_tube_with_its_first_copy() {
 }
 
 #[test]
+fn a_forked_trunk_does_not_twist_into_its_first_copy() {
+    // Each copy's own heading sets its rings' roll; the first carries on the trunk's tube from
+    // the trunk's side, so it must start from it.
+    for seed in 0..16 {
+        let mut species = forked_trunk(regular(), 2, 20.0, 0.4);
+        species.seed = Seed(seed);
+        species.trunk.lean = Toggle::on(Lean::degrees(30.0));
+        let axes = grow(&species).axes;
+        let (rings, _) = chain(&axes, &axes[0], |_| 6);
+        let joint = axes[0].rings.len() - 1;
+        let (at, next) = (rings[joint], rings[joint + 1]);
+        let twist = at
+            .side
+            .reject_from_normalized(next.tangent)
+            .angle_between(next.side)
+            .to_degrees();
+        assert!(twist < 30.0, "seed {seed}: {twist}°");
+    }
+}
+
+#[test]
 fn a_chain_shares_its_joins() {
     // A trunk of six sides bent 90° at its tip, carried on level by a copy of three.
     let ring = |center: Vec3, tangent: Vec3, at: f32| Ring {

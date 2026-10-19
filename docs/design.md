@@ -342,7 +342,7 @@ forked, its tip bears leaves as a twig's does (TD3.8). Only a fork cuts an axis 
 With Fork on, a level's axes fork with its chance (`fork.rs`), at a drawn share of their length, and end
 there. Copies carry the axis on, 2 to 5, of the same level: spread evenly around its
 direction, each turned half the drawn fork angle from it, the first toward its flank turned up by
-the drawn roll (`copy_directions`). Each copy starts at the axis's radius at the fork, reaches what the axis had left to grow past it, so a short limb forks short, and draws its wander and limbs
+the drawn roll (`copy_directions`). Each copy starts at the axis's radius at the fork, rolled to the axis's side there so the first carries on its tube untwisted, reaches what the axis had left to grow past it, so a short limb forks short, and draws its wander and limbs
 from a stream of the fork's; it is traced and tapered as it is added. A copy no longer than it is
 thick is left out; with none the axis does not fork. A forked axis bears no leaves at its tip, and copies do not fork again. A copy's limbs compete among themselves alone.
 A fork nearer the axis's base than its radius (`at_base`) leaves no stub: the copies take the

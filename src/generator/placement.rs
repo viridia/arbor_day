@@ -4,7 +4,7 @@
 use std::f32::consts::{FRAC_PI_2, PI, TAU};
 
 use bevy::{
-    math::{Vec2, Vec3},
+    math::{Quat, Vec2, Vec3},
     reflect::Typed,
 };
 
@@ -100,6 +100,9 @@ pub(super) fn stems(species: &Species) -> Vec<Axis> {
             if at_base {
                 Axis::stem(rings, rng)
             } else {
+                // Rolled to the trunk's side, so the first copy carries on its tube untwisted.
+                let mut rings = rings;
+                roll_to(&mut rings, frame.side);
                 let parent = (0, fork_at);
                 let mut copy = Axis::placed(0, AxisKind::ForkCopy, parent, rings[0], rest, rng);
                 copy.rings = rings;
@@ -115,6 +118,23 @@ pub(super) fn stems(species: &Species) -> Vec<Axis> {
     let mut stems = vec![stem];
     stems.extend(copies);
     stems
+}
+
+/// Turns every ring's side about its tangent by one angle, the one bringing the first's to
+/// `side`'s part across its tangent, so the tube keeps its own roll along it.
+fn roll_to(rings: &mut [Ring], side: Vec3) {
+    let first = rings[0];
+    let Some(target) = side.reject_from_normalized(first.tangent).try_normalize() else {
+        return;
+    };
+    let angle = first
+        .side
+        .cross(target)
+        .dot(first.tangent)
+        .atan2(first.side.dot(target));
+    for ring in rings {
+        ring.side = Quat::from_axis_angle(ring.tangent, angle) * ring.side;
+    }
 }
 
 /// A stem's rings from `base`, `length` long: leaving `from_up` radians from up toward `heading`

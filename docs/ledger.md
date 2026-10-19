@@ -105,6 +105,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C116  | Bias in place of Size bias: size and angle by node index about the middle node, neutral when added (TD3.3); a fork's copies reach what their limb had left (TD3.7); a fork's roll is `Fuzzy`, and its chance 50% when added. |
 | C58   | Stems below the ground (TD3.2). |
 | C122  | Flare as a trunk operator (TD3.2), from X45. |
+| C127  | A trunk fork's copies rolled to the trunk's side, so the first carries on its tube untwisted (TD3.7). |
 
 ## Next
 
