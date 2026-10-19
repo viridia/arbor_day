@@ -21,7 +21,7 @@ use serde::{
 };
 
 /// The key marking a disabled operator in a file, beside its settings.
-const ENABLED: &str = "enabled";
+pub const ENABLED: &str = "enabled";
 
 /// Whether an operator is in its level, and if so whether it runs.
 #[derive(Reflect, Clone, Copy, PartialEq, Eq, Debug)]

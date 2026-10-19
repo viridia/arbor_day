@@ -13,7 +13,8 @@ File commands, from a new document: the header row names it "Untitled" and its f
 New, Open, Save and Save As. Saved as (a `FileRequest`, since the driver cannot work native
 dialogs), the row names the document after its file and the glTF, its buffer and leaf texture are
 written; an edit marks the document with a dot and Cmd+S clears it. New returns to the default
-species, untitled, and Open brings the saved species back."""
+species, untitled, and Open brings the saved species back. A file holding a key the species lacks
+and a value of the wrong type opens with the rest, marked with the dot."""
 
 import json
 import os
@@ -135,6 +136,19 @@ def files(driver):
     driver.message(REQUEST, {"Open": path})
     driver.expect(NAME, TEXT, "live oak")
     driver.expect("Plant", GROWN_FROM, Between(6.999, 7.001), at="trunk.height")
+
+    # A file from before a schema change: what the species cannot take is pruned.
+    stale = load(path)
+    species = stale["scenes"][0]["extras"]["arbor_day"]
+    species["roots"] = True
+    species["trunk"]["radius"] = "thick"
+    with open(path, "w") as file:
+        json.dump(stale, file)
+    new(driver)
+    driver.message(REQUEST, {"Open": path})
+    driver.expect(NAME, TEXT, "live oak •")
+    driver.expect("Plant", GROWN_FROM, Between(6.999, 7.001), at="trunk.height")
+    driver.expect("Plant", GROWN_FROM, Between(0.199, 0.201), at="trunk.radius")
 
 
 def load(path):

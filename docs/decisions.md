@@ -348,10 +348,11 @@ from the shapes a species can take.
 Until X15's gate, the first species used in Panoply, the species schema changes freely: a chunk
 that renames, moves or removes a species field breaks every file written before it, and no
 version or migration covers it. Its Landed row says "Breaks files", so a saved species or working
-document is known not to survive it. Reading stays strict, so a stale file fails with an error
-naming the key rather than loading wrong (C10). Compatibility starts at the gate, as X15 and
-`docs/patches.md` (The file) lay out. **Reversing it** means a migration for every schema change
-from C10 on, for files that are only test artifacts.
+document is known not to survive it whole. A stale file opens best-effort (C124): what the
+species cannot take is left out, each path listed, its default in its place, and the document is
+marked edited, so nothing is lost silently and no migration is written. Compatibility starts at
+the gate, as X15 and `docs/patches.md` (The file) lay out. **Reversing it** means a migration for
+every schema change from C10 on, for files that are only test artifacts.
 
 ### D33 — Operators are added on purpose; the default is bare
 

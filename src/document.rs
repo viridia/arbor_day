@@ -48,6 +48,8 @@ pub struct Document {
     /// The file the species was last saved to; none until the first save.
     pub path: Option<PathBuf>,
     saved: Species,
+    /// Opened with fields its file held pruned, so the file differs from the species until saved.
+    pruned: bool,
 }
 
 impl Document {
@@ -63,7 +65,7 @@ impl Document {
 
     /// Whether `species` differs from the species as last saved.
     pub fn edited(&self, species: &Species) -> bool {
-        *species != self.saved
+        self.pruned || *species != self.saved
     }
 
     /// The name, and a dot while `species` has unsaved changes.
@@ -110,7 +112,10 @@ fn on_file_command(
         }
         FileCommand::Save if let Some(path) = &document.path => {
             match gltf_file::write(path, &document.name(), &species, &registry.read()) {
-                Ok(()) => document.saved = species.clone(),
+                Ok(()) => {
+                    document.saved = species.clone();
+                    document.pruned = false;
+                }
                 Err(error) => error!("Not saved to {}: {error}", path.display()),
             }
         }
@@ -180,10 +185,18 @@ fn on_file_request(
             // Unsaved changes are dropped without asking (ledger C108).
             FileRequest::Open(path) => match gltf_file::read(path, &registry.read()) {
                 Ok(opened) => {
-                    *species = opened.clone();
+                    if !opened.pruned.is_empty() {
+                        warn!(
+                            "{} opened with defaults in place of:\n  {}",
+                            path.display(),
+                            opened.pruned.join("\n  ")
+                        );
+                    }
+                    *species = opened.species.clone();
                     *document = Document {
                         path: Some(path.clone()),
-                        saved: opened,
+                        saved: opened.species,
+                        pruned: !opened.pruned.is_empty(),
                     };
                 }
                 Err(error) => error!("{} not opened: {error}", path.display()),

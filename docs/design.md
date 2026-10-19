@@ -158,7 +158,8 @@ and leaf `.png` beside it, named after it, their URIs escaped: a scene named aft
 holding the species file (TD2.3) under the extra `arbor_day`; a bark mesh (`COLOR_0`, linear) and a
 leaf mesh (`TEXCOORD_0`, masked at `LEAF_CUTOFF`, double-sided), both materials matte and not
 metallic, the bark's with the `"outline"` extra when outlined. The PNG is the texture's full-size
-level; the pipeline mipmaps. Open reads the species back from the extra.
+level; the pipeline mipmaps. Open reads the species back from the extra (TD2.3); a file with
+fields pruned opens with the document's dot shown until it is saved.
 
 A menu item shows its keys dimmed at its right end (`src/shortcut.rs`), in the families "Fira
 Sans, Key Symbols". Key Symbols (`assets/fonts/KeySymbols.ttf`) is DejaVu Sans subset to the key
@@ -210,18 +211,24 @@ written; a test compares the two. Custom serialization is type data on the type,
 `ReflectSerializerProcessor`, since `bevy_settings` makes its own serializer (C8).
 
 Reading takes `generator` off and refuses a file without one or from a newer generator, then
-deserializes the rest strictly: a key the species lacks fails, naming it (D32). Reflection returns
-only the fields the file holds, applied onto a template, the default species with every operator
-off (`all_off`), so a field left out keeps its default and an operator left out is off.
-`LimbLevels` reads one to three levels, each onto its depth's defaults with every operator off, the
-levels after them their depths' defaults as they are.
+deserializes the rest. Reflection returns only the fields the file holds, applied onto a template,
+the default species with every operator off (`all_off`), so a field left out keeps its default and
+an operator left out is off. `LimbLevels` reads one to three levels, each onto its depth's defaults
+with every operator off, the levels after them their depths' defaults as they are.
+
+The read is best-effort (D32): a `ReflectDeserializerProcessor` (`Lenient`) takes every struct,
+reads it through a JSON value key by key, and leaves out a key its type lacks, a value that fails
+to read, and a level past the third, each listed by path with the reason (`limbs[0].wobble: not a
+field`); the template's value stands in its place. It takes over from the `DeserializeWithRegistry`
+of `Toggle` and `LimbLevels`, since theirs read their parts without the processor, so an operator
+missing a field takes that field's default. Open logs the list as a warning and marks the document
+edited until it is saved (TD1.7).
 
 An operator's `Toggle` writes its settings bare when on, and when disabled `"enabled": false`
 before them; a struct holding operators leaves out those that are off (`serialize_on`), as
-`LimbLevel`'s and `Trunk`'s `SerializeWithRegistry`. Read, an operator is on unless marked, its
-settings read whole: a field missing from an operator fails, since its fields are fixed for its
-version. Its settings go through a `serde_json::Value`, whatever the format, so `"enabled"` can be
-taken off before reflection reads them.
+`LimbLevel`'s and `Trunk`'s `SerializeWithRegistry`. Read, an operator is on unless marked. Its
+`DeserializeWithRegistry`, for a read without the processor, reads its settings whole, through a
+`serde_json::Value` so `"enabled"` can be taken off first.
 
 BRP serializes through the same registry, so a plan reading the species (`GrownFrom`) sees the
 file's shape, `at="limbs[0].angle"`, while a path it writes (`set`) is a reflection path,

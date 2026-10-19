@@ -4,16 +4,20 @@
 use std::{any::TypeId, fmt};
 
 use bevy::reflect::{
-    ApplyError, PartialReflect, TypeRegistry,
-    serde::{TypedReflectDeserializer, TypedReflectSerializer},
-    structs::Struct,
+    ApplyError, PartialReflect, TypeInfo, TypeRegistration, TypeRegistry,
+    serde::{ReflectDeserializerProcessor, TypedReflectDeserializer, TypedReflectSerializer},
+    structs::{DynamicStruct, Struct, StructInfo},
 };
 use serde::{
-    de::DeserializeSeed,
+    Deserialize, Deserializer,
+    de::{self, DeserializeSeed},
     ser::{Serialize, SerializeMap, Serializer},
 };
 
-use crate::{species::Species, toggle::all_off};
+use crate::{
+    species::{LimbLevel, LimbLevels, MAX_LIMB_LEVELS, Species},
+    toggle::{ENABLED, IsToggle, OperatorState, all_off},
+};
 
 /// The generator's version, raised when output changes on purpose outside an operator (X15).
 pub const GENERATOR: u32 = 1;
@@ -21,9 +25,7 @@ pub const GENERATOR: u32 = 1;
 /// Why a species file was not read.
 #[derive(Debug)]
 pub enum ReadError {
-    /// Not JSON, or not a species: a key the species lacks, a value of the wrong type, or too many
-    /// levels. Schema changes before the first species ships break files (D32), so a stale file
-    /// lands here, its error naming the key.
+    /// Not JSON, or not a species: not an object.
     Json(serde_json::Error),
     /// No `generator`, so not a species file.
     NoGenerator,
@@ -55,10 +57,19 @@ impl From<serde_json::Error> for ReadError {
     }
 }
 
-/// The species in a species file, read strictly: a key the species lacks fails, naming it. A field
-/// the file leaves out keeps the template's value, the default species with every operator off,
-/// so a level's keeps its depth's (`LimbLevels`), and an operator left out is off.
-pub fn read(json: &str, registry: &TypeRegistry) -> Result<Species, ReadError> {
+/// A species read from a file, and what of the file was left out.
+pub struct Read {
+    pub species: Species,
+    /// Each key the species lacks and each value it could not take, by path, with the reason
+    /// (`limbs[0].wobble: not a field`). Its place keeps the template's value.
+    pub pruned: Vec<String>,
+}
+
+/// The species in a species file, read as far as it goes. A field the file leaves out keeps the
+/// template's value, the default species with every operator off, so a level's keeps its depth's
+/// (`LimbLevels`), and an operator left out is off. So does a field the file holds but the species
+/// cannot take, which is listed in `pruned`: a file from before a schema change opens (D32).
+pub fn read(json: &str, registry: &TypeRegistry) -> Result<Read, ReadError> {
     let mut file: serde_json::Value = serde_json::from_str(json)?;
     let generator = file
         .as_object_mut()
@@ -71,11 +82,158 @@ pub fn read(json: &str, registry: &TypeRegistry) -> Result<Species, ReadError> {
     let registration = registry
         .get(TypeId::of::<Species>())
         .expect("the species is registered");
-    let read = TypedReflectDeserializer::new(registration, registry).deserialize(file)?;
+    let mut lenient = Lenient::default();
+    let read = TypedReflectDeserializer::with_processor(registration, registry, &mut lenient)
+        .deserialize(file)?;
     let mut species = Species::default();
     all_off(&mut species);
     species.try_apply(&*read).map_err(ReadError::Apply)?;
-    Ok(species)
+    Ok(Read {
+        species,
+        pruned: lenient.pruned,
+    })
+}
+
+/// Reads every struct key by key, through a JSON value, so that a key its type lacks, or a value
+/// that fails to read, is left out and noted rather than failing the file. Takes over from the
+/// `DeserializeWithRegistry` of `Toggle` and `LimbLevels`, whose own reads are strict.
+#[derive(Default)]
+struct Lenient {
+    /// Where the value being read sits, as `.name` and `[index]` segments.
+    path: Vec<String>,
+    pruned: Vec<String>,
+}
+
+impl ReflectDeserializerProcessor for Lenient {
+    fn try_deserialize<'de, D: Deserializer<'de>>(
+        &mut self,
+        registration: &TypeRegistration,
+        registry: &TypeRegistry,
+        deserializer: D,
+    ) -> Result<Result<Box<dyn PartialReflect>, D>, D::Error> {
+        let TypeInfo::Struct(info) = registration.type_info() else {
+            return Ok(Err(deserializer));
+        };
+        let value = serde_json::Value::deserialize(deserializer)?;
+        let read = if registration.type_id() == TypeId::of::<LimbLevels>() {
+            self.levels(value, registry)
+        } else {
+            self.fields(registration.type_info(), info, value, registry)
+        };
+        read.map(Ok).map_err(de::Error::custom)
+    }
+}
+
+impl Lenient {
+    /// A struct's fields, those it lacks or cannot take left out; a toggle's settings bare, beside
+    /// `"enabled"` when disabled.
+    fn fields(
+        &mut self,
+        type_info: &'static TypeInfo,
+        info: &StructInfo,
+        value: serde_json::Value,
+        registry: &TypeRegistry,
+    ) -> Result<Box<dyn PartialReflect>, String> {
+        let serde_json::Value::Object(mut map) = value else {
+            return Err(format!("{value} is not a {}", info.ty().short_path()));
+        };
+        let mut read = DynamicStruct::default();
+        read.set_represented_type(Some(type_info));
+        if info.get_attribute::<IsToggle>().is_some() {
+            let state = match map.remove(ENABLED) {
+                None | Some(serde_json::Value::Bool(true)) => OperatorState::On,
+                Some(serde_json::Value::Bool(false)) => OperatorState::Disabled,
+                Some(other) => {
+                    self.prune(ENABLED, format!("{other} is not a bool"));
+                    OperatorState::On
+                }
+            };
+            read.insert("state", state);
+            let settings = info.field("settings").expect("a toggle has settings");
+            if let Some(settings) =
+                self.value(settings.type_id(), serde_json::Value::Object(map), registry)
+            {
+                read.insert_boxed("settings", settings);
+            }
+            return Ok(Box::new(read));
+        }
+        for (key, value) in map {
+            let Some(field) = info.field(&key) else {
+                self.prune(&key, "not a field".into());
+                continue;
+            };
+            self.path.push(format!(".{key}"));
+            if let Some(value) = self.value(field.type_id(), value, registry) {
+                read.insert_boxed(field.name(), value);
+            }
+            self.path.pop();
+        }
+        Ok(Box::new(read))
+    }
+
+    /// The limb levels, a list in the file: past the last level, or failing to read, a level is
+    /// left out; a level failing to read keeps its depth's defaults.
+    fn levels(
+        &mut self,
+        value: serde_json::Value,
+        registry: &TypeRegistry,
+    ) -> Result<Box<dyn PartialReflect>, String> {
+        let serde_json::Value::Array(items) = value else {
+            return Err(format!("{value} is not a list of limb levels"));
+        };
+        if items.is_empty() {
+            return Err("no limb levels".into());
+        }
+        let mut levels: Vec<Box<dyn PartialReflect>> = Vec::new();
+        for (index, item) in items.into_iter().enumerate() {
+            if index == MAX_LIMB_LEVELS {
+                self.prune(
+                    &format!("[{index}]"),
+                    format!("past the last of {MAX_LIMB_LEVELS} levels"),
+                );
+                break;
+            }
+            self.path.push(format!("[{index}]"));
+            let level = self.value(TypeId::of::<LimbLevel>(), item, registry);
+            self.path.pop();
+            levels.push(level.unwrap_or_else(|| Box::new(DynamicStruct::default())));
+        }
+        Ok(Box::new(
+            LimbLevels::from_read(&levels).map_err(|error| error.to_string())?,
+        ))
+    }
+
+    /// `value` read as the type `type_id`, or none, noted at the current path, if it cannot be.
+    fn value(
+        &mut self,
+        type_id: TypeId,
+        value: serde_json::Value,
+        registry: &TypeRegistry,
+    ) -> Option<Box<dyn PartialReflect>> {
+        let registration = registry.get(type_id).expect("every species type is registered");
+        match TypedReflectDeserializer::with_processor(registration, registry, self).deserialize(value)
+        {
+            Ok(read) => Some(read),
+            Err(error) => {
+                let path = self.path.concat();
+                self.pruned
+                    .push(format!("{}: {error}", path.trim_start_matches('.')));
+                None
+            }
+        }
+    }
+
+    /// Notes `key`, below the current path, as left out.
+    fn prune(&mut self, key: &str, reason: String) {
+        let key = if key.starts_with('[') {
+            key.to_string()
+        } else {
+            format!(".{key}")
+        };
+        let path = self.path.concat() + &key;
+        self.pruned
+            .push(format!("{}: {reason}", path.trim_start_matches('.')));
+    }
 }
 
 /// `species` as a species file: `generator`, then each of the species' fields by reflection, in the
@@ -145,7 +303,7 @@ mod tests {
     fn edited(
         species: &Species,
         edit: impl FnOnce(&mut serde_json::Value),
-    ) -> Result<Species, ReadError> {
+    ) -> Result<Read, ReadError> {
         let registry = registry();
         let mut file: serde_json::Value =
             serde_json::from_str(&write(species, &registry).unwrap()).unwrap();
@@ -153,17 +311,23 @@ mod tests {
         read(&file.to_string(), &registry)
     }
 
+    /// `species` written and read again, nothing pruned.
+    fn round_trip(species: &Species) -> Species {
+        let registry = registry();
+        let read = read(&write(species, &registry).unwrap(), &registry).unwrap();
+        assert!(read.pruned.is_empty(), "{:?}", read.pruned);
+        read.species
+    }
+
     #[test]
     fn a_species_reads_back_as_it_was_written() {
-        let registry = registry();
         let mut species = Species::default();
         species.limbs.shown = 3;
         species.limbs.levels[2].fork.state = OperatorState::On;
         species.limbs.levels[2].fork.settings.chance = 0.5;
         species.trunk.wander = Toggle::on(Wander { angle: 0.3 });
         species.ornaments.tip_leaves.state = OperatorState::Off;
-        let written = write(&species, &registry).unwrap();
-        assert!(read(&written, &registry).unwrap() == species);
+        assert!(round_trip(&species) == species);
     }
 
     #[test]
@@ -176,7 +340,8 @@ mod tests {
                 .unwrap()
                 .remove("tip_leaves");
         })
-        .unwrap();
+        .unwrap()
+        .species;
         assert_eq!(read_bare.ornaments.tip_leaves.state, OperatorState::Off);
         species.ornaments.tip_leaves.state = OperatorState::Off;
         let written = write(&species, &registry()).unwrap();
@@ -190,8 +355,7 @@ mod tests {
         // depth's defaults.
         let mut species = Species::default();
         species.limbs.levels[1].density = 1.0;
-        let read = edited(&species, |_| {}).unwrap();
-        assert!(read == Species::default());
+        assert!(round_trip(&species) == Species::default());
     }
 
     #[test]
@@ -203,8 +367,9 @@ mod tests {
             file["limbs"][1].as_object_mut().unwrap().remove("density");
         })
         .unwrap();
-        assert_eq!(read.taper, Species::default().taper);
-        assert_eq!(read.limbs.levels[1].density, 3.5);
+        assert!(read.pruned.is_empty(), "{:?}", read.pruned);
+        assert_eq!(read.species.taper, Species::default().taper);
+        assert_eq!(read.species.limbs.levels[1].density, 3.5);
     }
 
     #[test]
@@ -224,38 +389,62 @@ mod tests {
         assert_eq!(file["limbs"][1]["wander"]["enabled"], false);
         assert!(file["limbs"][1]["wander"].get("angle").is_some());
         assert!(file["limbs"][2].get("wander").is_none());
-        assert!(read(&written, &registry).unwrap() == species);
+        assert!(round_trip(&species) == species);
     }
 
     #[test]
-    fn an_operator_is_read_whole() {
+    fn an_operator_missing_a_field_takes_its_default() {
         let mut species = Species::default();
         species.limbs.levels[0].wander.state = OperatorState::On;
-        let error = edited(&species, |file| {
+        species.limbs.levels[0].wander.settings.angle = 0.5;
+        let read = edited(&species, |file| {
             file["limbs"][0]["wander"]
                 .as_object_mut()
                 .unwrap()
                 .remove("angle");
         })
-        .err()
         .unwrap();
-        assert!(error.to_string().contains("Wander"), "{error}");
+        let wander = &read.species.limbs.levels[0].wander;
+        assert_eq!(wander.state, OperatorState::On);
+        assert_eq!(
+            wander.settings.angle,
+            Species::default().limbs.levels[0].wander.settings.angle
+        );
     }
 
     #[test]
-    fn a_key_the_species_lacks_fails_naming_it() {
-        let error = edited(&Species::default(), |file| {
-            file["limbs"][0]["fork"]["wobble"] = 1.into();
-        })
-        .err()
-        .unwrap();
-        assert!(error.to_string().contains("wobble"), "{error}");
-        let error = edited(&Species::default(), |file| {
+    fn what_the_species_cannot_take_is_pruned_by_path() {
+        let species = Species {
+            taper: 0.5,
+            ..Species::default()
+        };
+        let read = edited(&species, |file| {
+            file["limbs"][0]["wobble"] = 1.into();
             file["roots"] = true.into();
+            file["trunk"]["height"] = "tall".into();
+            file["crown"]["profile"] = "Pyramid".into();
+            file["ornaments"]["tip_leaves"]["enabled"] = 0.into();
         })
-        .err()
         .unwrap();
-        assert!(error.to_string().contains("roots"), "{error}");
+        let mut pruned: Vec<_> = (read.pruned.iter())
+            .map(|line| line.split(':').next().unwrap())
+            .collect();
+        pruned.sort();
+        assert_eq!(
+            pruned,
+            [
+                "crown.profile",
+                "limbs[0].wobble",
+                "ornaments.tip_leaves.enabled",
+                "roots",
+                "trunk.height",
+            ]
+        );
+        let default = Species::default();
+        assert_eq!(read.species.trunk.height, default.trunk.height);
+        assert!(read.species.crown.profile == default.crown.profile);
+        assert_eq!(read.species.taper, 0.5);
+        assert_eq!(read.species.ornaments.tip_leaves.state, OperatorState::On);
     }
 
     #[test]
@@ -277,9 +466,12 @@ mod tests {
         let four = edited(&species, |file| {
             let level = file["limbs"][0].clone();
             file["limbs"].as_array_mut().unwrap().push(level);
-        });
-        assert!(matches!(four, Err(ReadError::Json(_))));
-        let none = edited(&species, |file| file["limbs"] = serde_json::json!([]));
-        assert!(matches!(none, Err(ReadError::Json(_))));
+        })
+        .unwrap();
+        assert!(four.pruned[0].starts_with("limbs[3]:"), "{:?}", four.pruned);
+        assert_eq!(four.species.limbs.shown, 3);
+        let none = edited(&species, |file| file["limbs"] = serde_json::json!([])).unwrap();
+        assert!(none.pruned[0].starts_with("limbs:"), "{:?}", none.pruned);
+        assert!(none.species.limbs == Species::default().limbs);
     }
 }

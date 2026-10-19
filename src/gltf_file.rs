@@ -95,8 +95,8 @@ pub fn write(
     Ok(())
 }
 
-/// The species saved in the glTF at `path`.
-pub fn read(path: &Path, registry: &TypeRegistry) -> Result<Species, Box<dyn Error>> {
+/// The species saved in the glTF at `path`, and what of it was pruned (`species_file::read`).
+pub fn read(path: &Path, registry: &TypeRegistry) -> Result<species_file::Read, Box<dyn Error>> {
     let root = Root::from_slice(&fs::read(path)?)?;
     let scene = root.scene.map_or(0, |scene| scene.value());
     let extras = (root.scenes.get(scene))
@@ -317,7 +317,7 @@ mod tests {
         let bin = fs::metadata(dir.join("oak.bin")).unwrap().len() as usize;
         assert_eq!(gltf.buffers().next().unwrap().length(), bin);
         assert_eq!(gltf.meshes().count(), 2, "bark and leaves");
-        assert!(read(&path, &registry).unwrap() == species);
+        assert!(read(&path, &registry).unwrap().species == species);
         fs::remove_dir_all(&dir).unwrap();
     }
 }

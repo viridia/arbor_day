@@ -4,7 +4,7 @@ use bevy::{
     feathers::controls::NumberInputUnits,
     prelude::*,
     reflect::{
-        PartialReflect, TypeRegistry, Typed,
+        ApplyError, PartialReflect, TypeRegistry, Typed,
         serde::{
             DeserializeWithRegistry, ReflectDeserializeWithRegistry, ReflectSerializeWithRegistry,
             SerializeWithRegistry, TypedReflectDeserializer, TypedReflectSerializer,
@@ -194,22 +194,32 @@ impl<'de> Visitor<'de> for LevelsVisitor<'_> {
             .registry
             .get(TypeId::of::<LimbLevel>())
             .ok_or_else(|| de::Error::custom("LimbLevel is not registered"))?;
-        let mut limbs = LimbLevels::default();
-        let mut shown = 0;
+        let mut levels = Vec::new();
         while let Some(level) =
             seq.next_element_seed(TypedReflectDeserializer::new(registration, self.registry))?
         {
-            let Some(depth) = limbs.levels.get_mut(shown) else {
-                return Err(de::Error::invalid_length(shown + 1, &self));
-            };
-            all_off(depth);
-            depth.try_apply(&*level).map_err(de::Error::custom)?;
-            shown += 1;
+            if levels.len() == MAX_LIMB_LEVELS {
+                return Err(de::Error::invalid_length(levels.len() + 1, &self));
+            }
+            levels.push(level);
         }
-        if shown == 0 {
+        if levels.is_empty() {
             return Err(de::Error::invalid_length(0, &self));
         }
-        limbs.shown = shown as i32;
+        LimbLevels::from_read(&levels).map_err(de::Error::custom)
+    }
+}
+
+impl LimbLevels {
+    /// The levels read from a file, one to [`MAX_LIMB_LEVELS`], each applied onto its depth's
+    /// defaults with every operator off; the levels after them are their depths' defaults.
+    pub fn from_read(levels: &[Box<dyn PartialReflect>]) -> Result<Self, ApplyError> {
+        let mut limbs = LimbLevels::default();
+        for (depth, level) in limbs.levels.iter_mut().zip(levels) {
+            all_off(depth);
+            depth.try_apply(&**level)?;
+        }
+        limbs.shown = levels.len() as i32;
         Ok(limbs)
     }
 }

@@ -106,6 +106,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C58   | Stems below the ground (TD3.2). |
 | C122  | Flare as a trunk operator (TD3.2), from X45. |
 | C127  | A trunk fork's copies rolled to the trunk's side, so the first carries on its tube untwisted (TD3.7). |
+| C124  | Best-effort open: a file's fields the species cannot take pruned and logged, the document marked edited (D32, TD2.3). |
 
 ## Next
 
@@ -138,7 +139,8 @@ next.
    `bevy_settings` does. A working document from before a schema change is lost (D32), but not
    silently: `bevy_settings` ignores unknown keys only at a resource's top level, and below it
    drops a field that fails to deserialize without a word (`load_properties`), so the species is
-   read by C10's strict path and its error logged. Stored as a list of open documents holding
+   read as a species file is (C124, TD2.3), its pruned fields logged and the document marked
+   edited. Stored as a list of open documents holding
    one, and the active one's index, so several (X26) need no change of format. E[3]
 3. **C113 File format freeze**, at D32's gate: from here a change that renames, moves or removes
    a species field, or changes its type, needs a migration (X15). Before it, each item below
@@ -165,11 +167,6 @@ next.
   meets at a grazing angle: looking straight down, it swings to the root or the top and clamps
   there, and at the home elevation a pointer just above centre pulls well above the focus. Fade
   the pull with the tilt, by cos(elevation). E[2]
-- **C124 Best-effort open**: before the freeze (C113), any renamed or removed field breaks every
-  saved file. A file that fails the strict read is read again with each key the species lacks,
-  and each value of the wrong type, pruned from the JSON, the pruned paths listed in the log and
-  a toast; the plant opens with defaults in their place, marked edited. C8's working document
-  reads the same way. E[2]
 - **C125 Steady nodes**: moving Start or End moves each node, which jumps limbs about in two
   ways. A lateral's length changes, so its own node count steps; its nodes draw in order from
   one `layout` stream and its limbs' streams are numbered by a running count, so one node more
@@ -187,7 +184,9 @@ next.
   operator was added from the menu not taking, until two frames' wait (the plan keeps it);
   `plans/widgets.py` (2026-10-17), twice, each a typed spread keeping its old value, the reach's
   0 and the sprig spacing's 10; `plans/cards.py` (2026-10-18), the lateral droop typed as 45
-  becoming 90°, a wrong value rather than the old one, passing on the rerun. E[2]
+  becoming 90°, a wrong value rather than the old one, passing on the rerun; `plans/levels.py`
+  (2026-10-19), the first level's add click not taking, one level left, passing on the rerun.
+  E[2]
 - **C89 `growth-model.md` against `design.md`**: its Consequences describe the model as built;
   keep the survey and the reasons, citing TD for the mechanism. E[2]
 - **C90 `show.py`** from `../ldd_template`, printing a D, TD or X entry by its number, so a session
@@ -206,6 +205,10 @@ next.
 - **C67 The leaf texture on the HUD** (D28), for tuning the leaf (requirements, Authoring app):
   the painted texture as an inset over a checkerboard, so its transparency shows, behind a
   toggle saved in `ViewSettings`. After C38. E[2]
+- **C128 A notice for pruned fields**: a file opened with fields pruned (C124) says so only in
+  the log and the dot. A line at the foot of the HUD, opposite the triangle count, fading after
+  some seconds: how many fields were reset, the first few paths. Neither feathers nor
+  `bevy_ui_widgets` has a toast. E[2]
 - **C123 Flare's icon**: Flare (C122) borrows `icons/operators/taper.png`; an icon of its own.
   E[0]
 
@@ -347,11 +350,9 @@ next.
   field's default are different things. What remains (fixes, reordered draws) is re-exported
   deliberately, the earlier export being the record. Versioned operators keep
   most changes out of this; what remains is the skeleton, the global parameters and realization.
-  Reading a file with a key this generator retired wants a policy per unknown field (skip, warn
-  or error), which `bevy_reflect`'s deserializer lacks: its maintainer wants one configurable in
-  the deserializer (Discord, 2026-10), with no date, during reflection's rewrite. Use it if it
-  has landed by the gate; otherwise the species reads its own fields. *Gate:* the first species
-  used in Panoply.
+  Reading a file with a key this generator retired prunes it with a warning (C124's processor,
+  on its maintainer's advice); a policy per field (skip, warn or error), if one is wanted, goes
+  in that processor. *Gate:* the first species used in Panoply.
 - **X18** Forms and presets. The tool is for indie developers wanting the common Earth plant
   types (requirements, What it is for), so presets named after those types ("Fir", "Willow",
   "Live oak", "Clump"), each a saved species, are its starting points. Whether forms are needed
