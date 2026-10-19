@@ -2,7 +2,7 @@
   "generator": 1,
   "seed": 1,
   "detail": 0.02,
-  "taper": 0.6,
+  "taper": 0.9,
   "bark_color": {
     "Srgba": {
       "red": 0.42,

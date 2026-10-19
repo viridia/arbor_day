@@ -110,7 +110,7 @@ impl Default for Species {
             seed: Seed(1),
             detail: 0.02,
             bark_color: Color::srgb(0.42, 0.33, 0.25),
-            taper: 0.6,
+            taper: 0.9,
             outline: true,
             // Panoply's models' width.
             bark_outline: 0.01,
