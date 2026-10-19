@@ -74,7 +74,7 @@ pub(super) fn stems(species: &Species) -> Vec<Axis> {
     let fork_at = drawn.at * stem.length();
     let at_base = at_base(fork_at, frame.radius);
     let lean = trunk_lean * (1.0 - drawn.at);
-    let copies: Vec<Axis> = (copy_directions(&frame, fork, drawn.half_angle).into_iter())
+    let copies: Vec<Axis> = (copy_directions(&frame, fork, &drawn).into_iter())
         .enumerate()
         .map(|(copy, direction)| {
             let rng = drawn.copies.fork(copy as u64);
@@ -167,9 +167,8 @@ pub(super) fn place_scions(level: &Level, skeleton: &mut Skeleton) {
 /// Places the laterals on `parent`, the axis at `index`: nodes along the part of the parent
 /// inside the crown, as many as the level's density gives for its length, each placed by
 /// `node_place`, its limbs turned about the parent by `node_azimuths` and their skew, each leaving
-/// at the level's angle from the parent and reaching its share of the way to the envelope, scaled
-/// by its node's `size_bias`. A fork's
-/// copy's nodes start from its base. Each lateral's base radius is the level's share of the
+/// at the level's angle from the parent and reaching its share of the way to the envelope, both as
+/// its node's `bias` changes them. A fork's copy's nodes start from its base. Each lateral's base radius is the level's share of the
 /// parent's radius where it leaves, so a level's radius changes that level alone.
 fn place_on(level: &Level, index: usize, parent: &Axis, placed: &mut Vec<Axis>) {
     let (envelope, params) = (&level.envelope, level.params);
@@ -186,6 +185,7 @@ fn place_on(level: &Level, index: usize, parent: &Axis, placed: &mut Vec<Axis>) 
     let gap = inside_length / nodes.max(1) as f32;
     // Each limb placed so far: how far along the parent it leaves, and its azimuth.
     let mut crowd: Vec<(f32, f32)> = Vec::new();
+    let angle_limits = limits::<LimbLevel>("angle");
     let mut limb = 0;
     for node in 0..nodes {
         let per_node = layout.round(params.per_node).max(1);
@@ -209,7 +209,9 @@ fn place_on(level: &Level, index: usize, parent: &Axis, placed: &mut Vec<Axis>) 
             let rng = parent.rng.fork(limb);
             limb += 1;
             let mut own = rng.fork(OWN_VALUES_STREAM);
-            let angle = draw::<LimbLevel>(&params.angle, "angle", &mut own);
+            let (size, turn) = bias(params, node, nodes);
+            let angle = draw::<LimbLevel>(&params.angle, "angle", &mut own) + turn;
+            let angle = angle.clamp(*angle_limits.start(), *angle_limits.end());
             let reach = draw::<LimbLevel>(&params.reach, "reach", &mut own);
             let azimuth = azimuth + (own.unit() * 2.0 - 1.0) * params.skew;
             crowd.push((at, azimuth));
@@ -217,9 +219,7 @@ fn place_on(level: &Level, index: usize, parent: &Axis, placed: &mut Vec<Axis>) 
             let (angle_sin, angle_cos) = angle.sin_cos();
             let direction =
                 frame.tangent * angle_cos + (frame.side * cos + across * sin) * angle_sin;
-            let reach = reach
-                * size_bias(params, node, nodes)
-                * distance_to_envelope(envelope, frame.point, direction);
+            let reach = reach * size * distance_to_envelope(envelope, frame.point, direction);
             let start = Ring {
                 tangent: direction,
                 side: upper_side(direction, frame.side),
@@ -239,15 +239,17 @@ fn place_on(level: &Level, index: usize, parent: &Axis, placed: &mut Vec<Axis>) 
     }
 }
 
-/// The share of the reach for laterals at node `node` of `nodes`: with Size bias on, its reach at
-/// base at the first node, changing evenly to 1 at the last; otherwise, and for a lone node, 1.
-pub(super) fn size_bias(params: &LimbLevel, node: u32, nodes: u32) -> f32 {
-    match params.size_bias.get() {
+/// The share of the reach, and the turn added to the angle, for laterals at node `node` of `nodes`:
+/// with Bias on, its size and angle at the first node, changing evenly through none at the middle
+/// to their opposites at the last; otherwise, and for a lone node, 1 and none.
+pub(super) fn bias(params: &LimbLevel, node: u32, nodes: u32) -> (f32, f32) {
+    match params.bias.get() {
         Some(bias) if nodes > 1 => {
-            let place = node as f32 / (nodes - 1) as f32;
-            bias.base + (1.0 - bias.base) * place
+            // −1 at the first node, 1 at the last.
+            let place = 2.0 * node as f32 / (nodes - 1) as f32 - 1.0;
+            (1.0 - bias.size * place, -bias.angle * place)
         }
-        _ => 1.0,
+        _ => (1.0, 0.0),
     }
 }
 

@@ -434,8 +434,8 @@ pub struct LimbLevel {
     pub rise: Toggle<Rise>,
     #[reflect(@Caption("Wander"))]
     pub wander: Toggle<Wander>,
-    #[reflect(@Caption("Size bias"))]
-    pub size_bias: Toggle<SizeBias>,
+    #[reflect(@Caption("Bias"))]
+    pub bias: Toggle<Bias>,
     #[reflect(@Caption("Fork"))]
     pub fork: Toggle<Fork>,
 }
@@ -466,7 +466,7 @@ impl Default for LimbLevel {
             sag: Toggle::off(Sag::default()),
             rise: Toggle::off(Rise::default()),
             wander: Toggle::off(Wander::degrees(10.0)),
-            size_bias: Toggle::off(SizeBias::default()),
+            bias: Toggle::off(Bias::default()),
             fork: Toggle::off(Fork::default()),
         }
     }
@@ -597,25 +597,39 @@ impl Wander {
     }
 }
 
-/// Laterals growing longer or shorter along their parent: short near a limb's root, so their
-/// leaves fill the crown's middle, or long low on the trunk, for a cone.
+/// Laterals changing along their parent, by their node's place, about the middle node's, which
+/// keeps the level's values: positive, longer and wider at the base and shorter and steeper toward
+/// the tip, as a conifer's; negative, the other way, short near a limb's root so its leaves fill the
+/// crown's middle.
 #[derive(Reflect, Clone, PartialEq)]
 #[reflect(@Icon("icons/operators/size-bias.png"))]
-pub struct SizeBias {
-    /// The reach of the laterals at the parent's first node, as a share of the reach, changing
-    /// evenly to 100% at its last node.
+pub struct Bias {
+    /// How much longer the laterals at the parent's first node are, as a share of the reach, and
+    /// shorter at its last, changing evenly between: 60% is 160% at the base and 40% at the tip.
     #[reflect(
-        @ValueRange::<f32>(0.0..=2.0),
+        @ValueRange::<f32>(-1.0..=1.0),
         @Precision(0),
         @NumberInputUnits::new_static("ratio_percent"),
-        @Caption("Reach at base"),
+        @Caption("Size"),
     )]
-    pub base: f32,
+    pub size: f32,
+    /// How much wider the laterals at the parent's first node leave it, and narrower at its last,
+    /// changing evenly between.
+    #[reflect(
+        @ValueRange::<f32>(-std::f32::consts::FRAC_PI_3..=std::f32::consts::FRAC_PI_3),
+        @Precision(1),
+        @NumberInputUnits::new_static("angle_degrees"),
+        @Caption("Angle"),
+    )]
+    pub angle: f32,
 }
 
-impl Default for SizeBias {
+impl Default for Bias {
     fn default() -> Self {
-        Self { base: 0.5 }
+        Self {
+            size: 0.0,
+            angle: 0.0,
+        }
     }
 }
 
@@ -654,24 +668,24 @@ pub struct Fork {
     )]
     pub angle: Fuzzy,
     /// Where the copies lie around the forked axis: at 0, two copies spread level, side by side; at
-    /// 90°, one above the other.
+    /// 90°, one above the other. Drawn for each fork.
     #[reflect(
         @ValueRange::<f32>(0.0..=std::f32::consts::FRAC_PI_2),
         @Precision(1),
         @NumberInputUnits::new_static("angle_degrees"),
         @Caption("Roll"),
     )]
-    pub roll: f32,
+    pub roll: Fuzzy,
 }
 
 impl Default for Fork {
     fn default() -> Self {
         Self {
-            chance: 0.0,
+            chance: 0.5,
             at: Fuzzy::new(0.5, 0.1, Distribution::Bell),
             copies: 2,
             angle: degrees(40.0, 10.0),
-            roll: 0.0,
+            roll: degrees(20.0, 20.0),
         }
     }
 }

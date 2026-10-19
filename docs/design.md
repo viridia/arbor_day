@@ -278,9 +278,11 @@ they point out from the plant's axis. Crowding is how near each azimuth is to ea
 raised to the 4th power, and faded to 0.7 a mean gap further along the parent; pointing outward,
 the more so the further the node is from the axis, up to a crown radius, counts 1 against it. Each
 limb then turns by its own random amount up to the level's skew, and leaves at its drawn angle from
-the parent, its reach a drawn share of the distance to the envelope. With Size bias on, that share
-is scaled by the node's index: the reach at base at the first node, changing evenly to 1 at the
-last, so the start does not change its meaning. Its base radius is the level's radius share of the
+the parent, its reach a drawn share of the distance to the envelope. With Bias on, both change
+with the node's index about the middle node's, from −1 at the first to 1 at the last: the reach
+is scaled by 1 less the size times it, and the angle less the bias angle times it is added, then
+clamped to the level's limits, so the level's mean holds and the start and end do not change
+their meaning. Its base radius is the level's radius share of the
 parent's radius there.
 
 ### 3.4 Tracing
@@ -331,7 +333,7 @@ forked, its tip bears leaves as a twig's does (TD3.8). Only a fork cuts an axis 
 With Fork on, a level's axes fork with its chance (`fork.rs`), at a drawn share of their length, and end
 there. Copies carry the axis on, 2 to 5, of the same level: spread evenly around its
 direction, each turned half the drawn fork angle from it, the first toward its flank turned up by
-the roll (`copy_directions`). Each copy starts at the axis's radius at the fork and draws its reach, wander and limbs
+the drawn roll (`copy_directions`). Each copy starts at the axis's radius at the fork, reaches what the axis had left to grow past it, so a short limb forks short, and draws its wander and limbs
 from a stream of the fork's; it is traced and tapered as it is added. A copy no longer than it is
 thick is left out; with none the axis does not fork. A forked axis bears no leaves at its tip, and copies do not fork again. A copy's limbs compete among themselves alone.
 A fork nearer the axis's base than its radius (`at_base`) leaves no stub: the copies take the

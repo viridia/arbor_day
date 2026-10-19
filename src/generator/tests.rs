@@ -9,7 +9,7 @@ use crate::{
     fuzzy::{Distribution, Fuzzy},
     random::Seed,
     species::{
-        Facing, Lean, Ornaments, Profile, Sag, SizeBias, Species, TipLeaves, Trunk, Upright, Wander,
+        Bias, Facing, Lean, Ornaments, Profile, Sag, Species, TipLeaves, Trunk, Upright, Wander,
     },
     toggle::{OperatorState, Toggle},
 };
@@ -413,22 +413,32 @@ fn limbs_reach_their_share_of_the_way_to_the_envelope() {
 }
 
 #[test]
-fn size_bias_shortens_laterals_toward_the_first_node() {
+fn bias_changes_laterals_along_their_parent() {
+    // Half way to the envelope, so 150% of it stays inside.
     let mut species = straight();
-    species.limbs.levels[0].size_bias = Toggle::on(SizeBias { base: 0.5 });
+    species.limbs.levels[0].reach.center = 0.5;
+    let level = &species.limbs.levels[0];
+    let (reach, angle) = (level.reach.center, level.angle.center);
+    species.limbs.levels[0].bias = Toggle::on(Bias {
+        size: 0.5,
+        angle: 20.0_f32.to_radians(),
+    });
     let laterals = side_limbs(&species);
     let envelope = Envelope::of(&species);
-    let reach = species.limbs.levels[0].reach.center;
-    // One a node, from the first at half the reach to the last at all of it.
+    // One a node, from the first at 150% of the reach and 20° wider to the last at 50% and 20°
+    // narrower, the middle as the level's.
     assert_eq!(laterals.len(), 16);
     for (node, limb) in laterals.iter().enumerate() {
+        let place = 2.0 * node as f32 / 15.0 - 1.0;
         let tip = limb.origin() + limb.direction() * limb.length();
         let whole = limb.length() + distance_to_envelope(&envelope, tip, limb.direction());
-        let share = 0.5 + 0.5 * node as f32 / 15.0;
+        let share = 1.0 - 0.5 * place;
         assert!(
             (limb.length() - share * reach * whole).abs() < 1e-3,
             "{node}"
         );
+        let expected = angle - 20.0_f32.to_radians() * place;
+        assert!((limb.direction().angle_between(Vec3::Y) - expected).abs() < 1e-4);
     }
 }
 
@@ -687,11 +697,12 @@ fn operators_not_on_grow_as_at_zero() {
     assert_eq!(rings(&leaning), rings(&upright));
 
     let mut biased = Species::default();
-    biased.limbs.levels[0].size_bias.settings.base = 0.2;
     let mut even = biased.clone();
-    even.limbs.levels[0].size_bias.state = OperatorState::On;
-    even.limbs.levels[0].size_bias.settings.base = 1.0;
-    biased.limbs.levels[0].size_bias.state = OperatorState::Disabled;
+    even.limbs.levels[0].bias = Toggle::on(Bias {
+        size: 0.0,
+        angle: 0.0,
+    });
+    biased.limbs.levels[0].bias.state = OperatorState::Disabled;
     assert_eq!(rings(&biased), rings(&even));
 
     let mut unforked = forking(2, 0.0);
@@ -1129,7 +1140,7 @@ fn forking(copies: i32, roll: f32) -> Species {
     level.fork.settings.at.center = 0.5;
     level.fork.settings.copies = copies;
     level.fork.settings.angle.center = 60.0_f32.to_radians();
-    level.fork.settings.roll = roll.to_radians();
+    level.fork.settings.roll = Fuzzy::new(roll.to_radians(), 0.0, Distribution::Bell);
     species
 }
 
@@ -1195,6 +1206,22 @@ fn a_forked_limb_bears_no_leaves_at_its_fork() {
         let mut leafy: Vec<usize> = skeleton.cards.iter().map(|card| card.axis).collect();
         leafy.dedup();
         assert_eq!(leafy, tips, "{shown}");
+    }
+}
+
+#[test]
+fn a_short_limb_forks_short() {
+    // Each copy reaches no further than its limb had left to grow past the fork.
+    let mut species = forking(2, 0.0);
+    species.limbs.levels[0].reach.center = 0.3;
+    let axes = grow(&species).axes;
+    let forks = forks(&axes);
+    assert!(!forks.is_empty());
+    for (limb, copies) in forks {
+        let left = limb.reach - limb.length();
+        for copy in copies {
+            assert!(copy.length() <= left + 1e-3, "{} {left}", copy.length());
+        }
     }
 }
 

@@ -89,7 +89,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C103  | Ornaments as slots (TD3.8). |
 | C66   | Outlines (TD3.9, TD3.10). |
 | C105  | Carry-on reach; removed in C117. |
-| C106  | Size bias (TD3.3). |
+| C106  | Size bias; replaced by C116. |
 | C107  | Shortcut text (TD1.7). |
 | C40   | File commands (D8, TD1.7). |
 | C109  | File dialogs, with `rfd` (TD1.7). |
@@ -102,6 +102,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C88   | Landed rows as citations; the file commands in TD1.7. |
 | C119  | End, beside Start (D30, TD3.3), default 85%. |
 | C120  | Wander up to the tip: the tip pinned, no kink inside the tip's straight run (D17, TD3.4). |
+| C116  | Bias in place of Size bias: size and angle by node index about the middle node, neutral when added (TD3.3); a fork's copies reach what their limb had left (TD3.7); a fork's roll is `Fuzzy`, and its chance 50% when added. |
 
 ## Next
 
@@ -147,13 +148,16 @@ next.
    - X37 Several sprigs, the tip leaves' one sprig likely becoming a list.
    - X12 Space colonization, if Arrangement becomes a choice of modes.
    - X50 The pipe model, if it removes the taper rather than overriding it.
-   - C116 Bias, in place of Size bias.
 
 ### Quick wins
 
 - **C108 Ask before dropping unsaved changes**: New, and Open once it works, replace an edited
   species without asking (C40). A feathers dialog (Save, Don't Save, Cancel) while the document
   has its dot. After C41, so Save in the dialog saves. E[2]
+- **C121 Frame on the trunk's middle** (TD1.3): zooming in cuts off the roots or the crown first,
+  since the view centres on the subject's bounding sphere and zoom moves the focus toward the
+  height under the pointer. Frame looking at the middle of the trunk's height, or of the whole
+  plant's, so both ends leave the view together. E[1]
 - **C93 Typed values lost in plans** (was X29, its gate passed): find whether a click right after
   Enter lands before the panel has rebuilt, or the typing is lost. Three failures, each once of two
   runs: `plans/levels.py` (2026-10-14) at the second level's density typed as 1.5, the plant
@@ -168,17 +172,6 @@ next.
   keep the survey and the reasons, citing TD for the mechanism. E[2]
 - **C90 `show.py`** from `../ldd_template`, printing a D, TD or X entry by its number, so a session
   reads the entries it needs rather than whole files. Propose it before code. E[2]
-- **C116 Bias** (in place of C106's Size bias and C55's angle by place; after C117): one
-  limb level operator varying the laterals by their node's index along the parent, the middle
-  node keeping the level's values, so the mean holds and the level's angle and reach read as the
-  middle limb's. Size scales reach in proportion, more at one end and less at the other (±60%:
-  1.6 at the base, 0.4 at the tip, seedling's conifers' 4:1); Angle adds at one end and takes away
-  at the other, so at 0 the limbs leave parallel and either way they fan apart or close in.
-  For conifers (upper laterals shorter and steeper) and for crowns bald on top (C55: twigs
-  radiating outward, the envelope's top empty, after seedling's `angleBias`,
-  `MeshGenerator.ts:593`). Size bias's "reach at base" scaled from the tip's lateral, the hardest
-  to see. Every level, so sprays narrow toward a limb's tip. Size bias's icon. Breaks files.
-  E[2]
 - **C42 Computed values are rounded where written**, from the first writer (Reset, Randomize,
   values derived from the generator): the number input never rounds what it shows, so round to
   the field's `Precision` in the units shown, as a drag does: through the unit's
@@ -568,6 +561,9 @@ next.
 
 ## Notes
 
+- A hemispherical crown reads better from a Column profile with Bias shortening the upper
+  laterals than from the Hemisphere profile (the author, 2026-10-18): evidence for presets
+  (X18) and for profiles beside the five (X43).
 - KTX2 for the pipeline (from C41's research): Bevy's glTF loader sends any image through
   `Image::from_buffer` by mime type or extension (`bevy_gltf/src/loader/mod.rs:1227`), so KTX2
   loads with Bevy's `ktx2` feature, embedded or by path, a path loaded as its own asset shared

@@ -7,8 +7,8 @@ default.
 - wander, turned on for the shots: the first level's limbs zigzag about their course at the most
   wander, 45°, and the second level's shorter twigs kink once or not at all;
 - facing: the second level's limbs to the sides (the default), up, down and around, then skewed;
-- size bias: the second level's twigs at 30% of their reach at each limb's first node, rising to
-  all of it at the last;
+- bias: the second level's twigs longer and wider at each limb's first node and shorter and
+  steeper toward its tip, at 60% and 20°, then the other way, short near each limb's root;
 - forks: every first-level limb forking, the Y level, then upright, then three ways, the second
   level to the sides, so the level Y shows whether twigs crowd its crotch (ledger X33);
 - stems: the trunk forked at the ground into three stems splayed from up, then a crown twice the
@@ -85,19 +85,25 @@ def run(driver):
     set_number(driver, "levels[1]/skew", "20")
     pick_facing(driver, "Sides")
 
-    # Twigs short near each limb's root, so their leaves fill the crown's middle.
-    driver.set_resource(SPECIES, "On", at="limbs.levels[1].size_bias.state")
-    set_number(driver, "levels[1]/size_bias/base", "30")
-    driver.screenshot("size_bias")
-    driver.set_resource(SPECIES, "Off", at="limbs.levels[1].size_bias.state")
+    # Twigs longer and wider low on each limb, shorter and steeper toward its tip, as a
+    # conifer's; then the other way, short near each limb's root.
+    driver.set_resource(SPECIES, "On", at="limbs.levels[1].bias.state")
+    driver.frames(2)
+    driver.screenshot("bias")
+    set_number(driver, "levels[1]/bias/size", "-60")
+    set_number(driver, "levels[1]/bias/angle", "-20")
+    driver.screenshot("bias_reversed")
+    driver.set_resource(SPECIES, "Off", at="limbs.levels[1].bias.state")
 
     # Every first-level limb forks: level, upright, then three ways.
     driver.set_resource(SPECIES, "On", at="limbs.levels[0].fork.state")
     set_number(driver, "levels[0]/fork/chance", "100")
+    driver.set_resource(SPECIES, 0.0, at="limbs.levels[0].fork.settings.roll.spread")
     driver.screenshot("forked")
-    set_number(driver, "levels[0]/fork/roll", "90")
+    driver.set_resource(SPECIES, math.radians(90), at="limbs.levels[0].fork.settings.roll.center")
+    driver.frames(2)
     driver.screenshot("forked_upright")
-    set_number(driver, "levels[0]/fork/roll", "0")
+    driver.set_resource(SPECIES, 0.0, at="limbs.levels[0].fork.settings.roll.center")
     set_number(driver, "levels[0]/fork/copies", "3")
     driver.screenshot("forked_three")
     set_number(driver, "levels[0]/fork/copies", "2")
