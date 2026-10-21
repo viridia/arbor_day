@@ -280,7 +280,7 @@ dependencies = [
  "objc2-foundation 0.3.2",
  "parking_lot",
  "percent-encoding",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
  "wl-clipboard-rs",
  "x11rb",
 ]
@@ -1620,12 +1620,13 @@ dependencies = [
 [[package]]
 name = "bevy_remote_driver"
 version = "0.1.0"
-source = "git+https://github.com/viridia/bevy_remote_driver#b07bb2f6abaa9b3157b8c61501efa7ac46f503e6"
+source = "git+https://github.com/viridia/bevy_remote_driver#e9f5d4c0c34e221b5559c6a99a1896667171b2dc"
 dependencies = [
  "bevy_app",
  "bevy_camera",
  "bevy_diagnostic",
  "bevy_ecs",
+ "bevy_input",
  "bevy_math",
  "bevy_reflect",
  "bevy_remote",
@@ -5004,7 +5005,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.4.15",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -6363,15 +6364,6 @@ name = "windows-sys"
 version = "0.52.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "282be5f36a8ce781fad8c8ae18fa3f9beff57ec1b52cb3de0789201425d9a33d"
-dependencies = [
- "windows-targets 0.52.6",
-]
-
-[[package]]
-name = "windows-sys"
-version = "0.59.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e38bc4d79ed67fd075bcc251a1c39b32a1776bbe92e5bef1f0bf1f8c531853b"
 dependencies = [
  "windows-targets 0.52.6",
 ]
