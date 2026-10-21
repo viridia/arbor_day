@@ -294,12 +294,15 @@ they point out from the plant's axis. Crowding is how near each azimuth is to ea
 raised to the 4th power, and faded to 0.7 a mean gap further along the parent; pointing outward,
 the more so the further the node is from the axis, up to a crown radius, counts 1 against it. Each
 limb then turns by its own random amount up to the level's skew, and leaves at its drawn angle from
-the parent, its reach a drawn share of the distance to the envelope. With Bias on, both change
-with the node's index about the middle node's, from −1 at the first to 1 at the last: the reach
-is scaled by 1 less the size times it, and the angle less the bias angle times it is added, then
-clamped to the level's limits, so the level's mean holds and the start and end do not change
-their meaning. Its base radius is the level's radius share of the
-parent's radius there.
+the parent, its reach a drawn share of the distance to the envelope. With Bias on, the reach
+changes with the node's index about the middle node's, from −1 at the first to 1 at the last,
+scaled by 1 less the size times it, so the level's mean holds. Bias's aim turns each limb by its
+share toward a point on the envelope's outline at the limb's own compass heading
+(`outline_point`). The outline runs from where the profile is widest, up its side and across the
+top to the axis; the nodes' points are spaced evenly along it by length, the first node's at its
+start and the last's on the axis. Both go by node index rather than place, so the start and end do
+not change their meaning. Its base radius is the level's radius share of the parent's radius
+there.
 
 ### 3.4 Tracing
 

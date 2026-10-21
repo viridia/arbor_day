@@ -413,20 +413,19 @@ fn limbs_reach_their_share_of_the_way_to_the_envelope() {
 }
 
 #[test]
-fn bias_changes_laterals_along_their_parent() {
+fn bias_size_changes_laterals_along_their_parent() {
     // Half way to the envelope, so 150% of it stays inside.
     let mut species = straight();
     species.limbs.levels[0].reach.center = 0.5;
-    let level = &species.limbs.levels[0];
-    let (reach, angle) = (level.reach.center, level.angle.center);
+    let reach = species.limbs.levels[0].reach.center;
     species.limbs.levels[0].bias = Toggle::on(Bias {
         size: 0.5,
-        angle: 20.0_f32.to_radians(),
+        aim: 0.0,
     });
     let laterals = side_limbs(&species);
     let envelope = Envelope::of(&species);
-    // One a node, from the first at 150% of the reach and 20° wider to the last at 50% and 20°
-    // narrower, the middle as the level's.
+    // One a node, from the first at 150% of the reach to the last at 50%, the middle as the
+    // level's.
     assert_eq!(laterals.len(), 16);
     for (node, limb) in laterals.iter().enumerate() {
         let place = 2.0 * node as f32 / 15.0 - 1.0;
@@ -437,9 +436,37 @@ fn bias_changes_laterals_along_their_parent() {
             (limb.length() - share * reach * whole).abs() < 1e-3,
             "{node}"
         );
-        let expected = angle - 20.0_f32.to_radians() * place;
-        assert!((limb.direction().angle_between(Vec3::Y) - expected).abs() < 1e-4);
     }
+}
+
+#[test]
+fn aim_turns_laterals_toward_the_outline() {
+    // The column's outline runs up its wall from the crown base at 1.25 m, then across its top at
+    // 6.25 m to the axis.
+    let mut species = straight();
+    let drawn = side_limbs(&species);
+    species.limbs.levels[0].bias = Toggle::on(Bias {
+        size: 0.0,
+        aim: 1.0,
+    });
+    let aimed = side_limbs(&species);
+    assert_eq!(aimed.len(), drawn.len());
+    let heading = |limb: &Axis| limb.direction().xz().normalize();
+    let from_up = |limb: &Axis| limb.direction().angle_between(Vec3::Y);
+    // The last points straight up, with no heading.
+    for (aimed, drawn) in aimed.iter().zip(&drawn).rev().skip(1) {
+        let (a, b) = (heading(aimed), heading(drawn));
+        assert!(a.distance(b) < 1e-3, "aim keeps each limb's heading");
+    }
+    // The first toward the wall at the crown base, below its node; each steeper than the one
+    // before; the last toward the top on the axis.
+    assert!(aimed[0].direction().y <= 0.0);
+    for pair in aimed.windows(2) {
+        assert!(from_up(&pair[1]) < from_up(&pair[0]));
+    }
+    let last = aimed.last().unwrap();
+    let toward_top = (Vec3::Y * 6.25 - last.origin()).normalize();
+    assert!(last.direction().angle_between(toward_top) < 1e-3);
 }
 
 #[test]
@@ -700,7 +727,7 @@ fn operators_not_on_grow_as_at_zero() {
     let mut even = biased.clone();
     even.limbs.levels[0].bias = Toggle::on(Bias {
         size: 0.0,
-        angle: 0.0,
+        aim: 0.0,
     });
     biased.limbs.levels[0].bias.state = OperatorState::Disabled;
     assert_eq!(rings(&biased), rings(&even));

@@ -2,7 +2,7 @@
 
 use std::f32::consts::TAU;
 
-use bevy::math::Vec3;
+use bevy::math::{Vec2, Vec3};
 
 use crate::species::{Profile, Species};
 
@@ -12,6 +12,8 @@ pub(super) const ENVELOPE_BISECTIONS: u32 = 20;
 
 /// Points down each meridian of the envelope's helper, base to top.
 const HELPER_STEPS: u32 = 16;
+/// Points along the profile in finding a point on the outline (`outline_point`).
+const OUTLINE_STEPS: u32 = 32;
 /// Meridians around the envelope's helper.
 const HELPER_MERIDIANS: u32 = 8;
 /// A ring around the helper every this many steps.
@@ -103,6 +105,36 @@ pub fn envelope_helper(envelope: &Envelope) -> Vec<Vec3> {
         }
     }
     lines
+}
+
+/// A point on the envelope's outline, seen in a vertical slice through the axis, as its distance
+/// from the axis and its height. The outline runs from where the profile is widest, up its side,
+/// then across the top to the axis. `along` is how far along it by length, 0 at its start and 1
+/// at the axis.
+pub(super) fn outline_point(envelope: &Envelope, along: f32) -> (f32, f32) {
+    let Envelope { base, top, .. } = *envelope;
+    let mut points: Vec<Vec2> = (0..=OUTLINE_STEPS)
+        .map(|step| {
+            let t = step as f32 / OUTLINE_STEPS as f32;
+            let width = envelope.radius * profile_width(envelope.profile, t);
+            Vec2::new(width, base + (top - base) * t)
+        })
+        .collect();
+    let widest = (points.iter().enumerate())
+        .fold(0, |best, (i, p)| if p.x > points[best].x { i } else { best });
+    points.drain(..widest);
+    points.push(Vec2::new(0.0, top));
+    let total: f32 = points.windows(2).map(|pair| pair[0].distance(pair[1])).sum();
+    let mut left = along.clamp(0.0, 1.0) * total;
+    for pair in points.windows(2) {
+        let length = pair[0].distance(pair[1]);
+        if left <= length && length > 0.0 {
+            let point = pair[0].lerp(pair[1], left / length);
+            return (point.x, point.y);
+        }
+        left -= length;
+    }
+    (0.0, top)
 }
 
 /// The envelope's radius at height `y`: 0 below the crown base and above the top.

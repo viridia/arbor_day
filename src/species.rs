@@ -631,10 +631,11 @@ impl Wander {
     }
 }
 
-/// Laterals changing along their parent, by their node's place, about the middle node's, which
-/// keeps the level's values: positive, longer and wider at the base and shorter and steeper toward
-/// the tip, as a conifer's; negative, the other way, short near a limb's root so its leaves fill the
-/// crown's middle.
+/// Laterals changing along their parent, by their node's place. Size changes their length about
+/// the middle node's, which keeps the level's: positive, longer at the base and shorter toward the
+/// tip, as a conifer's; negative, the other way, short near a limb's root so its leaves fill the
+/// crown's middle. Aim turns them toward the crown's outline, the upper ones toward its top, so
+/// their leaves cover the crown's middle from above.
 #[derive(Reflect, Clone, PartialEq)]
 #[reflect(@Icon("icons/operators/size-bias.png"))]
 pub struct Bias {
@@ -647,22 +648,24 @@ pub struct Bias {
         @Caption("Size"),
     )]
     pub size: f32,
-    /// How much wider the laterals at the parent's first node leave it, and narrower at its last,
-    /// changing evenly between.
+    /// How far the laterals turn from their drawn angle toward a point on the crown's outline, at
+    /// their own compass heading: the first node's toward where the crown is widest, the last's
+    /// toward its top, those between spread evenly along the outline. 100% points them there.
+    /// Meant for the trunk's laterals.
     #[reflect(
-        @ValueRange::<f32>(-std::f32::consts::FRAC_PI_3..=std::f32::consts::FRAC_PI_3),
-        @Precision(1),
-        @NumberInputUnits::new_static("angle_degrees"),
-        @Caption("Angle"),
+        @ValueRange::<f32>(0.0..=1.0),
+        @Precision(0),
+        @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("Aim"),
     )]
-    pub angle: f32,
+    pub aim: f32,
 }
 
 impl Default for Bias {
     fn default() -> Self {
         Self {
             size: 0.0,
-            angle: 0.0,
+            aim: 0.0,
         }
     }
 }

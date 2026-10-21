@@ -108,6 +108,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C127  | A trunk fork's copies rolled to the trunk's side, so the first carries on its tube untwisted (TD3.7). |
 | C124  | Best-effort open: a file's fields the species cannot take pruned and logged, the document marked edited (D32, TD2.3). |
 | C129  | Bevy main at `2614884` (D1), the family together; the leaf golden test writes its failure image to the temp directory, since `target/` is now shared above the repo (TD3.10). |
+| C130  | Aim in place of Bias's angle: laterals turned toward points on the envelope's outline, the upper ones toward its top (TD3.3), from the crown tests (Notes, 2026-10-21). |
 
 ## Next
 
@@ -125,8 +126,8 @@ per-type hook, and is retained-mode.
 The foundation, the skeleton (`docs/patches.md`, The abstract plant), tip rosettes, the species
 file (C10), operator stacks (C96 to C99) and colors by part (C69) have
 landed, and forks drawn along the chain (C95) and on stems (C75), sag and rise (C94), ornament
-slots (C103), the painted leaf (C38), outlines (C66) and carry-on's removal (C117); tips by
-steepness next.
+slots (C103), the painted leaf (C38), outlines (C66), carry-on's removal (C117) and aim (C130);
+tips by steepness next.
 
 1. **C70 Tips by steepness**: one card on a level tip and a rosette on an upright one (TD3.8)
    meet at a sudden switch, between them three looks:
@@ -142,9 +143,15 @@ steepness next.
    rising with steepness, since a third card showed only in a narrow range of settings; the level
    fan on the heading and the nudged thresholds are what differ.
 
-   A level card reaches back over its twig to its fold; a fan's cards start at the tip, so they
-   lengthen the limb by about a card. Either shorten the twig to make up for it, or fold those
-   cards so they too reach back along the twig.
+   The switch from round twig to flat card shows where the two run in one line. An overlap hides
+   it, as the level card reaches back over its twig to its fold; so does a turn, as a rosette's
+   cards leave at an angle. A fan's cards are level, so on a rising twig even the middle card
+   turns. A card leaving its twig at angle θ stands past the tip by about its length × cos θ, so
+   rosettes and fans lengthen a limb where a level card does not: shorten each twig by its look's
+   overhang, so a tip's foliage ends at the limb's reach whatever the look. A long card, such as
+   a pine's needles, makes a rosette a starburst; pines bear none on uprights, which the upright
+   tips field keeps. An upright's cards folded back along the twig, overlapping it as the level
+   card does, is a later choice for that field.
 
    First, a figure in `PlantStats` for how far cards are from edge-on to the game's camera (45°
    down), to judge by numbers as well as by eye. Density counts per limb: a lateral's card and
@@ -175,6 +182,10 @@ steepness next.
 
 ### Quick wins
 
+- **C131 Reference trees**: the species that read well today, chosen by the author, saved as
+  files, and a gallery plan (`plans/gallery/`) loading each and shooting it from the game camera
+  and from above, so a change to the layout (C125, C130, C132, C133) is judged against them.
+  E[2]
 - **C108 Ask before dropping unsaved changes**: New, and Open once it works, replace an edited
   species without asking (C40). A feathers dialog (Save, Don't Save, Cancel) while the document
   has its dot. After C41, so Save in the dialog saves. E[2]
@@ -233,6 +244,26 @@ steepness next.
 
 ### Later
 
+- **C134 Facing and skew are hard to use** (the author, 2026-10-21). Facing picks how a node's
+  limbs turn about the parent (around, to the sides, up or down) and skew turns each up to its
+  value either way. Open: what makes them hard, whether the choices, the results being hard to
+  foresee, or their part on the trunk's level once Aim (C130) chooses where limbs point. E[2]
+- **C132 Repeated forks**: a maple forks and forks again (sympodial), where the levels grow a
+  leader with laterals (monopodial). A fork's copies may fork again, up to a number of
+  generations, 1 being today's (TD3.7, "copies do not fork again"). A copy already reaches what
+  its axis had left, so each generation is shorter with no new length. Drawn forks repeated
+  crowd and cross, so each generation's plane turns about 90° from its parent's, as opposite
+  buds set crosswise do, with a pull up and out, the drawn roll a spread about that. Test case:
+  X53's maple. E[3]
+- **C133 Prune**: a plant operator after layout, thinning an overgrown crown to even, as a tree
+  sheds its shaded shoots. Each tip scored by shade, the foliage above and around it in a coarse
+  grid over the envelope; the most shaded removed first, with its subtree, and a limb left bare
+  removed up its chain, until a target density or card count. It hollows the inside and lifts
+  the crown from below. It removes only, so it closes no gap. The same grid gives `PlantStats` a
+  figure: the share of empty cells inside the silhouette from the game camera. After C132,
+  whose forks it could even out in place of a crowding cost. *Gate:* a tree overgrown by today's
+  settings (the second level facing Around, dense) overfilling every region meant to be leafy;
+  gaps left there are the layout's, for C130, C132 or X12. E[3]
 - **C104 Fruit and flowers** (was part of X42), ornaments (C103): for plants grown for them
   (sunflower, tulip, lavender) as well as blossom on trees, heads at tips or nodes, small meshes
   in vertex color or cards from a region of the leaf texture. *Gate:* C103, and a preset wanting
@@ -350,7 +381,9 @@ steepness next.
   `PinchGesture`, not as a pointer event, so it needs its own path to the view. *Gate:* scroll
   zoom proves awkward on a trackpad.
 - **X12** Space colonization (`docs/growth-model.md`) choosing the directions of the last limb
-  level only, competing for points in the envelope's shell. A mode of the level's Arrangement (`docs/patches.md`, Stacks). *Gate:* crowns show holes or read as too regular.
+  level only, competing for points in the envelope's shell. A mode of the level's Arrangement (`docs/patches.md`, Stacks). Or, as seedling chose between monopodial and pseudo-dichotomous, a
+  plant-level choice replacing the levels, the skeleton kept: a second generator. *Gate:* holes
+  left once C130 and C133 are in.
 - **X13** Panoply's leaf material keeps the exported normal on back faces: `cull_mode: None`
   with `double_sided: false`, set where flora loads, since Bevy flips a double-sided material's
   back-face normal (`prepare_world_normal`) and crown shading normals would then point inward.
@@ -614,6 +647,13 @@ steepness next.
 - A hemispherical crown reads better from a Column profile with Bias shortening the upper
   laterals than from the Hemisphere profile (the author, 2026-10-18): evidence for presets
   (X18) and for profiles beside the five (X43).
+- The default tree with more first-level limbs and a second level, from above (the author,
+  2026-10-21). Reach is a share of the distance to the envelope along a limb's own heading, and
+  leaves are at tips only, so every leaf lands on the envelope. With the second level to the
+  sides, they land on its wall: a ring from above, bare inside. Facing Up lands them on the cap,
+  filling the disc from above, but the side view shows long bare poles under a sheet of leaves;
+  reach at 40% shortens the poles only in proportion. X53's "short limbs bearing long children"
+  (2026-10-19) makes those poles once the children point up. Led to C130, C132 and C133.
 - KTX2 for the pipeline (from C41's research): Bevy's glTF loader sends any image through
   `Image::from_buffer` by mime type or extension (`bevy_gltf/src/loader/mod.rs:1227`), so KTX2
   loads with Bevy's `ktx2` feature, embedded or by path, a path loaded as its own asset shared

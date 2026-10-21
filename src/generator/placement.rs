@@ -9,7 +9,7 @@ use bevy::{
 };
 
 use super::{
-    envelope::{Envelope, distance_to_envelope},
+    envelope::{Envelope, distance_to_envelope, outline_point},
     foliage::straight_run,
     fork::{at_base, copy_directions, draw_fork},
     skeleton::{
@@ -187,8 +187,8 @@ pub(super) fn place_scions(level: &Level, skeleton: &mut Skeleton) {
 /// Places the laterals on `parent`, the axis at `index`: nodes along the part of the parent
 /// inside the crown, as many as the level's density gives for its length, each placed by
 /// `node_place`, its limbs turned about the parent by `node_azimuths` and their skew, each leaving
-/// at the level's angle from the parent and reaching its share of the way to the envelope, both as
-/// its node's `bias` changes them. A fork's copy's nodes start from its base. Each lateral's base radius is the level's share of the
+/// at the level's angle from the parent, turned by Bias's `aim`, and reaching its share of the way
+/// to the envelope, scaled by `bias_size`. A fork's copy's nodes start from its base. Each lateral's base radius is the level's share of the
 /// parent's radius where it leaves, so a level's radius changes that level alone.
 fn place_on(level: &Level, index: usize, parent: &Axis, placed: &mut Vec<Axis>) {
     let (envelope, params) = (&level.envelope, level.params);
@@ -229,16 +229,24 @@ fn place_on(level: &Level, index: usize, parent: &Axis, placed: &mut Vec<Axis>) 
             let rng = parent.rng.fork(limb);
             limb += 1;
             let mut own = rng.fork(OWN_VALUES_STREAM);
-            let (size, turn) = bias(params, node, nodes);
-            let angle = draw::<LimbLevel>(&params.angle, "angle", &mut own) + turn;
+            let size = bias_size(params, node, nodes);
+            let angle = draw::<LimbLevel>(&params.angle, "angle", &mut own);
             let angle = angle.clamp(*angle_limits.start(), *angle_limits.end());
             let reach = draw::<LimbLevel>(&params.reach, "reach", &mut own);
             let azimuth = azimuth + (own.unit() * 2.0 - 1.0) * params.skew;
             crowd.push((at, azimuth));
             let (sin, cos) = azimuth.sin_cos();
             let (angle_sin, angle_cos) = angle.sin_cos();
-            let direction =
+            let mut direction =
                 frame.tangent * angle_cos + (frame.side * cos + across * sin) * angle_sin;
+            if let Some(bias) = params.bias.get().filter(|bias| bias.aim > 0.0) {
+                let along = if nodes > 1 {
+                    node as f32 / (nodes - 1) as f32
+                } else {
+                    0.5
+                };
+                direction = aim(envelope, frame.point, direction, along, bias.aim);
+            }
             let reach = reach * size * distance_to_envelope(envelope, frame.point, direction);
             let start = Ring {
                 tangent: direction,
@@ -259,18 +267,34 @@ fn place_on(level: &Level, index: usize, parent: &Axis, placed: &mut Vec<Axis>) 
     }
 }
 
-/// The share of the reach, and the turn added to the angle, for laterals at node `node` of `nodes`:
-/// with Bias on, its size and angle at the first node, changing evenly through none at the middle
-/// to their opposites at the last; otherwise, and for a lone node, 1 and none.
-pub(super) fn bias(params: &LimbLevel, node: u32, nodes: u32) -> (f32, f32) {
+/// The share of the reach for laterals at node `node` of `nodes`: with Bias on, 1 plus its size at
+/// the first node, changing evenly through 1 at the middle to 1 less its size at the last;
+/// otherwise, and for a lone node, 1.
+pub(super) fn bias_size(params: &LimbLevel, node: u32, nodes: u32) -> f32 {
     match params.bias.get() {
         Some(bias) if nodes > 1 => {
             // −1 at the first node, 1 at the last.
             let place = 2.0 * node as f32 / (nodes - 1) as f32 - 1.0;
-            (1.0 - bias.size * place, -bias.angle * place)
+            1.0 - bias.size * place
         }
-        _ => (1.0, 0.0),
+        _ => 1.0,
     }
+}
+
+/// `direction`, from `origin`, turned by the share `aim` of the way toward the point `along` the
+/// envelope's outline (`outline_point`) at its own compass heading. One pointing straight up or
+/// down takes the heading out from the axis.
+fn aim(envelope: &Envelope, origin: Vec3, direction: Vec3, along: f32, aim: f32) -> Vec3 {
+    let heading = Vec3::new(direction.x, 0.0, direction.z)
+        .try_normalize()
+        .or_else(|| Vec3::new(origin.x, 0.0, origin.z).try_normalize())
+        .unwrap_or(Vec3::X);
+    let (out, height) = outline_point(envelope, along);
+    let target = heading * out + Vec3::Y * height;
+    let Some(toward) = (target - origin).try_normalize() else {
+        return direction;
+    };
+    Quat::IDENTITY.slerp(Quat::from_rotation_arc(direction, toward), aim) * direction
 }
 
 /// Where node `node` of `nodes` sits, as a fraction of the stretch bearing them: centred in its

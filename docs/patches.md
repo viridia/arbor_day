@@ -117,7 +117,7 @@ pub struct Ornaments {
 - Size does not pass from parent to scion. A scion near its parent's tip is already shorter, its
   reach a share of the distance to the envelope, which narrows toward the top of most profiles,
   and thinner, its radius a share of the tapered parent's there. Where a form wants more, a size
-  bias scales reach by place, as angle bias does angle.
+  bias scales reach by place.
 
 Operators come in three kinds:
 
@@ -181,9 +181,9 @@ the frame's, and an
 operator's own settings (a foliage card's facing and shape) are its fields. The operators, in
 their fixed order:
 
-1. **Bias** (C116): the angle and the reach changing with the node's place along the parent,
-   about the middle node's, for a form whose envelope does not shorten or steepen its upper
-   scions enough.
+1. **Bias** (C116, C130): the reach changing with the node's place along the parent, about the
+   middle node's, and the direction aimed at the envelope's outline, for a form whose envelope
+   does not shorten or steepen its upper scions enough.
 2. **Sag** and **Rise**: the course turning down by weight and up toward light (D17, C94).
    Without them the course is straight. On the
    trunk it curves the stem after the tilt it leaves the ground at (the splay, and the lean's
@@ -328,7 +328,7 @@ An input is a number or a string formula:
 - Draws: `bell(center, spread)` and `uniform(center, spread)`, drawn per element, replacing
   `Fuzzy` (D10) as values.
 
-`t` is what X22 once called a curve over the parent's length: angle by place (C116's Bias) is
+`t` is what X22 once called a curve over the parent's length: angle by place is
 `angle: "lerp(70°, 40°, t)"`, with no field of its own.
 
 ## A patch
