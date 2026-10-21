@@ -419,7 +419,7 @@ control point) or axial (inner at the base, outer at the tip), both colors shift
 black and translucent, are the leaf outline's width, and painted only on an outlined species. A
 golden test compares the default species' texture with
 `src/generator/leaf-golden.png`, each channel within 2, and on a difference writes what it painted
-to `target/leaf-golden.png`.
+to `leaf-golden.png` in the system's temporary directory, whose path the failure prints.
 
 The app (`plant.rs`) gives the leaves' material a new image on each build, with its mipmaps: each
 level a 2 × 2 box filter of the one before, colors weighted by alpha so transparent pixels add none

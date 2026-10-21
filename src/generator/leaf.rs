@@ -457,7 +457,7 @@ mod tests {
                 && (golden.iter().zip(&texture.pixels)).all(|(a, b)| a.abs_diff(*b) <= TOLERANCE)
         });
         if !matches {
-            let painted = "target/leaf-golden.png";
+            let painted = std::env::temp_dir().join("leaf-golden.png");
             let extent = Extent3d {
                 width: texture.size,
                 height: texture.size,
@@ -473,9 +473,12 @@ mod tests {
             image
                 .try_into_dynamic()
                 .expect("RGBA8 converts")
-                .save(painted)
+                .save(&painted)
                 .expect("the painted texture saves");
-            panic!("the leaf texture differs from {GOLDEN}; if {painted} is right, copy it there");
+            panic!(
+                "the leaf texture differs from {GOLDEN}; if {} is right, copy it there",
+                painted.display()
+            );
         }
     }
 }

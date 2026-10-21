@@ -107,6 +107,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C122  | Flare as a trunk operator (TD3.2), from X45. |
 | C127  | A trunk fork's copies rolled to the trunk's side, so the first carries on its tube untwisted (TD3.7). |
 | C124  | Best-effort open: a file's fields the species cannot take pruned and logged, the document marked edited (D32, TD2.3). |
+| C129  | Bevy main at `2614884` (D1), the family together; the leaf golden test writes its failure image to the temp directory, since `target/` is now shared above the repo (TD3.10). |
 
 ## Next
 
@@ -124,15 +125,33 @@ per-type hook, and is retained-mode.
 The foundation, the skeleton (`docs/patches.md`, The abstract plant), tip rosettes, the species
 file (C10), operator stacks (C96 to C99) and colors by part (C69) have
 landed, and forks drawn along the chain (C95) and on stems (C75), sag and rise (C94), ornament
-slots (C103), the painted leaf (C38), outlines (C66) and carry-on's removal (C117); card facing
-next.
+slots (C103), the painted leaf (C38), outlines (C66) and carry-on's removal (C117); tips by
+steepness next.
 
-1. **C70 Card facing**: first measure how far cards are from edge-on to the game's camera (45°
-   down), a figure in `PlantStats`, to judge facing and folds by numbers as well as by eye; C60's
-   rosettes took the steepest cards off edge-on. Then, if the figure still calls for it, the face
-   target (D27) widened from world up to a blend of up and the envelope's outward normal, with a
-   spread. Card counts multiply with levels, eight triangles each since C39, so look at density
-   against the budget too. E[3]
+1. **C70 Tips by steepness**: one card on a level tip and a rosette on an upright one (TD3.8)
+   meet at a sudden switch, between them three looks:
+   - Level: one card along the twig, its side leaves painted pairs or side branches (D27).
+   - Inclined: two or three cards in a level fan centred on the twig's heading.
+   - Upright: a rosette, the painted twig standing in for the real one; or none, as conifers
+     need, which the upright tips field keeps.
+
+   One rule covers them: a level fan about the twig's heading, its arc widening with steepness,
+   its cards at a fixed spacing near the texture's own fan width, so steepness adds cards rather
+   than closing them up. A fan of fans at small angles reads as clutter. Each tip's thresholds
+   take a seeded nudge, so no line between looks runs across the crown. D27 rejected a count
+   rising with steepness, since a third card showed only in a narrow range of settings; the level
+   fan on the heading and the nudged thresholds are what differ.
+
+   A level card reaches back over its twig to its fold; a fan's cards start at the tip, so they
+   lengthen the limb by about a card. Either shorten the twig to make up for it, or fold those
+   cards so they too reach back along the twig.
+
+   First, a figure in `PlantStats` for how far cards are from edge-on to the game's camera (45°
+   down), to judge by numbers as well as by eye. Density counts per limb: a lateral's card and
+   its side branches' against a riser's rosette. If tops grow dense, side-branch density falls as
+   a limb steepens, rather than rosettes shrinking; no placement setting varies by steepness
+   yet (C116's Bias varies along the parent). Card counts multiply with levels, eight triangles
+   each since C39, so look at density against the budget too. E[3]
 2. **C8 Working document in settings.** A settings group holding the working species and, once
    set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
    as seedling did. The document's name comes from the file name. Serialized by reflection, as
@@ -146,7 +165,7 @@ next.
    a species field, or changes its type, needs a migration (X15). Before it, each item below
    either lands, is dropped, or is accepted as a later migration; prune the list as those
    choices are made. E[1], the items aside.
-   - C70 Card facing, if its blend and spread replace a field rather than add one.
+   - C70 Tips by steepness, if its fan changes the upright tips field's choices.
    - X18 Forms: a species holding every form's parameters with a selector.
    - X22 Forms as patches: today's species becomes the default patch.
    - X32 Taper per limb level, in place of the plant's one.
@@ -225,7 +244,7 @@ next.
 - **C72 Crossed cards** (was part of C39): a share of cards with a second card through the
   first along its axis, turned 90° about it, so a crown reads from any side (requirements,
   Foliage). Cupped cards are C39's negative lateral droop. *Gate:* the author wanting them
-  after C70's facing. E[2]
+  after C70. E[2]
 - **C48 Arching stems**, for fountain shrubs: a lean past level, so a stem rises and then droops
   toward the ground, stopping above it. D24 stops the lean at level until a preset needs more
   (X18). The Weep operator on the trunk. E[2]
@@ -400,8 +419,8 @@ next.
   `Tooltip` for the species' doc comments. Ours stay where it has none: `Precision` and
   `Spinbox` (its follow-ups), `ShownCount`, and units, since its `Unit` is a label while ours
   names a feathers units format that also scales and parses. *Gate:* the follow-up annotations
-  PR merged, so the family is bumped and the attributes migrated once, in the same chunk; the
-  family's `d41bb12` predates bevy#26164.
+  PR merged, so the attributes are migrated once, with the bump that brings it; bevy#26164 is
+  in since C129.
 - **X26** Several open documents, as tabs above the panel (a feathers tab list), for an artist
   working on variants of one species. Each document an entity holding its species, file path
   and name, the species no longer one resource (D12). A new document is "Untitled" until its
@@ -438,7 +457,9 @@ next.
 - **X30** Cards along a twig, for plants whose leaves crowd their shoots: spur-bearing trees
   (apple, larch, ginkgo) and conifers' needles (growth model, How the shapes are covered: "clusters
   along the limbs"). "Cards along the twig", default 0 with a small maximum, never past the tip's
-  card, with no shell. Removed in C74, where they came from the shell (C37). Interior leaves
+  card, with no shell. They would also fill the crown's middle, which tip leaves alone leave as
+  a wagon wheel: laterals carry their tips out toward the shell. Removed in C74, where they came
+  from the shell (C37). Interior leaves
   that stand apart from any stem would want a texture of their own, without the painted stem
   (requirements, Foliage: more than one leaf texture region), and a second texture's fields
   would crowd the panel, so they wait to be an ornament (C103). *Gate:* a preset
@@ -600,7 +621,8 @@ next.
   bevy#19104), which gltf-transform's KTX2 conversion writes, so the pipeline points the image
   straight at the `.ktx2`, which Bevy accepts though the standard does not.
 - Bevy source at the locked commit is in Cargo's git checkout,
-  `~/.cargo/git/checkouts/bevy-*/d41bb12`; the local `../bevy` is at the same commit.
+  `~/.cargo/git/checkouts/bevy-*/2614884`; the local `../bevy` has `upstream/main` fetched
+  at the same commit, but its checked-out branch differs.
 - `plans/smoke.py` once failed at its first orbit hold (`orbit_left`, azimuth still 0) and
   passed on the next run; if it fails there again, look at the driver's press and hold.
 - The driver cannot drag or scroll, so the turntable's gestures (spin, tilt, zoom, the axis

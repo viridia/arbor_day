@@ -24,9 +24,9 @@
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="mm"
      showgrid="true"
-     inkscape:zoom="4.7572176"
-     inkscape:cx="42.882209"
-     inkscape:cy="52.65683"
+     inkscape:zoom="13.455443"
+     inkscape:cx="43.402509"
+     inkscape:cy="15.19831"
      inkscape:window-width="1512"
      inkscape:window-height="867"
      inkscape:window-x="0"
@@ -85,7 +85,10 @@
     <path
        style="fill:none;stroke:#ffffff;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:0.63695651"
        d="m 2.1166666,7.4083332 h 6.35"
-       id="path935" />
+       id="path935"
+       inkscape:export-filename="bell.png"
+       inkscape:export-xdpi="192"
+       inkscape:export-ydpi="192" />
     <path
        style="fill:none;stroke:#ffffff;stroke-width:0.265;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:0.65869558;stroke-dasharray:0.26499999, 0.26499999;stroke-dashoffset:0;marker-end:url(#Arrow2)"
        d="m 5.2916666,7.4083332 c 0,-5.2916666 0,-5.2916666 0,-5.2916666"
@@ -96,16 +99,22 @@
        id="path1276"
        sodipodi:nodetypes="csc" />
     <rect
-       style="fill:none;stroke:none;stroke-width:0.365001;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:0.636956"
+       style="fill:none;stroke:none;stroke-width:0.395417;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:0.636956"
        id="rect1501"
-       width="6.3499999"
-       height="6.3499999"
-       x="2.1166666"
-       y="1.0583333" />
+       width="6.8791666"
+       height="6.8791671"
+       x="1.8520833"
+       y="1.0583333"
+       inkscape:export-filename="bell.png"
+       inkscape:export-xdpi="177.23"
+       inkscape:export-ydpi="177.23" />
     <path
        style="fill:none;stroke:#ffffff;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:0.636956"
        d="m 11.641667,7.4083332 h 6.35"
-       id="path935-8" />
+       id="path935-8"
+       inkscape:export-filename="uniform.png"
+       inkscape:export-xdpi="192"
+       inkscape:export-ydpi="192" />
     <path
        style="fill:none;stroke:#ffffff;stroke-width:0.265;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:0.265, 0.265;stroke-dashoffset:0;stroke-opacity:0.658696;marker-end:url(#Arrow2-8)"
        d="m 14.816667,7.4083332 c 0,-5.2916666 0,-5.2916666 0,-5.2916666"
@@ -116,11 +125,14 @@
        id="path1276-7"
        sodipodi:nodetypes="cccccc" />
     <rect
-       style="fill:none;stroke:none;stroke-width:0.365001;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:0.636956"
+       style="fill:none;stroke:none;stroke-width:0.395417;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:0.636956"
        id="rect1501-4"
-       width="6.3499999"
-       height="6.3499999"
-       x="11.641666"
-       y="1.0583332" />
+       width="6.8791661"
+       height="6.8791666"
+       x="11.377084"
+       y="1.0583332"
+       inkscape:export-filename="uniform.png"
+       inkscape:export-xdpi="177.23"
+       inkscape:export-ydpi="177.23" />
   </g>
 </svg>

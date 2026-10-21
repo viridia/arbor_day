@@ -257,7 +257,10 @@ A card is a sprig of leaves on a painted stem, lined up with a real twig, after 
 the axis allows (TD3.8, TD3.9). Seen edge-on, a card then loses leaves but never a twig. One cluster
 grows at the tip of every branch end, whatever its level, so no visible end is bare; taking off
 the tip leaves leaves them all bare. Card size is a share of the crown radius, so a scaled species keeps its
-form (D21). Denser foliage comes from another limb level. The tip's card reaches back so its axial
+form (D21). Denser foliage comes from another limb level. A card's painted pairs (D29) and
+child limbs with tip leaves of their own both put leaves beside a twig: the pairs cost nothing
+beyond the card and suit small or hanging leaves, such as needles; larger inner leaves want
+limbs. The tip's card reaches back so its axial
 fold lies at the tip, as seedling's did, and the twig runs straight under it (D17).
 
 A steep tip bears what the species chooses, by default a rosette: several cards from the tip,
