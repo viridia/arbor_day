@@ -109,6 +109,8 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C124  | Best-effort open: a file's fields the species cannot take pruned and logged, the document marked edited (D32, TD2.3). |
 | C129  | Bevy main at `2614884` (D1), the family together; the leaf golden test writes its failure image to the temp directory, since `target/` is now shared above the repo (TD3.10). |
 | C130  | Aim in place of Bias's angle: laterals turned toward points on the envelope's outline, the upper ones toward its top (TD3.3), from the crown tests (Notes, 2026-10-21). |
+| C135  | Phantom nodes below a parent's first, so the lowest limbs join a settled spiral rather than leaving one side bare (TD3.3). |
+| C136  | Node gaps by balance: a node follows sooner while the limbs below it lean to one side, so the lowest limb is not left alone (TD3.3). |
 
 ## Next
 

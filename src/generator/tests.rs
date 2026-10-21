@@ -927,8 +927,8 @@ fn nodes_hold_their_limbs_evenly_around() {
 }
 
 /// The turns between successive nodes on `straight`'s upright stem, in degrees, modulo the
-/// angle between a node's limbs, since they are alike. The first few are left out, while the
-/// pattern settles.
+/// angle between a node's limbs, since they are alike. The first is included, so the pattern
+/// holds from the first node.
 fn node_turns(per_node: f32) -> Vec<f32> {
     let mut species = straight();
     species.limbs.levels[0].density = 8.0;
@@ -943,7 +943,6 @@ fn node_turns(per_node: f32) -> Vec<f32> {
         .map(|node| azimuth(&node[0]))
         .collect::<Vec<_>>()
         .windows(2)
-        .skip(3)
         .map(|pair| (pair[1] - pair[0]).rem_euclid(between))
         .collect()
 }
@@ -962,6 +961,9 @@ fn competition_gives_the_classic_patterns() {
         .map(|turn| turn.min(360.0 - turn))
         .collect();
     assert!((mean(&spiral) - 137.5).abs() < 8.0, "{spiral:?}");
+    // From the first node, rather than opposite, then near square, for several nodes.
+    let first = &spiral[..4];
+    assert!(first.iter().all(|turn| (turn - 137.5).abs() < 20.0), "{spiral:?}");
     // Pairs cross at 90° and whorls of three alternate at 60°, the most a turn can be from
     // the last node's limbs, so they are judged by how far each turn is from it.
     for (per_node, expected) in [(2.0, 90.0), (3.0, 60.0)] {
@@ -1039,11 +1041,12 @@ fn splayed_stems_send_their_limbs_outward() {
 fn nodes_lie_near_their_even_places_inside_the_crown() {
     let mut species = straight();
     // Five nodes along the stem's two crown radii inside the crown, each within 30% of the
-    // 0.8 m gap of 1.65, 2.45, 3.25, 4.05 and 4.85 m, ending at the tip.
+    // 0.8 m gap of 1.65, 2.45, 3.25, 4.05 and 4.85 m, ending at the tip. Pairs, opposite, so
+    // balance leaves the places alone.
     species.limbs.levels[0].density = 2.5;
     species.limbs.levels[0].end = 1.0;
-    let heights: Vec<f32> = side_limbs(&species)
-        .iter()
+    species.limbs.levels[0].per_node = 2.0;
+    let heights: Vec<f32> = (side_limbs(&species).iter().step_by(2))
         .map(|limb| limb.origin().y)
         .collect();
     assert_eq!(heights.len(), 5);
@@ -1063,10 +1066,11 @@ fn nodes_spread_from_their_start_to_their_end() {
     species.limbs.levels[0].density = 2.5;
     species.limbs.levels[0].start = 0.5;
     species.limbs.levels[0].end = 0.9;
+    species.limbs.levels[0].per_node = 2.0;
     // The stem inside the crown is 1.25 to 5.25 m, so nodes run from 3.25 to 4.85 m: five in
-    // those 1.6 m, each within 30% of the 0.32 m gap of 3.41, 3.73, 4.05, 4.37 and 4.69 m.
-    let heights: Vec<f32> = side_limbs(&species)
-        .iter()
+    // those 1.6 m, each within 30% of the 0.32 m gap of 3.41, 3.73, 4.05, 4.37 and 4.69 m. Pairs,
+    // as above.
+    let heights: Vec<f32> = (side_limbs(&species).iter().step_by(2))
         .map(|limb| limb.origin().y)
         .collect();
     assert_eq!(heights.len(), 5);
@@ -1090,6 +1094,33 @@ fn node_places_keep_their_ends_and_order() {
     }
     // An end below the start puts every node at the start.
     assert_eq!(node_place(2, 4, 0.5, 0.2, 0.7), 0.5);
+}
+
+#[test]
+fn a_lone_limb_low_on_the_parent_is_followed_sooner() {
+    let places: Vec<f32> = (0..10).map(|node| (node as f32 + 0.5) / 10.0).collect();
+    // One limb a node, spiralling by the golden angle.
+    let spiral: Vec<Vec<f32>> = (0..10)
+        .map(|node| vec![(node as f32 * 137.5).to_radians()])
+        .collect();
+    let balanced = balanced_places(&places, &spiral);
+    let gaps: Vec<f32> = balanced.windows(2).map(|pair| pair[1] - pair[0]).collect();
+    assert_eq!(balanced[0], places[0]);
+    assert!((balanced[9] - places[9]).abs() < 1e-5);
+    assert!(gaps.iter().all(|gap| *gap > 0.0), "{gaps:?}");
+    assert!(gaps[0] < 0.6 * mean(&gaps), "{gaps:?}");
+    // Once the spiral has turned about, its gaps are alike.
+    let settled = &gaps[3..];
+    assert!(settled.iter().all(|gap| (gap - mean(settled)).abs() < 0.1 * mean(settled)));
+    // Pairs, opposite, are balanced from the first.
+    let pairs: Vec<Vec<f32>> = (0..10)
+        .map(|node| {
+            let turn = (node as f32 * 90.0).to_radians();
+            vec![turn, turn + PI]
+        })
+        .collect();
+    let paired = balanced_places(&places, &pairs);
+    assert!(paired.iter().zip(&places).all(|(a, b)| (a - b).abs() < 1e-5));
 }
 
 #[test]

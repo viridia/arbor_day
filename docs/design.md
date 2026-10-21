@@ -281,7 +281,12 @@ meets the ground on its low side; that ring's distance along the axis is below 0
 inside the crown. Nodes are a density per crown radius of that part, the count rounded at random;
 they spread evenly from the level's start (a share of the part; a fork's copy starts from its base)
 to its end (a share too; below the start, every node is at the start), each moved from its even place by up to 30% of the gap. A node holds `per_node` limbs,
-rounded at random.
+rounded at random. Once every node's limbs are turned (below), the gaps are balanced
+(`balanced_places`): each shrinks by 0.6 times the lean of the limbs at and below the node before
+it, and all are then scaled so the first and last nodes keep their places. The lean is the length
+of the sum of those limbs' azimuths as unit vectors, faded by 0.7 a node, over their faded count.
+A lone limb low on the parent is followed at under half the gap; pairs and whorls, balanced,
+keep their places.
 
 A node's limbs are turned about the parent by its facing, measured from the parent's upper side,
 the one nearest world up:
@@ -292,7 +297,10 @@ the one nearest world up:
 A turn's cost is how crowded its limbs are by those already placed on the parent, less how far
 they point out from the plant's axis. Crowding is how near each azimuth is to each placed one's,
 raised to the 4th power, and faded to 0.7 a mean gap further along the parent; pointing outward,
-the more so the further the node is from the axis, up to a crown radius, counts 1 against it. Each
+the more so the further the node is from the axis, up to a crown radius, counts 1 against it. Ten
+phantom nodes a gap apart below the first, at its frame, are turned the same way first and bear
+no limbs, so the pattern has settled by the first real node rather than starting there with a
+turn of 180° and then about 90°. Each
 limb then turns by its own random amount up to the level's skew, and leaves at its drawn angle from
 the parent, its reach a drawn share of the distance to the envelope. With Bias on, the reach
 changes with the node's index about the middle node's, from −1 at the first to 1 at the last,

@@ -37,6 +37,13 @@ const CROWDING_FADE: f32 = 0.7;
 /// limb. With `CROWDING_FADE`, it gives the golden angle for one limb a node; gentler, the turn
 /// falls to 180°, and sharper, it turns erratic.
 const CROWDING_SHARPNESS: i32 = 4;
+/// Nodes placed below a parent's first, bearing no limbs, so its limbs' turns settle before the
+/// first real node. A spiral starting from none takes about eight nodes to settle.
+const PHANTOM_NODES: u32 = 10;
+/// How much the gap after a node shrinks for the lean of the limbs so far (`balanced_places`):
+/// after a lone limb, the next node comes at under half the gap; a settled spiral leans
+/// about 0.2, and keeps its gaps alike.
+const BALANCE_PULL: f32 = 0.6;
 /// How much a limb pointing straight out from the plant's axis gains, a crown radius off it,
 /// against crowding of 1 for a limb at the same azimuth one gap away.
 const OUTWARD_WEIGHT: f32 = 1.0;
@@ -188,7 +195,8 @@ pub(super) fn place_scions(level: &Level, skeleton: &mut Skeleton) {
 /// inside the crown, as many as the level's density gives for its length, each placed by
 /// `node_place`, its limbs turned about the parent by `node_azimuths` and their skew, each leaving
 /// at the level's angle from the parent, turned by Bias's `aim`, and reaching its share of the way
-/// to the envelope, scaled by `bias_size`. A fork's copy's nodes start from its base. Each lateral's base radius is the level's share of the
+/// to the envelope, scaled by `bias_size`; the nodes then moved by `balanced_places`. A fork's
+/// copy's nodes start from its base. Each lateral's base radius is the level's share of the
 /// parent's radius where it leaves, so a level's radius changes that level alone.
 fn place_on(level: &Level, index: usize, parent: &Axis, placed: &mut Vec<Axis>) {
     let (envelope, params) = (&level.envelope, level.params);
@@ -205,36 +213,83 @@ fn place_on(level: &Level, index: usize, parent: &Axis, placed: &mut Vec<Axis>) 
     let gap = inside_length / nodes.max(1) as f32;
     // Each limb placed so far: how far along the parent it leaves, and its azimuth.
     let mut crowd: Vec<(f32, f32)> = Vec::new();
+    let start = if parent.kind == AxisKind::ForkCopy {
+        0.0
+    } else {
+        params.start
+    };
+    if nodes > 0 {
+        // Nodes below the first, turned as real ones are but bearing no limbs, so the first real
+        // node meets the pattern settled rather than starting it.
+        let t = inside_start + inside * node_place(0, nodes, start, params.end, 0.5);
+        let frame = parent.frame(t);
+        let per_node = params.per_node.round().max(1.0) as u32;
+        for phantom in (1..=PHANTOM_NODES).rev() {
+            let at = t * length - phantom as f32 * gap;
+            let crowding = Crowd {
+                at,
+                gap,
+                placed: &crowd,
+            };
+            let azimuths = node_azimuths(&frame, per_node, params.facing, &crowding, envelope);
+            crowd.extend(azimuths.into_iter().map(|azimuth| (at, azimuth)));
+        }
+    }
     let angle_limits = limits::<LimbLevel>("angle");
     let mut limb = 0;
+    // Each node's place, and its limbs' drawn values: the places balanced once all are drawn.
+    let mut places = Vec::with_capacity(nodes as usize);
+    let mut node_limbs: Vec<Vec<Drawn>> = Vec::with_capacity(nodes as usize);
     for node in 0..nodes {
         let per_node = layout.round(params.per_node).max(1);
-        let start = if parent.kind == AxisKind::ForkCopy {
-            0.0
-        } else {
-            params.start
-        };
         let place = node_place(node, nodes, start, params.end, layout.unit());
         let t = inside_start + inside * place;
         let at = t * length;
-        let frame = parent.frame(t);
-        let across = frame.side.cross(frame.tangent);
         let crowding = Crowd {
             at,
             gap,
             placed: &crowd,
         };
-        let azimuths = node_azimuths(&frame, per_node, params.facing, &crowding, envelope);
+        let azimuths =
+            node_azimuths(&parent.frame(t), per_node, params.facing, &crowding, envelope);
+        let mut drawn = Vec::with_capacity(azimuths.len());
         for azimuth in azimuths {
             let rng = parent.rng.fork(limb);
             limb += 1;
             let mut own = rng.fork(OWN_VALUES_STREAM);
-            let size = bias_size(params, node, nodes);
             let angle = draw::<LimbLevel>(&params.angle, "angle", &mut own);
             let angle = angle.clamp(*angle_limits.start(), *angle_limits.end());
             let reach = draw::<LimbLevel>(&params.reach, "reach", &mut own);
             let azimuth = azimuth + (own.unit() * 2.0 - 1.0) * params.skew;
             crowd.push((at, azimuth));
+            drawn.push(Drawn {
+                angle,
+                reach,
+                azimuth,
+                rng,
+            });
+        }
+        places.push(place);
+        node_limbs.push(drawn);
+    }
+    let azimuths: Vec<Vec<f32>> = (node_limbs.iter())
+        .map(|limbs| limbs.iter().map(|limb| limb.azimuth).collect())
+        .collect();
+    let places = balanced_places(&places, &azimuths);
+    for (node, (place, limbs)) in places.into_iter().zip(node_limbs).enumerate() {
+        let node = node as u32;
+        let t = inside_start + inside * place;
+        let at = t * length;
+        let frame = parent.frame(t);
+        let across = frame.side.cross(frame.tangent);
+        for Drawn {
+            angle,
+            reach,
+            azimuth,
+            rng,
+        } in limbs
+        {
+            let size = bias_size(params, node, nodes);
             let (sin, cos) = azimuth.sin_cos();
             let (angle_sin, angle_cos) = angle.sin_cos();
             let mut direction =
@@ -265,6 +320,48 @@ fn place_on(level: &Level, index: usize, parent: &Axis, placed: &mut Vec<Axis>) 
             ));
         }
     }
+}
+
+/// A lateral's values drawn before its node's place is balanced: its angle from the parent, its
+/// share of the way to the envelope, its azimuth after skew, and its stream.
+struct Drawn {
+    angle: f32,
+    reach: f32,
+    azimuth: f32,
+    rng: Rng,
+}
+
+/// `places`, each node's along the parent, moved so the next node comes sooner while the limbs so
+/// far lean to one side, as a lone limb low on the parent does: each gap shrinks by
+/// `BALANCE_PULL` times the lean of the limbs at and below the node before it, then all are
+/// scaled so the first and last nodes keep their places. The lean is the length of the sum of
+/// the limbs' `azimuths` as unit vectors, faded by `CROWDING_FADE` a node, over their faded
+/// count: 1 for one limb, 0 for a pair opposite.
+pub(super) fn balanced_places(places: &[f32], azimuths: &[Vec<f32>]) -> Vec<f32> {
+    let Some((&first, &last)) = places.first().zip(places.last()) else {
+        return Vec::new();
+    };
+    let (mut sum, mut count) = (Vec2::ZERO, 0.0);
+    let gaps: Vec<f32> = (places.windows(2).zip(azimuths))
+        .map(|(pair, node)| {
+            sum = sum * CROWDING_FADE + node.iter().map(|&a| Vec2::from_angle(a)).sum::<Vec2>();
+            count = count * CROWDING_FADE + node.len() as f32;
+            let lean = sum.length() / count.max(1e-6);
+            (pair[1] - pair[0]) * (1.0 - BALANCE_PULL * lean)
+        })
+        .collect();
+    let total: f32 = gaps.iter().sum();
+    if total <= 0.0 {
+        return places.to_vec();
+    }
+    let scale = (last - first) / total;
+    let mut place = first;
+    std::iter::once(first)
+        .chain(gaps.iter().map(|gap| {
+            place += gap * scale;
+            place
+        }))
+        .collect()
 }
 
 /// The share of the reach for laterals at node `node` of `nodes`: with Bias on, 1 plus its size at
