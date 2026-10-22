@@ -9,13 +9,13 @@ may be departed from, with the reason stated where the departure is made ("depar
 …"); a requirement in [requirements.md](requirements.md) may not. Why a particular choice was made
 belongs in [decisions.md](decisions.md).
 
-**Where a guideline comes from.** A correction the author has had to make more than once, written
-with the case that produced it, since the case is what lets a reader recognize the next one.
+**Where a guideline comes from.** A correction the author has had to make, or expects to, written
+with a case that shows it, since the case is what lets a reader recognize the next one.
 
 **Numbering.** Each guideline's number is a permanent identity, never reused. A gap in the sequence
 is a retired guideline.
 
-**Next: 4.**
+**Next: 5.**
 
 ---
 
@@ -51,6 +51,18 @@ constant jitter; a facing and a skew replaced the divergence, competition placin
 A predictable range beats a guessed curve until a model is worth exposing (X18, X22). Left out
 until a preset needs them: a jitter per level (a fir's even whorls), and a sharply bare stretch
 such as a bare leader tip.
+
+### G4 — Put a new field in an operator
+
+Operators layer the species: a plant grows from its levels' own fields, and each operator is a
+layer an author adds when wanted, showing no rows while off. So a field a behaviour needs goes in
+the operator the behaviour belongs to, or in a new operator, before it goes on the level, where
+every author meets it. Where G1 finds no field to change, this says where the new one goes. So
+leaf size by Bias (C138) is a Bias setting, shown only where Bias is on.
+
+A part the algorithm cannot do without stays on the level. Every limb has a radius, and a radius
+of zero means nothing, so a Radius operator would override a default the author never chose,
+which no panel can explain.
 
 ### G2 — Vary a value where its instances are many
 

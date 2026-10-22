@@ -224,7 +224,7 @@ Levels grow in turn: a level's frame and operators, then its scions' level.
   levels do; the level is what was added, so it is what is removed, and Scions has no heading
   left empty but for its ✕.
 - An operator a level lacks shows no rows: a twig level without wander has no wander fields. A
-  new behaviour can be a new operator rather than a field on every level, which eases G1.
+  new behaviour's fields go in an operator where they can (G4).
 - Each operator is a field of its level, in the fixed order, so a level has at most one of each:
   a `Toggle<T>`, its settings and its state: off, disabled or on, as Blender's modifiers are
   removed, hidden or shown. The add menu turns it on, ✕ off, and an eye switches it between on

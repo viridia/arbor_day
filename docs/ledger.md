@@ -112,6 +112,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C135  | Phantom nodes below a parent's first, so the lowest limbs join a settled spiral rather than leaving one side bare (TD3.3). |
 | C136  | Node gaps by balance: a node follows sooner while the limbs below it lean to one side, so the lowest limb is not left alone (TD3.3). |
 | C137  | Seedling models converted to species files, best effort, by `scripts/from_seedling.py`, into `reference/` in seedling's subfolders, the crown and its profile measured from the old leaves, a negative angle bias as Aim; `plans/gallery/reference.py` opens and shoots each. First three: poplar-orange, leechgrass, palecress. |
+| C139  | Operators as the species' layers (G4); guidelines admit expected corrections. |
 
 | C47   | A sense of scale: a measuring stick and a silhouette beside the crown, with a HUD toggle of its own (TD1.6). |
 
@@ -195,7 +196,7 @@ tips by steepness next.
 - **C138 Leaf size by Bias** (from X53): smaller leaves near the top, so a tall thin cone keeps
   its shape. Each limb's Bias size factor multiplied down its subtree, so the levels below a
   short upper limb keep its share, and the leaves' size, uniform over the plant today, scaled
-  by that product, through a per-level control of how much Bias reaches the leaves. Leaves
+  by that product, through a Bias setting for how much reaches the leaves (G4). Leaves
   only: the children's reach stays a share of the distance to the envelope, since filling a
   hemisphere with Bias needs short limbs bearing long children (the author, 2026-10-19). The
   scale is clamped below, at about half: a card shrinks only so far before its baked outline
