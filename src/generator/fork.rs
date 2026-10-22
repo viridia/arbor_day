@@ -13,10 +13,7 @@ use super::{
     trace::{end_at, trace},
     wander::wander_axis,
 };
-use crate::{
-    random::Rng,
-    species::Fork,
-};
+use crate::{random::Rng, species::Fork};
 
 /// A fork as drawn for one axis.
 pub(super) struct Drawn {

@@ -250,8 +250,13 @@ fn place_on(level: &Level, index: usize, parent: &Axis, placed: &mut Vec<Axis>) 
             gap,
             placed: &crowd,
         };
-        let azimuths =
-            node_azimuths(&parent.frame(t), per_node, params.facing, &crowding, envelope);
+        let azimuths = node_azimuths(
+            &parent.frame(t),
+            per_node,
+            params.facing,
+            &crowding,
+            envelope,
+        );
         let mut drawn = Vec::with_capacity(azimuths.len());
         for azimuth in azimuths {
             let rng = parent.rng.fork(limb);

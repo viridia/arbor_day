@@ -210,8 +210,11 @@ impl Lenient {
         value: serde_json::Value,
         registry: &TypeRegistry,
     ) -> Option<Box<dyn PartialReflect>> {
-        let registration = registry.get(type_id).expect("every species type is registered");
-        match TypedReflectDeserializer::with_processor(registration, registry, self).deserialize(value)
+        let registration = registry
+            .get(type_id)
+            .expect("every species type is registered");
+        match TypedReflectDeserializer::with_processor(registration, registry, self)
+            .deserialize(value)
         {
             Ok(read) => Some(read),
             Err(error) => {

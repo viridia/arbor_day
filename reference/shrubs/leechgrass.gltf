@@ -2,69 +2,69 @@
   "accessors": [
     {
       "bufferView": 0,
-      "count": 141,
+      "count": 264,
       "componentType": 5126,
       "type": "VEC3",
       "min": [
-        -0.12973110377788544,
-        -0.019999999552965164,
-        -0.2233836054801941
+        -0.2532064914703369,
+        -0.009999999776482582,
+        -0.33478567004203796
       ],
       "max": [
-        0.17715491354465485,
-        0.45835259556770325,
-        0.13445453345775604
+        0.38154301047325134,
+        0.38234713673591614,
+        0.3545365631580353
       ]
     },
     {
       "bufferView": 1,
-      "count": 141,
+      "count": 264,
       "componentType": 5126,
       "type": "VEC3"
     },
     {
       "bufferView": 2,
-      "count": 141,
+      "count": 264,
       "componentType": 5126,
       "type": "VEC3"
     },
     {
       "bufferView": 3,
-      "count": 594,
+      "count": 1080,
       "componentType": 5125,
       "type": "SCALAR"
     },
     {
       "bufferView": 4,
-      "count": 272,
+      "count": 576,
       "componentType": 5126,
       "type": "VEC3",
       "min": [
-        -0.5338585376739502,
-        -0.07560804486274719,
-        -0.45030832290649414
+        -0.5896801948547363,
+        -0.11867517232894897,
+        -0.6160699725151062
       ],
       "max": [
-        0.4727834165096283,
-        0.526840329170227,
-        0.4350152015686035
+        0.7584739923477173,
+        0.45183759927749634,
+        0.6352916955947876
       ]
     },
     {
       "bufferView": 5,
-      "count": 272,
+      "count": 576,
       "componentType": 5126,
       "type": "VEC3"
     },
     {
       "bufferView": 6,
-      "count": 272,
+      "count": 576,
       "componentType": 5126,
       "type": "VEC2"
     },
     {
       "bufferView": 7,
-      "count": 408,
+      "count": 864,
       "componentType": 5125,
       "type": "SCALAR"
     }
@@ -74,57 +74,57 @@
   },
   "buffers": [
     {
-      "byteLength": 17788,
+      "byteLength": 35712,
       "uri": "leechgrass.bin"
     }
   ],
   "bufferViews": [
     {
       "buffer": 0,
-      "byteLength": 1692,
+      "byteLength": 3168,
       "byteOffset": 0,
       "target": 34962
     },
     {
       "buffer": 0,
-      "byteLength": 1692,
-      "byteOffset": 1692,
+      "byteLength": 3168,
+      "byteOffset": 3168,
       "target": 34962
     },
     {
       "buffer": 0,
-      "byteLength": 1692,
-      "byteOffset": 3384,
+      "byteLength": 3168,
+      "byteOffset": 6336,
       "target": 34962
     },
     {
       "buffer": 0,
-      "byteLength": 2376,
-      "byteOffset": 5076,
+      "byteLength": 4320,
+      "byteOffset": 9504,
       "target": 34963
     },
     {
       "buffer": 0,
-      "byteLength": 3264,
-      "byteOffset": 7452,
+      "byteLength": 6912,
+      "byteOffset": 13824,
       "target": 34962
     },
     {
       "buffer": 0,
-      "byteLength": 3264,
-      "byteOffset": 10716,
+      "byteLength": 6912,
+      "byteOffset": 20736,
       "target": 34962
     },
     {
       "buffer": 0,
-      "byteLength": 2176,
-      "byteOffset": 13980,
+      "byteLength": 4608,
+      "byteOffset": 27648,
       "target": 34962
     },
     {
       "buffer": 0,
-      "byteLength": 1632,
-      "byteOffset": 16156,
+      "byteLength": 3456,
+      "byteOffset": 32256,
       "target": 34963
     }
   ],
@@ -233,7 +233,7 @@
   ],
   "scenes": [
     {
-      "extras": {"arbor_day":{"bark_color":{"Srgba":{"alpha":1.0,"blue":0.20784314,"green":0.3764706,"red":0.3254902}},"bark_outline":0.01,"crown":{"base":0.76,"profile":"Cone","radius":0.4,"top":1.48},"detail":0.02,"generator":1,"leaf_outline":4.0,"limbs":[{"angle":{"center":1.3072516,"shape":"Uniform","spread":0.050614547},"density":8.4,"end":1.0,"facing":"Around","per_node":2.0,"radius":0.5,"reach":{"center":0.9,"shape":"Bell","spread":0.1},"rise":{"amount":0.35},"sides":4,"skew":0.34906584,"start":0.9}],"ornaments":{"tip_leaves":{"axial_droop":0.429351,"lateral_droop":0.38048178,"leaf":{"base_taper":0.0,"base_width":0.19,"gradient":"Lateral","inner_color":{"Srgba":{"alpha":1.0,"blue":0.56078434,"green":0.73333335,"red":0.65882355}},"jitter":0.0,"outer_color":{"Srgba":{"alpha":1.0,"blue":0.54901963,"green":0.7254902,"red":0.54901963}},"rake":0.0,"segments":1,"serration":0.0,"tip_taper":0.41,"tip_width":0.13,"variation":0.16},"size":1.0,"sprig":{"angle":{"center":0.80983275,"spread":0.13962634},"fan":2,"outer_size":1.0,"pairs":2,"spacing":{"center":0.44,"spread":0.2}},"upright":"Triple"}},"outline":true,"seed":1,"taper":0.79,"trunk":{"fork":{"angle":{"center":2.380629,"shape":"Uniform","spread":0.099483766},"at":{"center":0.76,"shape":"Uniform","spread":0.0},"chance":1.0,"copies":3,"roll":{"center":0.0,"shape":"Uniform","spread":0.0}},"height":0.36,"radius":0.02,"sides":6}}},
+      "extras": {"arbor_day":{"bark_color":{"Srgba":{"alpha":1.0,"blue":0.20784314,"green":0.3764706,"red":0.3254902}},"bark_outline":0.01,"crown":{"base":0.22,"profile":"Hemisphere","radius":0.4,"top":1.48},"detail":0.01,"generator":1,"leaf_outline":4.0,"limbs":[{"angle":{"center":0.86917394,"shape":"Uniform","spread":0.050614547},"density":3.8,"end":1.0,"facing":"Around","per_node":1.9,"radius":0.57,"reach":{"center":0.44,"shape":"Bell","spread":0.1},"rise":{"amount":0.38},"sides":4,"skew":0.34382987,"start":0.9},{"angle":{"center":0.7853982,"shape":"Bell","spread":0.17453292},"density":1.8,"end":0.79,"facing":"Around","per_node":1.4,"radius":0.51,"reach":{"center":0.97,"shape":"Bell","spread":0.1},"sides":3,"skew":0.34906584,"start":0.19}],"ornaments":{"tip_leaves":{"axial_droop":0.429351,"lateral_droop":0.38048178,"leaf":{"base_taper":0.0,"base_width":0.19,"gradient":"Lateral","inner_color":{"Srgba":{"alpha":1.0,"blue":0.56078434,"green":0.73333335,"red":0.65882355}},"jitter":0.0,"outer_color":{"Srgba":{"alpha":1.0,"blue":0.54901963,"green":0.7254902,"red":0.54901963}},"rake":0.0,"segments":1,"serration":0.0,"tip_taper":0.41,"tip_width":0.13,"variation":0.16},"size":1.0,"sprig":{"angle":{"center":0.80983275,"spread":0.13962634},"fan":2,"outer_size":1.0,"pairs":2,"spacing":{"center":0.44,"spread":0.2}},"upright":"Triple"}},"outline":true,"seed":1,"taper":0.82,"trunk":{"fork":{"angle":{"center":2.33176,"shape":"Uniform","spread":0.0},"at":{"center":0.19,"shape":"Uniform","spread":0.0},"chance":1.0,"copies":3,"roll":{"center":0.0,"shape":"Uniform","spread":0.0}},"height":0.5,"radius":0.01,"sides":6}}},
       "name": "leechgrass",
       "nodes": [
         0,

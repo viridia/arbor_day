@@ -199,7 +199,7 @@ def species(sapling, leaves, notes):
 
     trunk = {
         "height": clamp(old_trunk["length"], 0.1, 30.0),
-        "radius": clamp(old_trunk["radius"], 0.02, 1.0),
+        "radius": clamp(old_trunk["radius"], 0.01, 1.0),
         "sides": 6,
     }
     pattern = old_trunk["growthPattern"]

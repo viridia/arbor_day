@@ -120,11 +120,16 @@ pub(super) fn outline_point(envelope: &Envelope, along: f32) -> (f32, f32) {
             Vec2::new(width, base + (top - base) * t)
         })
         .collect();
-    let widest = (points.iter().enumerate())
-        .fold(0, |best, (i, p)| if p.x > points[best].x { i } else { best });
+    let widest = (points.iter().enumerate()).fold(
+        0,
+        |best, (i, p)| if p.x > points[best].x { i } else { best },
+    );
     points.drain(..widest);
     points.push(Vec2::new(0.0, top));
-    let total: f32 = points.windows(2).map(|pair| pair[0].distance(pair[1])).sum();
+    let total: f32 = points
+        .windows(2)
+        .map(|pair| pair[0].distance(pair[1]))
+        .sum();
     let mut left = along.clamp(0.0, 1.0) * total;
     for pair in points.windows(2) {
         let length = pair[0].distance(pair[1]);

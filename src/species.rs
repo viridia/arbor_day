@@ -326,7 +326,7 @@ pub struct Trunk {
     #[reflect(@ValueRange::<f32>(0.1..=30.0), @Precision(2), @Caption("Height"))]
     pub height: f32,
     /// Radius at the base, in meters.
-    #[reflect(@ValueRange::<f32>(0.02..=1.0), @Precision(2), @Caption("Radius"))]
+    #[reflect(@ValueRange::<f32>(0.01..=1.0), @Precision(2), @Caption("Radius"))]
     pub radius: f32,
     /// Sides of each ring.
     #[reflect(@ValueRange::<i32>(3..=8), @Spinbox, @Caption("Sides"))]

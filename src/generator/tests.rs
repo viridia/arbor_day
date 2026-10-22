@@ -9,7 +9,8 @@ use crate::{
     fuzzy::{Distribution, Fuzzy},
     random::Seed,
     species::{
-        Bias, Facing, Flare, Lean, Ornaments, Profile, Sag, Species, TipLeaves, Trunk, Upright, Wander,
+        Bias, Facing, Flare, Lean, Ornaments, Profile, Sag, Species, TipLeaves, Trunk, Upright,
+        Wander,
     },
     toggle::{OperatorState, Toggle},
 };
@@ -456,7 +457,13 @@ fn bias_leaves_scale_cards_along_their_parent() {
     let mut laterals: Vec<usize> = (0..axes.len())
         .filter(|&index| axes[index].level == 1 && axes[index].parent.is_some_and(|p| p.0 == 0))
         .collect();
-    laterals.sort_by(|&a, &b| axes[a].parent.unwrap().1.total_cmp(&axes[b].parent.unwrap().1));
+    laterals.sort_by(|&a, &b| {
+        axes[a]
+            .parent
+            .unwrap()
+            .1
+            .total_cmp(&axes[b].parent.unwrap().1)
+    });
     assert_eq!(laterals.len(), 16);
     let scale_of = |node: usize| {
         let reach = 1.0 - 0.6 * (2.0 * node as f32 / 15.0 - 1.0);
@@ -483,7 +490,12 @@ fn bias_leaves_scale_cards_along_their_parent() {
     let skeleton = grow(&species);
     let least = full * LEAST_LEAF_SCALE;
     assert!(skeleton.cards.iter().all(|card| card.size >= least - 1e-4));
-    assert!(skeleton.cards.iter().any(|card| (card.size - least).abs() < 1e-4));
+    assert!(
+        skeleton
+            .cards
+            .iter()
+            .any(|card| (card.size - least).abs() < 1e-4)
+    );
     // Longest at the last node, so full there.
     let level = &mut species.limbs.levels[0];
     level.bias.settings.size = -0.6;
@@ -1017,7 +1029,10 @@ fn competition_gives_the_classic_patterns() {
     assert!((mean(&spiral) - 137.5).abs() < 8.0, "{spiral:?}");
     // From the first node, rather than opposite, then near square, for several nodes.
     let first = &spiral[..4];
-    assert!(first.iter().all(|turn| (turn - 137.5).abs() < 20.0), "{spiral:?}");
+    assert!(
+        first.iter().all(|turn| (turn - 137.5).abs() < 20.0),
+        "{spiral:?}"
+    );
     // Pairs cross at 90° and whorls of three alternate at 60°, the most a turn can be from
     // the last node's limbs, so they are judged by how far each turn is from it.
     for (per_node, expected) in [(2.0, 90.0), (3.0, 60.0)] {
@@ -1165,7 +1180,11 @@ fn a_lone_limb_low_on_the_parent_is_followed_sooner() {
     assert!(gaps[0] < 0.6 * mean(&gaps), "{gaps:?}");
     // Once the spiral has turned about, its gaps are alike.
     let settled = &gaps[3..];
-    assert!(settled.iter().all(|gap| (gap - mean(settled)).abs() < 0.1 * mean(settled)));
+    assert!(
+        settled
+            .iter()
+            .all(|gap| (gap - mean(settled)).abs() < 0.1 * mean(settled))
+    );
     // Pairs, opposite, are balanced from the first.
     let pairs: Vec<Vec<f32>> = (0..10)
         .map(|node| {
@@ -1174,7 +1193,12 @@ fn a_lone_limb_low_on_the_parent_is_followed_sooner() {
         })
         .collect();
     let paired = balanced_places(&places, &pairs);
-    assert!(paired.iter().zip(&places).all(|(a, b)| (a - b).abs() < 1e-5));
+    assert!(
+        paired
+            .iter()
+            .zip(&places)
+            .all(|(a, b)| (a - b).abs() < 1e-5)
+    );
 }
 
 #[test]
@@ -1248,7 +1272,12 @@ fn a_flare_widens_the_base_and_meets_the_taper() {
         assert!(pair[1].radius <= pair[0].radius + 1e-6, "{pair:?}");
     }
     let above = |axis: &Axis| -> Vec<Ring> {
-        (axis.rings.iter().filter(|ring| ring.at > 3.0 * radius + 1e-4)).copied().collect()
+        (axis
+            .rings
+            .iter()
+            .filter(|ring| ring.at > 3.0 * radius + 1e-4))
+        .copied()
+        .collect()
     };
     assert_eq!(above(flared), above(&bare));
 }

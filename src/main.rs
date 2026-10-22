@@ -4,36 +4,37 @@ use bevy::{
     camera::Viewport,
     ecs::system::SystemParam,
     feathers::{
+        FeathersPlugins,
         controls::{
             FeathersPane, FeathersScrollbar, FeathersSplitPane, FeathersSplitPaneHandle,
             ScrollbarGutter,
         },
         dark_theme::create_dark_theme,
         theme::{ThemeBackgroundColor, UiTheme},
-        tokens, FeathersPlugins,
+        tokens,
     },
     light::{NotShadowCaster, NotShadowReceiver},
     pbr::wireframe::WireframePlugin,
     prelude::*,
     ui::{IsDefaultUiCamera, UiGlobalTransform, UiSystems},
-    ui_widgets::{split_pane_self_update, ControlOrientation, ScrollArea},
+    ui_widgets::{ControlOrientation, ScrollArea, split_pane_self_update},
     window::{ExitCondition, PrimaryWindow},
 };
 use bevy_immediate::{
-    attach::{BevyImmediateAttachPlugin, ImmediateAttach},
     Imm,
+    attach::{BevyImmediateAttachPlugin, ImmediateAttach},
 };
 use bevy_remote_driver::RemoteDriverPlugin;
 use document::{Document, DocumentPlugin};
-use hud::{hud, Ground, HudPlugin};
+use hud::{Ground, HudPlugin, hud};
 use keys::KeysPlugin;
 use outline::{OutlinePlugin, PlantOutline};
 use plant::{Plant, PlantEnvelope, PlantLeaves, PlantPlugin, PlantStats};
 use properties::{CapsPanel, HeaderNotes};
-use settings::{save_panel_width, AppSettingsPlugin, MIN_PANE_WIDTH};
+use settings::{AppSettingsPlugin, MIN_PANE_WIDTH, save_panel_width};
 use species::Species;
 use turntable::{
-    orbit_on_drag, zoom_on_scroll, TurntableCamera, TurntablePlugin, TurntableSubject,
+    TurntableCamera, TurntablePlugin, TurntableSubject, orbit_on_drag, zoom_on_scroll,
 };
 
 mod document;
