@@ -111,6 +111,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C130  | Aim in place of Bias's angle: laterals turned toward points on the envelope's outline, the upper ones toward its top (TD3.3), from the crown tests (Notes, 2026-10-21). |
 | C135  | Phantom nodes below a parent's first, so the lowest limbs join a settled spiral rather than leaving one side bare (TD3.3). |
 | C136  | Node gaps by balance: a node follows sooner while the limbs below it lean to one side, so the lowest limb is not left alone (TD3.3). |
+| C137  | Seedling models converted to species files, best effort, by `scripts/from_seedling.py`, into `reference/` in seedling's subfolders, the crown and its profile measured from the old leaves, a negative angle bias as Aim; `plans/gallery/reference.py` opens and shoots each. First three: poplar-orange, leechgrass, palecress. |
 
 ## Next
 
@@ -184,10 +185,30 @@ tips by steepness next.
 
 ### Quick wins
 
-- **C131 Reference trees**: the species that read well today, chosen by the author, saved as
-  files, and a gallery plan (`plans/gallery/`) loading each and shooting it from the game camera
-  and from above, so a change to the layout (C125, C130, C132, C133) is judged against them.
+- **C47 A sense of scale**, since Frame fits any plant to the view and hides how big it is
+  (seedling never zoomed, so its plants showed their size): a 5 m stick rising from the ground
+  about 2 m from the axis, ticked and numbered each metre in gizmos (`Gizmos::text`, a stroke
+  font), and beside it a human silhouette, a flat cutout. Shown with the crown helper. Minor
+  ticks between the metres, so a plant under a metre (palecress, 0.39 m) reads too; their
+  spacing and numbering found by trying. Needed
+  to judge the reference species' heights (C131). E[2]
+- **C131 Reference trees**: the species in `reference/`, converted from seedling (C137), tuned
+  by the author and saved from arbor_day, which fills in their meshes; more converted once the
+  first three are judged. `plans/gallery/reference.py` shoots each from the default view; add a
+  shot from above, so a change to the layout (C125, C130, C132, C133) is judged against them.
   E[2]
+- **C138 Leaf size by Bias** (from X53): smaller leaves near the top, so a tall thin cone keeps
+  its shape. Each limb's Bias size factor multiplied down its subtree, so the levels below a
+  short upper limb keep its share, and the leaves' size, uniform over the plant today, scaled
+  by that product, through a per-level control of how much Bias reaches the leaves. Leaves
+  only: the children's reach stays a share of the distance to the envelope, since filling a
+  hemisphere with Bias needs short limbs bearing long children (the author, 2026-10-19). The
+  scale is clamped below, at about half: a card shrinks only so far before its baked outline
+  and texture detail show (X53, Leafy share), so modest differences only. Open:
+  the card at the leader's tip, which no Bias factor reaches. By its place along the trunk, as
+  the last node's laterals are, is the author's lean, since it is the top of the crown; by limb
+  length would make it the largest card on the plant. Test case: `reference/trees-temperate/
+  poplar-orange.gltf` with upright tips Single (C137). E[2]
 - **C108 Ask before dropping unsaved changes**: New, and Open once it works, replace an edited
   species without asking (C40). A feathers dialog (Save, Don't Save, Cancel) while the document
   has its dot. After C41, so Save in the dialog saves. E[2]
@@ -230,10 +251,6 @@ tips by steepness next.
   private).
   Defaults are written in the units shown
   (`15.0_f32.to_radians()`, not `0.3`). E[2]
-- **C47 A sense of scale**, since Frame fits any plant to the view and hides how big it is
-  (seedling never zoomed, so its plants showed their size): a 5 m stick rising from the ground
-  about 2 m from the axis, ticked and numbered each metre in gizmos (`Gizmos::text`, a stroke
-  font), and beside it a human silhouette, a flat cutout. Shown with the crown helper. E[2]
 - **C67 The leaf texture on the HUD** (D28), for tuning the leaf (requirements, Authoring app):
   the painted texture as an inset over a checkerboard, so its transparency shows, behind a
   toggle saved in `ViewSettings`. After C38. E[2]
@@ -615,12 +632,7 @@ tips by steepness next.
     outlines show, but lower laterals bare before their foliage and upper ones leafy throughout
     give about 4:1. Built on cards along the twig (X30). A card's back may poke past its
     lateral's base, which shows close up but not at game distance.
-  - Leaf size by Bias, for a conifer's smaller leaves near the top: each limb's Bias size
-    factor multiplied down its subtree, so the levels below a short upper limb keep its share,
-    and the leaves' size, uniform over the plant today, scaled by that product, through a
-    per-level control of how much Bias reaches the leaves. Leaves only: the children's reach
-    stays a share of the distance to the envelope, since filling a hemisphere with Bias needs
-    short limbs bearing long children (the author, 2026-10-19).
+  - Leaf size by Bias: split out as C138.
   - The reference value is the midpoint's (C116), so the mean holds as the gradient changes;
     the base's, easiest to see, was the other choice.
   - Test cases: seedling's conifer (`artwork/reference/seedling/conifer.png`): upper laterals
