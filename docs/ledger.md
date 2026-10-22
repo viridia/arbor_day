@@ -570,8 +570,9 @@ tips by steepness next.
   its GPU texture, and `GpuImage::prepare_asset` writes the new data with `as_image_copy()`, mip
   level 0 only (`bevy_render/src/texture/gpu_image.rs`, `prepare_asset`), so the other levels
   keep their first contents. The leaf texture works around it with a new image each build
-  (TD3.10). *Gate:* the author filing it; then a fix in the Bevy we build against, and the
-  workaround dropped.
+  (TD3.10). Filed as bevy#26225; the fix (branch `mips-fix`) was tested here on 2026-10-22, with
+  the leaf image replaced in place, and a color edit showed at full zoom-out. *Gate:* the fix in
+  the Bevy we build against, and the workaround dropped.
 
 - **X49** Panoply draws every outline at `OutlineMaterial`'s default width, 0.015: it reads the
   `"outline"` extra's presence (`models::process_material_extras`) but not its value, so the
