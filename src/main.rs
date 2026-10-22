@@ -48,6 +48,7 @@ mod outline;
 mod plant;
 mod properties;
 mod random;
+mod scale;
 mod settings;
 mod shortcut;
 mod species;
@@ -83,6 +84,7 @@ fn main() {
             PlantPlugin,
             OutlinePlugin,
             HudPlugin,
+            scale::ScalePlugin,
             look::LookPlugin,
             shortcut::ShortcutPlugin,
             DocumentPlugin,
@@ -168,6 +170,10 @@ fn scene() -> impl SceneList {
         NotShadowCaster
         NotShadowReceiver
         MeshMaterial3d::<StandardMaterial>(asset_value(envelope_material))
+        --
+        // Not framed, so Frame fits the plant alone.
+        #ScaleFigure
+        scale::ScaleFigure
     }
 }
 

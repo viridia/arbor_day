@@ -1,6 +1,6 @@
 """The shell starts from default settings: the panel shows the trunk's parameters, the panel has
 its default width, the turntable camera frames the plant, the zoom and frame keys work, the HUD's
-toggles hide the ground and envelope and show the wireframe, the property editor edits numbers within their limits, an
+toggles hide the ground, envelope and scale and show the wireframe, the property editor edits numbers within their limits, an
 edit rebuilds the plant, and the seed reaches the plant, typed or picked by Random."""
 
 from driver import Between
@@ -65,17 +65,22 @@ def run(driver):
     driver.click("Shell/View/zoom_out", hold=30)
     driver.click("Shell/View/frame")
     driver.expect("SceneCamera", TURNTABLE, framed)
-    # The HUD over the view: the triangle count, and toggles that hide the ground and envelope.
+    # The HUD over the view: the triangle count, and toggles that hide the ground, envelope and
+    # scale.
     driver.present("Shell/View/triangles")
     driver.click("Shell/View/ground")
     driver.expect("Ground", VISIBILITY, "Hidden")
     driver.click("Shell/View/envelope")
     driver.expect("Envelope", VISIBILITY, "Hidden")
+    driver.click("Shell/View/scale")
+    driver.expect("ScaleFigure", VISIBILITY, "Hidden")
     driver.screenshot("hud_hidden")
     driver.click("Shell/View/ground")
     driver.expect("Ground", VISIBILITY, "Inherited")
     driver.click("Shell/View/envelope")
     driver.expect("Envelope", VISIBILITY, "Inherited")
+    driver.click("Shell/View/scale")
+    driver.expect("ScaleFigure", VISIBILITY, "Inherited")
     # The wireframe toggle draws lines over the bark and the leaves, and its second click turns
     # the setting off again.
     driver.click("Shell/View/wireframe")

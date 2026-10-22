@@ -56,6 +56,7 @@ pub struct ViewSettings {
     pub show_envelope: bool,
     pub show_ground: bool,
     pub show_wireframe: bool,
+    pub show_scale: bool,
 }
 
 impl Default for ViewSettings {
@@ -64,6 +65,7 @@ impl Default for ViewSettings {
             show_envelope: true,
             show_ground: true,
             show_wireframe: false,
+            show_scale: true,
         }
     }
 }

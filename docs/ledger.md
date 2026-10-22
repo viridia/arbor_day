@@ -113,6 +113,8 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C136  | Node gaps by balance: a node follows sooner while the limbs below it lean to one side, so the lowest limb is not left alone (TD3.3). |
 | C137  | Seedling models converted to species files, best effort, by `scripts/from_seedling.py`, into `reference/` in seedling's subfolders, the crown and its profile measured from the old leaves, a negative angle bias as Aim; `plans/gallery/reference.py` opens and shoots each. First three: poplar-orange, leechgrass, palecress. |
 
+| C47   | A sense of scale: a measuring stick and a silhouette beside the crown, with a HUD toggle of its own (TD1.6). |
+
 ## Next
 
 Three parts: the path to the milestone, in order; quick wins, for between big chunks; and
@@ -185,13 +187,6 @@ tips by steepness next.
 
 ### Quick wins
 
-- **C47 A sense of scale**, since Frame fits any plant to the view and hides how big it is
-  (seedling never zoomed, so its plants showed their size): a 5 m stick rising from the ground
-  about 2 m from the axis, ticked and numbered each metre in gizmos (`Gizmos::text`, a stroke
-  font), and beside it a human silhouette, a flat cutout. Shown with the crown helper. Minor
-  ticks between the metres, so a plant under a metre (palecress, 0.39 m) reads too; their
-  spacing and numbering found by trying. Needed
-  to judge the reference species' heights (C131). E[2]
 - **C131 Reference trees**: the species in `reference/`, converted from seedling (C137), tuned
   by the author and saved from arbor_day, which fills in their meshes; more converted once the
   first three are judged. `plans/gallery/reference.py` shoots each from the default view; add a

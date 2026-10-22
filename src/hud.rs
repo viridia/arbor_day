@@ -67,6 +67,8 @@ pub enum HudTarget {
     Ground,
     /// Lines over the bark's and the leaves' triangles, to see where the triangles go.
     Wireframe,
+    /// The measuring stick and the silhouette beside the plant.
+    Scale,
 }
 
 impl HudTarget {
@@ -76,6 +78,7 @@ impl HudTarget {
             HudTarget::Envelope => view.show_envelope,
             HudTarget::Ground => view.show_ground,
             HudTarget::Wireframe => view.show_wireframe,
+            HudTarget::Scale => view.show_scale,
         }
     }
 }
@@ -133,6 +136,7 @@ pub fn hud() -> impl Scene {
                 GridTrack::auto(),
                 GridTrack::auto(),
                 GridTrack::auto(),
+                GridTrack::auto(),
                 GridTrack::flex(1.0),
                 GridTrack::auto(),
                 GridTrack::auto(),
@@ -170,41 +174,47 @@ pub fn hud() -> impl Scene {
             on(toggle_target)
             Node { grid_row: GridPlacement::start(1), grid_column: GridPlacement::start(3) }
             --
+            @hud_button("icons/ruler.png", UiTransform::IDENTITY)
+            #scale
+            HudToggle(HudTarget::Scale)
+            on(toggle_target)
+            Node { grid_row: GridPlacement::start(1), grid_column: GridPlacement::start(4) }
+            --
             @hud_button("icons/360.png", mirrored)
             #orbit_left
             CameraButton(CameraMove::OrbitLeft)
-            Node { grid_row: GridPlacement::start(1), grid_column: GridPlacement::start(5) }
+            Node { grid_row: GridPlacement::start(1), grid_column: GridPlacement::start(6) }
             --
             @hud_button("icons/360.png", UiTransform::IDENTITY)
             #orbit_right
             CameraButton(CameraMove::OrbitRight)
-            Node { grid_row: GridPlacement::start(1), grid_column: GridPlacement::start(6) }
+            Node { grid_row: GridPlacement::start(1), grid_column: GridPlacement::start(7) }
             --
             @hud_button("icons/center_focus_strong.png", UiTransform::IDENTITY)
             #frame
             CameraButton(CameraMove::Frame)
             on(frame_camera)
-            Node { grid_row: GridPlacement::start(1), grid_column: GridPlacement::start(7) }
+            Node { grid_row: GridPlacement::start(1), grid_column: GridPlacement::start(8) }
             --
             @hud_button("icons/zoom_in.png", UiTransform::IDENTITY)
             #zoom_in
             CameraButton(CameraMove::ZoomIn)
-            Node { grid_row: GridPlacement::start(2), grid_column: GridPlacement::start(7) }
+            Node { grid_row: GridPlacement::start(2), grid_column: GridPlacement::start(8) }
             --
             @hud_button("icons/zoom_out.png", UiTransform::IDENTITY)
             #zoom_out
             CameraButton(CameraMove::ZoomOut)
-            Node { grid_row: GridPlacement::start(3), grid_column: GridPlacement::start(7) }
+            Node { grid_row: GridPlacement::start(3), grid_column: GridPlacement::start(8) }
             --
             @hud_button("icons/360.png", up)
             #tilt_up
             CameraButton(CameraMove::TiltUp)
-            Node { grid_row: GridPlacement::start(4), grid_column: GridPlacement::start(7) }
+            Node { grid_row: GridPlacement::start(4), grid_column: GridPlacement::start(8) }
             --
             @hud_button("icons/360.png", down)
             #tilt_down
             CameraButton(CameraMove::TiltDown)
-            Node { grid_row: GridPlacement::start(5), grid_column: GridPlacement::start(7) }
+            Node { grid_row: GridPlacement::start(5), grid_column: GridPlacement::start(8) }
             --
             @label("")
             #triangles
@@ -256,6 +266,7 @@ fn toggle_target(
         HudTarget::Envelope => &mut view.show_envelope,
         HudTarget::Ground => &mut view.show_ground,
         HudTarget::Wireframe => &mut view.show_wireframe,
+        HudTarget::Scale => &mut view.show_scale,
     };
     *shown = !*shown;
     commands.queue(SaveSettingsDeferred(SAVE_DELAY));

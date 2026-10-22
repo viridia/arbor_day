@@ -127,12 +127,20 @@ again, an operator keeps its settings for the session.
 
 The HUD (`src/hud.rs`) is a grid over the view pane with the panel's spacing (8 px padding and
 gaps), ignored by picking, so the view's drags and scrolls pass between its buttons. Toggles for the
-envelope, the ground and the wireframe sit in the upper left; their state is a field of
+envelope, the ground, the wireframe and the scale sit in the upper left; their state is a field of
 `ViewSettings`, saved, and the icon dims while the target is hidden. The envelope's and the
 ground's `Visibility` follows it; the wireframe is Bevy's `Wireframe` with an orange
 `WireframeColor`, added to the bark and the leaves while shown and removed while not. Its GPU
 features (line polygon mode, immediates) need no request, since Bevy enables all the adapter
-has. The camera's
+has.
+
+The scale (`src/scale.rs`) is a 5 m stick and a 1.75 m silhouette
+just outside the crown's radius on the camera's right, both turned to face the camera each frame.
+The stick is gizmo lines on a render layer only the 3D camera sees, ticked each metre, half metre
+and tenth, a spacing left out when its ticks fall under 6 px apart and numbered in gizmo stroke
+text when they are 28 px apart or more; tick lengths and numbers are sized in pixels at the
+camera's distance. The silhouette is a flat unlit mesh of a circle and capsules, not framed. The
+camera's
 buttons sit in the upper right, an L: orbit along the top, zoom and tilt down the side, Frame in the
 corner. A camera button moves the camera from the moment it is pressed until it is released (60° a
 second of orbit, 30° of tilt, a factor of 2 in distance); Frame acts on a click. The bottom row
