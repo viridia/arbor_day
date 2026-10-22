@@ -310,14 +310,10 @@ fn place_on(level: &Level, index: usize, parent: &Axis, placed: &mut Vec<Axis>) 
                 ..frame.ring(0.0)
             };
             let kind = AxisKind::Lateral;
-            placed.push(Axis::placed(
-                level.number,
-                kind,
-                (index, at),
-                start,
-                reach,
-                rng,
-            ));
+            placed.push(Axis {
+                leaf_scale: parent.leaf_scale * bias_leaves(params, node, nodes),
+                ..Axis::placed(level.number, kind, (index, at), start, reach, rng)
+            });
         }
     }
 }
@@ -373,6 +369,19 @@ pub(super) fn bias_size(params: &LimbLevel, node: u32, nodes: u32) -> f32 {
             // −1 at the first node, 1 at the last.
             let place = 2.0 * node as f32 / (nodes - 1) as f32 - 1.0;
             1.0 - bias.size * place
+        }
+        _ => 1.0,
+    }
+}
+
+/// The change to the leaves' size for laterals at node `node` of `nodes`: their `bias_size` over
+/// the longest node's, so 1 at the longest and falling evenly from there, taken by Bias's leaves
+/// share; otherwise, and for a lone node, 1.
+pub(super) fn bias_leaves(params: &LimbLevel, node: u32, nodes: u32) -> f32 {
+    match params.bias.get() {
+        Some(bias) if nodes > 1 => {
+            let ratio = bias_size(params, node, nodes) / (1.0 + bias.size.abs());
+            1.0 - bias.leaves * (1.0 - ratio)
         }
         _ => 1.0,
     }

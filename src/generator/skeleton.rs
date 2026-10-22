@@ -95,6 +95,9 @@ pub(super) struct Axis {
     pub rings: Vec<Ring>,
     /// How far it grows, as placed; the trace stops there or where it would leave the envelope.
     pub reach: f32,
+    /// Its leaves' share of their size: its parent's times its own Bias change (`bias_leaves`), 1
+    /// for a stem, a fork's copy taking its axis's. Its cards clamp it (`clusters`).
+    pub leaf_scale: f32,
     /// The axis's own random stream, before any draw; its scions' streams fork from it.
     pub rng: Rng,
     /// The axes growing from it, as indices in the plant's: its limbs, and its fork's copies. A
@@ -112,6 +115,7 @@ impl Axis {
             parent: None,
             rings,
             reach,
+            leaf_scale: 1.0,
             rng,
             scions: Vec::new(),
         }
@@ -133,6 +137,7 @@ impl Axis {
             parent: Some(parent),
             rings: vec![start],
             reach,
+            leaf_scale: 1.0,
             rng,
             scions: Vec::new(),
         }
@@ -254,6 +259,8 @@ pub(super) struct Card {
     pub at: f32,
     /// Unit direction from its base: along the twig, or turned from it in a rosette.
     pub direction: Vec3,
+    /// Its width and length.
+    pub size: f32,
 }
 
 /// The plant as grown, before meshing.

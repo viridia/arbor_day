@@ -5,7 +5,6 @@ use std::f32::consts::TAU;
 use bevy::math::{Vec2, Vec3};
 
 use super::{
-    foliage::card_size,
     leaf::{self, LeafTexture},
     skeleton::{Axis, AxisKind, Frame, Ring, grow, upper_side},
 };
@@ -75,7 +74,6 @@ pub fn plant(species: &Species) -> Grown {
             level_limbs[axis.level - 1] += 1;
         }
     }
-    let size = card_size(species);
     let tip_leaves = &species.ornaments.tip_leaves.settings;
     let sprig = leaf::layout(tip_leaves, species.seed, species.leaf_stroke());
     let mut leaves = Geometry::default();
@@ -91,7 +89,7 @@ pub fn plant(species: &Species) -> Grown {
             tangent: cluster.direction,
             ..twig
         };
-        card(&mut leaves, &frame, size, sprig.fold, tip_leaves);
+        card(&mut leaves, &frame, cluster.size, sprig.fold, tip_leaves);
     }
     let leaf_texture = leaf::paint(
         &sprig,

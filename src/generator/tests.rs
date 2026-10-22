@@ -421,6 +421,7 @@ fn bias_size_changes_laterals_along_their_parent() {
     species.limbs.levels[0].bias = Toggle::on(Bias {
         size: 0.5,
         aim: 0.0,
+        leaves: 0.0,
     });
     let laterals = side_limbs(&species);
     let envelope = Envelope::of(&species);
@@ -440,6 +441,57 @@ fn bias_size_changes_laterals_along_their_parent() {
 }
 
 #[test]
+fn bias_leaves_scale_cards_along_their_parent() {
+    let mut species = shown(2, straight());
+    species.limbs.levels[0].bias = Toggle::on(Bias {
+        size: 0.6,
+        aim: 0.0,
+        leaves: 0.5,
+    });
+    let skeleton = grow(&species);
+    let axes = &skeleton.axes;
+    let full = card_size(&species);
+    // The trunk's laterals by node, one a node, from 160% of the reach at the first to 40% at the
+    // last: their leaves from 100% down by half of the way to 40/160.
+    let mut laterals: Vec<usize> = (0..axes.len())
+        .filter(|&index| axes[index].level == 1 && axes[index].parent.is_some_and(|p| p.0 == 0))
+        .collect();
+    laterals.sort_by(|&a, &b| axes[a].parent.unwrap().1.total_cmp(&axes[b].parent.unwrap().1));
+    assert_eq!(laterals.len(), 16);
+    let scale_of = |node: usize| {
+        let reach = 1.0 - 0.6 * (2.0 * node as f32 / 15.0 - 1.0);
+        1.0 - 0.5 * (1.0 - reach / 1.6)
+    };
+    let cards_of = |axis: usize| skeleton.cards.iter().filter(move |card| card.axis == axis);
+    for (node, &lateral) in laterals.iter().enumerate() {
+        let scale = scale_of(node);
+        assert!((axes[lateral].leaf_scale - scale).abs() < 1e-4, "{node}");
+        // The second level, its Bias off, keeps its parent's.
+        let expected = full * scale;
+        let twigs = axes[lateral].scions.iter().copied();
+        for card in cards_of(lateral).chain(twigs.flat_map(cards_of)) {
+            assert!((card.size - expected).abs() < 1e-4, "{node}");
+        }
+    }
+    // The trunk's tip as its last node's.
+    let tip = full * scale_of(15);
+    assert!(cards_of(0).all(|card| (card.size - tip).abs() < 1e-4));
+    assert!(cards_of(0).count() > 0);
+    // Halved at the least.
+    species.limbs.levels[0].bias.settings.leaves = 1.0;
+    species.limbs.levels[0].bias.settings.size = 0.8;
+    let skeleton = grow(&species);
+    let least = full * LEAST_LEAF_SCALE;
+    assert!(skeleton.cards.iter().all(|card| card.size >= least - 1e-4));
+    assert!(skeleton.cards.iter().any(|card| (card.size - least).abs() < 1e-4));
+    // Longest at the last node, so full there.
+    let level = &mut species.limbs.levels[0];
+    level.bias.settings.size = -0.6;
+    assert_eq!(bias_leaves(level, 15, 16), 1.0);
+    assert!((bias_leaves(level, 0, 16) - 0.4 / 1.6).abs() < 1e-6);
+}
+
+#[test]
 fn aim_turns_laterals_toward_the_outline() {
     // The column's outline runs up its wall from the crown base at 1.25 m, then across its top at
     // 6.25 m to the axis.
@@ -448,6 +500,7 @@ fn aim_turns_laterals_toward_the_outline() {
     species.limbs.levels[0].bias = Toggle::on(Bias {
         size: 0.0,
         aim: 1.0,
+        leaves: 0.0,
     });
     let aimed = side_limbs(&species);
     assert_eq!(aimed.len(), drawn.len());
@@ -728,6 +781,7 @@ fn operators_not_on_grow_as_at_zero() {
     even.limbs.levels[0].bias = Toggle::on(Bias {
         size: 0.0,
         aim: 0.0,
+        leaves: 0.0,
     });
     biased.limbs.levels[0].bias.state = OperatorState::Disabled;
     assert_eq!(rings(&biased), rings(&even));

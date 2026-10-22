@@ -32,9 +32,26 @@ const STEEP: f32 = 45.0_f32.to_radians();
 /// that the card turns, from the twig toward that heading.
 const ROSETTE_LEAN: f32 = 0.75;
 
-/// A card's width and length: a share of the crown's radius, so a scaled species keeps its form.
+/// A full card's width and length: a share of the crown's radius, so a scaled species keeps its
+/// form.
 pub(super) fn card_size(species: &Species) -> f32 {
     species.ornaments.tip_leaves.settings.size * Envelope::of(species).radius.max(0.01)
+}
+
+/// The least share of the full size a card shrinks to by Bias: smaller, its baked outline and
+/// texture detail show (X53).
+pub(super) const LEAST_LEAF_SCALE: f32 = 0.5;
+
+/// The share of the full size of the cards at `twig`'s tip: its last lateral's `leaf_scale`, as
+/// its last node's laterals take, or its own if it bears none, clamped between
+/// `LEAST_LEAF_SCALE` and 1, so the straight run under a full card covers every card.
+pub(super) fn tip_scale(axes: &[Axis], twig: &Axis) -> f32 {
+    let laterals = twig.scions.iter().map(|&scion| &axes[scion]);
+    let last = (laterals.filter(|scion| scion.kind == AxisKind::Lateral))
+        .filter_map(|scion| Some((scion.parent?.1, scion.leaf_scale)))
+        .max_by(|a, b| a.0.total_cmp(&b.0));
+    let scale = last.map_or(twig.leaf_scale, |(_, scale)| scale);
+    scale.clamp(LEAST_LEAF_SCALE, 1.0)
 }
 
 /// How many cards a tip whose twig rises at `elevation` bears: one, unless it is `STEEP`, when
@@ -56,18 +73,20 @@ pub(super) fn cards_at(elevation: f32, upright: Upright) -> u32 {
 /// twig runs straight there (`wander_axis`), so the card lies along it. A rosette's cards start at
 /// the tip, spaced evenly around the twig from the side it points toward, each turned from the
 /// twig by `ROSETTE_LEAN` of the way to level, keeping its heading, so an upright tip reads as
-/// leaves splayed toward the light rather than one card on end.
+/// leaves splayed toward the light rather than one card on end. Each tip's cards are scaled by
+/// `tip_scale`.
 pub(super) fn clusters(species: &Species, axes: &[Axis]) -> Vec<Card> {
     let Some(tip_leaves) = species.ornaments.tip_leaves.get() else {
         return Vec::new();
     };
-    let size = card_size(species);
+    let full = card_size(species);
     let fold = axial_fold(species);
     let mut cards = Vec::new();
     for (index, twig) in axes.iter().enumerate() {
         if twig.bears(axes, AxisKind::ForkCopy) {
             continue;
         }
+        let size = full * tip_scale(axes, twig);
         let length = twig.length();
         let tip = twig.frame_at(length);
         let count = cards_at(tip.tangent.y.clamp(-1.0, 1.0).asin(), tip_leaves.upright);
@@ -79,6 +98,7 @@ pub(super) fn clusters(species: &Species, axes: &[Axis]) -> Vec<Card> {
                 axis: index,
                 at,
                 direction: twig.frame_at(at).tangent,
+                size,
             });
             continue;
         }
@@ -91,6 +111,7 @@ pub(super) fn clusters(species: &Species, axes: &[Axis]) -> Vec<Card> {
                 axis: index,
                 at: length,
                 direction: tip.tangent.slerp(turn * heading, ROSETTE_LEAN),
+                size,
             });
         }
     }

@@ -18,7 +18,7 @@ growth model.
   characters), a blank line, then a body of bullets, one per change, wrapped at 72 columns.
 - One chunk at a time: one focused change. Update the docs in the same chunk: the ledger's
   Landed row, Next and deferrals; `docs/design.md` for what changed in how it works;
-  `docs/decisions.md` for a new decision; `docs/guidelines.md` for a correction made twice.
+  `docs/decisions.md` for a new decision; `docs/guidelines.md` for a correction made or expected.
 - Before scoping a chunk, read `docs/guidelines.md`.
 - Every open item goes in the ledger: in Next, or in Deferred with a gate.
 - Propose structural changes (new dependencies, a new crate, replacing a subsystem) with a

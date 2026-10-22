@@ -113,6 +113,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C136  | Node gaps by balance: a node follows sooner while the limbs below it lean to one side, so the lowest limb is not left alone (TD3.3). |
 | C137  | Seedling models converted to species files, best effort, by `scripts/from_seedling.py`, into `reference/` in seedling's subfolders, the crown and its profile measured from the old leaves, a negative angle bias as Aim; `plans/gallery/reference.py` opens and shoots each. First three: poplar-orange, leechgrass, palecress. |
 | C139  | Operators as the species' layers (G4); guidelines admit expected corrections. |
+| C138  | Leaf size by Bias: Bias's leaves share scales the cards by each lateral's length over its parent's longest, multiplied down the levels, a parent's tip taking its last lateral's, no smaller than half (TD3.3, TD3.8). |
 
 | C47   | A sense of scale: a measuring stick and a silhouette beside the crown, with a HUD toggle of its own (TD1.6). |
 
@@ -193,18 +194,9 @@ tips by steepness next.
   first three are judged. `plans/gallery/reference.py` shoots each from the default view; add a
   shot from above, so a change to the layout (C125, C130, C132, C133) is judged against them.
   E[2]
-- **C138 Leaf size by Bias** (from X53): smaller leaves near the top, so a tall thin cone keeps
-  its shape. Each limb's Bias size factor multiplied down its subtree, so the levels below a
-  short upper limb keep its share, and the leaves' size, uniform over the plant today, scaled
-  by that product, through a Bias setting for how much reaches the leaves (G4). Leaves
-  only: the children's reach stays a share of the distance to the envelope, since filling a
-  hemisphere with Bias needs short limbs bearing long children (the author, 2026-10-19). The
-  scale is clamped below, at about half: a card shrinks only so far before its baked outline
-  and texture detail show (X53, Leafy share), so modest differences only. Open:
-  the card at the leader's tip, which no Bias factor reaches. By its place along the trunk, as
-  the last node's laterals are, is the author's lean, since it is the top of the crown; by limb
-  length would make it the largest card on the plant. Test case: `reference/trees-temperate/
-  poplar-orange.gltf` with upright tips Single (C137). E[2]
+- **C140 A fixed panel header** (the author, 2026-10-21): the hamburger menu and the file name
+  scroll away with the panel, so saving a long species means scrolling back up. Keep them fixed
+  above the scrolling rows (TD1.5). E[2]
 - **C108 Ask before dropping unsaved changes**: New, and Open once it works, replace an edited
   species without asking (C40). A feathers dialog (Save, Don't Save, Cancel) while the document
   has its dot. After C41, so Save in the dialog saves. E[2]

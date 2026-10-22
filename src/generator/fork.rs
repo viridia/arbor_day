@@ -139,7 +139,10 @@ fn fork_axis(level: &Level, index: usize, limb: &mut Axis) -> (Vec<Axis>, bool) 
             };
             let kind = AxisKind::ForkCopy;
             let parent = (index, fork_at);
-            let mut copy = Axis::placed(limb.level, kind, parent, start, reach, rng);
+            let mut copy = Axis {
+                leaf_scale: limb.leaf_scale,
+                ..Axis::placed(limb.level, kind, parent, start, reach, rng)
+            };
             trace(level, &mut copy).then(|| {
                 wander_axis(level, &mut copy);
                 taper_rings(&mut copy.rings, frame.radius, level.taper);

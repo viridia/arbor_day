@@ -635,7 +635,8 @@ impl Wander {
 /// the middle node's, which keeps the level's: positive, longer at the base and shorter toward the
 /// tip, as a conifer's; negative, the other way, short near a limb's root so its leaves fill the
 /// crown's middle. Aim turns them toward the crown's outline, the upper ones toward its top, so
-/// their leaves cover the crown's middle from above.
+/// their leaves cover the crown's middle from above. Leaves carries the size change to the leaves
+/// the laterals bear, so a tall, thin cone keeps its shape.
 #[derive(Reflect, Clone, PartialEq)]
 #[reflect(@Icon("icons/operators/size-bias.png"))]
 pub struct Bias {
@@ -659,6 +660,17 @@ pub struct Bias {
         @Caption("Aim"),
     )]
     pub aim: f32,
+    /// How much the leaves on the laterals, and on the limbs they bear, follow the laterals'
+    /// lengths: at 100%, a lateral half as long as its parent's longest bears leaves at half their
+    /// size, the longest's keeping theirs. A parent's own tip takes its last node's. Leaves never
+    /// shrink below half their size, where a card's outline and texture would show.
+    #[reflect(
+        @ValueRange::<f32>(0.0..=1.0),
+        @Precision(0),
+        @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("Leaves"),
+    )]
+    pub leaves: f32,
 }
 
 impl Default for Bias {
@@ -666,6 +678,7 @@ impl Default for Bias {
         Self {
             size: 0.0,
             aim: 0.0,
+            leaves: 0.0,
         }
     }
 }
