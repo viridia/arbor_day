@@ -2,7 +2,7 @@
 
 Control groups: the seed and the detail threshold share a Plant group at the top of the panel,
 and each limb level's rows sit in Arrangement, Direction and Shape groups. Checked by eye in the
-screenshots.
+screenshots. Scrolled down to the limb groups, the header and its file menu stay in place.
 
 Operators: a level's Wander starts off, and its header's add menu lists it and turns it on. The
 ✕ turns it off again, hiding its rows and leaving it out of the species as the file writes it, and
@@ -53,6 +53,10 @@ def groups(driver):
     driver.click("Shell/Panel/levels[0]/skew/input")
     driver.key("Escape")
     driver.screenshot("limb_groups")
+    # The header stays above the rows that scroll.
+    driver.click(MENU)
+    driver.present(f"{MENU}/save")
+    driver.key("Escape")
 
 
 def operators(driver):

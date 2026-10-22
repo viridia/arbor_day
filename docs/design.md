@@ -152,7 +152,8 @@ button, in fixed translucent grays; the grid stops `PointerDrag` bubbling up fro
 
 File commands (`src/document.rs`) act on the one `Document`: its file's path and name, and the
 species last saved. New, Open, Save and Save As are keys (⌘N, ⌘O, ⌘S, ⌘⇧S) and items of a file
-menu (`menu.png`) at the right of a header row above the Plant group. The row's left, and the
+menu (`menu.png`) at the right of the panel's header, which stays in place above the rows that
+scroll: an immediate-mode root of its own (`PanelHeader`). The header's left, and the
 window title, show the document's name, from its file ("Untitled" before the first save), and a dot
 while the species differs from the one saved. New resets the species, not the view.
 

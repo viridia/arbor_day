@@ -4,37 +4,36 @@ use bevy::{
     camera::Viewport,
     ecs::system::SystemParam,
     feathers::{
-        FeathersPlugins,
         controls::{
             FeathersPane, FeathersScrollbar, FeathersSplitPane, FeathersSplitPaneHandle,
             ScrollbarGutter,
         },
         dark_theme::create_dark_theme,
         theme::{ThemeBackgroundColor, UiTheme},
-        tokens,
+        tokens, FeathersPlugins,
     },
     light::{NotShadowCaster, NotShadowReceiver},
     pbr::wireframe::WireframePlugin,
     prelude::*,
     ui::{IsDefaultUiCamera, UiGlobalTransform, UiSystems},
-    ui_widgets::{ControlOrientation, ScrollArea, split_pane_self_update},
+    ui_widgets::{split_pane_self_update, ControlOrientation, ScrollArea},
     window::{ExitCondition, PrimaryWindow},
 };
 use bevy_immediate::{
-    Imm,
     attach::{BevyImmediateAttachPlugin, ImmediateAttach},
+    Imm,
 };
 use bevy_remote_driver::RemoteDriverPlugin;
 use document::{Document, DocumentPlugin};
-use hud::{Ground, HudPlugin, hud};
+use hud::{hud, Ground, HudPlugin};
 use keys::KeysPlugin;
 use outline::{OutlinePlugin, PlantOutline};
 use plant::{Plant, PlantEnvelope, PlantLeaves, PlantPlugin, PlantStats};
 use properties::{CapsPanel, HeaderNotes};
-use settings::{AppSettingsPlugin, MIN_PANE_WIDTH, save_panel_width};
+use settings::{save_panel_width, AppSettingsPlugin, MIN_PANE_WIDTH};
 use species::Species;
 use turntable::{
-    TurntableCamera, TurntablePlugin, TurntableSubject, orbit_on_drag, zoom_on_scroll,
+    orbit_on_drag, zoom_on_scroll, TurntableCamera, TurntablePlugin, TurntableSubject,
 };
 
 mod document;
@@ -77,7 +76,10 @@ fn main() {
             WireframePlugin::default(),
             AppSettingsPlugin,
             FeathersPlugins,
-            BevyImmediateAttachPlugin::<CapsPanel, ParamPanel>::new(),
+            (
+                BevyImmediateAttachPlugin::<CapsPanel, PanelHeader>::new(),
+                BevyImmediateAttachPlugin::<CapsPanel, ParamPanel>::new(),
+            ),
             RemoteDriverPlugin,
             TurntablePlugin,
             KeysPlugin,
@@ -107,6 +109,11 @@ struct ViewportSlot;
 /// The split pane's pane holding the parameter panel.
 #[derive(Component, Default, Clone)]
 struct PanelPane;
+
+/// The root of the immediate-mode panel header: the document's name and file menu, fixed above
+/// the rows that scroll.
+#[derive(Component, Default, Clone)]
+struct PanelHeader;
 
 /// The root of the immediate-mode parameter panel.
 #[derive(Component, Default, Clone)]
@@ -213,17 +220,30 @@ fn shell_ui() -> impl Scene {
                 PanelPane
                 ThemeBackgroundColor(tokens::WINDOW_BG)
                 Children [
+                    PanelHeader
+                    Node {
+                        flex_direction: FlexDirection::Column,
+                        // The gap below is the header's, so the scrollbar starts level with the
+                        // first row.
+                        padding: UiRect {
+                            left: px(8),
+                            top: px(8),
+                            bottom: px(8),
+                            right: px(4),
+                        },
+                    }
+                    --
                     // Scrolls as feathers' list view does: a frame with a gutter for the
                     // scrollbar, around a node that scrolls.
                     Node {
                         flex_direction: FlexDirection::Column,
                         flex_grow: 1.0,
                         min_height: px(0),
-                        padding: UiRect { right: px(10) },
+                        padding: UiRect { right: px(8) },
                     }
                     // Exactly the scrollbar (6 wide, 4 from the edge); the content's own margin
                     // is the gap before it.
-                    ScrollbarGutter(px(10))
+                    ScrollbarGutter(px(8))
                     Children [
                         #scrolled
                         Node {
@@ -239,7 +259,7 @@ fn shell_ui() -> impl Scene {
                                 flex_direction: FlexDirection::Column,
                                 // The gutter is reserved only while the scrollbar shows, so the
                                 // content keeps its own margin on the right.
-                                padding: px(8),
+                                padding: UiRect { left: px(8), right: px(8), bottom: px(8) },
                                 row_gap: px(8),
                             }
                         ]
@@ -274,20 +294,32 @@ fn shell_ui() -> impl Scene {
 }
 
 #[derive(SystemParam)]
+struct HeaderParams<'w, 's> {
+    species: Res<'w, Species>,
+    document: Res<'w, Document>,
+    commands: Commands<'w, 's>,
+}
+
+impl ImmediateAttach<CapsPanel> for PanelHeader {
+    type Params = HeaderParams<'static, 'static>;
+
+    fn construct(ui: &mut Imm<CapsPanel>, params: &mut HeaderParams) {
+        if let Some(command) = document::header(ui, &params.document, &params.species) {
+            params.commands.trigger(command);
+        }
+    }
+}
+
+#[derive(SystemParam)]
 struct PanelParams<'w, 's> {
     species: ResMut<'w, Species>,
     stats: Query<'w, 's, &'static PlantStats>,
-    document: Res<'w, Document>,
-    commands: Commands<'w, 's>,
 }
 
 impl ImmediateAttach<CapsPanel> for ParamPanel {
     type Params = PanelParams<'static, 'static>;
 
     fn construct(ui: &mut Imm<CapsPanel>, params: &mut PanelParams) {
-        if let Some(command) = document::header(ui, &params.document, &params.species) {
-            params.commands.trigger(command);
-        }
         // Edit a copy: writing through `ResMut` every frame would mark the species changed every
         // frame, and the plant would rebuild every frame.
         let mut edited = params.species.clone();

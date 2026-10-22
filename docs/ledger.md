@@ -114,6 +114,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C137  | Seedling models converted to species files, best effort, by `scripts/from_seedling.py`, into `reference/` in seedling's subfolders, the crown and its profile measured from the old leaves, a negative angle bias as Aim; `plans/gallery/reference.py` opens and shoots each. First three: poplar-orange, leechgrass, palecress. |
 | C139  | Operators as the species' layers (G4); guidelines admit expected corrections. |
 | C138  | Leaf size by Bias: Bias's leaves share scales the cards by each lateral's length over its parent's longest, multiplied down the levels, a parent's tip taking its last lateral's, no smaller than half (TD3.3, TD3.8). |
+| C140  | A fixed panel header: the document's name and file menu stay above the rows that scroll (TD1.7). |
 
 | C47   | A sense of scale: a measuring stick and a silhouette beside the crown, with a HUD toggle of its own (TD1.6). |
 
@@ -194,9 +195,6 @@ tips by steepness next.
   first three are judged. `plans/gallery/reference.py` shoots each from the default view; add a
   shot from above, so a change to the layout (C125, C130, C132, C133) is judged against them.
   E[2]
-- **C140 A fixed panel header** (the author, 2026-10-21): the hamburger menu and the file name
-  scroll away with the panel, so saving a long species means scrolling back up. Keep them fixed
-  above the scrolling rows (TD1.5). E[2]
 - **C108 Ask before dropping unsaved changes**: New, and Open once it works, replace an edited
   species without asking (C40). A feathers dialog (Save, Don't Save, Cancel) while the document
   has its dot. After C41, so Save in the dialog saves. E[2]
