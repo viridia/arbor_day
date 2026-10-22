@@ -115,6 +115,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C139  | Operators as the species' layers (G4); guidelines admit expected corrections. |
 | C138  | Leaf size by Bias: Bias's leaves share scales the cards by each lateral's length over its parent's longest, multiplied down the levels, a parent's tip taking its last lateral's, no smaller than half (TD3.3, TD3.8). |
 | C140  | A fixed panel header: the document's name and file menu stay above the rows that scroll (TD1.7). |
+| C141  | A short twig's card reaches back past its root, its fold at the tip, as seedling's did, so palecress's leaves sit at its stalk (TD3.8). |
 
 | C47   | A sense of scale: a measuring stick and a silhouette beside the crown, with a HUD toggle of its own (TD1.6). |
 

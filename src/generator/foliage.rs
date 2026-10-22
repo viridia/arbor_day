@@ -69,8 +69,8 @@ pub(super) fn cards_at(elevation: f32, upright: Upright) -> u32 {
 /// The leaf clusters, if the tip leaves are on: at the tip of each stem or limb that did not fork,
 /// whether or not it bears limbs, so no branch end is bare unless the species leaves steep ones so. A tip bears one card,
 /// or on a steep twig what the species' `Upright` says (`cards_at`). One card reaches back along the twig, its fold at the tip, so the sprig's stem
-/// overlaps the twig's end, as seedling's did; on a twig shorter than that, from its base. The
-/// twig runs straight there (`wander_axis`), so the card lies along it. A rosette's cards start at
+/// overlaps the twig's end, as seedling's did; on a twig shorter than that, from behind its root,
+/// so a short twig's leaves stay at its tip, close in to its parent. The twig runs straight there (`wander_axis`), so the card lies along it. A rosette's cards start at
 /// the tip, spaced evenly around the twig from the side it points toward, each turned from the
 /// twig by `ROSETTE_LEAN` of the way to level, keeping its heading, so an upright tip reads as
 /// leaves splayed toward the light rather than one card on end. Each tip's cards are scaled by
@@ -91,9 +91,7 @@ pub(super) fn clusters(species: &Species, axes: &[Axis]) -> Vec<Card> {
         let tip = twig.frame_at(length);
         let count = cards_at(tip.tangent.y.clamp(-1.0, 1.0).asin(), tip_leaves.upright);
         if count == 1 {
-            let back = (fold * size).min(length);
-            let t = (1.0 - back / length.max(f32::EPSILON)).clamp(0.0, 1.0);
-            let at = t * length;
+            let at = length - fold * size;
             cards.push(Card {
                 axis: index,
                 at,

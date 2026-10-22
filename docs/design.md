@@ -391,8 +391,8 @@ every smaller one. A tip bears one card, unless its twig rises
 of two or three (`cards_at`).
 
 One card lies along the twig, reaching back until its axial fold, where the painted sprig's fan
-starts (`axial_fold`, TD3.10), lies at the tip, or starting at
-the twig's base on a twig shorter than that. A rosette's cards start at the tip, spaced evenly
+starts (`axial_fold`, TD3.10), lies at the tip, even past the twig's root on a twig shorter than
+that, so a short twig's leaves stay close in to its parent, as a rosette's leaves do. A rosette's cards start at the tip, spaced evenly
 about world up from the heading the twig points (straight up, the opposite of its upper side).
 Each turns from the twig toward level in its own heading by three quarters of the angle between
 them, so on an upright twig each rises 22.5°, and in a pair on a 60° one the card ahead rises 15°

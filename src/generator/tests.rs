@@ -1595,8 +1595,7 @@ fn a_card_at_every_branch_end() {
         .collect();
     assert_eq!(cards.len(), per_tip.iter().sum::<usize>());
     assert!(per_tip.contains(&1) && per_tip.iter().any(|&count| count > 1));
-    // Each tip between a card's base and fold: at its fold, or short of it on a short twig, or
-    // at the base of a rosette's card.
+    // Each tip at a card's fold, or at the base of a rosette's card.
     let spans = |card: &[Vec3], tip: Vec3| distance_to_segment(tip, card[BASE], card[FOLD]) < 1e-4;
     assert!(
         tips.iter()
@@ -1649,8 +1648,8 @@ fn cards_lie_along_their_twigs_facing_up() {
         assert!(across.y.abs() < 1e-4, "{across}");
         assert!(normal.dot(axis).abs() < 1e-4 && normal.y >= 0.0, "{normal}");
         assert!((normal - Vec3::Y.reject_from(axis).normalize()).length() < 1e-3);
-        // The base on a twig, which the axis follows: straight twigs, so their direction. A
-        // short twig's tip card starts at its base, where its parent and siblings meet too.
+        // The base on a twig's line, which the axis follows: straight twigs, so their direction.
+        // A short twig's tip card starts behind its root.
         assert!(twigs.iter().any(|twig| {
             let from = base - twig.origin();
             from.cross(twig.direction()).length() < 1e-3
