@@ -195,18 +195,14 @@ their fixed order:
    the fixed spacing every level has now. Its options: a roughness falling off at smaller
    scales, and kinks at the nodes (X23), which needs nodes laid out before the trace and so
    strains the order.
-5. **Taper**: the level's own taper in place of the plant's (X32). Before Fork, since a fork's
-   copies start at the limb's radius at the fork (TD3.1).
-6. **Flare**: the trunk only, its stems widening toward the ground (C122, TD3.2).
-7. **Fork**: D31's five fields; on the trunk, stem forks (C75).
-8. **Scions**: the next level, placed on this one's axes. It has no settings of its own: how
+5. **Flare**: the trunk only, its stems widening toward the ground (C122, TD3.2).
+6. **Fork**: D31's five fields; on the trunk, stem forks (C75).
+7. **Scions**: the next level, placed on this one's axes. It has no settings of its own: how
    the level is placed (density, per node, facing, skew, start: the placement half of a limb)
    is that level's Arrangement, since an author tunes a level as one thing, as SpeedTree's
    generators carry their own generation settings. It shows as the next level's pane, not as a
    heading. Not offered on the last of three limb levels (D15). Space colonization (X12) would be
    a second way to place a level, a mode of its Arrangement.
-9. **Pipe model**: the level's axes narrowed by the wood their children take (D22), in place of
-   the taper (C73). It needs every level grown, so it runs after them.
 
 Levels grow in turn: a level's frame and operators, then its scions' level.
 

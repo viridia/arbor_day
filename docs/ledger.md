@@ -183,10 +183,8 @@ tips by steepness next.
    - C70 Tips by steepness, if its fan changes the upright tips field's choices.
    - X18 Forms: a species holding every form's parameters with a selector.
    - X22 Forms as patches: today's species becomes the default patch.
-   - X32 Taper per limb level, in place of the plant's one.
    - X37 Several sprigs, the tip leaves' one sprig likely becoming a list.
    - X12 Space colonization, if Arrangement becomes a choice of modes.
-   - X50 The pipe model, if it removes the taper rather than overriding it.
 
 ### Quick wins
 
@@ -303,7 +301,7 @@ tips by steepness next.
   ones, which today differ only by length (nodes are a density per crown radius). From the
   parent's radius, already written by the taper (G1): a threshold, parents thinner than it
   bearing none, so only main limbs carry the level; or a weight, density scaled by the parent's
-  base radius over the level's thickest, to a power (0 as now), after the pipe model. A
+  base radius over the level's thickest, to a power (0 as now). A
   parameter of the Scions operator. E[2]
 - **C54 Radiating foliage** (was X20, its gate C37 passed): cards radiating from a stem's tip or
   the ground, for palms, rosettes and tufts (agave, grass, fern), with no limbs (growth model,
@@ -503,9 +501,6 @@ tips by steepness next.
   would crowd the panel, so they wait to be an ornament (C103). *Gate:* a preset
   (X18) that another limb level cannot make dense enough.
 
-- **X32** A taper per limb level, in place of the plant's one (D22), as the Taper operator. *Gate:* a preset (X18) whose
-  twigs taper unlike its limbs.
-
 - **X33** A fork's copies (C30) competing as one parent for their children's places (D26), so
   each copy's first child goes to its outer flank, away from the crotch; alternation still puts
   later ones inside, as in real amphitonic forks. E[2] *Gate:* C30's screenshot of a level-roll
@@ -552,7 +547,7 @@ tips by steepness next.
   rings as bands of bark color. Triangles grow with the count, so judge against the budget.
   *Gate:* a preset (X18) needing a clump the stems cannot make.
 
-- **X45** A radius profile along an axis, beside the even taper (D22, X32) and the flare (C122):
+- **X45** A radius profile along an axis, beside the even taper (D22) and the flare (C122):
   the radius from a curve rather than a line, for bottle trunks (baobab) and bulging stems.
   Rings carry their own radii (C81), so it is the taper stage written another way. *Gate:* a
   preset needing a bulge.
@@ -580,10 +575,6 @@ tips by steepness next.
   `"outline"` extra's presence (`models::process_material_extras`) but not its value, so the
   width the export writes (C41, C66) has no effect. A material per distinct width, cached. An
   item for Panoply's ledger. *Gate:* the first species exported (C41).
-
-- **X50** The Pipe model operator (`docs/patches.md`, Stacks; D22): each level's axes narrowed
-  by the wood their children take, in place of the taper, run after every level has grown.
-  *Gate:* a preset (X18) whose trunk should narrow where many limbs leave it.
 
 - **X51** Key Symbols (C107) upstream in feathers, for the Bevy editor's menus too, the author
   proposing it. *Gate:* it landing in the Bevy we build against; then `src/shortcut.rs` uses
