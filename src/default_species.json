@@ -51,6 +51,7 @@
     "tip_leaves": {
       "upright": "Triple",
       "size": 0.25,
+      "smallest": 0.5,
       "lateral_droop": -0.27925268,
       "axial_droop": 0.29670596,
       "sprig": {

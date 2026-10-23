@@ -384,7 +384,7 @@ parent where it left. Stems fork the same way (TD3.2).
 `clusters` places cards at the tip of each stem or limb that did not fork, while the tip leaves are on, an
 ornament slot (`docs/patches.md`, Stacks) whose panel and file are an operator's (TD1.5, TD2.3). Their
 size is a share of the crown radius, scaled at each tip by its twig's leaf scale (TD3.3), or on an
-axis bearing laterals by its last lateral's, clamped between a half and 1 (`tip_scale`): smaller,
+axis bearing laterals by its last lateral's, clamped between the tip leaves' smallest and 1 (`tip_scale`): below a half,
 a card's outline and texture detail show, and the straight run under a full card (TD3.4) covers
 every smaller one. A tip bears one card, unless its twig rises
 45° or more above level at its tip, when the species' upright tips say: none, one, or a rosette

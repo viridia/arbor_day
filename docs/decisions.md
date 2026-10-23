@@ -100,7 +100,7 @@ the shape toggle would be. **Reversing it** changes the species' format and ever
 The growth model is parametric per level, with a crown envelope that sets limb reach and foliage
 placement, limbs bending toward directions measured against world up, leaving their parent at an
 angle from it, and cards lying along their twigs (D27). The survey behind it is in
-[growth-model.md](growth-model.md). **Reversing it** rewrites the generator and the species.
+[prior-art.md](prior-art.md). **Reversing it** rewrites the generator and the species.
 
 ### D12 — One species resource, rebuilt whole on any edit
 
@@ -177,7 +177,7 @@ Varying a value only where its instances are many is a guideline: G2.
 
 Leaf textures are painted on the CPU with `tiny-skia`, a pure-Rust port of part of Skia, which
 covers seedling's Canvas2D subset almost one to one (paths, fills and strokes, transforms, linear
-gradients, paint alpha), and on the CPU, so the command-line export (X1) can use it. Rejected:
+gradients, paint alpha), and on the CPU, so a command-line export could use it. Rejected:
 `vello` (GPU, so not for the command line), `vello_cpu` (likely tiny-skia's successor, its API still
 moving; revisit when it settles), `raqote` (quieter), Cairo (a C library to build and ship), `lyon`
 (tessellates, does not rasterize). **Reversing it** rewrites the painter.
@@ -253,7 +253,7 @@ which stays deferred. **Reversing it** changes every plant's arrangement and the
 ### D27 — A card is a sprig along a twig, at every branch end; a rosette where it is steep
 
 A card is a sprig of leaves on a painted stem, lined up with a real twig, after seedling
-(growth-model.md, Foliage): its base on the twig, its axis along it, its face as near world up as
+(prior-art.md, Foliage): its base on the twig, its axis along it, its face as near world up as
 the axis allows (TD3.8, TD3.9). Seen edge-on, a card then loses leaves but never a twig. One cluster
 grows at the tip of every branch end, whatever its level, so no visible end is bare; taking off
 the tip leaves leaves them all bare. Card size is a share of the crown radius, so a scaled species keeps its
@@ -331,7 +331,7 @@ limb of its children's level carrying it on, so the trunk turned into a branch r
 in a post. It switched the axis's sag, sides, wander and reach at the joint, started the next
 level's laterals at that level's start, leaving a bare stretch at each joint, and needed a reach
 of its own, since at the level's reach a leader stood above the crown and every limb ended in a
-trident. Placement settings varying along the parent (X53, C116) are to shorten and steepen the
+trident. Placement settings varying along the parent (C116's Bias) are to shorten and steepen the
 upper laterals instead. **Reversing it** brings back the carrier, its reach and the switch at
 each joint.
 

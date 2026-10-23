@@ -12,7 +12,7 @@ default.
 - aim: the first level's limbs turned toward the crown's outline, the upper ones toward its top,
   half way, then all the way;
 - forks: every first-level limb forking, the Y level, then upright, then three ways, the second
-  level to the sides, so the level Y shows whether twigs crowd its crotch (ledger X33);
+  level to the sides, so the level Y shows whether twigs crowd its crotch;
 - stems: the trunk forked at the ground into three stems splayed from up, then a crown twice the
   trunk's height, which leaves the stems in its narrow foot, bearing fewer limbs, then the trunk
   split into two at 40% of its height, a codominant fork."""

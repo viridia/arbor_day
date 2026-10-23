@@ -1,108 +1,250 @@
 {
+  "accessors": [
+    {
+      "bufferView": 0,
+      "count": 877,
+      "componentType": 5126,
+      "type": "VEC3",
+      "min": [
+        -0.9434362649917603,
+        -0.12999999523162842,
+        -0.943549633026123
+      ],
+      "max": [
+        0.9578343033790588,
+        3.56000018119812,
+        0.974749743938446
+      ]
+    },
+    {
+      "bufferView": 1,
+      "count": 877,
+      "componentType": 5126,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "count": 877,
+      "componentType": 5126,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 3,
+      "count": 3834,
+      "componentType": 5125,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 4,
+      "count": 1264,
+      "componentType": 5126,
+      "type": "VEC3",
+      "min": [
+        -1.153577208518982,
+        0.25288718938827515,
+        -1.0991005897521973
+      ],
+      "max": [
+        1.1088618040084839,
+        3.6208648681640625,
+        1.1214147806167603
+      ]
+    },
+    {
+      "bufferView": 5,
+      "count": 1264,
+      "componentType": 5126,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 6,
+      "count": 1264,
+      "componentType": 5126,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 7,
+      "count": 1896,
+      "componentType": 5125,
+      "type": "SCALAR"
+    }
+  ],
   "asset": {
-    "version": "2.0",
-    "generator": "arbor_day scripts/from_seedling.py"
+    "version": "2.0"
   },
+  "buffers": [
+    {
+      "byteLength": 94940,
+      "uri": "pine-drooping.bin"
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteLength": 10524,
+      "byteOffset": 0,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 10524,
+      "byteOffset": 10524,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 10524,
+      "byteOffset": 21048,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 15336,
+      "byteOffset": 31572,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteLength": 15168,
+      "byteOffset": 46908,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 15168,
+      "byteOffset": 62076,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 10112,
+      "byteOffset": 77244,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 7584,
+      "byteOffset": 87356,
+      "target": 34963
+    }
+  ],
   "scene": 0,
+  "images": [
+    {
+      "mimeType": "image/png",
+      "uri": "pine-drooping.png"
+    }
+  ],
+  "materials": [
+    {
+      "alphaMode": "OPAQUE",
+      "doubleSided": false,
+      "name": "bark",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "metallicFactor": 0.0,
+        "roughnessFactor": 1.0
+      },
+      "emissiveFactor": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "extras": {"outline":0.009999999776482582}
+    },
+    {
+      "alphaCutoff": 0.5,
+      "alphaMode": "MASK",
+      "doubleSided": true,
+      "name": "leaves",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "baseColorTexture": {
+          "index": 0,
+          "texCoord": 0
+        },
+        "metallicFactor": 0.0,
+        "roughnessFactor": 1.0
+      },
+      "emissiveFactor": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "meshes": [
+    {
+      "name": "bark",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1,
+            "COLOR_0": 2
+          },
+          "indices": 3,
+          "material": 0
+        }
+      ]
+    },
+    {
+      "name": "leaves",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 4,
+            "NORMAL": 5,
+            "TEXCOORD_0": 6
+          },
+          "indices": 7,
+          "material": 1
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "mesh": 0,
+      "name": "bark"
+    },
+    {
+      "mesh": 1,
+      "name": "leaves"
+    }
+  ],
+  "samplers": [
+    {
+      "magFilter": 9729,
+      "minFilter": 9987,
+      "wrapS": 33071,
+      "wrapT": 33071
+    }
+  ],
   "scenes": [
     {
+      "extras": {"arbor_day":{"bark_color":{"Srgba":{"alpha":1.0,"blue":0.1764706,"green":0.34509805,"red":0.34901962}},"bark_outline":0.01,"crown":{"base":0.11,"profile":"Cone","radius":1.1,"top":1.0},"detail":0.02,"generator":1,"leaf_outline":4.0,"limbs":[{"angle":{"center":2.0402899,"shape":"Uniform","spread":0.050614547},"bias":{"aim":0.06,"leaves":1.0,"size":0.59},"density":26.9,"end":0.95,"facing":"Around","per_node":1.0,"radius":0.5,"reach":{"center":0.9,"shape":"Bell","spread":0.1},"rise":{"amount":0.25},"sides":4,"skew":0.710349,"start":0.18}],"ornaments":{"tip_leaves":{"axial_droop":0.3996804,"lateral_droop":0.5794493,"leaf":{"base_taper":-0.38,"base_width":0.14,"gradient":"Axial","inner_color":{"Srgba":{"alpha":1.0,"blue":0.44705883,"green":0.44705883,"red":0.3019608}},"jitter":0.0,"outer_color":{"Srgba":{"alpha":1.0,"blue":0.4627451,"green":0.6392157,"red":0.4627451}},"rake":0.0,"segments":8,"serration":0.12,"tip_taper":0.42,"tip_width":0.2,"variation":0.06},"size":0.71,"smallest":0.26,"sprig":{"angle":{"center":1.2793263,"spread":0.31066862},"fan":1,"outer_size":0.91,"pairs":5,"spacing":{"center":0.41,"spread":0.14}},"upright":"Single"}},"outline":true,"seed":1,"taper":0.98,"trunk":{"height":3.56,"radius":0.13,"sides":6}}},
       "name": "pine-drooping",
-      "nodes": [],
-      "extras": {
-        "arbor_day": {
-          "generator": 1,
-          "taper": 0.98,
-          "bark_color": {
-            "Srgba": {
-              "red": 0.34901960784313724,
-              "green": 0.34509803921568627,
-              "blue": 0.17647058823529413,
-              "alpha": 1.0
-            }
-          },
-          "trunk": {
-            "height": 3.56,
-            "radius": 0.13,
-            "sides": 6
-          },
-          "crown": {
-            "profile": "Cone",
-            "top": 1.0,
-            "base": 0.11,
-            "radius": 1.1
-          },
-          "limbs": [
-            {
-              "density": 26.9,
-              "per_node": 1,
-              "facing": "Around",
-              "skew": 0.7103490055616922,
-              "start": 0.18,
-              "angle": {
-                "center": 2.0402898955813713,
-                "spread": 0.05061454830783556,
-                "shape": "Uniform"
-              },
-              "rise": {
-                "amount": 0.25
-              },
-              "bias": {
-                "size": 0.83,
-                "aim": 0.06
-              }
-            }
-          ],
-          "ornaments": {
-            "tip_leaves": {
-              "upright": "Triple",
-              "size": 0.71,
-              "lateral_droop": 0.5794493116621174,
-              "axial_droop": 0.39968039870670147,
-              "sprig": {
-                "fan": 1,
-                "angle": {
-                  "center": 1.2793263417118435,
-                  "spread": 0.31066860685499065
-                },
-                "outer_size": 0.91,
-                "pairs": 5,
-                "spacing": {
-                  "center": 0.41,
-                  "spread": 0.14
-                }
-              },
-              "leaf": {
-                "base_width": 0.14,
-                "base_taper": -0.38,
-                "tip_width": 0.2,
-                "tip_taper": 0.42,
-                "segments": 8,
-                "serration": 0.12,
-                "rake": 0,
-                "jitter": 0,
-                "inner_color": {
-                  "Srgba": {
-                    "red": 0.30196078431372547,
-                    "green": 0.4470588235294118,
-                    "blue": 0.4470588235294118,
-                    "alpha": 1.0
-                  }
-                },
-                "outer_color": {
-                  "Srgba": {
-                    "red": 0.4627450980392157,
-                    "green": 0.6392156862745098,
-                    "blue": 0.4627450980392157,
-                    "alpha": 1.0
-                  }
-                },
-                "gradient": "Axial",
-                "variation": 0.06
-              }
-            }
-          }
-        }
-      }
+      "nodes": [
+        0,
+        1
+      ]
+    }
+  ],
+  "textures": [
+    {
+      "sampler": 0,
+      "source": 0
     }
   ]
 }

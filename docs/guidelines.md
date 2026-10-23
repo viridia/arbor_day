@@ -15,7 +15,7 @@ with a case that shows it, since the case is what lets a reader recognize the ne
 **Numbering.** Each guideline's number is a permanent identity, never reused. A gap in the sequence
 is a retired guideline.
 
-**Next: 5.**
+**Next: 7.**
 
 ---
 
@@ -48,7 +48,7 @@ A new behaviour changes what a field means, or is derived from what is there, be
 field, since a limb level has many already. So the span's two fields became one start with a
 constant jitter; a facing and a skew replaced the divergence, competition placing the children
 (D26); wander became kinks at a fixed spacing rather than gaining a smoothness and a spacing (D17).
-A predictable range beats a guessed curve until a model is worth exposing (X18, X22). Left out
+A predictable range beats a guessed curve until a model is worth exposing (X22). Left out
 until a preset needs them: a jitter per level (a fir's even whorls), and a sharply bare stretch
 such as a bare leader tip.
 
@@ -63,6 +63,35 @@ leaf size by Bias (C138) is a Bias setting, shown only where Bias is on.
 A part the algorithm cannot do without stays on the level. Every limb has a radius, and a radius
 of zero means nothing, so a Radius operator would override a default the author never chose,
 which no panel can explain.
+
+### G5 — Where the algorithm decides, offer one deviation, not an override
+
+A control that the model's own choice overrules promises what it cannot deliver: the author moves
+it and sees nothing, or sees another control's effect. Where the algorithm decides, as crowding
+places a limb around its parent and Aim turns it toward the outline, the author gets at most one
+control of how far to stray from that choice, named by its effect, and no direct setting; an
+override per limb or per choice would multiply the controls past what a panel can hold. Seedling
+went the other way, the author drawing every angle at random: an organic look, but limbs sticking
+out at odd angles. So C134 turns skew, a random turn after crowding's pick, into an irregularity,
+and leaves facing off the trunk, which has no upper side to measure it from.
+
+### G6 — Count a change's cost to the finished trees
+
+The author's finished trees are work a change can undo, in two ways: a file stops reading as it
+did, losing values to pruning (C124), or it reads the same but grows a different tree, which
+nothing reports but the golden trees (C146). So a change to the species or the generator is one
+of three, in order of preference:
+
+- **Additive**: a new field or operator whose default or off state grows today's plant. Free.
+  Curves (C145) were taken for additive until Size's number was seen to become a curve.
+- **Migrated**: a field's type or meaning changes, and a script converts `reference/` in the
+  same chunk, as `scripts/from_seedling.py` converted seedling's files, so no file falls behind.
+- **Output changed**: the golden trees fail, and the author looks at each: close enough, saved
+  again as it is; retuned; or the change goes behind an option.
+
+Migrate early: before the freeze (C113) the items that need it land while the trees are few. A
+patch (X22) is a species of its own kind, tagged apart in the glTF extra, so it costs today's
+files nothing.
 
 ### G2 — Vary a value where its instances are many
 

@@ -22,7 +22,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C12   | Fuzzy numbers (D10, TD2.2). |
 | C13   | Captions above fields; replaced by C77. |
 | C14   | Spread strip (TD1.5). |
-| C6    | Growth-model survey, `docs/growth-model.md` (D11). |
+| C6    | Growth-model survey, `docs/prior-art.md` (D11). |
 | C15   | A trunk from the species (D12, TD2.1). |
 | C16   | Crown envelope and enum selects (TD1.5). |
 | C17   | Nested structs as subpanes (TD1.5). |
@@ -117,6 +117,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C140  | A fixed panel header: the document's name and file menu stay above the rows that scroll (TD1.7). |
 | C141  | A short twig's card reaches back past its root, its fold at the tip, as seedling's did, so palecress's leaves sit at its stalk (TD3.8). |
 | C142  | The trunk's radius down to 1 cm, the thinnest that reads at Panoply's camera distance, for flower stems and herbs. |
+| C143  | Tip leaves' smallest: the floor on Bias's leaf scale per species, 50% by default as before, down to 25% so a conifer's tip closes (TD3.8). |
 
 | C47   | A sense of scale: a measuring stick and a silhouette beside the crown, with a HUD toggle of its own (TD1.6). |
 
@@ -136,10 +137,17 @@ per-type hook, and is retained-mode.
 The foundation, the skeleton (`docs/patches.md`, The abstract plant), tip rosettes, the species
 file (C10), operator stacks (C96 to C99) and colors by part (C69) have
 landed, and forks drawn along the chain (C95) and on stems (C75), sag and rise (C94), ornament
-slots (C103), the painted leaf (C38), outlines (C66), carry-on's removal (C117) and aim (C130);
-tips by steepness next.
+slots (C103), the painted leaf (C38), outlines (C66), carry-on's removal (C117) and aim (C130).
+Before the freeze (C113), the changes that would cost the finished trees a migration or a new
+look land while the trees are few; the golden trees next, so each of those changes is seen.
 
-1. **C70 Tips by steepness**: one card on a level tip and a rosette on an upright one (TD3.8)
+1. **C146 Golden trees**: a test growing each finished tree in `reference/` from its file and
+   comparing the meshes with those saved in it, within a small tolerance, so a change that moves
+   a finished tree fails (G6). The finished trees are named in the test, the author adding each
+   when done (leechgrass is not). On a failure the author looks at the tree: close enough, saved
+   again as it is, which updates its meshes; retuned and saved; or the change put behind an
+   option. X15's first measure. E[2]
+2. **C70 Tips by steepness**: one card on a level tip and a rosette on an upright one (TD3.8)
    meet at a sudden switch, between them three looks:
    - Level: one card along the twig, its side leaves painted pairs or side branches (D27).
    - Inclined: two or three cards in a level fan centred on the twig's heading.
@@ -169,7 +177,65 @@ tips by steepness next.
    a limb steepens, rather than rosettes shrinking; no placement setting varies by steepness
    yet (C116's Bias varies along the parent). Card counts multiply with levels, eight triangles
    each since C39, so look at density against the budget too. E[3]
-2. **C8 Working document in settings.** A settings group holding the working species and, once
+3. **C125 Steady nodes**: moving Start or End moves each node, which jumps limbs about in two
+   ways. A lateral's length changes, so its own node count steps; its nodes draw in order from
+   one `layout` stream and its limbs' streams are numbered by a running count, so one node more
+   re-deals every node after it, and every level below. Each node from a stream of its own
+   (`layout.fork(node)`), and each limb's from its node and slot, so a count change adds or
+   drops one node. And a node's azimuth is the cheapest of its candidates (`node_azimuths`),
+   which flips as crowding changes with the nodes' spacing; blend the two cheapest when their
+   costs are near. Changes every plant's layout (X15's generator version). E[2]
+4. **C134 Facing, skew and angle as G5 has them** (the author, 2026-10-21 and 10-22): adjusting
+   facing and skew seldom improves a plant, since the model decides what they promise to set.
+   - Facing only where the parent has an upper side: an upright trunk has none, so Sides, Up and
+     Down measure from an arbitrary side there. The trunk's level is always Around (crowding's
+     spiral, `node_azimuths`), its Facing row hidden.
+   - Skew becomes Irregularity: how far limbs stray from crowding's pick, the random turn
+     `placement.rs` adds after it, captioned by effect, a tidy spiral to scattered. Its field and
+     range stay (G1).
+   - Angle under Aim: Aim keeps each limb's heading and turns its angle, so an author setting the
+     angle with Aim on sees Aim's result. The angle row says so while Aim is on, or the two meet
+     in one row; which, decided when built.
+
+   E[2]
+5. **C145 Bias as curves** (was X55, its gate passed): Bias's Size a curve along the parent, first
+   node to last, in place of today's straight change, so a conifer's tip narrows faster than its
+   base (C143's floor works around it); Leaves and Aim after, as fields. A curve's x is the
+   place, 0 to 1; its y the field's own value in its units and range, not a factor on it. A few
+   points, monotone interpolation so it never overshoots them; flat by default, and today's
+   straight change is a two-point curve, so files convert with no change of output. A first
+   slice of a general curve editor (particles, animation graphs), in three layers kept apart so
+   each can move upstream:
+   - **Model**, the consumer's: points, any handles, a sampled polyline sorted by x (exact points
+     at kinks; a step two points at one x), the segment kinds it supports, its constraints
+     (x in 0 to 1, ends fixed, y in range); it applies, clamps or refuses each edit. So the editor
+     never offers an interpolation the engine lacks. Here: points and monotone interpolation, no
+     tangents.
+   - **Editor**, headless with a feathers look: points as UI nodes, dragged, added by
+     double-click, deleted by key, the selected one's value in a number input; edits sent as
+     requests (move, insert, delete; move tangent and set kind designed but not built). It opens
+     as a popup from the row, as the color input's picker does; other hosts place it as they
+     want.
+   - **Plot**: the author's `draw_path` (`../bevy_reactor_3/crates/bevy_reactor_nodegraph/src/
+     draw_path.rs`, its shader `assets/draw_path.wesl`), a `UiMaterial` drawing a path of moves,
+     lines and quadratics from a storage buffer by each pixel's least distance to every segment,
+     antialiased at a constant width. The polyline is a move and lines; testing every segment is
+     cheap at a popup's size (256 samples over 300 × 150 px). The grid is a second instance, one
+     color and width each. The row's thumbnail is the same material, small. Changes: an option
+     to take points in the node's own coordinates, since `update` makes them relative to the
+     path's bounds, which suits a wire but not a fixed plot area; and the shader moved to a crate
+     arbor_day, the node graph and any upstream widget share. Storage buffers rule out WebGL2,
+     so an upstream widget needs a uniform-array path or is WebGPU only.
+
+   Node-graph wires (X22) are `draw_path`'s quadratics, Quilez's SDF, with one fix: its
+   `kk = 1.0 / dot(b, b)`, `b = A − 2B + C`, divides by zero when the control point is midway
+   between the ends, as on a straight wire, so below a small `dot(b, b)` it takes the line's
+   distance from A to C. Open: whether reach and angle
+   take curves too. E[3]
+6. **C147 Sprigs as a list** (X37's format, ahead of its feature): the tip leaves' sprig becomes
+   a list holding one, the panel showing it as now, so several sprigs (X37) later need no
+   migration. `reference/` converted. E[1]
+7. **C8 Working document in settings.** A settings group holding the working species and, once
    set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
    as seedling did. The document's name comes from the file name. Serialized by reflection, as
    `bevy_settings` does. A working document from before a schema change is lost (D32), but not
@@ -178,15 +244,22 @@ tips by steepness next.
    read as a species file is (C124, TD2.3), its pruned fields logged and the document marked
    edited. Stored as a list of open documents holding
    one, and the active one's index, so several (X26) need no change of format. E[3]
-3. **C113 File format freeze**, at D32's gate: from here a change that renames, moves or removes
+8. **C113 File format freeze**, at D32's gate: from here a change that renames, moves or removes
    a species field, or changes its type, needs a migration (X15). Before it, each item below
    either lands, is dropped, or is accepted as a later migration; prune the list as those
    choices are made. E[1], the items aside.
-   - C70 Tips by steepness, if its fan changes the upright tips field's choices.
-   - X18 Forms: a species holding every form's parameters with a selector.
-   - X22 Forms as patches: today's species becomes the default patch.
-   - X37 Several sprigs, the tip leaves' one sprig likely becoming a list.
-   - X12 Space colonization, if Arrangement becomes a choice of modes.
+   - **Migrated**, a field's type or meaning changing, `reference/` converted in the same chunk:
+     - C145 Bias as curves: Size's number becomes a two-point curve, with no change of output.
+     - C147 Sprigs as a list: the tip leaves' one sprig becomes a list of one.
+     - C70 Tips by steepness, if its fan changes the upright tips field's choices.
+   - **Output changed**, files reading as before but growing differently, each tree judged close
+     enough, retuned, or the change put behind an option:
+     - C125 Steady nodes: every plant's layout.
+     - C70 Tips by steepness: its fans.
+     - C134: a trunk level whose Facing is not Around.
+
+   Additive changes, whose default or off state grows today's plant, need no place here (C132,
+   C133, X12's modes with today's as the default), nor does X22, a species of its own kind.
 
 ### Quick wins
 
@@ -206,60 +279,33 @@ tips by steepness next.
   meets at a grazing angle: looking straight down, it swings to the root or the top and clamps
   there, and at the home elevation a pointer just above centre pulls well above the focus. Fade
   the pull with the tilt, by cos(elevation). E[2]
-- **C125 Steady nodes**: moving Start or End moves each node, which jumps limbs about in two
-  ways. A lateral's length changes, so its own node count steps; its nodes draw in order from
-  one `layout` stream and its limbs' streams are numbered by a running count, so one node more
-  re-deals every node after it, and every level below. Each node from a stream of its own
-  (`layout.fork(node)`), and each limb's from its node and slot, so a count change adds or
-  drops one node. And a node's azimuth is the cheapest of its candidates (`node_azimuths`),
-  which flips as crowding changes with the nodes' spacing; blend the two cheapest when their
-  costs are near. Changes every plant's layout (X15's generator version). E[2]
-- **C93 Typed values lost in plans** (was X29, its gate passed): find whether a click right after
-  Enter lands before the panel has rebuilt, or the typing is lost. Three failures, each once of two
-  runs: `plans/levels.py` (2026-10-14) at the second level's density typed as 1.5, the plant
-  keeping the default's 70 limbs; `plans/levels.py` (2026-10-16) just after that edit, the second
-  level's − click not taking; `plans/cards.py` (2026-10-16), the axial droop typed as 0 keeping
-  its default; `plans/operators.py` (2026-10-17), a ✕ below the fold clicked just after its
-  operator was added from the menu not taking, until two frames' wait (the plan keeps it);
-  `plans/widgets.py` (2026-10-17), twice, each a typed spread keeping its old value, the reach's
-  0 and the sprig spacing's 10; `plans/cards.py` (2026-10-18), the lateral droop typed as 45
-  becoming 90°, a wrong value rather than the old one, passing on the rerun; `plans/levels.py`
-  (2026-10-19), the first level's add click not taking, one level left, passing on the rerun.
-  E[2]
-- **C89 `growth-model.md` against `design.md`**: its Consequences describe the model as built;
-  keep the survey and the reasons, citing TD for the mechanism. E[2]
-- **C90 `show.py`** from `../ldd_template`, printing a D, TD or X entry by its number, so a session
-  reads the entries it needs rather than whole files. Propose it before code. E[2]
-- **C42 Computed values are rounded where written**, from the first writer (Reset, Randomize,
-  values derived from the generator): the number input never rounds what it shows, so round to
-  the field's `Precision` in the units shown, as a drag does: through the unit's
-  `canonical_to_display` and `display_to_canonical` (feathers' `NumberInputPrecision::round` is
-  private).
-  Defaults are written in the units shown
-  (`15.0_f32.to_radians()`, not `0.3`). E[2]
-- **C67 The leaf texture on the HUD** (D28), for tuning the leaf (requirements, Authoring app):
-  the painted texture as an inset over a checkerboard, so its transparency shows, behind a
-  toggle saved in `ViewSettings`. After C38. E[2]
+- **C93 Flaky typing in plans** (was X29): plans that type into a number input sometimes keep
+  the old value (once a wrong one, 45 typed becoming 90°), or the click right after misses; nine
+  failures from 2026-10-14 to 10-22 (the last `levels.py`'s add click, one level left) in `levels.py`, `cards.py`, `operators.py` and `widgets.py`,
+  each passing on a rerun. Only plans type; the author drags. To tell the causes apart, a plan
+  helper types, presses Enter and `expect`s the field's value before the next step: a failure
+  there is the typing lost, a miss after it a click landing before the panel rebuilds. Then fix
+  the one it is. E[2]
 - **C128 A notice for pruned fields**: a file opened with fields pruned (C124) says so only in
   the log and the dot. A line at the foot of the HUD, opposite the triangle count, fading after
   some seconds: how many fields were reset, the first few paths. Neither feathers nor
   `bevy_ui_widgets` has a toast. E[2]
 - **C123 Flare's icon**: Flare (C122) borrows `icons/operators/taper.png`; an icon of its own.
   E[0]
+- **C144 Feathers' Key Symbols** (was X51, its gate passed): feathers on Bevy main has the Key
+  Symbols font (C107); `src/shortcut.rs` uses feathers' and `assets/fonts/KeySymbols.ttf` goes.
+  If the locked Bevy predates it, `cargo update -p bevy` first, a full rebuild. E[1]
 
 ### Later
 
-- **C134 Facing and skew are hard to use** (the author, 2026-10-21). Facing picks how a node's
-  limbs turn about the parent (around, to the sides, up or down) and skew turns each up to its
-  value either way. Open: what makes them hard, whether the choices, the results being hard to
-  foresee, or their part on the trunk's level once Aim (C130) chooses where limbs point. E[2]
 - **C132 Repeated forks**: a maple forks and forks again (sympodial), where the levels grow a
   leader with laterals (monopodial). A fork's copies may fork again, up to a number of
   generations, 1 being today's (TD3.7, "copies do not fork again"). A copy already reaches what
   its axis had left, so each generation is shorter with no new length. Drawn forks repeated
   crowd and cross, so each generation's plane turns about 90° from its parent's, as opposite
   buds set crosswise do, with a pull up and out, the drawn roll a spread about that. Test case:
-  X53's maple. E[3]
+  a maple forking at about a fifth of its height into risers that split again, under a
+  hemispherical crown. E[3]
 - **C133 Prune**: a plant operator after layout, thinning an overgrown crown to even, as a tree
   sheds its shaded shoots. Each tip scored by shade, the foliage above and around it in a coarse
   grid over the envelope; the most shaded removed first, with its subtree, and a limb left bare
@@ -274,13 +320,9 @@ tips by steepness next.
   in vertex color or cards from a region of the leaf texture. *Gate:* C103, and a preset wanting
   them. E[3]
 - **C71 Crown softness** (was part of C39): the cards' shading normal blended toward the
-  envelope's outward normal by a weight (growth model, Foliage), so the crown shades as one
+  envelope's outward normal by a weight (prior art, Foliage), so the crown shades as one
   mass; built as a weight and judged in the preview before it becomes an option or is fixed
   either way. Panoply's side is X13. E[2]
-- **C72 Crossed cards** (was part of C39): a share of cards with a second card through the
-  first along its axis, turned 90° about it, so a crown reads from any side (requirements,
-  Foliage). Cupped cards are C39's negative lateral droop. *Gate:* the author wanting them
-  after C70. E[2]
 - **C48 Arching stems**, for fountain shrubs: a lean past level, so a stem rises and then droops
   toward the ground, stopping above it. D24 stops the lean at level until a preset needs more
   (X18). The Weep operator on the trunk. E[2]
@@ -315,43 +357,16 @@ tips by steepness next.
   runs straight along the twig and whose rachis tubes cost triangles that do not show at game
   scale. Its texture, a midrib with leaflets either side, is a frond mode of C38's painter, a
   second region of the leaf texture (requirements, Foliage). E[3]
-- **C111 Scale**: a species field, default 1.0, that resizes a finished plant without changing
-  its design. The plant grows as the species describes it, then its positions are multiplied by
-  the scale; the bark outline's width and the detail threshold apply in final units, so neither
-  scales. Raising the height instead redesigns the plant, since most fields are relative to it,
-  and scaling in Panoply thickens or thins outlines with the model. E[2]
-- **C114 The trunk's lean split in two** (was X36): a tilt where the stem leaves the ground, and
-  the curve after it from the bends (C94). Lean's `angle` becomes the tilt at the base, the stem
-  straight from there toward its heading (G1: the field's meaning changes, no field is added);
-  the trunk gains Sag and Rise, as limbs have, acting on the heading the tilt gives, and a fork's
-  stems (C75) turn by them past the fork. Rise then gives a trunk leaning at its base and
-  recovering, as on slopes; sag, a bow; past level, Weep (C48). The heading stays drawn from the
-  seed (D23); a fixed one would do, since Panoply turns placed instances, but changes nothing
-  needed here. Old files read, a leaning trunk growing differently; not a file breaker (C113).
-  TD3.2 rewritten. E[3]
 - **C112 View settings panel**: a gear icon opening a dialog of view settings, saved in
   `ViewSettings` (D28): the lighting and tone mapping (`GameLook`, TD1.1; per-project looks stay
   X6). Two buttons reset the lighting and tone
   mapping: one to Bevy's defaults, one to Panoply's. E[3]
-- **C126 No crown**: a Profile of Off, the envelope unbounded, for growing a plant by its levels
-  alone; the crown helper hidden. A lateral's reach is then a share of the parent's length
-  rather than of the distance to the envelope (X54's measure), and the node density, per crown
-  radius today, per metre of the parent. E[3]
 
 ## Deferred
 
-- **X1** The generator as its own library crate, beside the app: no Bevy dependency beyond
-  `bevy_math` (its `libm` feature gives the same float results on every platform), with the
-  export command as a binary of that crate, so the asset pipeline and the determinism tests
-  build without the renderer. Until then the generator is `src/generator/`, on Bevy's math
-  types with no ECS. The species types need `bevy_reflect` too, and their editor attributes
-  (`ValueRange` and the rest, now in `src/properties.rs`) would move with them. *Gate:* the
-  command-line export.
-- **X3** Publishing, or reserving the name on crates.io. A crate with git dependencies cannot be
-  published. *Gate:* a Bevy release with what the app uses (0.21), or the author choosing to
-  reserve the name with a placeholder.
-- **X4** A fast modifier for scrubbing feathers number inputs, upstream (Shift for slow is all
-  there is). *Gate:* spread inputs prove slow to drag.
+- **X3** Distribution: the app as binaries on GitHub Releases, crates.io at most reserving the
+  name (a crate with git dependencies cannot be published there). *Gate:* a Bevy release with
+  what the app uses (0.21).
 - **X5** A dual-thumb range slider (requirements, Authoring app, a **C** item). The span, the
   case that called for it, is gone (C46). *Gate:* the
   center-and-spread row proves clumsy.
@@ -365,27 +380,7 @@ tips by steepness next.
   2026-10-11). Pan-orbit can turn off pan and fix the up direction, but cannot lock pitch, and it
   orbits about the point under the pointer rather than a fixed vertical axis through the subject.
   *Gate:* C4 landed and used long enough to settle its controls.
-- **X9** Report upstream: a feathers number input given its value twice before its text applies
-  shows the text twice ("11" for 1, "0°0°" for 0°). Its observers queue select-all and insert on
-  `EditableText` after comparing against `value()`, which ignores queued edits, so the second
-  write is queued too, and its select-all does not cover the first insert. It happens on the
-  spawn frame, where the scene's default `NumericValue` writes "0" and `bevy_immediate`'s
-  `number_input` always inserts the value again. `src/properties.rs` works around it: the value,
-  limits and units are inserted before the scene, so the first write is right, and the binding
-  starts the frame after (`will_be_spawned`). Filed upstream as bevy#26123.
-  *Gate:* a fix in the Bevy we build against; then drop the workaround.
-- **X10** A feathers number input's drag clamps to the `SoftLimit` before applying
-  `NumberInputWrap`, so a wrapping input with the slider look never wraps when dragged (typing
-  does); skip the soft clamp when wrapping. Filed upstream as bevy#26125. The other gaps filed
-  with it (chevrons, captions, rounding) are fixed (C76). *Gate:* a wrapping field, which no
-  species has (D9).
-- **X11** The spread strip's colour from the feathers theme rather than a fixed white at 80%. A
-  gradient's stops take colours, not tokens, so it means reading `UiTheme` in the panel and
-  redrawing on a theme change. *Gate:* a second theme, or the white reading poorly over a fill.
-- **X8** Pinch to zoom on a trackpad. C4 zooms on vertical scroll only; a pinch arrives as
-  `PinchGesture`, not as a pointer event, so it needs its own path to the view. *Gate:* scroll
-  zoom proves awkward on a trackpad.
-- **X12** Space colonization (`docs/growth-model.md`) choosing the directions of the last limb
+- **X12** Space colonization (`docs/prior-art.md`) choosing the directions of the last limb
   level only, competing for points in the envelope's shell. A mode of the level's Arrangement (`docs/patches.md`, Stacks). Or, as seedling chose between monopodial and pseudo-dichotomous, a
   plant-level choice replacing the levels, the skeleton kept: a second generator. *Gate:* holes
   left once C130 and C133 are in.
@@ -396,7 +391,7 @@ tips by steepness next.
   preview and in the game.
 - **X15** Keeping old trees as they were when the generator changes. The game ships exported
   meshes, so a tree changes only when regenerated: edited again, or rebuilt by the command-line
-  export (X1) if the asset pipeline runs it. Rather than keeping every past generator (Cargo
+  export if the asset pipeline runs one. Rather than keeping every past generator (Cargo
   could depend on several versions under different names), three measures:
   (1) golden tests, species files with a hash of their meshes, so no output changes by
   accident, once C10 can save species files; C78's hash of four species built in code, in git
@@ -410,45 +405,27 @@ tips by steepness next.
   Reading a file with a key this generator retired prunes it with a warning (C124's processor,
   on its maintainer's advice); a policy per field (skip, warn or error), if one is wanted, goes
   in that processor. *Gate:* the first species used in Panoply.
-- **X18** Forms and presets. The tool is for indie developers wanting the common Earth plant
-  types (requirements, What it is for), so presets named after those types ("Fir", "Willow",
-  "Live oak", "Clump"), each a saved species, are its starting points. Whether forms are needed
-  as well is open: a few architectures (excurrent and decurrent, which covers clumps; seedling's
-  48 used only these two, a limit of seedling's rather than of intent, growth model, Seedling's
-  flora), each with a handful of outcome
-  parameters it translates into the engine's ("branches per limb on average" rather than nodes
-  per crown radius). A species would keep every form's parameters with a selector for the
-  active one, as D15 keeps hidden levels, so switching loses nothing and the editor needs no
-  widget for an enum with data; the raw engine stays a developer view. *Gate:* C44, foliage (C37
-  to C39) and C30 landed, since the generator's look cannot be judged without leaves, and
-  presets for the reference set tried: forms only if tuning presets is still too
-  fiddly.
+- **X18** Presets. The tool is for indie developers wanting the common Earth plant types
+  (requirements, What it is for), so presets named after those types ("Fir", "Willow", "Live
+  oak", "Clump"), each a saved species, are its starting points. Controls in the tree's terms
+  are X22's, the node graph. *Gate:* the reference trees (C131) tuned.
 - **X19** Pendulous levels, for willows: a level whose limbs may hang below the envelope, the
-  envelope guiding rather than clipping them (growth model, How the shapes are covered). The
+  envelope guiding rather than clipping them (prior art, How the shapes are covered). The
   Weep operator. *Gate:* a weeping preset (X18).
-- **X21** Find out why `bevy_immediate`'s `.text()` on the subpane headers, called every frame
-  with an unchanged string, stopped clicks on the bark's color swatch from opening its picker
-  (`plans/bark.py` failed three runs in three), and report it to the fork. The headers use
-  `on_hash_change_text_fn`, which writes only when the text changes, and the plan passes. Until
-  then, a panel binds changing text that way. *Gate:* Panoply's editor taking the panel
-  patterns (D3).
 - **X22** Forms as patches (`docs/patches.md`), after Reaktor's front panels and Blender's
-  geometry nodes: a file of operators over an abstract plant (axes and the attachments placing
-  them, so the trunk and limbs share every operator on composition), each input a formula over
+  geometry nodes: operators over an abstract plant, edited as a node graph of structure and
+  value wires and saved as a file (patches, Node graph), each input a value or a formula over
   the author's named controls, evaluated per plant or per element, never per vertex; a Rust
-  library realizes the result. Today's species becomes the default patch. After stacks (C96 to C99),
+  library realizes the result. Built in three steps: structure only, then per-element inputs
+  (C145), then value wires and controls. A patch is a species of its own kind, tagged apart
+  from today's in the glTF extra, so neither is read as the other. After stacks (C96 to C99),
   the generator split into operators and realization, in Rust, with no language. E[4],
   split as the doc's order of work. *Gate:* the milestone's first species exported, and C10's
   file leaving room for a species to name its patch.
-- **X23** Kinks at the nodes, the limb deflecting away from each child it gives off, as
-  sympodial growth zigzags (oak, hawthorn). Nodes are laid out after a limb is traced, so this
-  means laying them out first. An option of Wander. *Gate:* D17's kinks,
-  evenly spaced but not placed at the nodes, read as too random.
-
 - **X24** Cards that include their stem and stand in for the finest twigs, one card per twig
   of the last level in place of its tube, rather than leaves lined up with meshed twigs (D27),
   saving the triangles those twigs cost now that every stem is drawn (D22). Seen edge-on the twig vanishes, so it needs crossed cards (twice the
-  triangles) or facing kept away from edge-on. *Gate:* X28, to compare the two at game scale.
+  triangles) or facing kept away from edge-on. *Gate:* the last level's twigs costing too much of the triangle budget.
 
 - **X25** The property editor's attributes from `bevy::annotations` (bevy#26164, merged as `8550394`): its
   `ValueRange` (an `f64` range, read with `ValueRange::from_attributes`), `Step` and
@@ -469,44 +446,22 @@ tips by steepness next.
   makes switching stutter, cache the texture per document. Until then, nothing may assume
   there is only one document: C8 stores a list, C40 acts on the active document, C7 keeps a
   history per document. Plans that write the species past the panel (the driver's
-  `set_resource`) move to `set` on the active document's entity. Open: closing a tab with unsaved changes, whether a new document starts
-  from defaults or a copy of the active one, and which
-  need tabs serve that X28's sheets would not (editing variants one at a time, against comparing
-  them side by side). *Gate:* C8 and C40 landed, and an author working on variants.
-
-- **X28** Contact sheets (was C45), so designs are explored in sweeps rather than one
-  screenshot at a time, by the author or by an agent. A second binary (`src/bin/sheet.rs`; the
-  modules move behind a `src/lib.rs` so both binaries share them) reads a species file and a
-  sweep (seeds, or one field's values by reflection path), grows each plant with the generator,
-  lays them out in a grid at game scale (150 to 300 px a plant, the size they are in Panoply),
-  saves one PNG and exits; no panel, no driver. Species files are read by reflection, the part
-  of C10's serialization this needs, pulled forward. Costs: an image is about width × height ÷
-  750 tokens, so a 3 × 3 sheet near 900 px square is about 1,000, nine designs for the price of
-  one screenshot. Uses: interactive selection (a sheet of variants, the author picks, the next
-  sheet varies the pick), presets (X18), and comparing card models (X24). The sheets would
-  replace `plans/gallery/shapes.py`. Unattended exploration runs in a subagent, keeping the
-  images out of the main conversation: sweeping parameters needs only writing sweep files and
-  running the one command, so a narrow allowlist covers it; trying generator changes (a form,
-  say) runs in a git worktree that is thrown away afterwards, the findings written up and built
-  properly. Deferred as a large, disruptive change (the crate split) whose payoff is unproven.
-  E[3] *Gate:* tuning in the editor proving too slow to compare designs at game scale, or
-  presets (X18) begun.
+  `set_resource`) move to `set` on the active document's entity. Open: closing a tab with unsaved changes, and whether a new document starts
+  from defaults or a copy of the active one. *Gate:* C8 and C40 landed, and an author working on variants.
 
 - **X30** Cards along a twig, for plants whose leaves crowd their shoots: spur-bearing trees
-  (apple, larch, ginkgo) and conifers' needles (growth model, How the shapes are covered: "clusters
+  (apple, larch, ginkgo) and conifers' needles (prior art, How the shapes are covered: "clusters
   along the limbs"). "Cards along the twig", default 0 with a small maximum, never past the tip's
   card, with no shell. They would also fill the crown's middle, which tip leaves alone leave as
   a wagon wheel: laterals carry their tips out toward the shell. Removed in C74, where they came
   from the shell (C37). Interior leaves
   that stand apart from any stem would want a texture of their own, without the painted stem
   (requirements, Foliage: more than one leaf texture region), and a second texture's fields
-  would crowd the panel, so they wait to be an ornament (C103). *Gate:* a preset
+  would crowd the panel, so they wait to be an ornament (C103). Then a leafy share along the
+  parent, after seedling's conifer (`artwork/reference/seedling/conifer.png`): lower laterals
+  bare toward their base, upper ones leafy throughout; a card's back may poke past its lateral's
+  base, which shows close up but not at game distance. *Gate:* a preset
   (X18) that another limb level cannot make dense enough.
-
-- **X33** A fork's copies (C30) competing as one parent for their children's places (D26), so
-  each copy's first child goes to its outer flank, away from the crotch; alternation still puts
-  later ones inside, as in real amphitonic forks. E[2] *Gate:* C30's screenshot of a level-roll
-  Y with sides facing shows the crotch crowded.
 
 - **X35** Report upstream: a feathers number input left without a change (Enter, or focus lost)
   keeps its editing text, so an angle shows `20d` rather than `20°`, beside its interior caption
@@ -515,28 +470,11 @@ tips by steepness next.
 
 - **X37** Variety among the tips' leaves: several sprigs painted as regions of the one leaf
   texture (requirements, Foliage), each tip's card drawing one from its foliage stream (D16).
-  *Gate:* C38 landed, and the crown's tips reading as one sprig repeated.
+  Its list of sprigs is C147's. *Gate:* C38 landed, and the crown's tips reading as one sprig repeated.
 
 - **X38** Wander that falls off at smaller scales, so a limb sweeps in a few large kinks and its
   smaller ones are gentler; today's bolt is as jagged at every scale (D17). *Gate:* a preset
   (X18) that needs smoother limbs.
-
-- **X39** Rounded turns, as an old oak's limbs bend (D17): each corner the hinting keeps smoothed
-  into an arc with extra rings, in proportion to the tube's radius, so twigs at the detail
-  threshold stay cornered. Rings tilted through a tight turn meet on its inside where the arc's
-  radius is under the tube's, so the arc must be at least as wide as the tube, never fixed by
-  boolean geometry. *Gate:* corners reading as too angular at game scale.
-
-- **X41** Log scale for sizes (was C32), a convenience: an `@LogScale` attribute whose unit keeps
-  the number input in ln(metres), so a drag moves evenly in the log, with text printed and
-  parsed in metres, since feathers drags in display units and won't drag in canonical ones.
-  *Gate:* sizing small plants (herbs, under a metre) proving fiddly on the linear slider.
-
-- **X40** Roll spread (was part of C60): each card turned about its axis at random, by up to a
-  species angle, drawn from a foliage stream of the twig's own (D16), so a plant reads from the
-  side, for games with a lower camera than Panoply's. Lateral droop (C39) already turns a card's
-  halves toward the side. *Gate:* a game viewing plants from near level, where lateral droop
-  does not keep cards from reading edge-on.
 
 - **X43** Crowns widest at the top: profiles beside `Profile`'s five, an umbrella (a flat top
   over a narrow base, for acacia and stone pine) and a vase (widening to near the top, for elm
@@ -574,15 +512,6 @@ tips by steepness next.
   the leaf image replaced in place, and a color edit showed at full zoom-out. *Gate:* the fix in
   the Bevy we build against, and the workaround dropped.
 
-- **X49** Panoply draws every outline at `OutlineMaterial`'s default width, 0.015: it reads the
-  `"outline"` extra's presence (`models::process_material_extras`) but not its value, so the
-  width the export writes (C41, C66) has no effect. A material per distinct width, cached. An
-  item for Panoply's ledger. *Gate:* the first species exported (C41).
-
-- **X51** Key Symbols (C107) upstream in feathers, for the Bevy editor's menus too, the author
-  proposing it. *Gate:* it landing in the Bevy we build against; then `src/shortcut.rs` uses
-  feathers' and `assets/fonts/KeySymbols.ttf` goes.
-
 - **X52** Teeth independent of the leaf's shape (was C115). Serration is hard to steer because
   the tapers and widths reach the teeth in `leaf::half_outline`: the edge is cut at equal steps of
   the curve's parameter, so a taper moves teeth along it; each tooth is pushed square to the edge
@@ -600,41 +529,6 @@ tips by steepness next.
   Open: rake as an angle from square to the edge, so a lean holds at any depth; inflating across
   more than along. *Gate:* the author settling what serration should mean.
 
-- **X53** Values by place along the parent, in place of carry-on, revising D30. Placement works
-  near the crown's base and not further up. Carry-on (TD3.6) switches level at the parent's last
-  node: from the cut the axis takes the child level's sag, sides, wander and reach, and its
-  laterals start at the grandchild level's start, leaving a bare stretch at each joint. Instead,
-  placement settings vary with `t`, the node's place along the parent inside the crown (X22's
-  `t`): angle, reach, and a leafy share, how much of a lateral bears foliage; perhaps density and
-  fork chance. Nodes run to the tip, which is the smallest shoot, so no post or trident (D30's
-  reasons); carry-on went in C117. Bias (C116) varies size and angle by node index.
-  - Leafy share, after seedling's conifers: cards shrink only to about half before their baked
-    outlines show, but lower laterals bare before their foliage and upper ones leafy throughout
-    give about 4:1. Built on cards along the twig (X30). A card's back may poke past its
-    lateral's base, which shows close up but not at game distance.
-  - Leaf size by Bias: split out as C138.
-  - The reference value is the midpoint's (C116), so the mean holds as the gradient changes;
-    the base's, easiest to see, was the other choice.
-  - Test cases: seedling's conifer (`artwork/reference/seedling/conifer.png`): upper laterals
-    shorter, steeper and leafy throughout. A maple: forks at about a fifth of its height into
-    risers that split, under a hemispherical crown, sprigs radiating outward near its surface,
-    few leaves inside. A fig: floppy, drooping leaves throughout, forking near the surface. A
-    citrus: many small shoots rising straight up, leaves along their whole length.
-  - Not covered: depth in the crown, for the maple's shell (sprigs only in an outer shell,
-    facing outward; X12 aimed at it), a later step. In a real tree the small branches fork
-    just inside the crown, rather than every level stopping at it (C118): forks drawn by
-    distance from the envelope rather than share of length, or each level's reach stopping
-    a shell's depth short of it.
-  - Open: which settings vary; the panel's control (a row split into base and tip, or a center
-    and a change); how the leafy share and X30 meet; what Start becomes; sag, wander and sides
-    along a limb, which stay per level.
-  E[4], split before it is written. *Gate:* the author agreeing the proposal; before C113.
-
-- **X54** Apical dominance: a lateral's reach no more than the parent's length left past its
-  node, so laterals shorten toward the tip and those near it, no longer than thick, drop out;
-  no field (G1). Every parent then dominant, as excurrent trees are, decurrent forms coming
-  from forks; a share in place of the 1 if too strong. Under C116's Bias, which shapes the
-  laterals below the cap. E[2] *Gate:* tridents still showing once End (C119) is in.
 
 ## Notes
 
@@ -646,7 +540,7 @@ tips by steepness next.
   leaves are at tips only, so every leaf lands on the envelope. With the second level to the
   sides, they land on its wall: a ring from above, bare inside. Facing Up lands them on the cap,
   filling the disc from above, but the side view shows long bare poles under a sheet of leaves;
-  reach at 40% shortens the poles only in proportion. X53's "short limbs bearing long children"
+  reach at 40% shortens the poles only in proportion. "Short limbs bearing long children"
   (2026-10-19) makes those poles once the children point up. Led to C130, C132 and C133.
 - KTX2 for the pipeline (from C41's research): Bevy's glTF loader sends any image through
   `Image::from_buffer` by mime type or extension (`bevy_gltf/src/loader/mod.rs:1227`), so KTX2

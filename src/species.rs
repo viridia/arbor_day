@@ -663,7 +663,7 @@ pub struct Bias {
     /// How much the leaves on the laterals, and on the limbs they bear, follow the laterals'
     /// lengths: at 100%, a lateral half as long as its parent's longest bears leaves at half their
     /// size, the longest's keeping theirs. A parent's own tip takes its last node's. Leaves never
-    /// shrink below half their size, where a card's outline and texture would show.
+    /// shrink below the tip leaves' smallest.
     #[reflect(
         @ValueRange::<f32>(0.0..=1.0),
         @Precision(0),
@@ -810,6 +810,15 @@ pub struct TipLeaves {
         @Caption("Size"),
     )]
     pub size: f32,
+    /// The least share of its size a card shrinks to by Bias's leaves: lower closes a conifer's
+    /// tip, but a smaller card's outline and texture detail show.
+    #[reflect(
+        @ValueRange::<f32>(0.25..=1.0),
+        @Precision(0),
+        @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("Smallest"),
+    )]
+    pub smallest: f32,
     /// How far each half of a card turns down about its midrib, folding it along the sprig's
     /// stem; negative turns the halves up, cupping it.
     #[reflect(
@@ -1013,6 +1022,7 @@ impl Default for TipLeaves {
         Self {
             upright: Upright::Triple,
             size: 0.25,
+            smallest: 0.5,
             // Seedling's most common pair, on the shrubs and two hemlocks.
             lateral_droop: (-16.0_f32).to_radians(),
             axial_droop: 17.0_f32.to_radians(),

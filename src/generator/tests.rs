@@ -484,18 +484,21 @@ fn bias_leaves_scale_cards_along_their_parent() {
     let tip = full * scale_of(15);
     assert!(cards_of(0).all(|card| (card.size - tip).abs() < 1e-4));
     assert!(cards_of(0).count() > 0);
-    // Halved at the least.
+    // No smaller than the tip leaves' smallest.
     species.limbs.levels[0].bias.settings.leaves = 1.0;
     species.limbs.levels[0].bias.settings.size = 0.8;
-    let skeleton = grow(&species);
-    let least = full * LEAST_LEAF_SCALE;
-    assert!(skeleton.cards.iter().all(|card| card.size >= least - 1e-4));
-    assert!(
-        skeleton
-            .cards
-            .iter()
-            .any(|card| (card.size - least).abs() < 1e-4)
-    );
+    for smallest in [0.5, 0.3] {
+        species.ornaments.tip_leaves.settings.smallest = smallest;
+        let skeleton = grow(&species);
+        let least = full * smallest;
+        assert!(skeleton.cards.iter().all(|card| card.size >= least - 1e-4));
+        assert!(
+            skeleton
+                .cards
+                .iter()
+                .any(|card| (card.size - least).abs() < 1e-4)
+        );
+    }
     // Longest at the last node, so full there.
     let level = &mut species.limbs.levels[0];
     level.bias.settings.size = -0.6;

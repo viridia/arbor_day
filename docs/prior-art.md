@@ -1,9 +1,8 @@
-# Growth model
+# Prior art
 
 The growth model is the part of the generator that decides where the trunk, limbs and foliage
 cards go. This document surveys the candidates named in the requirements (Research), judges them
-against what arbor_day makes, and recommends one. The species data model (ledger C10) follows
-from it.
+against what arbor_day makes, and recommends one.
 
 ## How the game sees plants
 
@@ -228,7 +227,7 @@ authored per species, of world up and the envelope's outward normal, with a boun
 
 The card's shading normal is separate from its face: the face normal blended toward the
 envelope's outward normal by a "crown softness" weight, so the crown shades as one mass. At 0
-the card keeps its own normal, as today. Above 0 both faces share it; see Consequences.
+the card keeps its own normal, as today. Above 0 both faces share it, which Panoply's leaf material must allow (ledger X13).
 
 ### How the shapes are covered
 
@@ -249,28 +248,9 @@ The last four were beyond seedling. Weeping needs a level allowed below the enve
 envelope guides it rather than clipping it; palms and rosettes need foliage radiating from a
 stem's tip or the ground.
 
-## Consequences
+## What was built
 
-For the species data model (C10), the groups follow the layers:
-
-- **Envelope:** profile, top and base (against the trunk's height), radius, lean, squash.
-- **Stems:** count, splay, height, fork count and angle.
-- **Limb levels**, a list: nodes, limbs per node, facing and skew, start along the parent,
-  angle and its limits, reach, tropism, wander, radius ratio.
-- **Bark:** base radius, taper, flare, color.
-- **Foliage:** leaves on or off, size, lateral and axial droop, facing (up-to-outward blend,
-  spread), crown softness.
-- **Leaf sprig:** how the leaves are arranged on the card's stem (seedling's `leafGroup`: fan
-  size and angle, pairs along the stem and their spacing, taper), painted into the texture.
-- **Leaf texture:** shape and color as in seedling (`leafShape`, `leafColor`), with their own
-  random streams.
-- **Outline:** on or off, and its widths, for the bark shell and the painted leaf stroke.
-
-For Panoply: Bevy flips the normal of a back face when a material is double-sided
-(`prepare_world_normal` in `bevy_pbr`), and the glTF loader makes `doubleSided` materials so. A
-card with a crown normal would shade its back face as if it faced into the crown. The game's leaf
-material needs `cull_mode: None` with `double_sided: false`, set where the flora is loaded, so
-both faces keep the exported normal.
+`design.md` describes the generator as built.
 
 ## Sources
 

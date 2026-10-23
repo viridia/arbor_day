@@ -9,7 +9,7 @@ the art style, the asset pipeline it feeds, and the editor UI architecture (X3 i
 migration ledger, `docs/migration.md`). Panoply is not the only intended user (What it is for).
 
 This document says what the tool must do. The growth model is chosen in
-[growth-model.md](growth-model.md), after the survey under Research, below.
+[prior-art.md](prior-art.md), after the survey under Research, below.
 
 Backward compatibility is not a goal. The existing plants stay as they are, and seedling stays
 available to regenerate them. New models may replace them species by species if they look
@@ -59,7 +59,7 @@ Silhouette, crown shape, and art direction come first.
 - `collision.ts` (pick branch angles to minimize self-shading) exists but is not used.
 - Trees often came out contorted, with branches and leaf cards facing every which way. The
   code shows why (see Order and variation, below).
-- Its output, measured: `docs/growth-model.md`, Seedling's flora.
+- Its output, measured: `docs/prior-art.md`, Seedling's flora.
 - The editor is a React control panel of property groups with a three.js preview that orbits
   on horizontal scroll.
 
@@ -153,7 +153,7 @@ Priority: **M** must, **S** should, **C** could.
 - **M** Every tree an artist would want is reachable, including those that need a trick of
   perception rather than biology to read well at low poly, such as carry-on and folded cards.
 - **S** The trees an artist wants most are few edits away. A mechanism that widens what is
-  reachable but is awkward to steer sits behind controls in the tree's terms (X18's forms), not
+  reachable but is awkward to steer sits behind controls in the tree's terms (X22's node graph), not
   in front of the artist.
 - **M** Control of the overall silhouette: a crown envelope (cone, ellipsoid, column, or a
   curve) that branches and foliage fill, not only a result of per-level rules.
@@ -299,8 +299,7 @@ The output of this step is a short write-up with a recommendation, before any co
    game distance. Measure on screen first. A typical seedling tree is about 2,500 triangles in
    all, which the game draws today; 300 to 600 is a guess, not a target. It turns on how many
    trees are on screen at once, and on how many edges the low-poly look wants.
-2. Crate shape: a generator library plus the authoring app, or a single crate? The shell is
-   one crate; the split is proposed in the ledger, X1.
+2. Crate shape: a generator library plus the authoring app, or a single crate? One crate.
 3. Leaf texture rendering in Rust: a 2D vector rasterizer (e.g. `tiny-skia`) on the CPU, or
    drawn on the GPU in the app. The command-line mode needs the CPU path either way. Settled:
    `tiny-skia` (D20).

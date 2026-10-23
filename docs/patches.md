@@ -1,6 +1,6 @@
 # Patches
 
-A design for forms as data (ledger X22, X18): a plant described by a patch, a file of operators
+A design for forms as data (ledger X22): a plant described by a patch, a file of operators
 whose inputs are formulas over the author's own controls, run in Rust over an abstract plant
 and then realized as meshes. Not built.
 
@@ -15,9 +15,9 @@ not relations, so a preset scaled up is a different tree.
 After Reaktor, a patch has a front panel of controls, and formulas wire each control to as many
 operator inputs as it should move, combined with other controls by arithmetic. After Blender's
 geometry nodes, the operators act on a plant, not on numbers: each takes a plant and returns one,
-as Merge Points takes a geometry and returns another. A patch is a file, not a node graph:
-operators in order, their inputs written as spreadsheet formulas in strings, so the file stays
-readable and needs no AST spelled out in JSON.
+as Merge Points takes a geometry and returns another. A patch is edited as a node graph (Node
+graph, below) and saved as a file: operators in order, their inputs written as spreadsheet
+formulas in strings, so the file stays readable and needs no AST spelled out in JSON.
 
 Formulas never reach the vertices. Placing rings, tracing paths, sharing wood and meshing stay in
 Rust, so the language is never a slow, clumsy copy of the generator. A formula is evaluated once
@@ -134,7 +134,7 @@ Operators run level by level, since scions are placed on their parent's finished
 model alone waits for the whole skeleton.
 
 The skeleton is plain data, not entities: the generator stays a pure function of the species, as
-X1's crate without the ECS needs, an edit rebuilds thousands of axes without spawning, and an
+a library without the ECS would need, an edit rebuilds thousands of axes without spawning, and an
 operator reads a parent while writing a scion by index. Selecting a limb in the editor, or a plan
 reading one, can spawn a view of the skeleton later.
 
@@ -187,13 +187,13 @@ their fixed order:
 2. **Sag** and **Rise**: the course turning down by weight and up toward light (D17, C94).
    Without them the course is straight. On the
    trunk it curves the stem after the tilt it leaves the ground at (the splay, and the lean's
-   tilt, C114), which gives it the heading a bend keeps.
+   tilt), which gives it the heading a bend keeps.
 3. **Weep**: the course allowed past level and below the envelope, for arching stems (C48) and
    pendulous levels (X19).
 4. **Wander**: the course displaced as a lightning bolt (C84), with an amplitude (today's
    wander) and a frequency in kinks per crown radius, so a level can kink faster or slower than
    the fixed spacing every level has now. Its options: a roughness falling off at smaller
-   scales, and kinks at the nodes (X23), which needs nodes laid out before the trace and so
+   scales, and kinks at the nodes, which needs nodes laid out before the trace and so
    strains the order.
 5. **Flare**: the trunk only, its stems widening toward the ground (C122, TD3.2).
 6. **Fork**: D31's five fields; on the trunk, stem forks (C75).
@@ -365,6 +365,34 @@ Each step is an object with one key, the operator, as a MongoDB pipeline stage i
 A species is then a patch, the controls' values and a seed: the glTF extra (C10) holds those, and
 the patch's name and version (X15).
 
+## Node graph
+
+The editor shows a patch as a graph with two kinds of wire, drawn differently:
+
+- **Structure**: the plant, or the axes a step makes, flowing from one operator to the next. A
+  scion node fed from the trunk outputs limbs, which other operators then take. A step's `on`
+  tag is its structure wire. One output may feed several nodes, so a trunk bears its lower and
+  upper limbs from two scion nodes with different settings.
+- **Values**: inputs to operators. A scalar or a color; a per-element value, a function of the
+  element evaluated for each (`t`, `depth`, `index`), as Blender's fields are, of which a curve
+  over `t` is one (C145, replacing Bias); and a draw (`bell`, `uniform`), replacing `Fuzzy`. A
+  formula is a value wire written as text.
+
+Two cases a graph must meet:
+
+- **Crowding across nodes**: competition (D26) places a node's limbs against those already on
+  the parent, so two scion nodes on one parent would not see each other's. Either a scion node
+  takes several ranges, each with its own settings, or competition works on the parent rather
+  than inside a node.
+- **Whole-plant steps**: `pipe`, prune (C133) and `clusters` on every end need every axis, so
+  structure wires join before them, by a join node or by those steps standing at the end.
+
+SpeedTree's generation editor is a graph of structure alone: generator nodes each spawning on
+its parent, their parameters set on each node, many as curves along the parent. So a graph
+comes in three steps, each useful alone: structure only, today's levels and operators as nodes,
+which already gives a trunk two scion nodes; per-element inputs (C145's curves); then value wires
+and the front panel's controls.
+
 ## Not in the language
 
 Rings, vertices and meshing; competition's constants; stream bookkeeping; the order of draws
@@ -386,15 +414,15 @@ second form is a second file.
   objects deep.
 - **Editing**: a patch is a Bevy asset, hot-reloaded, edited in a text editor while the preview
   follows; the panel shows the controls only. A developer view listing the steps can come later.
-- **Today's species**: becomes the default patch, its controls one to one with today's fields,
-  so the panel and plans are unchanged until a second form exists.
+- **Today's species** stays as it is: a patch is a species of its own kind, tagged apart from it
+  in the glTF extra, so neither is read as the other.
 
 ## Order of work
 
 1. The skeleton, with the panel and species unchanged: golden meshes (C78), one axis type
    (C79), the skeleton meshed after growing (C80), a radius per vertex (C81), operators as
    functions (C82); then, changing output, hinting as each level's last stage (C83) and wander as a
-   displacement (C84). Useful alone: it is most of X1.
+   displacement (C84).
 2. Stacks (C96 to C99): the operators on the panel, today's per-level fields split between the frames
    and default operators, so the default species grows as before.
 3. Formulas, controls and the patch file; the default patch reproduces step 2's plant.
