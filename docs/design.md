@@ -170,6 +170,12 @@ metallic, the bark's with the `"outline"` extra when outlined. The PNG is the te
 level; the pipeline mipmaps. Open reads the species back from the extra (TD2.3); a file with
 fields pruned opens with the document's dot shown until it is saved.
 
+The golden trees are the finished trees in `reference/`, listed in `FINISHED` in
+`src/gltf_file.rs`'s tests (G6). A test grows each from its species and compares the result with
+what was saved: indices exactly, positions and texture coordinates within 0.1 mm, normals within
+0.001, and the leaf texture within 2 a channel. It lists every tree that differs before failing.
+Saving a tree again makes its current output the golden one.
+
 A menu item shows its keys dimmed at its right end (`src/shortcut.rs`), in the families "Fira
 Sans, Key Symbols". Key Symbols (`assets/fonts/KeySymbols.ttf`) is DejaVu Sans subset to the key
 symbols Fira Sans lacks, renamed; Parley picks a font per character. ⎋ is in neither, so Escape

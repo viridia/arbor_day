@@ -118,8 +118,8 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C141  | A short twig's card reaches back past its root, its fold at the tip, as seedling's did, so palecress's leaves sit at its stalk (TD3.8). |
 | C142  | The trunk's radius down to 1 cm, the thinnest that reads at Panoply's camera distance, for flower stems and herbs. |
 | C143  | Tip leaves' smallest: the floor on Bias's leaf scale per species, 50% by default as before, down to 25% so a conifer's tip closes (TD3.8). |
-
 | C47   | A sense of scale: a measuring stick and a silhouette beside the crown, with a HUD toggle of its own (TD1.6). |
+| C146  | Golden trees: each finished tree in `reference/` grown from its file and compared with its saved meshes and leaf texture (TD1.7, G6); X15's first measure. |
 
 ## Next
 
@@ -137,17 +137,11 @@ per-type hook, and is retained-mode.
 The foundation, the skeleton (`docs/patches.md`, The abstract plant), tip rosettes, the species
 file (C10), operator stacks (C96 to C99) and colors by part (C69) have
 landed, and forks drawn along the chain (C95) and on stems (C75), sag and rise (C94), ornament
-slots (C103), the painted leaf (C38), outlines (C66), carry-on's removal (C117) and aim (C130).
-Before the freeze (C113), the changes that would cost the finished trees a migration or a new
-look land while the trees are few; the golden trees next, so each of those changes is seen.
+slots (C103), the painted leaf (C38), outlines (C66), carry-on's removal (C117), aim (C130) and
+the golden trees (C146). Before the freeze (C113), the changes that would cost the finished trees
+a migration or a new look land while the trees are few, the golden trees showing each.
 
-1. **C146 Golden trees**: a test growing each finished tree in `reference/` from its file and
-   comparing the meshes with those saved in it, within a small tolerance, so a change that moves
-   a finished tree fails (G6). The finished trees are named in the test, the author adding each
-   when done (leechgrass is not). On a failure the author looks at the tree: close enough, saved
-   again as it is, which updates its meshes; retuned and saved; or the change put behind an
-   option. X15's first measure. E[2]
-2. **C70 Tips by steepness**: one card on a level tip and a rosette on an upright one (TD3.8)
+1. **C70 Tips by steepness**: one card on a level tip and a rosette on an upright one (TD3.8)
    meet at a sudden switch, between them three looks:
    - Level: one card along the twig, its side leaves painted pairs or side branches (D27).
    - Inclined: two or three cards in a level fan centred on the twig's heading.
@@ -177,7 +171,7 @@ look land while the trees are few; the golden trees next, so each of those chang
    a limb steepens, rather than rosettes shrinking; no placement setting varies by steepness
    yet (C116's Bias varies along the parent). Card counts multiply with levels, eight triangles
    each since C39, so look at density against the budget too. E[3]
-3. **C125 Steady nodes**: moving Start or End moves each node, which jumps limbs about in two
+2. **C125 Steady nodes**: moving Start or End moves each node, which jumps limbs about in two
    ways. A lateral's length changes, so its own node count steps; its nodes draw in order from
    one `layout` stream and its limbs' streams are numbered by a running count, so one node more
    re-deals every node after it, and every level below. Each node from a stream of its own
@@ -185,7 +179,7 @@ look land while the trees are few; the golden trees next, so each of those chang
    drops one node. And a node's azimuth is the cheapest of its candidates (`node_azimuths`),
    which flips as crowding changes with the nodes' spacing; blend the two cheapest when their
    costs are near. Changes every plant's layout (X15's generator version). E[2]
-4. **C134 Facing, skew and angle as G5 has them** (the author, 2026-10-21 and 10-22): adjusting
+3. **C134 Facing, skew and angle as G5 has them** (the author, 2026-10-21 and 10-22): adjusting
    facing and skew seldom improves a plant, since the model decides what they promise to set.
    - Facing only where the parent has an upper side: an upright trunk has none, so Sides, Up and
      Down measure from an arbitrary side there. The trunk's level is always Around (crowding's
@@ -198,7 +192,7 @@ look land while the trees are few; the golden trees next, so each of those chang
      in one row; which, decided when built.
 
    E[2]
-5. **C145 Bias as curves** (was X55, its gate passed): Bias's Size a curve along the parent, first
+4. **C145 Bias as curves** (was X55, its gate passed): Bias's Size a curve along the parent, first
    node to last, in place of today's straight change, so a conifer's tip narrows faster than its
    base (C143's floor works around it); Leaves and Aim after, as fields. A curve's x is the
    place, 0 to 1; its y the field's own value in its units and range, not a factor on it. A few
@@ -232,10 +226,10 @@ look land while the trees are few; the golden trees next, so each of those chang
    between the ends, as on a straight wire, so below a small `dot(b, b)` it takes the line's
    distance from A to C. Open: whether reach and angle
    take curves too. E[3]
-6. **C147 Sprigs as a list** (X37's format, ahead of its feature): the tip leaves' sprig becomes
+5. **C147 Sprigs as a list** (X37's format, ahead of its feature): the tip leaves' sprig becomes
    a list holding one, the panel showing it as now, so several sprigs (X37) later need no
    migration. `reference/` converted. E[1]
-7. **C8 Working document in settings.** A settings group holding the working species and, once
+6. **C8 Working document in settings.** A settings group holding the working species and, once
    set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
    as seedling did. The document's name comes from the file name. Serialized by reflection, as
    `bevy_settings` does. A working document from before a schema change is lost (D32), but not
@@ -244,7 +238,7 @@ look land while the trees are few; the golden trees next, so each of those chang
    read as a species file is (C124, TD2.3), its pruned fields logged and the document marked
    edited. Stored as a list of open documents holding
    one, and the active one's index, so several (X26) need no change of format. E[3]
-8. **C113 File format freeze**, at D32's gate: from here a change that renames, moves or removes
+7. **C113 File format freeze**, at D32's gate: from here a change that renames, moves or removes
    a species field, or changes its type, needs a migration (X15). Before it, each item below
    either lands, is dropped, or is accepted as a later migration; prune the list as those
    choices are made. E[1], the items aside.
@@ -393,9 +387,8 @@ look land while the trees are few; the golden trees next, so each of those chang
   meshes, so a tree changes only when regenerated: edited again, or rebuilt by the command-line
   export if the asset pipeline runs one. Rather than keeping every past generator (Cargo
   could depend on several versions under different names), three measures:
-  (1) golden tests, species files with a hash of their meshes, so no output changes by
-  accident, once C10 can save species files; C78's hash of four species built in code, in git
-  history, served the skeleton's refactors (C79 to C82), each mesh's triangles hashed as a set;
+  (1) the golden trees (C146), so no output changes by accident; C78's hash of four species
+  built in code, in git history, served the skeleton's refactors (C79 to C82);
   (2) a generator version in the species file, raised only when output changes on
   purpose, which the export can warn about; (3) an additive change defaults to the old output
   when the file lacks its field (no wander, say), so a new species' default and a missing

@@ -320,4 +320,151 @@ mod tests {
         assert!(read(&path, &registry).unwrap().species == species);
         fs::remove_dir_all(&dir).unwrap();
     }
+
+    /// The author's finished trees in `reference/`, each added when done (G6).
+    const FINISHED: &[&str] = &[
+        "trees-temperate/poplar-orange",
+        "crops/palecress",
+        "trees-coniferous/pine-fluffy",
+        "trees-coniferous/pine-drooping",
+    ];
+
+    /// The most a position or texture coordinate may move, in metres or UV units, and a normal.
+    const DISTANCE: f32 = 1e-4;
+    const NORMAL: f32 = 1e-3;
+
+    /// The most a texture channel may differ: SIMD may round differently.
+    const CHANNEL: u8 = 2;
+
+    #[test]
+    fn finished_trees_grow_as_saved() {
+        let mut registry = TypeRegistry::new();
+        registry.register::<Species>();
+        let failures: Vec<String> = FINISHED
+            .iter()
+            .flat_map(|tree| {
+                golden_differences(tree, &registry)
+                    .unwrap_or_else(|error| vec![error.to_string()])
+                    .into_iter()
+                    .map(move |difference| format!("{tree}: {difference}"))
+            })
+            .collect();
+        assert!(
+            failures.is_empty(),
+            "finished trees grow unlike their saved meshes; look at each, then save it again, \
+             retune it, or put the change behind an option:\n{}",
+            failures.join("\n")
+        );
+    }
+
+    /// How the tree at `reference/<tree>.gltf`, grown from its species, differs from its saved
+    /// meshes and leaf texture.
+    fn golden_differences(
+        tree: &str,
+        registry: &TypeRegistry,
+    ) -> Result<Vec<String>, Box<dyn Error>> {
+        let path = Path::new("reference").join(tree).with_extension("gltf");
+        let grown = generator::plant(&read(&path, registry)?.species);
+        let gltf = gltf::Gltf::from_slice(&fs::read(&path)?)?;
+        let bin = fs::read(path.with_extension("bin"))?;
+        let mut differences = Vec::new();
+        for (name, geometry) in [("bark", &grown.bark), ("leaves", &grown.leaves)] {
+            let saved = gltf.meshes().find(|mesh| mesh.name() == Some(name));
+            let Some(primitive) = saved.and_then(|mesh| mesh.primitives().next()) else {
+                if !geometry.indices.is_empty() {
+                    differences.push(format!("{name}: grown, but none saved"));
+                }
+                continue;
+            };
+            let reader = primitive.reader(|_| Some(&bin));
+            let indices: Vec<u32> = reader
+                .read_indices()
+                .ok_or("no indices")?
+                .into_u32()
+                .collect();
+            if indices != geometry.indices {
+                differences.push(format!(
+                    "{name}: {} triangles saved, {} grown, or joined differently",
+                    indices.len() / 3,
+                    geometry.indices.len() / 3
+                ));
+                continue;
+            }
+            let positions: Vec<Vec3> = reader
+                .read_positions()
+                .ok_or("no positions")?
+                .map(Vec3::from)
+                .collect();
+            let normals: Vec<Vec3> = reader
+                .read_normals()
+                .ok_or("no normals")?
+                .map(Vec3::from)
+                .collect();
+            let uvs: Vec<Vec3> = (reader.read_tex_coords(0))
+                .map(|uvs| {
+                    uvs.into_f32()
+                        .map(|uv| Vec2::from(uv).extend(0.0))
+                        .collect()
+                })
+                .unwrap_or_default();
+            let grown_uvs: Vec<Vec3> = geometry.uvs.iter().map(|uv| uv.extend(0.0)).collect();
+            differences.extend(
+                [
+                    furthest(name, "positions", &positions, &geometry.positions, DISTANCE),
+                    furthest(name, "normals", &normals, &geometry.normals, NORMAL),
+                    furthest(name, "uvs", &uvs, &grown_uvs, DISTANCE),
+                ]
+                .into_iter()
+                .flatten(),
+            );
+        }
+        if !grown.leaves.indices.is_empty() {
+            let decoder = png::Decoder::new(io::BufReader::new(fs::File::open(
+                path.with_extension("png"),
+            )?));
+            let mut reader = decoder.read_info()?;
+            let mut pixels = vec![0; reader.output_buffer_size().ok_or("too large")?];
+            let info = reader.next_frame(&mut pixels)?;
+            pixels.truncate(info.buffer_size());
+            let painted = &grown.leaf_texture.pixels;
+            if pixels.len() != painted.len() {
+                differences.push(format!(
+                    "leaf texture: {}×{} saved, {}×{} painted",
+                    info.width, info.height, grown.leaf_texture.size, grown.leaf_texture.size
+                ));
+            } else if let Some(most) = pixels
+                .iter()
+                .zip(painted)
+                .map(|(a, b)| a.abs_diff(*b))
+                .max()
+                .filter(|&most| most > CHANNEL)
+            {
+                differences.push(format!("leaf texture: a channel differs by {most}"));
+            }
+        }
+        Ok(differences)
+    }
+
+    /// Where `grown` strays furthest from `saved`, if by more than `tolerance`.
+    fn furthest(
+        mesh: &str,
+        attribute: &str,
+        saved: &[Vec3],
+        grown: &[Vec3],
+        tolerance: f32,
+    ) -> Option<String> {
+        if saved.len() != grown.len() {
+            return Some(format!(
+                "{mesh}: {} {attribute} saved, {} grown",
+                saved.len(),
+                grown.len()
+            ));
+        }
+        let (vertex, distance) = (saved.iter().zip(grown))
+            .map(|(a, b)| a.distance(*b))
+            .enumerate()
+            .max_by(|a, b| a.1.total_cmp(&b.1))?;
+        (distance > tolerance)
+            .then(|| format!("{mesh}: {attribute} moved by up to {distance}, at vertex {vertex}"))
+    }
 }

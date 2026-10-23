@@ -34,9 +34,9 @@ rfd = "0.17.2"
 tiny-skia = { version = "0.11.4", default-features = false, features = ["std", "simd"] }
 
 [dev-dependencies]
-# The reader Bevy's loader uses, to validate the saved glTF. Already in the lock file through Bevy;
-# without `import`, which would bring new crates.
-gltf = { version = "1.4.1", default-features = false, features = ["extras", "names"] }
+# The reader Bevy's loader uses, to validate the saved glTF and read the golden trees' meshes.
+# Already in the lock file through Bevy; without `import`, which would bring new crates.
+gltf = { version = "1.4.1", default-features = false, features = ["extras", "names", "utils"] }
 
 [profile.dev]
 opt-level = 1
