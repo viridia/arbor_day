@@ -1,0 +1,250 @@
+{
+  "accessors": [
+    {
+      "bufferView": 0,
+      "count": 486,
+      "componentType": 5126,
+      "type": "VEC3",
+      "min": [
+        -0.5850119590759277,
+        -0.07999999821186066,
+        -0.5384605526924133
+      ],
+      "max": [
+        0.5896240472793579,
+        2.5668160915374756,
+        0.5967220664024353
+      ]
+    },
+    {
+      "bufferView": 1,
+      "count": 486,
+      "componentType": 5126,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "count": 486,
+      "componentType": 5126,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 3,
+      "count": 1926,
+      "componentType": 5125,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 4,
+      "count": 960,
+      "componentType": 5126,
+      "type": "VEC3",
+      "min": [
+        -0.8647348880767822,
+        0.41013866662979126,
+        -0.8417603969573975
+      ],
+      "max": [
+        0.9019182324409485,
+        2.687208890914917,
+        0.9176550507545471
+      ]
+    },
+    {
+      "bufferView": 5,
+      "count": 960,
+      "componentType": 5126,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 6,
+      "count": 960,
+      "componentType": 5126,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 7,
+      "count": 1440,
+      "componentType": 5125,
+      "type": "SCALAR"
+    }
+  ],
+  "asset": {
+    "version": "2.0"
+  },
+  "buffers": [
+    {
+      "byteLength": 61680,
+      "uri": "pine-fluffy.bin"
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteLength": 5832,
+      "byteOffset": 0,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 5832,
+      "byteOffset": 5832,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 5832,
+      "byteOffset": 11664,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 7704,
+      "byteOffset": 17496,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteLength": 11520,
+      "byteOffset": 25200,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 11520,
+      "byteOffset": 36720,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 7680,
+      "byteOffset": 48240,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 5760,
+      "byteOffset": 55920,
+      "target": 34963
+    }
+  ],
+  "scene": 0,
+  "images": [
+    {
+      "mimeType": "image/png",
+      "uri": "pine-fluffy.png"
+    }
+  ],
+  "materials": [
+    {
+      "alphaMode": "OPAQUE",
+      "doubleSided": false,
+      "name": "bark",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "metallicFactor": 0.0,
+        "roughnessFactor": 1.0
+      },
+      "emissiveFactor": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "extras": {"outline":0.009999999776482582}
+    },
+    {
+      "alphaCutoff": 0.5,
+      "alphaMode": "MASK",
+      "doubleSided": true,
+      "name": "leaves",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "baseColorTexture": {
+          "index": 0,
+          "texCoord": 0
+        },
+        "metallicFactor": 0.0,
+        "roughnessFactor": 1.0
+      },
+      "emissiveFactor": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "meshes": [
+    {
+      "name": "bark",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1,
+            "COLOR_0": 2
+          },
+          "indices": 3,
+          "material": 0
+        }
+      ]
+    },
+    {
+      "name": "leaves",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 4,
+            "NORMAL": 5,
+            "TEXCOORD_0": 6
+          },
+          "indices": 7,
+          "material": 1
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "mesh": 0,
+      "name": "bark"
+    },
+    {
+      "mesh": 1,
+      "name": "leaves"
+    }
+  ],
+  "samplers": [
+    {
+      "magFilter": 9729,
+      "minFilter": 9987,
+      "wrapS": 33071,
+      "wrapT": 33071
+    }
+  ],
+  "scenes": [
+    {
+      "extras": {"arbor_day":{"bark_color":{"Srgba":{"alpha":1.0,"blue":0.1764706,"green":0.34509805,"red":0.3882353}},"bark_outline":0.01,"crown":{"base":0.03,"profile":"Cone","radius":0.9,"top":1.03},"detail":0.02,"generator":1,"leaf_outline":5.9,"limbs":[{"angle":{"center":0.84997535,"shape":"Uniform","spread":0.050614547},"bias":{"aim":0.15,"leaves":1.0,"size":0.25},"density":9.6,"end":1.0,"facing":"Around","per_node":1.0,"radius":0.5,"reach":{"center":0.9,"shape":"Bell","spread":0.1},"sides":4,"skew":0.38048178,"start":0.18},{"angle":{"center":0.63529986,"shape":"Uniform","spread":0.2443461},"bias":{"aim":0.0,"leaves":0.0,"size":1.0},"density":1.3,"end":0.87,"facing":"Sides","per_node":2.0,"radius":0.5,"reach":{"center":0.6,"shape":"Bell","spread":0.1},"rise":{"amount":0.3},"sides":3,"skew":0.0,"start":0.49}],"ornaments":{"tip_leaves":{"axial_droop":0.3996804,"lateral_droop":0.5794493,"leaf":{"base_taper":0.0,"base_width":0.18,"gradient":"Axial","inner_color":{"Srgba":{"alpha":1.0,"blue":0.40784314,"green":0.40784314,"red":0.3137255}},"jitter":0.0,"outer_color":{"Srgba":{"alpha":1.0,"blue":0.39215687,"green":0.6666667,"red":0.39215687}},"rake":0.0,"segments":6,"serration":0.12,"tip_taper":0.41,"tip_width":0.2,"variation":0.06},"size":0.85,"sprig":{"angle":{"center":1.0698868,"spread":0.15533431},"fan":2,"outer_size":0.91,"pairs":4,"spacing":{"center":0.63,"spread":0.0}},"upright":"Single"}},"outline":true,"seed":1,"taper":0.97,"trunk":{"height":2.56,"radius":0.08,"sides":6}}},
+      "name": "pine-fluffy",
+      "nodes": [
+        0,
+        1
+      ]
+    }
+  ],
+  "textures": [
+    {
+      "sampler": 0,
+      "source": 0
+    }
+  ]
+}

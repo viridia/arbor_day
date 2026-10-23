@@ -1,0 +1,108 @@
+{
+  "asset": {
+    "version": "2.0",
+    "generator": "arbor_day scripts/from_seedling.py"
+  },
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "desert1",
+      "nodes": [],
+      "extras": {
+        "arbor_day": {
+          "generator": 1,
+          "taper": 0.79,
+          "bark_color": {
+            "Srgba": {
+              "red": 0.4392156862745098,
+              "green": 0.44313725490196076,
+              "blue": 0.3411764705882353,
+              "alpha": 1.0
+            }
+          },
+          "trunk": {
+            "height": 3.35,
+            "radius": 0.12,
+            "sides": 6
+          },
+          "crown": {
+            "profile": "Cone",
+            "top": 1.22,
+            "base": 0.39,
+            "radius": 0.6
+          },
+          "limbs": [
+            {
+              "density": 2.0,
+              "per_node": 3,
+              "facing": "Around",
+              "skew": 0.5044001538263612,
+              "start": 0.39,
+              "angle": {
+                "center": 1.5795229730548683,
+                "spread": 0.1291543646475804,
+                "shape": "Uniform"
+              },
+              "rise": {
+                "amount": 0.78
+              },
+              "bias": {
+                "size": 0.34,
+                "aim": 0.63
+              }
+            }
+          ],
+          "ornaments": {
+            "tip_leaves": {
+              "upright": "Triple",
+              "size": 1.0,
+              "lateral_droop": -0.06981317007977318,
+              "axial_droop": -0.08028514559173916,
+              "sprig": {
+                "fan": 0,
+                "angle": {
+                  "center": 0.6597344572538565,
+                  "spread": 0.10995574287564276
+                },
+                "outer_size": 0.69,
+                "pairs": 4,
+                "spacing": {
+                  "center": 0.57,
+                  "spread": 0.37
+                }
+              },
+              "leaf": {
+                "base_width": 0.29,
+                "base_taper": 0.35,
+                "tip_width": 0.28,
+                "tip_taper": 0.55,
+                "segments": 1,
+                "serration": 0,
+                "rake": 0.07,
+                "jitter": 0,
+                "inner_color": {
+                  "Srgba": {
+                    "red": 0.5725490196078431,
+                    "green": 0.6431372549019608,
+                    "blue": 0.5058823529411764,
+                    "alpha": 1.0
+                  }
+                },
+                "outer_color": {
+                  "Srgba": {
+                    "red": 0.48627450980392156,
+                    "green": 0.6039215686274509,
+                    "blue": 0.5098039215686274,
+                    "alpha": 1.0
+                  }
+                },
+                "gradient": "Lateral",
+                "variation": 0.12
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

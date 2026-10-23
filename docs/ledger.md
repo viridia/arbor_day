@@ -111,7 +111,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C130  | Aim in place of Bias's angle: laterals turned toward points on the envelope's outline, the upper ones toward its top (TD3.3), from the crown tests (Notes, 2026-10-21). |
 | C135  | Phantom nodes below a parent's first, so the lowest limbs join a settled spiral rather than leaving one side bare (TD3.3). |
 | C136  | Node gaps by balance: a node follows sooner while the limbs below it lean to one side, so the lowest limb is not left alone (TD3.3). |
-| C137  | Seedling models converted to species files, best effort, by `scripts/from_seedling.py`, into `reference/` in seedling's subfolders, the crown and its profile measured from the old leaves, a negative angle bias as Aim; `plans/gallery/reference.py` opens and shoots each. First three: poplar-orange, leechgrass, palecress. |
+| C137  | Seedling models converted to species files, best effort, by `scripts/from_seedling.py`, into `reference/` in seedling's subfolders, the crown and its profile measured from the old leaves, a negative angle bias as Aim; `plans/gallery/reference.py` opens and shoots each. First three: poplar-orange, leechgrass, palecress; the other 44 after. |
 | C139  | Operators as the species' layers (G4); guidelines admit expected corrections. |
 | C138  | Leaf size by Bias: Bias's leaves share scales the cards by each lateral's length over its parent's longest, multiplied down the levels, a parent's tip taking its last lateral's, no smaller than half (TD3.3, TD3.8). |
 | C140  | A fixed panel header: the document's name and file menu stay above the rows that scroll (TD1.7). |
@@ -191,8 +191,8 @@ tips by steepness next.
 ### Quick wins
 
 - **C131 Reference trees**: the species in `reference/`, converted from seedling (C137), tuned
-  by the author and saved from arbor_day, which fills in their meshes; more converted once the
-  first three are judged. `plans/gallery/reference.py` shoots each from the default view; add a
+  by the author and saved from arbor_day, which fills in their meshes; the first three are tuned, the
+  other 44 are as converted. `plans/gallery/reference.py` shoots each from the default view; add a
   shot from above, so a change to the layout (C125, C130, C132, C133) is judged against them.
   E[2]
 - **C108 Ask before dropping unsaved changes**: New, and Open once it works, replace an edited

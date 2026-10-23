@@ -1,0 +1,106 @@
+{
+  "asset": {
+    "version": "2.0",
+    "generator": "arbor_day scripts/from_seedling.py"
+  },
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "fogroot",
+      "nodes": [],
+      "extras": {
+        "arbor_day": {
+          "generator": 1,
+          "taper": 0.81,
+          "bark_color": {
+            "Srgba": {
+              "red": 0.6980392156862745,
+              "green": 0.6392156862745098,
+              "blue": 0.4196078431372549,
+              "alpha": 1.0
+            }
+          },
+          "trunk": {
+            "height": 0.3,
+            "radius": 0.09,
+            "sides": 6,
+            "fork": {
+              "chance": 1.0,
+              "at": {
+                "center": 0.7,
+                "spread": 0.0,
+                "shape": "Uniform"
+              },
+              "copies": 3,
+              "angle": {
+                "center": 0.8203047484373349,
+                "spread": 0.09948376736367678,
+                "shape": "Uniform"
+              },
+              "roll": {
+                "center": 0.0,
+                "spread": 0.0,
+                "shape": "Uniform"
+              }
+            }
+          },
+          "crown": {
+            "profile": "Cone",
+            "top": 1.26,
+            "base": 0.7,
+            "radius": 0.1
+          },
+          "ornaments": {
+            "tip_leaves": {
+              "upright": "Triple",
+              "size": 1.0,
+              "lateral_droop": -0.3193952531149623,
+              "axial_droop": -0.09948376736367678,
+              "sprig": {
+                "fan": 2,
+                "angle": {
+                  "center": 0.39968039870670147,
+                  "spread": 0.0
+                },
+                "outer_size": 0.78,
+                "pairs": 2,
+                "spacing": {
+                  "center": 0.12,
+                  "spread": 0.0
+                }
+              },
+              "leaf": {
+                "base_width": 0.06,
+                "base_taper": 0.09,
+                "tip_width": 0.05,
+                "tip_taper": 0.42,
+                "segments": 1,
+                "serration": 0,
+                "rake": 0,
+                "jitter": 0,
+                "inner_color": {
+                  "Srgba": {
+                    "red": 0.12549019607843137,
+                    "green": 0.35294117647058826,
+                    "blue": 0.2196078431372549,
+                    "alpha": 1.0
+                  }
+                },
+                "outer_color": {
+                  "Srgba": {
+                    "red": 0.4666666666666667,
+                    "green": 0.7176470588235294,
+                    "blue": 0.5529411764705883,
+                    "alpha": 1.0
+                  }
+                },
+                "gradient": "Axial",
+                "variation": 0.12
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

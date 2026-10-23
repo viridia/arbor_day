@@ -1,0 +1,123 @@
+{
+  "asset": {
+    "version": "2.0",
+    "generator": "arbor_day scripts/from_seedling.py"
+  },
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "rimeslip",
+      "nodes": [],
+      "extras": {
+        "arbor_day": {
+          "generator": 1,
+          "taper": 0.79,
+          "bark_color": {
+            "Srgba": {
+              "red": 0.7568627450980392,
+              "green": 0.803921568627451,
+              "blue": 0.8156862745098039,
+              "alpha": 1.0
+            }
+          },
+          "trunk": {
+            "height": 0.32,
+            "radius": 0.06,
+            "sides": 6,
+            "fork": {
+              "chance": 1.0,
+              "at": {
+                "center": 0.62,
+                "spread": 0.0,
+                "shape": "Uniform"
+              },
+              "copies": 3,
+              "angle": {
+                "center": 0.6998770300497261,
+                "spread": 0.09948376736367678,
+                "shape": "Uniform"
+              },
+              "roll": {
+                "center": 0.0,
+                "spread": 0.0,
+                "shape": "Uniform"
+              }
+            }
+          },
+          "crown": {
+            "profile": "Cone",
+            "top": 1.95,
+            "base": 0.62,
+            "radius": 0.3
+          },
+          "limbs": [
+            {
+              "density": 2.4,
+              "per_node": 2,
+              "facing": "Around",
+              "start": 0.9,
+              "end": 1.0,
+              "angle": {
+                "center": 0.7801621756414654,
+                "spread": 0.05061454830783556,
+                "shape": "Uniform"
+              },
+              "rise": {
+                "amount": 0.24
+              }
+            }
+          ],
+          "ornaments": {
+            "tip_leaves": {
+              "upright": "Triple",
+              "size": 1.0,
+              "lateral_droop": 0.09948376736367678,
+              "axial_droop": 1.2304571226560024,
+              "sprig": {
+                "fan": 2,
+                "angle": {
+                  "center": 0.8098327729253689,
+                  "spread": 0.13962634015954636
+                },
+                "outer_size": 1,
+                "pairs": 2,
+                "spacing": {
+                  "center": 0.44,
+                  "spread": 0.2
+                }
+              },
+              "leaf": {
+                "base_width": 0.1,
+                "base_taper": 0.09,
+                "tip_width": 0.13,
+                "tip_taper": 0.82,
+                "segments": 1,
+                "serration": 0,
+                "rake": 0,
+                "jitter": 0,
+                "inner_color": {
+                  "Srgba": {
+                    "red": 0.8823529411764706,
+                    "green": 0.9058823529411765,
+                    "blue": 0.9176470588235294,
+                    "alpha": 1.0
+                  }
+                },
+                "outer_color": {
+                  "Srgba": {
+                    "red": 0.8392156862745098,
+                    "green": 0.9254901960784314,
+                    "blue": 0.9529411764705882,
+                    "alpha": 1.0
+                  }
+                },
+                "gradient": "Lateral",
+                "variation": 0.09
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,153 @@
+{
+  "asset": {
+    "version": "2.0",
+    "generator": "arbor_day scripts/from_seedling.py"
+  },
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "desert2",
+      "nodes": [],
+      "extras": {
+        "arbor_day": {
+          "generator": 1,
+          "taper": 0.79,
+          "bark_color": {
+            "Srgba": {
+              "red": 0.4196078431372549,
+              "green": 0.36470588235294116,
+              "blue": 0.2784313725490196,
+              "alpha": 1.0
+            }
+          },
+          "trunk": {
+            "height": 1.72,
+            "radius": 0.1,
+            "sides": 6,
+            "fork": {
+              "chance": 1.0,
+              "at": {
+                "center": 0.57,
+                "spread": 0.0,
+                "shape": "Uniform"
+              },
+              "copies": 3,
+              "angle": {
+                "center": 0.3193952531149623,
+                "spread": 0.26005405854715513,
+                "shape": "Uniform"
+              },
+              "roll": {
+                "center": 0.0,
+                "spread": 0.0,
+                "shape": "Uniform"
+              }
+            }
+          },
+          "crown": {
+            "profile": "Column",
+            "top": 2.0,
+            "base": 0.57,
+            "radius": 1.7
+          },
+          "limbs": [
+            {
+              "density": 2.3,
+              "per_node": 1,
+              "facing": "Around",
+              "start": 0.9,
+              "end": 1.0,
+              "angle": {
+                "center": 0.24085543677521748,
+                "spread": 0.05061454830783556,
+                "shape": "Uniform"
+              },
+              "sag": {
+                "amount": 0.48171087355043496
+              }
+            },
+            {
+              "density": 6.1,
+              "per_node": 1,
+              "facing": "Around",
+              "start": 0.9,
+              "end": 1.0,
+              "angle": {
+                "center": 0.34033920413889424,
+                "spread": 0.05061454830783556,
+                "shape": "Uniform"
+              },
+              "sag": {
+                "amount": 0.48171087355043496
+              }
+            },
+            {
+              "density": 3.7,
+              "per_node": 1,
+              "facing": "Around",
+              "start": 0.9,
+              "end": 1.0,
+              "angle": {
+                "center": 0.27052603405912107,
+                "spread": 0.05061454830783556,
+                "shape": "Uniform"
+              },
+              "sag": {
+                "amount": 1.514945790731078
+              }
+            }
+          ],
+          "ornaments": {
+            "tip_leaves": {
+              "upright": "Triple",
+              "size": 0.47,
+              "lateral_droop": -0.21991148575128552,
+              "axial_droop": 0.5899212871740833,
+              "sprig": {
+                "fan": 0,
+                "angle": {
+                  "center": 0.6597344572538565,
+                  "spread": 0.10995574287564276
+                },
+                "outer_size": 0.69,
+                "pairs": 2,
+                "spacing": {
+                  "center": 0.57,
+                  "spread": 0.37
+                }
+              },
+              "leaf": {
+                "base_width": 0.29,
+                "base_taper": 0.35,
+                "tip_width": 0.28,
+                "tip_taper": 0.55,
+                "segments": 1,
+                "serration": 0,
+                "rake": 0.07,
+                "jitter": 0,
+                "inner_color": {
+                  "Srgba": {
+                    "red": 0.4,
+                    "green": 0.42745098039215684,
+                    "blue": 0.30980392156862746,
+                    "alpha": 1.0
+                  }
+                },
+                "outer_color": {
+                  "Srgba": {
+                    "red": 0.3058823529411765,
+                    "green": 0.36470588235294116,
+                    "blue": 0.2980392156862745,
+                    "alpha": 1.0
+                  }
+                },
+                "gradient": "Lateral",
+                "variation": 0.12
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

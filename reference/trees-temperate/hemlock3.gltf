@@ -1,0 +1,108 @@
+{
+  "asset": {
+    "version": "2.0",
+    "generator": "arbor_day scripts/from_seedling.py"
+  },
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "hemlock3",
+      "nodes": [],
+      "extras": {
+        "arbor_day": {
+          "generator": 1,
+          "taper": 0.86,
+          "bark_color": {
+            "Srgba": {
+              "red": 0.39215686274509803,
+              "green": 0.3686274509803922,
+              "blue": 0.2549019607843137,
+              "alpha": 1.0
+            }
+          },
+          "trunk": {
+            "height": 3.66,
+            "radius": 0.05,
+            "sides": 6
+          },
+          "crown": {
+            "profile": "Cone",
+            "top": 1.02,
+            "base": 0.13,
+            "radius": 0.7
+          },
+          "limbs": [
+            {
+              "density": 2.6,
+              "per_node": 2,
+              "facing": "Around",
+              "skew": 0.0,
+              "start": 0.13,
+              "angle": {
+                "center": 0.9197885158010117,
+                "spread": 0.05061454830783556,
+                "shape": "Uniform"
+              },
+              "sag": {
+                "amount": 0.4799655442984406
+              },
+              "bias": {
+                "size": 0.74,
+                "aim": 0.0
+              }
+            }
+          ],
+          "ornaments": {
+            "tip_leaves": {
+              "upright": "Triple",
+              "size": 1.0,
+              "lateral_droop": 0.24085543677521748,
+              "axial_droop": -0.24958208303518914,
+              "sprig": {
+                "fan": 1,
+                "angle": {
+                  "center": 0.9093165402890457,
+                  "spread": 0.13962634015954636
+                },
+                "outer_size": 0.72,
+                "pairs": 3,
+                "spacing": {
+                  "center": 0.44,
+                  "spread": 0.2
+                }
+              },
+              "leaf": {
+                "base_width": 0.29,
+                "base_taper": 0.35,
+                "tip_width": 0.28,
+                "tip_taper": 0.55,
+                "segments": 3,
+                "serration": 0.19,
+                "rake": 0.07,
+                "jitter": 0,
+                "inner_color": {
+                  "Srgba": {
+                    "red": 0.37254901960784315,
+                    "green": 0.5490196078431373,
+                    "blue": 0.40784313725490196,
+                    "alpha": 1.0
+                  }
+                },
+                "outer_color": {
+                  "Srgba": {
+                    "red": 0.4549019607843137,
+                    "green": 0.5568627450980392,
+                    "blue": 0.403921568627451,
+                    "alpha": 1.0
+                  }
+                },
+                "gradient": "Lateral",
+                "variation": 0.08
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}
