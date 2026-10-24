@@ -20,18 +20,31 @@ const KINK_SPACING: f32 = 0.15;
 pub(super) const TRACE_STEP: f32 = 0.02;
 
 /// Traces the level's laterals just placed (`trace`), leaving out any that came out no longer
-/// than they are thick, and adds the rest to their parents' scions.
+/// than they are thick, or that end inside their parent, as one the envelope stops short low on
+/// a narrow crown does, since a lateral starts on its parent's centre line. Adds the rest to their
+/// parents' scions.
 pub(super) fn trace_scions(level: &Level, skeleton: &mut Skeleton) {
     let axes = &mut skeleton.axes;
     let first = (axes.iter().position(|axis| axis.level == level.number)).unwrap_or(axes.len());
     for mut axis in axes.split_off(first) {
-        if trace(level, &mut axis) {
-            let (parent, _) = axis.parent.expect("a limb grows from a parent");
+        let (parent, place) = axis.parent.expect("a limb grows from a parent");
+        if trace(level, &mut axis) && emerges(&axis, &axes[parent], place) {
             let id = axes.len();
             axes[parent].scions.push(id);
             axes.push(axis);
         }
     }
+}
+
+/// Whether `axis`'s tip ends outside `parent`, which it joins `place` metres along: further from
+/// the parent's line there than its radius, or past the parent's tip, as a limb running up
+/// through a short trunk's end does.
+fn emerges(axis: &Axis, parent: &Axis, place: f32) -> bool {
+    let tip = axis.rings[axis.rings.len() - 1].center;
+    let join = parent.frame_at(place);
+    let parent_tip = parent.rings[parent.rings.len() - 1];
+    (tip - join.point).reject_from(join.tangent).length() > join.radius
+        || (tip - parent_tip.center).dot(parent_tip.tangent) > 0.0
 }
 
 /// Traces a placed axis along its course for up to its reach (`trace_limb`), replacing its start

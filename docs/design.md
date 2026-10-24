@@ -340,17 +340,22 @@ angle from up, solved exactly per step (the tangent of the half angle grows by e
 neither an upright nor a hanging course sags. With Rise on, it then closes the rise's share of
 its angle from up over each crown radius. With neither, the course is straight. A
 limb stops at its reach, or before a step that would leave the envelope. A traced limb no longer
-than it is thick at its base is left out.
+than it is thick at its base is left out, and so is a lateral whose tip ends inside its parent
+(`emerges`): no further from the parent's line where it joins than the parent's radius there, and
+not past the parent's tip. A lateral starts on its parent's centre line, so the envelope can stop
+one short inside a thick trunk, as a Flame crown's narrow base does with the lowest limbs; its
+card, reaching back past its root (TD3.8), would show alone on the trunk.
 
 The level then wanders (`wander.rs`), after tracing and before the taper; a fork's copies
 wander as they are added, and stems as they are made. The course is displaced between two fixed
 points, the end of a straight run at its base, a kink spacing (0.15 crown radii) give or take 40%,
-and the tip: a segment longer than 1.5 spacings is split within 20% of its middle, but never
-inside the straight run under a tip's card (TD3.8), where the split falls at the run's start, so
-the last segment runs straight to the tip at whatever angle; and the split point moves square to the segment,
-in a random direction, by a random share of the shorter half's length, or a spacing if less, times
-the tangent of the wander, halved until neither half points further off the course than the
-wander; then each half likewise. An axis too short for both runs does not wander. Offsets between split points are
+and the tip: a segment longer than 1.5 spacings is split within 20% of its middle, and the split
+point moves square to the segment, in a random direction, by a random share of the shorter half's
+length, or a spacing if less, times the tangent of the wander, halved until neither half points
+further off the course than the wander; then each half likewise. The split points inside the
+straight run under a tip's card (TD3.8) are then taken out, so the last segment runs straight to
+the tip at whatever angle, and the run's length, which follows the sprig's fold and the card's
+size, moves no other kink. An axis too short for both runs does not wander. Offsets between split points are
 interpolated along the course, each split point gets a ring, so each kink is a corner, and a
 point displaced outside the envelope is pulled back toward the course until inside. Draws come
 from the axis's wander stream.

@@ -1,7 +1,8 @@
 //! Wander (D17), as a lightning bolt is drawn: an axis traced along its course is displaced by
 //! midpoints between two fixed points, the end of a straight run at its base, so it leaves along
-//! its course, and its tip. No midpoint falls in the straight run under a tip's card, so the last
-//! segment runs straight to the tip, at whatever angle. The middle of each segment moves square to it, a random amount in a random direction, then each
+//! its course, and its tip. The midpoints in the straight run under a tip's card are taken out
+//! after, so the last segment runs straight to the tip, at whatever angle, and the run's length
+//! moves no other kink. The middle of each segment moves square to it, a random amount in a random direction, then each
 //! half likewise, down to segments of about one kink spacing. No move is larger than a segment of
 //! two spacings would get, so a long axis zigzags evenly about its course rather than turning on
 //! one large corner, and its tip stays where the course puts it, at any wander.
@@ -58,8 +59,9 @@ pub(super) fn wander_axis(level: &Level, axis: &mut Axis) {
 }
 
 /// Displaces `rings`, traced along a course, from about a kink spacing along them (`BASE_JITTER`)
-/// to their tip, by midpoints (`split`), none in the last `straight` metres, so the last segment
-/// runs straight to the tip; rings before the start and the tip stay on the course. Each stretch
+/// to their tip, by midpoints (`split`), those in the last `straight` metres then taken out, so
+/// the last segment runs straight to the tip and the run's length moves no other kink; rings
+/// before the start and the tip stay on the course. Each stretch
 /// points no further off the course than `wander`. Rings displaced outside `envelope`, if given, are pulled back toward the
 /// course until inside. The rings are then laid again (`rings_through`) through a point at each
 /// ring and each split, each `at` the distance along them.
@@ -83,7 +85,6 @@ pub(super) fn displace(
         wander,
         tan: wander.tan(),
         spacing,
-        last_split,
     };
     split(
         &course,
@@ -93,6 +94,9 @@ pub(super) fn displace(
         &mut rng,
         &mut splits,
     );
+    // Split as if there were no straight run, then take out the kinks in it, so its length moves
+    // none of the others.
+    splits.retain(|&(at, _)| at <= last_split);
     splits.push((end, Vec3::ZERO));
 
     // A point at every ring and every split, so each kink is a corner.
@@ -150,21 +154,19 @@ impl Course<'_> {
     }
 }
 
-/// What every split reads: the wander and its tangent, the kink spacing, and the furthest a split
-/// point may lie along the course.
+/// What every split reads: the wander and its tangent, and the kink spacing.
 struct Bounds {
     wander: f32,
     tan: f32,
     spacing: f32,
-    last_split: f32,
 }
 
 /// Splits the segment from `a` to `b`, each a distance along the course and the offset from it
 /// there, if it is longer than `SPLIT_LENGTH` spacings, pushing the split points onto `splits` in
-/// order along the course. The split point lies within `KINK_JITTER` of the segment's middle, but
-/// no further along than `last_split`, and moves square to the segment by up to the shorter half's length, or a spacing if less, times the
-/// tangent of the wander, in a random direction, halved until neither half points further off the course than
-/// the wander.
+/// order along the course. The split point lies within `KINK_JITTER` of the segment's middle, and
+/// moves square to the segment by up to the shorter half's length, or a spacing if less, times the
+/// tangent of the wander, in a random direction, halved until neither half points further off the
+/// course than the wander.
 fn split(
     course: &Course,
     bounds: &Bounds,
@@ -181,11 +183,7 @@ fn split(
     let around = rng.unit() * TAU;
     let amount = rng.unit();
 
-    let at = (a.0 + length * share).min(bounds.last_split);
-    if at <= a.0 {
-        return;
-    }
-    let share = (at - a.0) / length;
+    let at = a.0 + length * share;
     let (_, side) = course.at(at);
     let point = |(at, offset): (f32, Vec3)| course.at(at).0 + offset;
     let chord = (point(b) - point(a)).normalize_or(Vec3::Y);

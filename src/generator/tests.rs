@@ -900,6 +900,42 @@ fn a_short_axis_wanders_up_to_its_tip_run() {
 }
 
 #[test]
+fn the_tip_run_moves_no_kink_before_it() {
+    // Ten spacings long: with a tip run of one spacing or of two, the axis is the same up to two
+    // spacings before the run's start, where the shorter run may keep a kink the longer drops.
+    let spacing = 1.0;
+    let course = stem_rings(10.0, 0.0, 0.0, 0.0);
+    for seed in 0..8 {
+        let wandered = |straight: f32| {
+            let mut rings = course.clone();
+            let rng = Seed(seed).stream("test");
+            displace(
+                &mut rings,
+                rng,
+                30.0_f32.to_radians(),
+                spacing,
+                straight,
+                None,
+            );
+            rings
+        };
+        let (short, long) = (wandered(1.0), wandered(2.0));
+        let before = |rings: &[Ring]| -> Vec<Vec3> {
+            (rings.iter())
+                .filter(|ring| ring.at < 10.0 - 2.0 - 2.0 * spacing)
+                .map(|ring| ring.center)
+                .collect()
+        };
+        assert_eq!(before(&short), before(&long), "seed {seed}");
+        assert!(
+            before(&short)
+                .iter()
+                .any(|center| center.xz().length() > 1e-3)
+        );
+    }
+}
+
+#[test]
 fn branch_ends_run_straight_under_their_cards() {
     // With no bend, a stretch with no kinks keeps no rings, so a branch end's last ring
     // before its tip lies before the stretch its card covers.
@@ -977,6 +1013,40 @@ fn limbs_start_on_the_trunk_as_meshed() {
     for limb in limbs(&species) {
         assert!(limb.origin().cross(tip).length() < 1e-5, "{limb:?}");
     }
+}
+
+#[test]
+fn every_limb_ends_outside_its_parent() {
+    // A Flame crown's narrow base stops the lowest limbs within a thick trunk's radius.
+    let mut species = Species::default();
+    species.crown.profile = Profile::Flame;
+    species.trunk.radius = 0.2;
+    species.limbs.levels[0].start = 0.0;
+    let mut kept = 0;
+    for seed in 0..10 {
+        species.seed = Seed(seed);
+        let axes = grow(&shown(2, species.clone())).axes;
+        for limb in &axes {
+            let Some((parent, place)) = limb.parent else {
+                continue;
+            };
+            if limb.kind != AxisKind::Lateral {
+                continue;
+            }
+            let join = axes[parent].frame_at(place);
+            let parent_tip = axes[parent].rings.last().unwrap();
+            let tip = limb.rings.last().unwrap().center;
+            let out = (tip - join.point).reject_from(join.tangent).length();
+            let past = (tip - parent_tip.center).dot(parent_tip.tangent) > 0.0;
+            assert!(
+                out > join.radius || past,
+                "seed {seed}: {out} within {}",
+                join.radius
+            );
+            kept += 1;
+        }
+    }
+    assert!(kept > 0);
 }
 
 #[test]
