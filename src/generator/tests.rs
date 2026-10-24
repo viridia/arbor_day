@@ -1636,17 +1636,24 @@ fn a_card_at_every_branch_end() {
     let tips: Vec<Vec3> = (ends.iter())
         .map(|limb| limb.rings[limb.rings.len() - 1].center)
         .collect();
-    // As many as the tips' steepness asks for, some tips bearing more than one.
-    let per_tip: Vec<usize> = (ends.iter())
-        .map(|limb| {
-            let elevation = limb.frame_at(limb.length()).tangent.y.asin();
-            cards_at(elevation, species.ornaments.tip_leaves.settings.upright) as usize
+    // Some tips bearing one, some a rosette.
+    let skeleton = grow(&species);
+    assert_eq!(cards.len(), skeleton.cards.len());
+    let per_tip: Vec<usize> = (0..ends.len())
+        .map(|axis| {
+            skeleton
+                .cards
+                .iter()
+                .filter(|card| card.axis == axis)
+                .count()
         })
         .collect();
-    assert_eq!(cards.len(), per_tip.iter().sum::<usize>());
     assert!(per_tip.contains(&1) && per_tip.iter().any(|&count| count > 1));
-    // Each tip at a card's fold, or at the base of a rosette's card.
-    let spans = |card: &[Vec3], tip: Vec3| distance_to_segment(tip, card[BASE], card[FOLD]) < 1e-4;
+    // Each tip at a card's fold, or nearer a rosette card's base than its fold.
+    let spans = |card: &[Vec3], tip: Vec3| {
+        distance_to_segment(tip, card[BASE], card[FOLD]) < 1e-4
+            || card[BASE].distance(tip) <= card[BASE].distance(card[FOLD]) + 1e-4
+    };
     assert!(
         tips.iter()
             .all(|tip| cards.iter().any(|card| spans(card, *tip)))
@@ -1682,8 +1689,11 @@ fn cards_lie_along_their_twigs_facing_up() {
     let mut along = 0;
     for (cluster, (corners, normals)) in skeleton.cards.iter().zip(cards) {
         let twig = &skeleton.axes[cluster.axis];
-        let elevation = twig.frame_at(twig.length()).tangent.y.asin();
-        if cards_at(elevation, species.ornaments.tip_leaves.settings.upright) > 1 {
+        if cluster
+            .direction
+            .angle_between(twig.frame_at(cluster.at).tangent)
+            > 1e-4
+        {
             continue;
         }
         along += 1;
@@ -1709,63 +1719,88 @@ fn cards_lie_along_their_twigs_facing_up() {
     assert!(along > 0);
 }
 
+/// The cards at the tip of a lone straight twig a metre long, rising at `elevation` degrees toward
+/// +X, its tip as `upright` has it, its streams from `seed`; and the twig's direction.
+fn tip_cards(elevation: f32, upright: Upright, seed: i32) -> (Vec<Card>, Vec3) {
+    let (rise, run) = elevation.to_radians().sin_cos();
+    let tangent = Vec3::new(run, rise, 0.0);
+    let ring = |at: f32| Ring {
+        center: tangent * at,
+        tangent,
+        side: Vec3::Z,
+        at,
+        radius: 0.01,
+    };
+    let stream = Seed(seed).stream("test");
+    let mut twig = Axis::placed(1, AxisKind::Lateral, (0, 0.0), ring(0.0), 1.0, stream);
+    twig.rings.push(ring(1.0));
+    let mut species = Species::default();
+    species.ornaments.tip_leaves.settings.upright = upright;
+    let cards = clusters(&species, &[twig]);
+    assert!(cards.iter().all(|card| card.direction.is_normalized()));
+    (cards, tangent)
+}
+
 #[test]
 fn steep_tips_bear_rosettes() {
-    // A lone straight twig a metre long, rising at `elevation` toward +X, its tip as `upright`
-    // has it.
-    let cards_as = |elevation: f32, upright: Upright| {
-        let (rise, run) = elevation.to_radians().sin_cos();
-        let tangent = Vec3::new(run, rise, 0.0);
-        let ring = |at: f32| Ring {
-            center: tangent * at,
-            tangent,
-            side: Vec3::Z,
-            at,
-            radius: 0.01,
-        };
-        let stream = Seed(0).stream("test");
-        let mut twig = Axis::placed(1, AxisKind::Lateral, (0, 0.0), ring(0.0), 1.0, stream);
-        twig.rings.push(ring(1.0));
-        let mut species = Species::default();
-        species.ornaments.tip_leaves.settings.upright = upright;
-        let cards = clusters(&species, &[twig]);
-        assert!(cards.iter().all(|card| card.direction.is_normalized()));
-        (cards, tangent)
-    };
-    let cards = |elevation: f32| cards_as(elevation, Upright::Triple);
+    let cards = |elevation: f32, seed: i32| tip_cards(elevation, Upright::Rosette, seed).0;
     let heading = |direction: Vec3| direction.xz().to_angle().to_degrees();
     let rise = |direction: Vec3| direction.y.asin().to_degrees();
-    // Below 45°, one card along the twig, short of its tip.
-    let (one, tangent) = cards(40.0);
-    assert_eq!(one.len(), 1);
-    assert!(one[0].at < 1.0 && one[0].direction.angle_between(tangent) < 1e-4);
-    // Steep, the option's count from 45°.
-    assert_eq!(cards(45.0).0.len(), 3);
-    // At 60°, two at the tip, each turned ¾ of the way to level: one ahead, down from 60° to
-    // 15°, and one over the top, through 120° to 30° behind.
-    let (two, _) = cards_as(60.0, Upright::Double);
-    assert_eq!(two.len(), 2);
-    assert!(two.iter().all(|card| card.at == 1.0));
-    assert!(heading(two[0].direction).abs() < 1e-2);
-    assert!((rise(two[0].direction) - 15.0).abs() < 1e-2);
-    assert!((heading(two[1].direction).abs() - 180.0).abs() < 1e-2);
-    assert!((rise(two[1].direction) - 30.0).abs() < 1e-2);
-    // Straight up, three, 120° apart, each 22.5° above level.
-    let (three, _) = cards(90.0);
-    assert_eq!(three.len(), 3);
-    for (card, next) in three.iter().zip(three.iter().cycle().skip(1)) {
-        let apart = (heading(card.direction) - heading(next.direction)).rem_euclid(360.0);
-        assert!((apart - 120.0).abs() < 1e-2, "{apart}");
-        assert!((rise(card.direction) - 22.5).abs() < 1e-2);
+    for seed in 0..20 {
+        // Straight up, three at the tip, 120° apart, each 22.5° above level.
+        let three = cards(90.0, seed);
+        assert_eq!(three.len(), 3);
+        for (card, next) in three.iter().zip(three.iter().cycle().skip(1)) {
+            let apart = (heading(card.direction) - heading(next.direction)).rem_euclid(360.0);
+            assert!((apart - 120.0).abs() < 1e-2, "{apart}");
+            assert!((rise(card.direction) - 22.5).abs() < 1e-2);
+            assert_eq!(card.at, 1.0);
+        }
+        // Tilting, the count never rises; tilted 45° or more, one card along the twig, short of
+        // its tip, whatever the choice.
+        let counts: Vec<usize> = (45..=90)
+            .rev()
+            .map(|e| cards(e as f32, seed).len())
+            .collect();
+        assert!(
+            counts.windows(2).all(|pair| pair[1] <= pair[0]),
+            "{counts:?}"
+        );
+        for upright in [Upright::Bare, Upright::Single, Upright::Rosette] {
+            let (one, tangent) = tip_cards(40.0, upright, seed);
+            assert_eq!(one.len(), 1);
+            assert!(one[0].at < 1.0 && one[0].direction.angle_between(tangent) < 1e-4);
+        }
     }
-    // Single keeps one card along the twig; Bare, none. Below 45° every choice bears the one
-    // card.
-    let (single, tangent) = cards_as(90.0, Upright::Single);
+    // Tips drop cards at different tilts: at 22.5° from up, some bear three and some two.
+    let halfway: Vec<usize> = (0..40).map(|seed| cards(67.5, seed).len()).collect();
+    assert!(halfway.contains(&3) && halfway.contains(&2), "{halfway:?}");
+    // Single keeps one card along the twig; Bare, none.
+    let (single, tangent) = tip_cards(90.0, Upright::Single, 0);
     assert_eq!(single.len(), 1);
     assert!(single[0].direction.angle_between(tangent) < 1e-4);
-    assert!(cards_as(60.0, Upright::Bare).0.is_empty());
-    for upright in [Upright::Bare, Upright::Single, Upright::Double] {
-        assert_eq!(cards_as(40.0, upright).0.len(), 1);
+    assert!(tip_cards(60.0, Upright::Bare, 0).0.is_empty());
+}
+
+#[test]
+fn a_closing_rosette_moves_no_card_far() {
+    // In small steps of tilt, each card stays near one from the step before, through each drop
+    // and on to the one card along the twig at 45°. From just off upright: straight up, the
+    // twig has no heading, and its upper side stands in.
+    for seed in 0..20 {
+        let mut before = tip_cards(89.75, Upright::Rosette, seed).0;
+        for step in 2..=200 {
+            let elevation = 90.0 - step as f32 * 0.25;
+            let cards = tip_cards(elevation, Upright::Rosette, seed).0;
+            for card in &cards {
+                let near = before.iter().any(|old| {
+                    old.direction.angle_between(card.direction) < 2.0_f32.to_radians()
+                        && (old.at - card.at).abs() < 0.01
+                });
+                assert!(near, "seed {seed}, {elevation}°: {card:?} from {before:?}");
+            }
+            before = cards;
+        }
     }
 }
 

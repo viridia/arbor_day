@@ -121,6 +121,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C47   | A sense of scale: a measuring stick and a silhouette beside the crown, with a HUD toggle of its own (TD1.6). |
 | C146  | Golden trees: each finished tree in `reference/` grown from its file and compared with its saved meshes and leaf texture (TD1.7, G6); X15's first measure. |
 | C70a  | Card facing in `PlantStats`: the share of the cards' area the game's camera sees, turned all the way around (TD2.1); a baseline in Notes. |
+| C70b  | A rosette closing as its tip tilts: three cards upright, gathering into a fan toward the twig's heading and dropping out as they crowd, to one card along the twig at 45° (D27, TD3.8). Upright tips' Triple is now Rosette and Double is gone, `reference/` converted. |
 
 ## Next
 
@@ -142,39 +143,18 @@ slots (C103), the painted leaf (C38), outlines (C66), carry-on's removal (C117),
 the golden trees (C146). Before the freeze (C113), the changes that would cost the finished trees
 a migration or a new look land while the trees are few, the golden trees showing each.
 
-1. **C70b Tips by steepness**: one card on a level tip and a rosette on an upright one (TD3.8)
-   meet at a sudden switch, between them three looks:
-   - Level: one card along the twig, its side leaves painted pairs or side branches (D27).
-   - Inclined: two or three cards in a level fan centred on the twig's heading.
-   - Upright: a rosette, the painted twig standing in for the real one; or none, as conifers
-     need, which the upright tips field keeps.
-
-   One rule covers them: a level fan about the twig's heading, its arc widening with steepness,
-   its cards at a fixed spacing near the texture's own fan width, so steepness adds cards rather
-   than closing them up. A fan of fans at small angles reads as clutter. Each tip's thresholds
-   take a seeded nudge, so no line between looks runs across the crown. D27 rejected a count
-   rising with steepness, since a third card showed only in a narrow range of settings; the level
-   fan on the heading and the nudged thresholds are what differ.
-
-   The upright tips field becomes Bare, Single and Fan: Triple, the default, becomes Fan, and
-   Double goes, since no file in `reference/` sets it; the one file writing `"Triple"` is
-   converted. A fan's cards are level, so on a rising twig even the middle card turns. A long
-   card, such as a pine's needles, makes a rosette a starburst; pines bear none on uprights, which
-   the upright tips field keeps. An upright's cards folded back along the twig, overlapping it as
-   the level card does, is a later choice for that field.
-
-   Judged by card facing (C70a; Notes, the baseline) as well as by eye. Density counts per limb: a
-   lateral's card and its side branches' against a riser's rosette. If tops grow dense,
-   side-branch density falls as a limb steepens, rather than rosettes shrinking; no placement
-   setting varies by steepness yet (C116's Bias varies along the parent). Card counts multiply
-   with levels, eight triangles each since C39, so look at density against the budget too. E[3]
+1. **C148 Buried limbs**: a lateral starts on its parent's centre line and is kept if longer than
+   its own radius, so one cut short by the envelope can end inside its parent. Its card, reaching
+   back past its root (C141), then shows alone on the trunk, and its own laterals are buried with
+   it (`reference/bugs/trunkleaf.gltf`, a Flame crown, whose narrow base stops the lowest limbs
+   inside the trunk). Keep a lateral only if its tip ends outside its parent's surface, in
+   `trace_scions`. E[1]
 2. **C70c Twigs shortened by their overhang**: the switch from round twig to flat card shows
    where the two run in one line. An overlap hides it, as the level card reaches back over its
-   twig to its fold; so does a turn, as a rosette's or fan's cards leave at an angle. A card
-   leaving its twig at angle θ stands past the tip by about its length × cos θ, so rosettes and
-   fans lengthen a limb where a level card does not: shorten each twig by its look's overhang, so
-   a tip's foliage ends at the limb's reach whatever the look. In tracing (`straight_run`), after
-   C70b. E[2]
+   twig to its fold; so does a turn, as a rosette's cards leave at an angle. A card leaving its
+   twig at angle θ stands past the tip by about its length × cos θ, so a rosette lengthens a limb
+   where a level card does not: shorten each twig by its look's overhang, so a tip's foliage ends
+   at the limb's reach whatever the look. In tracing (`straight_run`). E[2]
 3. **C125 Steady nodes**: moving Start or End moves each node, which jumps limbs about in two
    ways. A lateral's length changes, so its own node count steps; its nodes draw in order from
    one `layout` stream and its limbs' streams are numbered by a running count, so one node more
@@ -249,11 +229,9 @@ a migration or a new look land while the trees are few, the golden trees showing
    - **Migrated**, a field's type or meaning changing, `reference/` converted in the same chunk:
      - C145 Bias as curves: Size's number becomes a two-point curve, with no change of output.
      - C147 Sprigs as a list: the tip leaves' one sprig becomes a list of one.
-     - C70b Tips by steepness: the upright tips field's Triple becomes Fan, leechgrass converted.
    - **Output changed**, files reading as before but growing differently, each tree judged close
      enough, retuned, or the change put behind an option:
      - C125 Steady nodes: every plant's layout.
-     - C70b Tips by steepness: its fans.
      - C70c Twigs shortened by their overhang: every steep tip's reach.
      - C134: a trunk level whose Facing is not Around.
 
@@ -402,7 +380,10 @@ a migration or a new look land while the trees are few, the golden trees showing
   most changes out of this; what remains is the skeleton, the global parameters and realization.
   Reading a file with a key this generator retired prunes it with a warning (C124's processor,
   on its maintainer's advice); a policy per field (skip, warn or error), if one is wanted, goes
-  in that processor. *Gate:* the first species used in Panoply.
+  in that processor. A variant renamed after the freeze keeps its old name as a custom attribute
+  on the variant (`#[reflect(@Alias("Triple"))]`; variants carry them in the Bevy we build
+  against), which that processor reads when a string names no variant, logging the repair;
+  before the freeze, renames convert `reference/` instead (G6). *Gate:* the first species used in Panoply.
 - **X18** Presets. The tool is for indie developers wanting the common Earth plant types
   (requirements, What it is for), so presets named after those types ("Fir", "Willow", "Live
   oak", "Clump"), each a saved species, are its starting points. Controls in the tree's terms
@@ -527,12 +508,24 @@ a migration or a new look land while the trees are few, the golden trees showing
   Open: rake as an angle from square to the edge, so a lean holds at any depth; inflating across
   more than along. *Gate:* the author settling what serration should mean.
 
+- **X56** Rosette cards shrunk before they are dropped (C70b), so a count steps down gently.
+  The author doubts it would look good, and the game's trees are static, so a drop never pops on
+  screen: a step shows only across the crown, which C70b's nudge spreads, or while dragging a
+  setting. *Gate:* a line between counts seen in a crown despite the nudge.
+
+- **X57** A sprig for rosettes without its stem and pairs, only the fan: on a leaf with long
+  stems below the fan, rosette cards splayed from the tip look odd. Fewer leaves per card, so
+  less density. A second sprig, one more region of the leaf texture (X37's), chosen by the
+  tip's look. *Gate:* a species whose rosettes look odd for their stems.
+
 
 ## Notes
 
 - Card facing (C70a) before C70b, 2026-10-24: a level card scores 0.71, an upright one 0.45. The
   reference trees run from 0.53 (the pines, poplar-orange, shadowfoil) to 0.67 (juniper1); the
-  default species 0.63.
+  default species 0.63. After C70b the Rosette trees score lower, from 0.48 (shadowfoil) to 0.64
+  (fireweed), juniper1 0.56, crown-med 0.60 (0.65), and bear fewer cards (juniper1 42, from 87),
+  since steep tips' cards now rise toward 45° and drop out. The Single trees are unchanged.
 - A hemispherical crown reads better from a Column profile with Bias shortening the upper
   laterals than from the Hemisphere profile (the author, 2026-10-18): evidence for presets
   (X18) and for profiles beside the five (X43).

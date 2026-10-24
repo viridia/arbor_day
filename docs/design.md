@@ -394,17 +394,24 @@ ornament slot (`docs/patches.md`, Stacks) whose panel and file are an operator's
 size is a share of the crown radius, scaled at each tip by its twig's leaf scale (TD3.3), or on an
 axis bearing laterals by its last lateral's, clamped between the tip leaves' smallest and 1 (`tip_scale`): below a half,
 a card's outline and texture detail show, and the straight run under a full card (TD3.4) covers
-every smaller one. A tip bears one card, unless its twig rises
-45° or more above level at its tip, when the species' upright tips say: none, one, or a rosette
-of two or three (`cards_at`).
+every smaller one. A tip bears one card, unless its twig is tilted less than 45° from straight
+up at its tip, when the species' upright tips say: none, one, or a rosette.
 
 One card lies along the twig, reaching back until its axial fold, where the painted sprig's fan
 starts (`axial_fold`, TD3.10), lies at the tip, even past the twig's root on a twig shorter than
-that, so a short twig's leaves stay close in to its parent, as a rosette's leaves do. A rosette's cards start at the tip, spaced evenly
-about world up from the heading the twig points (straight up, the opposite of its upper side).
-Each turns from the twig toward level in its own heading by three quarters of the angle between
-them, so on an upright twig each rises 22.5°, and in a pair on a 60° one the card ahead rises 15°
-and the one behind, turned over the top, 30°.
+that, so a short twig's leaves stay close in to its parent, as a rosette's leaves do.
+
+A rosette closes as its twig tilts, by `closing`, 1 straight up and 0 at 45°. Its cards point at
+turns about world up from the heading the twig points (straight up, the opposite of its upper
+side), each turn scaled by `closing` (`rosette_turns`): upright, three 120° apart at a roll drawn
+from the tip's foliage stream, the middle one within 60° of the heading. Tilting, they gather
+toward the heading as a fan. Its span, 240° × `closing`, must hold its cards a least spacing
+apart, 60° nudged by up to 30% either way per tip from the same stream: when it cannot, the middle
+card goes, the ends keeping their turns, and then the end further from the heading. Each card
+rises from 22.5° above level when upright to 45° at 45°, whatever its turn, and starts back from
+the tip by the fold's share of its size times 1 − `closing`. So no card jumps as one goes, and at
+45° the last is the one card along the twig. With the defaults a tip bears three to about 22°
+(16° to 29° by the nudge), two to about 34° (30° to 37°), one beyond.
 
 ### 3.9 Meshing
 

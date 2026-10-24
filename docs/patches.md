@@ -269,7 +269,7 @@ settings. The default species, abridged, angles in radians:
     }
   ],
   "ornaments": {
-    "tip_leaves": { "size": 0.25, "lateral_droop": -0.28, "axial_droop": 0.3, "upright": "Triple" }
+    "tip_leaves": { "size": 0.25, "lateral_droop": -0.28, "axial_droop": 0.3, "upright": "Rosette" }
   }
 }
 ```
@@ -386,6 +386,11 @@ Two cases a graph must meet:
   than inside a node.
 - **Whole-plant steps**: `pipe`, prune (C133) and `clusters` on every end need every axis, so
   structure wires join before them, by a join node or by those steps standing at the end.
+
+A structure wire can also be split by its elements' properties. A demultiplexer node fed from a
+scion node sorts the limbs by the angle of each one's tip, with an output for each range, and
+each output feeds a different foliage operator. So a graph gives a steep tip its look
+conditionally, where the species builds one rule into its cards (C70b).
 
 SpeedTree's generation editor is a graph of structure alone: generator nodes each spawning on
 its parent, their parameters set on each node, many as curves along the parent. So a graph

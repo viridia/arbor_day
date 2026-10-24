@@ -105,10 +105,10 @@ def cards(driver):
     droop(driver, lateral=0, axial=60)
     driver.screenshot("bent")
 
-    # Upright tips, on the trunk and on limbs 10° to 30° from it: a rosette of three each by
-    # default, then one card each, then none.
+    # Upright tips, on the trunk and on limbs 10° to 30° from it: a rosette by default, of three,
+    # or two on a limb tilted far enough, then one card each, then none.
     driver.set_resource(SPECIES, math.radians(20), at="limbs.levels[0].angle.center")
-    driver.expect("Plant", STATS, {"leafy_tips": Between(10, 11), "cards": Between(10 * 3, 11 * 3)})
+    driver.expect("Plant", STATS, {"leafy_tips": Between(10, 11), "cards": Between(10 * 2, 11 * 3)})
     driver.screenshot("upright_rosettes")
     driver.set_resource(SPECIES, "Single", at=f"{TIP_LEAVES}.upright")
     driver.expect("Plant", STATS, {"leafy_tips": Between(10, 11), "cards": Between(10, 11)})

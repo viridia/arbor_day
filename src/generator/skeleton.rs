@@ -27,6 +27,8 @@ pub(super) const OWN_VALUES_STREAM: u64 = u64::MAX - 1;
 pub(super) const LAYOUT_STREAM: u64 = u64::MAX - 2;
 /// A limb's fork: whether it forks, where and how widely, and its copies.
 pub(super) const FORK_STREAM: u64 = u64::MAX - 5;
+/// The leaves at an axis's tip: a rosette's roll and least spacing.
+pub(super) const FOLIAGE_STREAM: u64 = u64::MAX - 6;
 
 /// A ring along an axis: one at every step of its trace, until its level is hinted (`hint`).
 #[derive(Debug, Clone, Copy, PartialEq)]

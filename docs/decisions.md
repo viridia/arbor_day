@@ -267,9 +267,13 @@ A steep tip bears what the species chooses, by default a rosette: several cards 
 splayed around the twig toward level. A level shoot twists its leaves into one flat spray, which
 one card models; an upright one bears them all around, each blade turned toward level, which one
 card along it showed on end, dark from the game's camera, with nothing on its other sides. The
-choice is a rosette of two or three, one card as on a level twig, for crops and shrubs seen from
-above, or none. A count rising with steepness, two from 45° and three from 75°, was rejected:
-a third card showed only in a narrow range of settings.
+choice is a rosette, one card as on a level twig, for crops and shrubs seen from above, or none.
+The rosette has three cards, since four read as an orthogonal cross. It closes as its twig tilts
+(C70b, TD3.8): the cards gather into a fan toward the twig's heading and drop out as they crowd,
+down to the one card along the twig at 45°, so tilt has no sudden switch. Each tip drops cards
+at its own nudged tilt, so no line between counts runs across the crown. An earlier count rising
+with steepness, two from 45° and three from 75°, was rejected, since a third card showed only in
+a narrow range of settings. Here every tilt below 45° lies on the slope.
 
 Rejected: clusters at a density along each twig within a shell of the envelope, where any density
 put cards along twigs, none made the plant bare, and those near a tip ran past the tip's card

@@ -233,7 +233,7 @@ def species(sapling, leaves, notes):
     fan = group["fanSize"] - 1
     file["ornaments"] = {
         "tip_leaves": {
-            "upright": "Triple",
+            "upright": "Rosette",
             "size": clamp(card / crown_radius, 0.02, 1.0),
             "lateral_droop": group["lateralDroop"],
             "axial_droop": group["axialDroop"],

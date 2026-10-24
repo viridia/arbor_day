@@ -1011,16 +1011,16 @@ pub enum Upright {
     Bare,
     /// One card along the twig, as on a level one: crops and shrubs, seen from above.
     Single,
-    /// Two cards from the tip, splayed toward level.
-    Double,
-    /// Three cards from the tip, splayed toward level, so the tip reads from every side.
-    Triple,
+    /// Three cards splayed toward level around an upright twig, so the tip reads from every side,
+    /// closing into a fan toward the twig's heading as it tilts, and dropping cards as they crowd,
+    /// to one along the twig at 45°.
+    Rosette,
 }
 
 impl Default for TipLeaves {
     fn default() -> Self {
         Self {
-            upright: Upright::Triple,
+            upright: Upright::Rosette,
             size: 0.25,
             smallest: 0.5,
             // Seedling's most common pair, on the shrubs and two hemlocks.
