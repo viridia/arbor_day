@@ -261,6 +261,9 @@ pub(super) struct Card {
     pub at: f32,
     /// Unit direction from its base: along the twig, or turned from it in a rosette.
     pub direction: Vec3,
+    /// Whether it bends with its twig from its base to its fold, as a card along the twig does; a
+    /// rosette's turns from the twig, and runs straight.
+    pub bends: bool,
     /// Its leaves' size, the middle leaf's length; the card around them follows (`CardShape`).
     pub size: f32,
 }

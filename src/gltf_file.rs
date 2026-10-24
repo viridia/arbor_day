@@ -327,6 +327,7 @@ mod tests {
         "crops/palecress",
         "trees-coniferous/pine-fluffy",
         "trees-coniferous/pine-drooping",
+        "trees-temperate/hemlock1",
     ];
 
     /// The most a position or texture coordinate may move, in metres or UV units, and a normal.

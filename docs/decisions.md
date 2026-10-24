@@ -261,7 +261,9 @@ form (D21). Denser foliage comes from another limb level. A card's painted pairs
 child limbs with tip leaves of their own both put leaves beside a twig: the pairs cost nothing
 beyond the card and suit small or hanging leaves, such as needles; larger inner leaves want
 limbs. The tip's card reaches back so its axial
-fold lies at the tip, as seedling's did, and the twig runs straight under it (D17).
+fold lies at the tip, as seedling's did, and bends with the twig under it, so a sagging limb's
+leaves droop with it. It bends only where a straight card would miss the twig by more than the
+detail threshold, as hinting keeps a ring (D17), so a bend costs triangles only where it shows.
 
 A steep tip bears what the species chooses, by default a rosette: several cards from the tip,
 splayed around the twig toward level. A level shoot twists its leaves into one flat spray, which

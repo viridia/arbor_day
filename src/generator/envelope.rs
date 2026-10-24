@@ -176,7 +176,9 @@ pub(super) fn distance_to_envelope(envelope: &Envelope, origin: Vec3, direction:
 /// through `point` leaves it: square to the profile's side, or straight up or down on a flat top
 /// or base. Straight up at the middle itself.
 pub(super) fn outward_normal(envelope: &Envelope, point: Vec3) -> Vec3 {
-    let Envelope { base, top, radius, .. } = *envelope;
+    let Envelope {
+        base, top, radius, ..
+    } = *envelope;
     let middle = Vec3::Y * (base + top) * 0.5;
     let Some(direction) = (point - middle).try_normalize() else {
         return Vec3::Y;

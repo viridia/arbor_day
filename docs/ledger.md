@@ -127,6 +127,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C150  | The sprig's leaves at a fixed size: Size is the middle leaf's length, the card the sprig's bounds in it, its UVs the part of the square texture the sprig fills, so a longer phalanx lengthens the card and leaves the fan alone (D29, TD3.8 to TD3.10, G7). `reference/` converted by each file's old layout, so its leaves keep their size. |
 | C151  | Wander's spacing: kinks and the base run a Spacing apart, per level, in crown radii, 0.15 by default, so short twigs can kink (D17, TD3.4). |
 | C71   | Crown softness on the tip leaves, 0 by default: each card's normal blended toward the envelope's outward normal, the material double-sided at every weight, so nothing jumps above 0 and Panoply needs no material of its own (TD3.9); X13 withdrawn. Shots in `plans/gallery/shapes.py`. |
+| C152  | Cards bend with their twigs: a card along its twig runs from its base to the tip, its far half on along the twig's last stretch, and bends at each ring a straight card would miss by more than the detail threshold, so cards follow sagging and rising limbs (D27, TD3.9). Hemlock1 joins the golden trees. |
 
 ## Next
 
@@ -324,13 +325,24 @@ a migration or a new look land while the trees are few, the golden trees showing
   with a spread, so young fronds stand and old ones droop, and the length. A palm's frond is one
   card arching along its length: several axial segments, each bending further down, in place of
   C39's one fold, its V from the lateral droop; not a limb level with tip leaves, whose card
-  runs straight along the twig and whose rachis tubes cost triangles that do not show at game
-  scale. Its texture, a midrib with leaflets either side, is a frond mode of C38's painter, a
+  bends only as its twig does (C152) and whose rachis tubes cost triangles that do not show at
+  game scale. Its texture, a midrib with leaflets either side, is a frond mode of C38's painter, a
   second region of the leaf texture (requirements, Foliage). E[3]
 - **C112 View settings panel**: a gear icon opening a dialog of view settings, saved in
   `ViewSettings` (D28): the lighting and tone mapping (`GameLook`, TD1.1; per-project looks stay
   X6). Two buttons reset the lighting and tone
   mapping: one to Bevy's defaults, one to Panoply's. E[3]
+- **C153 The leader's tip apart from steep limbs**: Upright tips take every tip steeper than 45°,
+  so a hemlock whose leader should be bare loses the leaves of its upper third's limbs too. A
+  choice for stem tips in the tip leaves (G4), today's Upright by default, so files grow as
+  before. E[1]
+- **C154 Wander straight only from above**: the run under a tip's card need only be straight in
+  plan, now that a card bends with its twig (C152), which reads as leaves drooping or lifting. Its
+  kinks keep their vertical part, their horizontal part laid on the line from the last kink before
+  the run to the tip, by plan distance along the course, so the run's length still re-deals no
+  kink (C149, G7). An envelope pulling a point back moves it along its whole offset, slightly off
+  that line. Each kink kept under a card costs two triangles. Changes the leaves of every tree
+  with wander. E[2]
 
 ## Deferred
 

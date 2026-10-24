@@ -90,8 +90,8 @@ pub(super) fn rosette_turns(closing: f32, roll: f32, least: f32) -> Vec<f32> {
 /// A tip bears one card, or on a steep twig what the species' `Upright` says. One card reaches
 /// back along the twig, its fold at the tip, so the sprig's stem overlaps the twig's end, as
 /// seedling's did; on a twig shorter than that, from behind its root, so a short twig's leaves
-/// stay at its tip, close in to its parent. The twig runs straight there (`wander_axis`), so the
-/// card lies along it.
+/// stay at its tip, close in to its parent. It bends with the twig there (`mesh::spine`), which
+/// sag or rise may curve.
 ///
 /// A rosette's cards (`rosette_turns`) each point at its own heading, `UPRIGHT_RISE` above level
 /// on an upright twig. As the twig tilts, they rise toward the twig's own elevation at `STEEP`,
@@ -117,6 +117,7 @@ pub(super) fn clusters(species: &Species, axes: &[Axis]) -> Vec<Card> {
             axis: index,
             at,
             direction: twig.frame_at(at).tangent,
+            bends: true,
             size,
         };
         match tip_leaves.upright {
@@ -139,6 +140,7 @@ pub(super) fn clusters(species: &Species, axes: &[Axis]) -> Vec<Card> {
                         axis: index,
                         at,
                         direction: level * rise.cos() + Vec3::Y * rise.sin(),
+                        bends: false,
                         size,
                     });
                 }

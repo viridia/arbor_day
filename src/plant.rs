@@ -9,7 +9,7 @@ use bevy::{
 };
 
 use crate::{
-    generator::{self, CARD_CORNERS, Geometry, LeafTexture},
+    generator::{self, Geometry, LeafTexture},
     species::Species,
 };
 
@@ -101,7 +101,7 @@ fn build_plant(
         let stats = PlantStats {
             triangles: (grown.bark.triangles() + grown.leaves.triangles()) as u32,
             limbs: level_limbs.iter().sum::<usize>() as u32,
-            cards: (grown.leaves.positions.len() / CARD_CORNERS) as u32,
+            cards: grown.cards as u32,
             leafy_tips: grown.leafy_tips as u32,
             card_facing: grown.leaves.facing(GAME_ELEVATION),
             level_limbs: level_limbs.iter().map(|&count| count as u32).collect(),

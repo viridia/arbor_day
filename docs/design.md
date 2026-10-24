@@ -433,11 +433,15 @@ parents'. A segment between rings of equal sides is a band of
 quads; between N and M, a stitch of N + M triangles walking both rings by
 angle. A tube is open at its base and closed at its tip by a fan.
 
-A card is two by two quads, as wide and as tall as the sprig's bounds times its leaves' size
-(`CardShape`, TD3.10), its base where it was placed, its axis along its direction, its face
-toward that axis's upper side. Each half turns down about the midrib by the lateral droop (up, cupping, if negative),
-and the far half bends down across the axial fold by the axial droop. Every quad keeps the flat
-card's normal, blended at each corner by the tip leaves' crown softness toward the envelope's
+A card is two quads across, as wide and as tall as the sprig's bounds times its leaves' size
+(`CardShape`, TD3.10), laid along a spine of frames from its base to its axial fold, a row of
+quads between each two and one beyond the fold, each line across it facing its frame's upper
+side. A rosette's spine is straight, along its direction (`straight_spine`). A card along its
+twig takes the twig at its base and its fold, and between them the twig's rings that `simplify`
+keeps at the detail threshold (`spine`), so it bends where a straight card would miss the twig
+visibly, and its far half runs on along the twig's last stretch. Each half turns down about the
+midrib by the lateral droop (up, cupping, if negative), and the far row bends down across the
+axial fold by the axial droop. Each corner keeps its frame's flat normal, blended by the tip leaves' crown softness toward the envelope's
 outward normal: the normal where a ray from the crown's middle, on its axis halfway up, through the
 corner leaves the envelope, square to the profile's side or straight up or down on a flat top or
 base. The leaf material is double-sided at every softness, so a back face takes the flipped normal.

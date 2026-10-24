@@ -1706,6 +1706,10 @@ fn facing_is_the_share_of_area_seen_around() {
     assert_eq!(Geometry::default().facing(down), None);
 }
 
+/// Corners in a card with a straight spine: four quads of four, since each has its own normals
+/// (`card`). Each bend in the spine adds two quads.
+const CARD_CORNERS: usize = 16;
+
 /// In a card's corners: the middle of its base, its base's left and right ends, the middle of
 /// its axial fold, and the middle of its tip.
 const BASE: usize = 1;
@@ -1906,10 +1910,19 @@ fn the_envelope_faces_out_of_its_side_top_and_base() {
     };
     let near = |a: Vec3, b: Vec3| (a - b).length() < 1e-3;
     let column = envelope(Profile::Column);
-    assert!(near(outward_normal(&column, Vec3::new(0.0, 2.0, 0.5)), Vec3::Z));
-    assert!(near(outward_normal(&column, Vec3::new(0.2, 2.9, 0.0)), Vec3::Y));
+    assert!(near(
+        outward_normal(&column, Vec3::new(0.0, 2.0, 0.5)),
+        Vec3::Z
+    ));
+    assert!(near(
+        outward_normal(&column, Vec3::new(0.2, 2.9, 0.0)),
+        Vec3::Y
+    ));
     let dome = envelope(Profile::Hemisphere);
-    assert!(near(outward_normal(&dome, Vec3::new(0.1, 1.1, 0.0)), Vec3::NEG_Y));
+    assert!(near(
+        outward_normal(&dome, Vec3::new(0.1, 1.1, 0.0)),
+        Vec3::NEG_Y
+    ));
     // Up the dome's side, it leans out and up.
     let normal = outward_normal(&dome, Vec3::new(0.5, 2.5, 0.0));
     assert!(normal.x > 0.1 && normal.y > 0.1 && normal.z.abs() < 1e-3);
@@ -1921,7 +1934,11 @@ fn the_envelope_faces_out_of_its_side_top_and_base() {
 fn a_soft_card_shades_as_the_crown() {
     let envelope = Envelope::default();
     // A level twig on the crown's side, its card facing up.
-    let point = Vec3::new(0.5 * envelope.radius, (envelope.base + envelope.top) * 0.5, 0.0);
+    let point = Vec3::new(
+        0.5 * envelope.radius,
+        (envelope.base + envelope.top) * 0.5,
+        0.0,
+    );
     let frame = Frame {
         point,
         tangent: Vec3::X,
@@ -1941,7 +1958,8 @@ fn a_soft_card_shades_as_the_crown() {
             softness,
             ..TipLeaves::default()
         };
-        card(&mut geometry, &frame, 0.1, &shape, &leaves, &envelope);
+        let spine = straight_spine(&frame, shape.fold * shape.height * 0.1);
+        card(&mut geometry, &spine, 0.1, &shape, &leaves, &envelope);
         geometry
     };
     assert!(shaded(0.0).normals.iter().all(|&n| n == Vec3::Y));
@@ -1977,7 +1995,15 @@ fn cards_fold_at_the_midrib_and_across() {
             axial_droop: axial.to_radians(),
             ..TipLeaves::default()
         };
-        card(&mut geometry, &frame, 2.0, shape, &leaves, &Envelope::default());
+        let spine = straight_spine(&frame, shape.fold * shape.height * 2.0);
+        card(
+            &mut geometry,
+            &spine,
+            2.0,
+            shape,
+            &leaves,
+            &Envelope::default(),
+        );
         geometry
     };
     let folded = |lateral: f32, axial: f32| shaped(&square, lateral, axial);
@@ -2018,6 +2044,67 @@ fn cards_fold_at_the_midrib_and_across() {
             assert!((quad[1] - quad[0]).cross(quad[3] - quad[0]).y > 0.0);
         }
     }
+}
+
+#[test]
+fn cards_bend_with_their_twigs() {
+    // A level twig bending down 30° at a ring half a metre out, and on to its tip.
+    let (sin, cos) = 30_f32.to_radians().sin_cos();
+    let bent = Vec3::new(cos, -sin, 0.0);
+    let ring = |center: Vec3, tangent: Vec3, at: f32| Ring {
+        center,
+        tangent,
+        side: Vec3::Z,
+        at,
+        radius: 0.01,
+    };
+    let knee = Vec3::X * 0.5;
+    let stream = Seed(0).stream("test");
+    let start = ring(Vec3::ZERO, Vec3::X, 0.0);
+    let mut twig = Axis::placed(1, AxisKind::Lateral, (0, 0.0), start, 1.0, stream);
+    let halfway = (Vec3::X + bent).normalize();
+    twig.rings.push(ring(knee, halfway, 0.5));
+    twig.rings.push(ring(knee + bent * 0.5, bent, 1.0));
+    let shape = CardShape {
+        width: 1.0,
+        height: 1.0,
+        fold: 0.75,
+        uv_min: Vec2::ZERO,
+        uv_max: Vec2::ONE,
+    };
+    let leaves = TipLeaves {
+        lateral_droop: 0.0,
+        axial_droop: 0.0,
+        ..TipLeaves::default()
+    };
+    // A card a metre long, its fold at the tip, so its base three quarters of a metre short of it.
+    let mut geometry = Geometry::default();
+    let spine = spine(&twig, 0.25, 0.75, 0.02);
+    card(
+        &mut geometry,
+        &spine,
+        1.0,
+        &shape,
+        &leaves,
+        &Envelope::default(),
+    );
+    // Two rows to the fold, either side of the knee, and one beyond: six quads.
+    assert_eq!(geometry.positions.len(), CARD_CORNERS + 8);
+    // The midrib on the twig: at the base, the knee, and the tip, then on along the last stretch.
+    let tip = knee + bent * 0.5;
+    assert!((geometry.positions[BASE] - Vec3::X * 0.25).length() < 1e-5);
+    assert!((geometry.positions[FOLD] - knee).length() < 1e-5);
+    assert!((geometry.positions[FOLD + 8] - tip).length() < 1e-5);
+    assert!((geometry.positions[TIP + 8] - (tip + bent * 0.25)).length() < 1e-4);
+    // Each row faces its stretch's upper side.
+    assert!((geometry.normals[0] - Vec3::Y).length() < 1e-5);
+    let up = Vec3::Y.reject_from(bent).normalize();
+    assert!((geometry.normals[TIP + 8] - up).length() < 1e-5);
+    // Bending 5°, the knee lies within 2 cm of a straight card, which stays straight.
+    let shallow = Vec3::new(5_f32.to_radians().cos(), -5_f32.to_radians().sin(), 0.0);
+    twig.rings[1].tangent = (Vec3::X + shallow).normalize();
+    twig.rings[2] = ring(knee + shallow * 0.5, shallow, 1.0);
+    assert_eq!(super::mesh::spine(&twig, 0.25, 0.75, 0.02).len(), 2);
 }
 
 #[test]

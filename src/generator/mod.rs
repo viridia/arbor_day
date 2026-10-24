@@ -18,4 +18,4 @@ mod tests;
 
 pub use envelope::{Envelope, envelope_helper};
 pub use leaf::LeafTexture;
-pub use mesh::{CARD_CORNERS, Geometry, plant};
+pub use mesh::{Geometry, plant};
