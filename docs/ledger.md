@@ -126,6 +126,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C149  | Wander's kinks steady under the tip's straight run: split as if there were none, the kinks inside it taken out after, so the sprig's spacing, fold or card size no longer re-deals every kink, the trunk's included (TD3.4). The sprig's own coupling is C150. |
 | C150  | The sprig's leaves at a fixed size: Size is the middle leaf's length, the card the sprig's bounds in it, its UVs the part of the square texture the sprig fills, so a longer phalanx lengthens the card and leaves the fan alone (D29, TD3.8 to TD3.10, G7). `reference/` converted by each file's old layout, so its leaves keep their size. |
 | C151  | Wander's spacing: kinks and the base run a Spacing apart, per level, in crown radii, 0.15 by default, so short twigs can kink (D17, TD3.4). |
+| C71   | Crown softness on the tip leaves, 0 by default: each card's normal blended toward the envelope's outward normal, the material double-sided at every weight, so nothing jumps above 0 and Panoply needs no material of its own (TD3.9); X13 withdrawn. Shots in `plans/gallery/shapes.py`. |
 
 ## Next
 
@@ -292,10 +293,6 @@ a migration or a new look land while the trees are few, the golden trees showing
   (sunflower, tulip, lavender) as well as blossom on trees, heads at tips or nodes, small meshes
   in vertex color or cards from a region of the leaf texture. *Gate:* C103, and a preset wanting
   them. E[3]
-- **C71 Crown softness** (was part of C39): the cards' shading normal blended toward the
-  envelope's outward normal by a weight (prior art, Foliage), so the crown shades as one
-  mass; built as a weight and judged in the preview before it becomes an option or is fixed
-  either way. Panoply's side is X13. E[2]
 - **C48 Arching stems**, for fountain shrubs: a lean past level, so a stem rises and then droops
   toward the ground, stopping above it. D24 stops the lean at level until a preset needs more
   (X18). The Weep operator on the trunk. E[2]
@@ -357,11 +354,6 @@ a migration or a new look land while the trees are few, the golden trees showing
   level only, competing for points in the envelope's shell. A mode of the level's Arrangement (`docs/patches.md`, Stacks). Or, as seedling chose between monopodial and pseudo-dichotomous, a
   plant-level choice replacing the levels, the skeleton kept: a second generator. *Gate:* holes
   left once C130 and C133 are in.
-- **X13** Panoply's leaf material keeps the exported normal on back faces: `cull_mode: None`
-  with `double_sided: false`, set where flora loads, since Bevy flips a double-sided material's
-  back-face normal (`prepare_world_normal`) and crown shading normals would then point inward.
-  An item for Panoply's ledger. *Gate:* crown softness above 0 judged worth keeping, in the
-  preview and in the game.
 - **X15** Keeping old trees as they were when the generator changes. The game ships exported
   meshes, so a tree changes only when regenerated: edited again, or rebuilt by the command-line
   export if the asset pipeline runs one. Rather than keeping every past generator (Cargo
@@ -526,6 +518,13 @@ a migration or a new look land while the trees are few, the golden trees showing
   outside the envelope turned up or shrunk; cards scaled down on twigs much shorter than a card;
   or rosettes opening less. *Gate:* a second tree with isolated leaves out of its crown, the
   same kind of tip each time.
+
+- **X61** Crown softness's two weak spots (C71). Bevy flips a double-sided material's back-face
+  normal (`prepare_world_normal`), so a card seen from behind darkens as softness rises; and a
+  card low in the crown faces up while the envelope there faces down, so near 50% its normal
+  turns over in a step. Fixes, if either shows: a pair of one-sided cards back to back, each
+  with its own normal (twice the leaf triangles), or a leaf shader that mirrors a back face's
+  normal across the card. *Gate:* either read wrong from the game's camera on a soft species.
 
 - **X58** C145's plot drawn as scene content anchored to the plot node, to try the author's
   unified UI proposal (`https://hackmd.io/@dreamertalin/H1ruQhFnGl`) before offering it to

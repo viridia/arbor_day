@@ -54,6 +54,7 @@
       "smallest": 0.5,
       "lateral_droop": -0.27925268,
       "axial_droop": 0.29670596,
+      "softness": 0.0,
       "sprig": {
         "fan": 2,
         "angle": {

@@ -227,7 +227,7 @@ authored per species, of world up and the envelope's outward normal, with a boun
 
 The card's shading normal is separate from its face: the face normal blended toward the
 envelope's outward normal by a "crown softness" weight, so the crown shades as one mass. At 0
-the card keeps its own normal, as today. Above 0 both faces share it, which Panoply's leaf material must allow (ledger X13).
+the card keeps its own normal, as today. Built as C71 (`docs/design.md`, TD3.9).
 
 ### How the shapes are covered
 

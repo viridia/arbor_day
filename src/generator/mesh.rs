@@ -5,6 +5,7 @@ use std::f32::consts::TAU;
 use bevy::math::{Vec2, Vec3};
 
 use super::{
+    envelope::{Envelope, outward_normal},
     leaf::{self, CardShape, LeafTexture},
     skeleton::{Axis, AxisKind, Frame, Ring, grow, upper_side},
 };
@@ -103,6 +104,7 @@ pub fn plant(species: &Species) -> Grown {
     }
     let tip_leaves = &species.ornaments.tip_leaves.settings;
     let sprig = leaf::layout(tip_leaves, species.seed, species.leaf_stroke());
+    let envelope = Envelope::of(species);
     let mut leaves = Geometry::default();
     let mut leafy_tips = 0;
     let mut last_axis = None;
@@ -116,7 +118,14 @@ pub fn plant(species: &Species) -> Grown {
             tangent: cluster.direction,
             ..twig
         };
-        card(&mut leaves, &frame, cluster.size, &sprig.card, tip_leaves);
+        card(
+            &mut leaves,
+            &frame,
+            cluster.size,
+            &sprig.card,
+            tip_leaves,
+            &envelope,
+        );
     }
     let leaf_texture = leaf::paint(
         &sprig,
@@ -146,15 +155,25 @@ pub fn plant(species: &Species) -> Grown {
 /// shading: every quad keeps the flat card's normal, so a facet turned from the light is not cut
 /// dark against its neighbours. The corners go near quads before far, left before right, each
 /// quad's counter-clockwise from its face starting at its corner nearest the base on the left.
+///
+/// Above 0, the crown softness blends each corner's normal toward the envelope's outward normal
+/// there, so the crown shades as one mass.
 pub(super) fn card(
     geometry: &mut Geometry,
     frame: &Frame,
     size: f32,
     shape: &CardShape,
     leaves: &TipLeaves,
+    envelope: &Envelope,
 ) {
     let axis = frame.tangent;
     let normal = upper_side(axis, frame.side);
+    let shading = |position: Vec3| {
+        if leaves.softness <= 0.0 {
+            return normal;
+        }
+        (normal.lerp(outward_normal(envelope, position), leaves.softness)).normalize_or(normal)
+    };
     // Square to both, so corners run counter-clockwise seen from the face.
     let across = axis.cross(normal);
     let (lateral_sin, lateral_cos) = leaves.lateral_droop.sin_cos();
@@ -186,7 +205,7 @@ pub(super) fn card(
                 [(u0, v0), (u1, v0), (u1, v1), (u0, v1)].map(|(u, v)| (u, v, folded(u, v)));
             for (u, v, position) in corners {
                 geometry.positions.push(position);
-                geometry.normals.push(normal);
+                geometry.normals.push(shading(position));
                 geometry.uvs.push(uv(u, v));
             }
             geometry

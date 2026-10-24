@@ -437,7 +437,11 @@ A card is two by two quads, as wide and as tall as the sprig's bounds times its 
 (`CardShape`, TD3.10), its base where it was placed, its axis along its direction, its face
 toward that axis's upper side. Each half turns down about the midrib by the lateral droop (up, cupping, if negative),
 and the far half bends down across the axial fold by the axial droop. Every quad keeps the flat
-card's normal. Its UVs cover the part of the texture the sprig fills, its bottom the card's base.
+card's normal, blended at each corner by the tip leaves' crown softness toward the envelope's
+outward normal: the normal where a ray from the crown's middle, on its axis halfway up, through the
+corner leaves the envelope, square to the profile's side or straight up or down on a flat top or
+base. The leaf material is double-sided at every softness, so a back face takes the flipped normal.
+Its UVs cover the part of the texture the sprig fills, its bottom the card's base.
 
 On an outlined species the app (`src/outline.rs`) draws the bark again, sharing its mesh, with
 Panoply's `OutlineMaterial`: an inverted hull, each vertex pushed out along its normal by the bark

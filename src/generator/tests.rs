@@ -1897,6 +1897,65 @@ fn a_closing_rosette_moves_no_card_far() {
 }
 
 #[test]
+fn the_envelope_faces_out_of_its_side_top_and_base() {
+    let envelope = |profile| Envelope {
+        profile,
+        base: 1.0,
+        top: 3.0,
+        radius: 1.0,
+    };
+    let near = |a: Vec3, b: Vec3| (a - b).length() < 1e-3;
+    let column = envelope(Profile::Column);
+    assert!(near(outward_normal(&column, Vec3::new(0.0, 2.0, 0.5)), Vec3::Z));
+    assert!(near(outward_normal(&column, Vec3::new(0.2, 2.9, 0.0)), Vec3::Y));
+    let dome = envelope(Profile::Hemisphere);
+    assert!(near(outward_normal(&dome, Vec3::new(0.1, 1.1, 0.0)), Vec3::NEG_Y));
+    // Up the dome's side, it leans out and up.
+    let normal = outward_normal(&dome, Vec3::new(0.5, 2.5, 0.0));
+    assert!(normal.x > 0.1 && normal.y > 0.1 && normal.z.abs() < 1e-3);
+    // At the crown's middle, straight up.
+    assert!(near(outward_normal(&column, Vec3::Y * 2.0), Vec3::Y));
+}
+
+#[test]
+fn a_soft_card_shades_as_the_crown() {
+    let envelope = Envelope::default();
+    // A level twig on the crown's side, its card facing up.
+    let point = Vec3::new(0.5 * envelope.radius, (envelope.base + envelope.top) * 0.5, 0.0);
+    let frame = Frame {
+        point,
+        tangent: Vec3::X,
+        side: Vec3::Z,
+        radius: 0.0,
+    };
+    let shape = CardShape {
+        width: 1.0,
+        height: 1.0,
+        fold: 0.5,
+        uv_min: Vec2::ZERO,
+        uv_max: Vec2::ONE,
+    };
+    let shaded = |softness: f32| {
+        let mut geometry = Geometry::default();
+        let leaves = TipLeaves {
+            softness,
+            ..TipLeaves::default()
+        };
+        card(&mut geometry, &frame, 0.1, &shape, &leaves, &envelope);
+        geometry
+    };
+    assert!(shaded(0.0).normals.iter().all(|&n| n == Vec3::Y));
+    let soft = shaded(1.0);
+    for (&position, &normal) in soft.positions.iter().zip(&soft.normals) {
+        assert!((normal - outward_normal(&envelope, position)).length() < 1e-5);
+    }
+    // Halfway, between the card's face and the crown's.
+    let half = shaded(0.5).normals[0];
+    let out = outward_normal(&envelope, soft.positions[0]);
+    assert!(half.dot(Vec3::Y) > out.dot(Vec3::Y) && half.dot(out) > Vec3::Y.dot(out));
+}
+
+#[test]
 fn cards_fold_at_the_midrib_and_across() {
     let frame = Frame {
         point: Vec3::ZERO,
@@ -1918,7 +1977,7 @@ fn cards_fold_at_the_midrib_and_across() {
             axial_droop: axial.to_radians(),
             ..TipLeaves::default()
         };
-        card(&mut geometry, &frame, 2.0, shape, &leaves);
+        card(&mut geometry, &frame, 2.0, shape, &leaves, &Envelope::default());
         geometry
     };
     let folded = |lateral: f32, axial: f32| shaped(&square, lateral, axial);

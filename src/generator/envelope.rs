@@ -172,6 +172,28 @@ pub(super) fn distance_to_envelope(envelope: &Envelope, origin: Vec3, direction:
     near
 }
 
+/// The envelope's outward normal where a ray from the crown's middle, on the axis halfway up it,
+/// through `point` leaves it: square to the profile's side, or straight up or down on a flat top
+/// or base. Straight up at the middle itself.
+pub(super) fn outward_normal(envelope: &Envelope, point: Vec3) -> Vec3 {
+    let Envelope { base, top, radius, .. } = *envelope;
+    let middle = Vec3::Y * (base + top) * 0.5;
+    let Some(direction) = (point - middle).try_normalize() else {
+        return Vec3::Y;
+    };
+    let exit = middle + direction * distance_to_envelope(envelope, middle, direction);
+    // The profile's solid cut by the planes of its base and top, below 0 inside: its gradient on
+    // the surface is the normal there.
+    let span = (top - base).max(1e-4);
+    let outside = |p: Vec3| {
+        let width = radius * profile_width(envelope.profile, (p.y - base) / span);
+        (p.x.hypot(p.z) - width).max(base - p.y).max(p.y - top)
+    };
+    let step = 1e-3 * (radius + top).max(0.01);
+    let slope = |axis: Vec3| outside(exit + axis * step) - outside(exit - axis * step);
+    Vec3::new(slope(Vec3::X), slope(Vec3::Y), slope(Vec3::Z)).normalize_or(direction)
+}
+
 /// Whether `point` lies inside the envelope.
 pub(super) fn inside_envelope(envelope: &Envelope, point: Vec3) -> bool {
     point.x.hypot(point.z) < envelope_radius(envelope, point.y)

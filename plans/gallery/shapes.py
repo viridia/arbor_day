@@ -2,6 +2,8 @@
 unit tests check the counts, so this plan waits a few frames after each edit rather than checking
 the plant. A section that edits the first level puts it back, so later shots compare with the
 default.
+- crown softness: a second level for a fuller crown, its cards shading as themselves, then half
+  way to the envelope's normal, then all the way;
 - node start: the first level's nodes in the upper half of the trunk inside the crown;
 - limbs per node and density: whorls, and a mix of one and two limbs to a node;
 - wander, turned on for the shots: the first level's limbs zigzag about their course at the most
@@ -53,6 +55,16 @@ def run(driver):
     driver.present("Shell/Panel/levels[0]/add")  # the immediate-mode panel has built its rows
     driver.frames(2)
     driver.screenshot("default")
+
+    add_level(driver, 0)
+    driver.frames(2)
+    for softness in [0, 50, 100]:
+        driver.set_resource(SPECIES, softness / 100, at="ornaments.tip_leaves.settings.softness")
+        driver.frames(2)
+        driver.screenshot(f"softness_{softness}")
+    driver.set_resource(SPECIES, 0.0, at="ornaments.tip_leaves.settings.softness")
+    driver.click("Shell/Panel/levels[1]/remove")
+    driver.frames(2)
 
     set_number(driver, "levels[0]/start", "50")
     driver.screenshot("start_halfway")

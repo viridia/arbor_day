@@ -849,6 +849,15 @@ pub struct TipLeaves {
         @Caption("Axial droop"),
     )]
     pub axial_droop: f32,
+    /// How far the cards shade as one mass with the crown: each card's normal blended toward the
+    /// envelope's outward normal. At 0 every card shades as itself.
+    #[reflect(
+        @ValueRange::<f32>(0.0..=1.0),
+        @Precision(0),
+        @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("Crown softness"),
+    )]
+    pub softness: f32,
     #[reflect(@Caption("Sprig"))]
     pub sprig: Sprig,
     #[reflect(@Caption("Leaf"))]
@@ -1038,6 +1047,7 @@ impl Default for TipLeaves {
             // Seedling's most common pair, on the shrubs and two hemlocks.
             lateral_droop: (-16.0_f32).to_radians(),
             axial_droop: 17.0_f32.to_radians(),
+            softness: 0.0,
             sprig: Sprig::default(),
             leaf: Leaf::default(),
         }
