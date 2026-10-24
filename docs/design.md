@@ -396,14 +396,15 @@ parent where it left. Stems fork the same way (TD3.2).
 
 `clusters` places cards at the tip of each stem or limb that did not fork, while the tip leaves are on, an
 ornament slot (`docs/patches.md`, Stacks) whose panel and file are an operator's (TD1.5, TD2.3). Their
-size is a share of the crown radius, scaled at each tip by its twig's leaf scale (TD3.3), or on an
+size, the middle leaf's length (`leaf_length`), is a share of the crown radius, each card the
+sprig's bounds in it (TD3.10), scaled at each tip by its twig's leaf scale (TD3.3), or on an
 axis bearing laterals by its last lateral's, clamped between the tip leaves' smallest and 1 (`tip_scale`): below a half,
 a card's outline and texture detail show, and the straight run under a full card (TD3.4) covers
 every smaller one. A tip bears one card, unless its twig is tilted less than 45° from straight
 up at its tip, when the species' upright tips say: none, one, or a rosette.
 
 One card lies along the twig, reaching back until its axial fold, where the painted sprig's fan
-starts (`axial_fold`, TD3.10), lies at the tip, even past the twig's root on a twig shorter than
+starts (`below_fan`, TD3.10), lies at the tip, even past the twig's root on a twig shorter than
 that, so a short twig's leaves stay close in to its parent, as a rosette's leaves do.
 
 A rosette closes as its twig tilts, by `closing`, 1 straight up and 0 at 45°. Its cards point at
@@ -414,7 +415,7 @@ toward the heading as a fan. Its span, 240° × `closing`, must hold its cards a
 apart, 60° nudged by up to 30% either way per tip from the same stream: when it cannot, the middle
 card goes, the ends keeping their turns, and then the end further from the heading. Each card
 rises from 22.5° above level when upright to 45° at 45°, whatever its turn, and starts back from
-the tip by the fold's share of its size times 1 − `closing`. So no card jumps as one goes, and at
+the tip by its stretch below the fan times 1 − `closing`. So no card jumps as one goes, and at
 45° the last is the one card along the twig. With the defaults a tip bears three to about 22°
 (16° to 29° by the nudge), two to about 34° (30° to 37°), one beyond.
 
@@ -431,10 +432,11 @@ parents'. A segment between rings of equal sides is a band of
 quads; between N and M, a stitch of N + M triangles walking both rings by
 angle. A tube is open at its base and closed at its tip by a fan.
 
-A card is two by two quads, its base where it was placed, its axis along its direction, its face
+A card is two by two quads, as wide and as tall as the sprig's bounds times its leaves' size
+(`CardShape`, TD3.10), its base where it was placed, its axis along its direction, its face
 toward that axis's upper side. Each half turns down about the midrib by the lateral droop (up, cupping, if negative),
 and the far half bends down across the axial fold by the axial droop. Every quad keeps the flat
-card's normal. The texture's bottom is the card's base.
+card's normal. Its UVs cover the part of the texture the sprig fills, its bottom the card's base.
 
 On an outlined species the app (`src/outline.rs`) draws the bark again, sharing its mesh, with
 Panoply's `OutlineMaterial`: an inverted hull, each vertex pushed out along its normal by the bark
@@ -455,8 +457,11 @@ and the pairs below, a spacing apart, at the angle and the outer size; each leaf
 pair leaf's place stray by their spreads.
 
 `layout` fits the sprig to the texture: symmetric about the stem, so it lies on the card's
-midrib, square, padded by half the outline and a pixel, the tip up. Where the fan starts, as a
-share of the height from the bottom edge, is the card's axial fold. `paint` strokes the stem, from
+midrib, its longer side across the square, padded by half the outline and a pixel, the tip up.
+The card is the part the sprig fills, its bounds and that padding (`CardShape`), in leaf lengths
+and as the texture's part, at one scale both ways, so the leaves keep their size whatever the
+sprig's shape and a longer phalanx only lengthens the card. Where the fan starts, as a share of
+the card's height from its base, is its axial fold. `paint` strokes the stem, from
 below the bottom edge to the fan, and every leaf black, the outline's width wider; then the stem in
 the bark color; then each leaf in turn stroked translucent black and filled with a linear gradient
 in its own frame, lateral (outer, inner at the midrib, outer, across 1.2 times the half's widest

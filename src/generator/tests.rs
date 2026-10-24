@@ -1,9 +1,10 @@
 use std::f32::consts::{FRAC_PI_2, PI, TAU};
 
-use bevy::math::{Vec3, Vec3Swizzles};
+use bevy::math::{Vec2, Vec3, Vec3Swizzles};
 
 use super::{
-    envelope::*, foliage::*, hint::*, mesh::*, placement::*, skeleton::*, trace::*, wander::*,
+    envelope::*, foliage::*, hint::*, leaf::CardShape, mesh::*, placement::*, skeleton::*,
+    trace::*, wander::*,
 };
 use crate::{
     fuzzy::{Distribution, Fuzzy},
@@ -451,7 +452,7 @@ fn bias_leaves_scale_cards_along_their_parent() {
     });
     let skeleton = grow(&species);
     let axes = &skeleton.axes;
-    let full = card_size(&species);
+    let full = leaf_length(&species);
     // The trunk's laterals by node, one a node, from 160% of the reach at the first to 40% at the
     // last: their leaves from 100% down by half of the way to 40/160.
     let mut laterals: Vec<usize> = (0..axes.len())
@@ -940,9 +941,7 @@ fn branch_ends_run_straight_under_their_cards() {
     // With no bend, a stretch with no kinks keeps no rings, so a branch end's last ring
     // before its tip lies before the stretch its card covers.
     let species = level_limbs(45.0);
-    let straight = axial_fold(&species)
-        * species.ornaments.tip_leaves.settings.size
-        * Envelope::of(&species).radius;
+    let straight = below_fan(&card_shape(&species)) * leaf_length(&species);
     let limbs = limbs(&species);
     let ends: Vec<&Axis> = limbs.iter().filter(|limb| limb.scions.is_empty()).collect();
     assert!(ends.iter().any(|limb| limb.rings.len() > 2));
@@ -1741,7 +1740,6 @@ fn cards_lie_along_their_twigs_facing_up() {
         axial_droop: 0.0,
         ..TipLeaves::default()
     };
-    let side = tip_leaves.size * Envelope::default().radius;
     let species = Species {
         ornaments: Ornaments {
             tip_leaves: Toggle::on(tip_leaves),
@@ -1751,6 +1749,7 @@ fn cards_lie_along_their_twigs_facing_up() {
     let twigs = limbs(&species);
     let skeleton = grow(&species);
     let leaves = plant(&species).leaves;
+    let shape = card_shape(&species);
     assert!(!leaves.positions.is_empty());
     assert_eq!(leaves.uvs.len(), leaves.positions.len());
     let cards = leaves.positions.chunks(CARD_CORNERS);
@@ -1768,8 +1767,9 @@ fn cards_lie_along_their_twigs_facing_up() {
         }
         along += 1;
         let base = corners[BASE];
-        let axis = (corners[TIP] - base) / side;
-        let across = (corners[BASE_RIGHT] - corners[BASE_LEFT]) / side;
+        // The card the sprig's shape, in its leaves' size.
+        let axis = (corners[TIP] - base) / (shape.height * cluster.size);
+        let across = (corners[BASE_RIGHT] - corners[BASE_LEFT]) / (shape.width * cluster.size);
         // Flat, so every quad faces the same way.
         let normal = normals[0];
         assert!(normals.iter().all(|n| (*n - normal).length() < 1e-4));
@@ -1882,16 +1882,24 @@ fn cards_fold_at_the_midrib_and_across() {
         side: Vec3::Z,
         radius: 0.0,
     };
-    let folded = |lateral: f32, axial: f32| {
+    let square = CardShape {
+        width: 1.0,
+        height: 1.0,
+        fold: 0.5,
+        uv_min: Vec2::ZERO,
+        uv_max: Vec2::ONE,
+    };
+    let shaped = |shape: &CardShape, lateral: f32, axial: f32| {
         let mut geometry = Geometry::default();
         let leaves = TipLeaves {
             lateral_droop: lateral.to_radians(),
             axial_droop: axial.to_radians(),
             ..TipLeaves::default()
         };
-        card(&mut geometry, &frame, 2.0, 0.5, &leaves);
+        card(&mut geometry, &frame, 2.0, shape, &leaves);
         geometry
     };
+    let folded = |lateral: f32, axial: f32| shaped(&square, lateral, axial);
     // A level twig along x, so the card faces up and its left edge lies toward −z.
     let flat = folded(0.0, 0.0);
     assert!((flat.positions[TIP] - Vec3::new(2.0, 0.0, 0.0)).length() < 1e-5);
@@ -1905,6 +1913,23 @@ fn cards_fold_at_the_midrib_and_across() {
     assert_eq!(bent.positions[BASE], Vec3::ZERO);
     let (sin, cos) = 30_f32.to_radians().sin_cos();
     assert!((bent.positions[TIP] - Vec3::new(1.0 + cos, -sin, 0.0)).length() < 1e-5);
+    // A tall, narrow sprig makes a card as long and wide as it, in its leaves' size, showing only
+    // the part of the texture the sprig fills: its base the part's bottom, its tip the top.
+    let tall = CardShape {
+        width: 0.5,
+        height: 1.5,
+        fold: 0.6,
+        uv_min: Vec2::new(0.4, 0.0),
+        uv_max: Vec2::new(0.6, 1.0),
+    };
+    let tall = shaped(&tall, 0.0, 0.0);
+    assert!((tall.positions[TIP] - Vec3::new(3.0, 0.0, 0.0)).length() < 1e-5);
+    let width = tall.positions[BASE_RIGHT] - tall.positions[BASE_LEFT];
+    assert!((width.length() - 1.0).abs() < 1e-5);
+    assert!((tall.positions[FOLD] - Vec3::new(1.8, 0.0, 0.0)).length() < 1e-5);
+    assert_eq!(tall.uvs[BASE], Vec2::new(0.5, 1.0));
+    assert_eq!(tall.uvs[BASE_LEFT], Vec2::new(0.4, 1.0));
+    assert_eq!(tall.uvs[TIP], Vec2::new(0.5, 0.0));
     // Every quad keeps the flat card's normal, and its winding faces the same side.
     for geometry in [&drooped, &bent, &folded(-30.0, -30.0)] {
         assert!(geometry.normals.iter().all(|n| *n == Vec3::Y));

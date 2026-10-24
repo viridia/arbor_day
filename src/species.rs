@@ -802,9 +802,10 @@ pub struct TipLeaves {
     /// What a steep tip bears.
     #[reflect(@Caption("Upright tips"))]
     pub upright: Upright,
-    /// Each card's width, as a fraction of the crown's radius.
+    /// The middle leaf's length, as a fraction of the crown's radius. The sprig's other leaves,
+    /// its pairs and their spacing are measured in it, so changing them leaves this alone.
     #[reflect(
-        @ValueRange::<f32>(0.02..=1.0),
+        @ValueRange::<f32>(0.01..=1.0),
         @Precision(0),
         @NumberInputUnits::new_static("ratio_percent"),
         @Caption("Size"),
@@ -1021,7 +1022,7 @@ impl Default for TipLeaves {
     fn default() -> Self {
         Self {
             upright: Upright::Rosette,
-            size: 0.25,
+            size: 0.12,
             smallest: 0.5,
             // Seedling's most common pair, on the shrubs and two hemlocks.
             lateral_droop: (-16.0_f32).to_radians(),

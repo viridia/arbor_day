@@ -40,14 +40,14 @@
       "componentType": 5126,
       "type": "VEC3",
       "min": [
-        -0.27181440591812134,
-        -0.009174063801765442,
-        -0.2611958980560303
+        -0.22342348098754883,
+        0.015425535850226879,
+        -0.22762344777584076
       ],
       "max": [
-        0.27151164412498474,
-        0.24671754240989685,
-        0.2410028874874115
+        0.23120880126953125,
+        0.20516428351402283,
+        0.19001635909080505
       ]
     },
     {
@@ -233,7 +233,7 @@
   ],
   "scenes": [
     {
-      "extras": {"arbor_day":{"bark_color":{"Srgba":{"alpha":1.0,"blue":0.4117647,"green":0.6431373,"red":0.5411765}},"bark_outline":0.004,"crown":{"base":0.0,"profile":"Hemisphere","radius":0.3,"top":2.0},"detail":0.02,"generator":1,"leaf_outline":10.8,"limbs":[{"angle":{"center":1.0227629,"shape":"Uniform","spread":0.05},"bias":{"aim":0.19,"leaves":0.52,"size":0.4},"density":9.0,"end":1.0,"facing":"Around","per_node":3.0,"radius":0.21,"reach":{"center":0.16,"shape":"Bell","spread":0.05},"sides":3,"skew":0.0,"start":0.0}],"ornaments":{"tip_leaves":{"axial_droop":-0.0837758,"lateral_droop":-0.12042772,"leaf":{"base_taper":0.0,"base_width":0.27,"gradient":"Axial","inner_color":{"Srgba":{"alpha":1.0,"blue":0.3254902,"green":0.5294118,"red":0.18431373}},"jitter":0.0,"outer_color":{"Srgba":{"alpha":1.0,"blue":0.7647059,"green":0.8509804,"red":0.72156864}},"rake":0.0,"segments":1,"serration":0.0,"tip_taper":-0.13,"tip_width":0.39,"variation":0.12},"size":1.0,"smallest":0.5,"sprig":{"angle":{"center":1.4189527,"spread":0.0},"fan":2,"outer_size":1.0,"pairs":0,"spacing":{"center":0.43,"spread":0.0}},"upright":"Single"}},"outline":true,"seed":1,"taper":0.9,"trunk":{"height":0.1,"radius":0.02,"sides":6}}},
+      "extras": {"arbor_day":{"bark_color":{"Srgba":{"alpha":1.0,"blue":0.4117647,"green":0.6431373,"red":0.5411765}},"bark_outline":0.004,"crown":{"base":0.0,"profile":"Hemisphere","radius":0.3,"top":2.0},"detail":0.02,"generator":1,"leaf_outline":10.8,"limbs":[{"angle":{"center":1.0227629,"shape":"Uniform","spread":0.05},"bias":{"aim":0.19,"leaves":0.52,"size":0.4},"density":9.0,"end":1.0,"facing":"Around","per_node":3.0,"radius":0.21,"reach":{"center":0.16,"shape":"Bell","spread":0.05},"sides":3,"skew":0.0,"start":0.0}],"ornaments":{"tip_leaves":{"axial_droop":-0.0837758,"lateral_droop":-0.12042772,"leaf":{"base_taper":0.0,"base_width":0.27,"gradient":"Axial","inner_color":{"Srgba":{"alpha":1.0,"blue":0.3254902,"green":0.5294118,"red":0.18431373}},"jitter":0.0,"outer_color":{"Srgba":{"alpha":1.0,"blue":0.7647059,"green":0.8509804,"red":0.72156864}},"rake":0.0,"segments":1,"serration":0.0,"tip_taper":-0.13,"tip_width":0.39,"variation":0.12},"size":0.4706,"smallest":0.5,"sprig":{"angle":{"center":1.4189527,"spread":0.0},"fan":2,"outer_size":1.0,"pairs":0,"spacing":{"center":0.43,"spread":0.0}},"upright":"Single"}},"outline":true,"seed":1,"taper":0.9,"trunk":{"height":0.1,"radius":0.02,"sides":6}}},
       "name": "palecress",
       "nodes": [
         0,

@@ -269,7 +269,7 @@ settings. The default species, abridged, angles in radians:
     }
   ],
   "ornaments": {
-    "tip_leaves": { "size": 0.25, "lateral_droop": -0.28, "axial_droop": 0.3, "upright": "Rosette" }
+    "tip_leaves": { "size": 0.12, "lateral_droop": -0.28, "axial_droop": 0.3, "upright": "Rosette" }
   }
 }
 ```

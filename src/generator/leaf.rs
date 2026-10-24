@@ -62,12 +62,29 @@ pub(super) struct Layout {
     to_pixels: Transform,
     /// Texture pixels per leaf length.
     scale: f32,
-    /// Where the fan starts, as a share of the texture's height from its bottom edge.
+    /// The texture's height below where the fan starts, in leaf lengths.
+    below_fan: f32,
+    /// The card holding the sprig.
+    pub card: CardShape,
+}
+
+/// A card: the sprig's bounds and its outline's, in leaf lengths, so the leaves keep their size
+/// whatever the sprig's shape, after seedling's (D29).
+#[derive(Clone, Copy, Debug)]
+pub(super) struct CardShape {
+    pub width: f32,
+    pub height: f32,
+    /// Where the fan starts, as a share of the height from the card's base.
     pub fold: f32,
+    /// The part of the texture the card shows: its top left and bottom right, from 0 to 1, rows
+    /// from the top.
+    pub uv_min: Vec2,
+    pub uv_max: Vec2,
 }
 
 /// Lays out the sprig of `tip_leaves` for `seed`, fitted to a texture outlined `outline` pixels
-/// wide: square, the stem on its vertical midline, every leaf and its outline inside.
+/// wide: square, the stem on its vertical midline, every leaf and its outline inside, at the scale
+/// that fits its longer side. The card is the part the sprig fills.
 pub(super) fn layout(tip_leaves: &TipLeaves, seed: Seed, outline: Option<f32>) -> Layout {
     let half = half_outline(&tip_leaves.leaf, seed);
     let stamps = stamps(&tip_leaves.sprig, seed);
@@ -97,12 +114,25 @@ pub(super) fn layout(tip_leaves: &TipLeaves, seed: Seed, outline: Option<f32>) -
         size * 0.5,
         size * 0.5 + middle * scale,
     );
+    // In pixels, rows from the top: the fan's start, and the card's sides, top and base.
+    let fan = size * 0.5 + middle * scale;
+    let side = (half_width * scale + padding).min(size * 0.5);
+    let card_top = (fan - top * scale - padding).max(0.0);
+    let base = (fan - bottom * scale + padding).min(size);
+    let height = (base - card_top).max(f32::EPSILON);
     Layout {
         half,
         stamps,
         to_pixels,
         scale,
-        fold: 0.5 - middle * scale / size,
+        below_fan: (size - fan) / scale,
+        card: CardShape {
+            width: 2.0 * side / scale,
+            height: height / scale,
+            fold: (base - fan) / height,
+            uv_min: Vec2::new(size * 0.5 - side, card_top) / size,
+            uv_max: Vec2::new(size * 0.5 + side, base) / size,
+        },
     }
 }
 
@@ -355,7 +385,7 @@ fn leaf_path(half: &[Segment]) -> Path {
 
 /// The stem, from below the texture's bottom edge, so its end is cut off square, up to the fan.
 fn stem_path(layout: &Layout) -> Path {
-    let below = (layout.fold + 0.1) * TEXTURE_SIZE as f32 / layout.scale;
+    let below = layout.below_fan + 0.1 * TEXTURE_SIZE as f32 / layout.scale;
     let mut path = PathBuilder::new();
     path.move_to(0.0, -below);
     path.line_to(0.0, 0.0);
@@ -412,7 +442,27 @@ mod tests {
         layout.to_pixels.map_point(&mut stem);
         assert!((stem.x - TEXTURE_SIZE as f32 * 0.5).abs() < 1e-3);
         // The pairs hang below the fan, so it starts partway up.
-        assert!((0.2..0.8).contains(&layout.fold), "{}", layout.fold);
+        let card = layout.card;
+        assert!((0.2..0.8).contains(&card.fold), "{}", card.fold);
+        // The card the sprig's bounds, centred on the stem, its longer side the texture's.
+        assert!((card.uv_min.x + card.uv_max.x - 1.0).abs() < 1e-5);
+        let uv = card.uv_max - card.uv_min;
+        assert!((uv.max_element() - 1.0).abs() < 1e-5, "{uv}");
+        assert!((card.width / card.height - uv.x / uv.y).abs() < 1e-4);
+    }
+
+    #[test]
+    fn a_longer_phalanx_lengthens_the_card_not_the_leaves() {
+        let mut tip_leaves = TipLeaves::default();
+        let short = layout(&tip_leaves, Seed(1), None).card;
+        tip_leaves.sprig.spacing.center *= 2.0;
+        let long = layout(&tip_leaves, Seed(1), None).card;
+        // In leaf lengths: the fan the same, the card longer below it, give or take the margin of a
+        // pixel, whose length follows the texture's scale.
+        let fan = |card: CardShape| card.height * (1.0 - card.fold);
+        assert!((fan(long) - fan(short)).abs() < 0.02);
+        assert!(long.height > short.height + 0.1);
+        assert!((long.width - short.width).abs() < 0.02);
     }
 
     /// The default species' texture, as painted when it was last checked and judged by eye.

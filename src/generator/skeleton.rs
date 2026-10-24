@@ -261,7 +261,7 @@ pub(super) struct Card {
     pub at: f32,
     /// Unit direction from its base: along the twig, or turned from it in a rosette.
     pub direction: Vec3,
-    /// Its width and length.
+    /// Its leaves' size, the middle leaf's length; the card around them follows (`CardShape`).
     pub size: f32,
 }
 

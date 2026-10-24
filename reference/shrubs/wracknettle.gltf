@@ -55,7 +55,7 @@
           "ornaments": {
             "tip_leaves": {
               "upright": "Rosette",
-              "size": 1.0,
+              "size": 0.4759,
               "lateral_droop": -0.06981317007977318,
               "axial_droop": 0.8691739674931761,
               "sprig": {

@@ -5,7 +5,7 @@ use std::f32::consts::TAU;
 use bevy::math::{Vec2, Vec3};
 
 use super::{
-    leaf::{self, LeafTexture},
+    leaf::{self, CardShape, LeafTexture},
     skeleton::{Axis, AxisKind, Frame, Ring, grow, upper_side},
 };
 use crate::species::{Species, TipLeaves};
@@ -116,7 +116,7 @@ pub fn plant(species: &Species) -> Grown {
             tangent: cluster.direction,
             ..twig
         };
-        card(&mut leaves, &frame, cluster.size, sprig.fold, tip_leaves);
+        card(&mut leaves, &frame, cluster.size, &sprig.card, tip_leaves);
     }
     let leaf_texture = leaf::paint(
         &sprig,
@@ -134,14 +134,15 @@ pub fn plant(species: &Species) -> Grown {
     }
 }
 
-/// Adds a square card `size` across for a sprig growing from `frame`: its base at the frame's
-/// point, its axis along the frame's tangent, so a sprig along its twig lines up with it, and its
-/// face toward the axis's upper side, world up made square to it, so it is turned as near up as
-/// the axis allows. The texture's bottom is the base.
+/// Adds a card shaped as `shape`, its leaves `size` long, for a sprig growing from `frame`: its
+/// base at the frame's point, its axis along the frame's tangent, so a sprig along its twig lines
+/// up with it, and its face toward the axis's upper side, world up made square to it, so it is
+/// turned as near up as the axis allows. It shows the part of the texture `shape` says, its
+/// bottom at the base.
 ///
 /// The card is two by two quads, after seedling, folded twice: each half turns down about the
 /// midrib by the lateral droop (up, cupping, if negative), and the far half bends down about the
-/// line across at `fold`, a share of its length, by the axial droop. The folds shape the outline but not the
+/// line across at the shape's fold, by the axial droop. The folds shape the outline but not the
 /// shading: every quad keeps the flat card's normal, so a facet turned from the light is not cut
 /// dark against its neighbours. The corners go near quads before far, left before right, each
 /// quad's counter-clockwise from its face starting at its corner nearest the base on the left.
@@ -149,7 +150,7 @@ pub(super) fn card(
     geometry: &mut Geometry,
     frame: &Frame,
     size: f32,
-    fold: f32,
+    shape: &CardShape,
     leaves: &TipLeaves,
 ) {
     let axis = frame.tangent;
@@ -158,16 +159,25 @@ pub(super) fn card(
     let across = axis.cross(normal);
     let (lateral_sin, lateral_cos) = leaves.lateral_droop.sin_cos();
     let (axial_sin, axial_cos) = leaves.axial_droop.sin_cos();
-    // A point on the flat card, `u` across from the midrib and `v` along from the base, both in
-    // card widths, folded and placed.
+    let (width, height, fold) = (shape.width, shape.height, shape.fold);
+    // A point on the flat card, `u` across from the midrib in widths and `v` along from the base in
+    // heights, folded and placed.
     let folded = |u: f32, v: f32| {
-        let mut out = Vec3::new(u * lateral_cos, -u.abs() * lateral_sin, v);
+        let x = u * width;
+        let mut out = Vec3::new(x * lateral_cos, -x.abs() * lateral_sin, v * height);
         if v > fold {
-            let beyond = Vec2::new(out.z - fold, out.y);
-            out.z = fold + beyond.x * axial_cos + beyond.y * axial_sin;
+            let beyond = Vec2::new(out.z - fold * height, out.y);
+            out.z = fold * height + beyond.x * axial_cos + beyond.y * axial_sin;
             out.y = beyond.y * axial_cos - beyond.x * axial_sin;
         }
         frame.point + (across * out.x + normal * out.y + axis * out.z) * size
+    };
+    let uv = |u: f32, v: f32| {
+        let (min, max) = (shape.uv_min, shape.uv_max);
+        Vec2::new(
+            min.x + (u + 0.5) * (max.x - min.x),
+            max.y - v * (max.y - min.y),
+        )
     };
     for (v0, v1) in [(0.0, fold), (fold, 1.0)] {
         for (u0, u1) in [(-0.5, 0.0), (0.0, 0.5)] {
@@ -177,7 +187,7 @@ pub(super) fn card(
             for (u, v, position) in corners {
                 geometry.positions.push(position);
                 geometry.normals.push(normal);
-                geometry.uvs.push(Vec2::new(u + 0.5, 1.0 - v));
+                geometry.uvs.push(uv(u, v));
             }
             geometry
                 .indices

@@ -124,6 +124,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C70b  | A rosette closing as its tip tilts: three cards upright, gathering into a fan toward the twig's heading and dropping out as they crowd, to one card along the twig at 45° (D27, TD3.8). Upright tips' Triple is now Rosette and Double is gone, `reference/` converted. |
 | C148  | Buried limbs left out: a lateral whose tip ends inside its parent, as a Flame crown's narrow base leaves the lowest limbs inside a thick trunk, whose cards showed alone on it (TD3.4; `reference/bugs/trunkleaf.gltf`). |
 | C149  | Wander's kinks steady under the tip's straight run: split as if there were none, the kinks inside it taken out after, so the sprig's spacing, fold or card size no longer re-deals every kink, the trunk's included (TD3.4). The sprig's own coupling is C150. |
+| C150  | The sprig's leaves at a fixed size: Size is the middle leaf's length, the card the sprig's bounds in it, its UVs the part of the square texture the sprig fills, so a longer phalanx lengthens the card and leaves the fan alone (D29, TD3.8 to TD3.10, G7). `reference/` converted by each file's old layout, so its leaves keep their size. |
 
 ## Next
 
@@ -145,12 +146,13 @@ slots (C103), the painted leaf (C38), outlines (C66), carry-on's removal (C117),
 the golden trees (C146). Before the freeze (C113), the changes that would cost the finished trees
 a migration or a new look land while the trees are few, the golden trees showing each.
 
-1. **C70c Twigs shortened by their overhang**: the switch from round twig to flat card shows
-   where the two run in one line. An overlap hides it, as the level card reaches back over its
-   twig to its fold; so does a turn, as a rosette's cards leave at an angle. A card leaving its
-   twig at angle θ stands past the tip by about its length × cos θ, so a rosette lengthens a limb
-   where a level card does not: shorten each twig by its look's overhang, so a tip's foliage ends
-   at the limb's reach whatever the look. In tracing (`straight_run`). E[2]
+1. **C151 Wander's spacing** (the author, 2026-10-24): kinks are 0.15 crown radii apart on every
+   level (D17), with a base run of about one spacing and the straight run under the tip's card
+   (its stretch below the fan) before and after them. On floppy's second level (spacing 0.24 m, straight
+   run 0.31 m) a twig under 0.55 m has no kinks, and one of 1 m one or two, so its wander angle
+   does almost nothing. A Spacing on the Wander operator, per level, in crown radii, 0.15 by
+   default, the base run following it: additive (G4, G6). Twigs shorter than the two runs stay
+   straight. E[1]
 2. **C125 Steady nodes**: moving Start or End moves each node, which jumps limbs about in two
    ways. A lateral's length changes, so its own node count steps; its nodes draw in order from
    one `layout` stream and its limbs' streams are numbered by a running count, so one node more
@@ -232,7 +234,6 @@ a migration or a new look land while the trees are few, the golden trees showing
    - **Output changed**, files reading as before but growing differently, each tree judged close
      enough, retuned, or the change put behind an option:
      - C125 Steady nodes: every plant's layout.
-     - C70c Twigs shortened by their overhang: every steep tip's reach.
      - C134: a trunk level whose Facing is not Around.
 
    Additive changes, whose default or off state grows today's plant, need no place here (C132,
@@ -275,12 +276,6 @@ a migration or a new look land while the trees are few, the golden trees showing
 
 ### Later
 
-- **C150 The sprig's leaves at a fixed size** (the author, 2026-10-24): the sprig is fitted to
-  the square texture whole (`leaf::layout`), so a longer phalanx (the pairs' spacing, or more
-  pairs) shrinks the fan on the card. Keep the leaf scale fixed and let the phalanx lengthen the
-  card, taller than wide, so Size is the fan's, not the card's. Changes a field's meaning and
-  every leafy tree's cards, so a migration, before the freeze if wanted. *Gate:* the fan
-  shrinking under a long phalanx judged wrong rather than as the sprig fitting its card. E[2]
 - **C132 Repeated forks**: a maple forks and forks again (sympodial), where the levels grow a
   leader with laterals (monopodial). A fork's copies may fork again, up to a number of
   generations, 1 being today's (TD3.7, "copies do not fork again"). A copy already reaches what
@@ -523,6 +518,19 @@ a migration or a new look land while the trees are few, the golden trees showing
   stems below the fan, rosette cards splayed from the tip look odd. Fewer leaves per card, so
   less density. A second sprig, one more region of the leaf texture (X37's), chosen by the
   tip's look. *Gate:* a species whose rosettes look odd for their stems.
+
+- **X60** Leaves standing out of the crown (was C70c, twigs shortened by their overhang).
+  Measured after C70b (2026-10-24). Along the twig, rosettes stand little past a level card: in
+  card lengths 0.57 at most against 0.47 for the default species, and on floppy
+  (`reference/bugs/`, axial droop 56°) 0.46 against 0.41. Sideways, on floppy, they stand out
+  most: of 169 cards, 6 have a corner over half a card outside the envelope, and the five worst
+  are rosettes of two or three on second-level twigs 0.2 to 0.45 m long, tipped 15° to 35° from
+  up, 0.2 to 0.4 m inside the crown, their 0.66 m cards splayed up to 0.42 m out. Every
+  first-level tip lands on the envelope (reach), its level card 0.3 m past it, which reads as
+  the crown's edge. Perhaps only the spreads; fixes, if not: a rosette card that would end
+  outside the envelope turned up or shrunk; cards scaled down on twigs much shorter than a card;
+  or rosettes opening less. *Gate:* a second tree with isolated leaves out of its crown, the
+  same kind of tip each time.
 
 - **X58** C145's plot drawn as scene content anchored to the plot node, to try the author's
   unified UI proposal (`https://hackmd.io/@dreamertalin/H1ruQhFnGl`) before offering it to

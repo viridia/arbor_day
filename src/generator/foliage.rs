@@ -6,22 +6,28 @@ use bevy::math::{Quat, Vec3};
 
 use super::{
     envelope::Envelope,
-    leaf,
+    leaf::{self, CardShape},
     skeleton::{Axis, AxisKind, Card, FOLIAGE_STREAM, upper_side},
 };
 use crate::species::{Species, Upright};
 
-/// Where a card's axial droop bends it, as a share of its length from the base: where the painted
-/// sprig's fan starts, as seedling's did.
-pub(super) fn axial_fold(species: &Species) -> f32 {
+/// The card holding the sprig, in leaf lengths (`leaf::CardShape`). Its axial droop bends it at
+/// its fold, where the painted sprig's fan starts, as seedling's did.
+pub(super) fn card_shape(species: &Species) -> CardShape {
     let tip_leaves = &species.ornaments.tip_leaves.settings;
-    leaf::layout(tip_leaves, species.seed, species.leaf_stroke()).fold
+    leaf::layout(tip_leaves, species.seed, species.leaf_stroke()).card
 }
 
 /// How far back from its tip an axis runs straight, under its tip's card (D17), whether or not
-/// leaves grow, so turning them off leaves the branches alone.
+/// leaves grow, so turning them off leaves the branches alone: the card's stretch below the fan,
+/// at full size.
 pub(super) fn straight_run(species: &Species) -> f32 {
-    axial_fold(species) * card_size(species)
+    below_fan(&card_shape(species)) * leaf_length(species)
+}
+
+/// The card's stretch below the fan, in leaf lengths, which reaches back along the twig.
+pub(super) fn below_fan(card: &CardShape) -> f32 {
+    card.fold * card.height
 }
 
 /// The tilt from straight up below which a tip is steep, where one card along the twig would
@@ -41,9 +47,9 @@ const ROSETTE_SPACING: f32 = 120.0_f32.to_radians();
 const LEAST_SPACING: f32 = 60.0_f32.to_radians();
 const SPACING_NUDGE: f32 = 0.3;
 
-/// A full card's width and length: a share of the crown's radius, so a scaled species keeps its
-/// form.
-pub(super) fn card_size(species: &Species) -> f32 {
+/// The middle leaf's length at full size: a share of the crown's radius, so a scaled species keeps
+/// its form. The card around the sprig follows from it (`card_shape`).
+pub(super) fn leaf_length(species: &Species) -> f32 {
     species.ornaments.tip_leaves.settings.size * Envelope::of(species).radius.max(0.01)
 }
 
@@ -96,8 +102,8 @@ pub(super) fn clusters(species: &Species, axes: &[Axis]) -> Vec<Card> {
     let Some(tip_leaves) = species.ornaments.tip_leaves.get() else {
         return Vec::new();
     };
-    let full = card_size(species);
-    let fold = axial_fold(species);
+    let full = leaf_length(species);
+    let below = below_fan(&card_shape(species));
     let mut cards = Vec::new();
     for (index, twig) in axes.iter().enumerate() {
         if twig.bears(axes, AxisKind::ForkCopy) {
@@ -114,9 +120,9 @@ pub(super) fn clusters(species: &Species, axes: &[Axis]) -> Vec<Card> {
             size,
         };
         match tip_leaves.upright {
-            _ if tilt >= STEEP => cards.push(along(length - fold * size)),
+            _ if tilt >= STEEP => cards.push(along(length - below * size)),
             Upright::Bare => {}
-            Upright::Single => cards.push(along(length - fold * size)),
+            Upright::Single => cards.push(along(length - below * size)),
             Upright::Rosette => {
                 let closing = 1.0 - tilt / STEEP;
                 let mut rng = twig.rng.fork(FOLIAGE_STREAM);
@@ -125,7 +131,7 @@ pub(super) fn clusters(species: &Species, axes: &[Axis]) -> Vec<Card> {
                 // Level, the way the twig points; straight up, its upper side's opposite.
                 let heading = -upper_side(tip.tangent, tip.side).reject_from_normalized(Vec3::Y);
                 let heading = heading.normalize_or(Vec3::X);
-                let at = length - fold * size * (1.0 - closing);
+                let at = length - below * size * (1.0 - closing);
                 let rise = STEEP - (STEEP - UPRIGHT_RISE) * closing;
                 for turn in rosette_turns(closing, roll, least) {
                     let level = Quat::from_rotation_y(turn) * heading;

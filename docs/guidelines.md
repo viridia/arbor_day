@@ -15,7 +15,7 @@ with a case that shows it, since the case is what lets a reader recognize the ne
 **Numbering.** Each guideline's number is a permanent identity, never reused. A gap in the sequence
 is a retired guideline.
 
-**Next: 7.**
+**Next: 8.**
 
 ---
 
@@ -92,6 +92,16 @@ of three, in order of preference:
 Migrate early: before the freeze (C113) the items that need it land while the trees are few. A
 patch (X22) is a species of its own kind, tagged apart in the glTF extra, so it costs today's
 files nothing.
+
+### G7 — A control changes what it names, and nothing else
+
+The author shapes leaves and limbs, not cards, rings or textures: those are how the plant is drawn,
+and the panel should not need them to be understood. So a control changes only the thing it names,
+as the author sees it. When the sprig was fitted to a square card, a longer spacing between its
+pairs shrank the fan, and the spacing reached the limbs too, by way of the straight run under each
+card, which re-dealt every kink (C149, C150). The leaves are now sized first and the card is the
+box that holds them, so spacing lengthens the sprig and nothing more. Where a drawing detail
+couples two controls, the detail follows them; where it cannot, the coupling goes in the ledger.
 
 ### G2 — Vary a value where its instances are many
 

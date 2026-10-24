@@ -256,7 +256,7 @@ A card is a sprig of leaves on a painted stem, lined up with a real twig, after 
 (prior-art.md, Foliage): its base on the twig, its axis along it, its face as near world up as
 the axis allows (TD3.8, TD3.9). Seen edge-on, a card then loses leaves but never a twig. One cluster
 grows at the tip of every branch end, whatever its level, so no visible end is bare; taking off
-the tip leaves leaves them all bare. Card size is a share of the crown radius, so a scaled species keeps its
+the tip leaves leaves them all bare. Leaf size is a share of the crown radius, so a scaled species keeps its
 form (D21). Denser foliage comes from another limb level. A card's painted pairs (D29) and
 child limbs with tip leaves of their own both put leaves beside a twig: the pairs cost nothing
 beyond the card and suit small or hanging leaves, such as needles; larger inner leaves want
@@ -304,8 +304,9 @@ tooth; serration also sharpens the tip. A sprig is a fan (count, angle, a size t
 pairs down the stem at the fan's angle. Each leaf is filled with an inner and an outer color, in a
 lateral or axial gradient in its own frame, shifted in hue and lightness at random per leaf. Every
 leaf is stroked black first, then each is filled and stroked translucent dark, so the black shows
-only around the cluster and the leaves within it are parted by faint lines. The texture is square,
-fitted to the sprig. Changed:
+only around the cluster and the leaves within it are parted by faint lines. The leaves are sized
+first and the card is the box that holds them, so the size is the middle leaf's length and a
+longer phalanx lengthens the card, not shrinks the leaves (C150). Changed:
 - Colors are painted as picked. Seedling painted linear values as sRGB, so its leaves came out far
   darker than their swatches (poplar-green's outer `rgb(80,201,80)` painted near `rgb(20,149,20)`),
   and its stored colors are not targets.
@@ -319,6 +320,10 @@ fitted to the sprig. Changed:
   rather than HSL, so a step of lightness looks alike on every hue.
 - Shape, arrangement and color draw from streams of their own (D16); seedling's one stream
   reshuffled the leaf on any edit.
+- The square texture holds the sprig at one scale both ways, and the card shows the part it fills.
+  Seedling stretched the sprig to fill its texture on each axis, which thickened the outlines and
+  the stem along one; a long sprig here leaves part of the texture unused, until several sprigs
+  share it (X37).
 
 The fan's angle still sets the pairs', until a preset needs them apart. The droops shape the card,
 not the texture. Seedling's 47 models used every field, jitter least (3). **Reversing it** loses
