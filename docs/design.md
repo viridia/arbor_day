@@ -348,7 +348,8 @@ card, reaching back past its root (TD3.8), would show alone on the trunk.
 
 The level then wanders (`wander.rs`), after tracing and before the taper; a fork's copies
 wander as they are added, and stems as they are made. The course is displaced between two fixed
-points, the end of a straight run at its base, a kink spacing (0.15 crown radii) give or take 40%,
+points, the end of a straight run at its base, a kink spacing (the Wander operator's, in crown
+radii) give or take 40%,
 and the tip: a segment longer than 1.5 spacings is split within 20% of its middle, and the split
 point moves square to the segment, in a random direction, by a random share of the shorter half's
 length, or a spacing if less, times the tangent of the wander, halved until neither half points

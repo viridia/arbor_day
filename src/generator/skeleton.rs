@@ -10,7 +10,7 @@ use super::{
     ground::{flare, sink},
     hint::hint,
     placement::{place_scions, stems},
-    trace::{TRACE_STEP, kink_spacing, trace_scions},
+    trace::{TRACE_STEP, trace_scions},
     wander::wander,
 };
 use crate::{
@@ -280,8 +280,6 @@ pub(super) struct Level<'a> {
     pub envelope: Envelope,
     /// The plant's taper (D22), 0 to 1.
     pub taper: f32,
-    /// The distance between kinks (`kink_spacing`).
-    pub spacing: f32,
     /// How far back from its tip a limb runs straight (`straight_run`).
     pub straight: f32,
 }
@@ -293,7 +291,6 @@ impl<'a> Level<'a> {
             number,
             params: &species.limbs.grown()[number - 1],
             taper: species.taper.clamp(0.0, 1.0),
-            spacing: kink_spacing(&envelope),
             straight: straight_run(species),
             envelope,
         }

@@ -2,13 +2,13 @@
   "accessors": [
     {
       "bufferView": 0,
-      "count": 1170,
+      "count": 1353,
       "componentType": 5126,
       "type": "VEC3",
       "min": [
         -1.4476401805877686,
         -0.10000000149011612,
-        -1.2795562744140625
+        -1.279728651046753
       ],
       "max": [
         1.4652601480484009,
@@ -18,25 +18,25 @@
     },
     {
       "bufferView": 1,
-      "count": 1170,
+      "count": 1353,
       "componentType": 5126,
       "type": "VEC3"
     },
     {
       "bufferView": 2,
-      "count": 1170,
+      "count": 1353,
       "componentType": 5126,
       "type": "VEC3"
     },
     {
       "bufferView": 3,
-      "count": 4812,
+      "count": 5910,
       "componentType": 5125,
       "type": "SCALAR"
     },
     {
       "bufferView": 4,
-      "count": 2672,
+      "count": 2688,
       "componentType": 5126,
       "type": "VEC3",
       "min": [
@@ -52,19 +52,19 @@
     },
     {
       "bufferView": 5,
-      "count": 2672,
+      "count": 2688,
       "componentType": 5126,
       "type": "VEC3"
     },
     {
       "bufferView": 6,
-      "count": 2672,
+      "count": 2688,
       "componentType": 5126,
       "type": "VEC2"
     },
     {
       "bufferView": 7,
-      "count": 4008,
+      "count": 4032,
       "componentType": 5125,
       "type": "SCALAR"
     }
@@ -74,57 +74,57 @@
   },
   "buffers": [
     {
-      "byteLength": 162904,
+      "byteLength": 174492,
       "uri": "floppy.bin"
     }
   ],
   "bufferViews": [
     {
       "buffer": 0,
-      "byteLength": 14040,
+      "byteLength": 16236,
       "byteOffset": 0,
       "target": 34962
     },
     {
       "buffer": 0,
-      "byteLength": 14040,
-      "byteOffset": 14040,
+      "byteLength": 16236,
+      "byteOffset": 16236,
       "target": 34962
     },
     {
       "buffer": 0,
-      "byteLength": 14040,
-      "byteOffset": 28080,
+      "byteLength": 16236,
+      "byteOffset": 32472,
       "target": 34962
     },
     {
       "buffer": 0,
-      "byteLength": 19248,
-      "byteOffset": 42120,
+      "byteLength": 23640,
+      "byteOffset": 48708,
       "target": 34963
     },
     {
       "buffer": 0,
-      "byteLength": 32064,
-      "byteOffset": 61368,
+      "byteLength": 32256,
+      "byteOffset": 72348,
       "target": 34962
     },
     {
       "buffer": 0,
-      "byteLength": 32064,
-      "byteOffset": 93432,
+      "byteLength": 32256,
+      "byteOffset": 104604,
       "target": 34962
     },
     {
       "buffer": 0,
-      "byteLength": 21376,
-      "byteOffset": 125496,
+      "byteLength": 21504,
+      "byteOffset": 136860,
       "target": 34962
     },
     {
       "buffer": 0,
-      "byteLength": 16032,
-      "byteOffset": 146872,
+      "byteLength": 16128,
+      "byteOffset": 158364,
       "target": 34963
     }
   ],
@@ -233,7 +233,7 @@
   ],
   "scenes": [
     {
-      "extras": {"arbor_day":{"bark_color":{"Srgba":{"alpha":1.0,"blue":0.25,"green":0.33,"red":0.42}},"bark_outline":0.01,"crown":{"base":0.33,"profile":"Hemisphere","radius":1.6,"top":1.14},"detail":0.02,"generator":1,"leaf_outline":6.0,"limbs":[{"angle":{"center":1.0471976,"shape":"Bell","spread":0.17453292},"bias":{"aim":0.71,"leaves":0.0,"size":0.19},"density":9.2,"end":0.68,"facing":"Around","per_node":1.0,"radius":0.5,"reach":{"center":0.9,"shape":"Bell","spread":0.1},"sides":4,"skew":0.038397245,"start":0.02,"wander":{"angle":0.286234}},{"angle":{"center":0.75049156,"shape":"Bell","spread":0.17453292},"bias":{"aim":0.26,"leaves":0.0,"size":0.36},"density":12.0,"end":0.85,"facing":"Around","per_node":1.0,"radius":0.5,"reach":{"center":0.54,"shape":"Bell","spread":0.1},"sides":3,"skew":0.0,"start":0.4,"wander":{"angle":0.34382987}}],"ornaments":{"tip_leaves":{"axial_droop":0.9738937,"lateral_droop":-0.27925268,"leaf":{"base_taper":0.0,"base_width":0.18,"gradient":"Lateral","inner_color":{"Hsla":{"alpha":1.0,"hue":180.0,"lightness":0.32202953,"saturation":0.3838863}},"jitter":0.0,"outer_color":{"Hsla":{"alpha":1.0,"hue":120.0,"lightness":0.22422908,"saturation":0.52838427}},"rake":0.0,"segments":1,"serration":0.0,"tip_taper":-0.13,"tip_width":0.22,"variation":0.06},"size":0.2049,"smallest":0.5,"sprig":{"angle":{"center":0.8220501,"spread":0.15707964},"fan":2,"outer_size":0.64,"pairs":4,"spacing":{"center":0.26,"spread":0.0}},"upright":"Rosette"}},"outline":true,"seed":1,"taper":0.9,"trunk":{"height":3.18,"radius":0.1,"sides":6}}},
+      "extras": {"arbor_day":{"bark_color":{"Srgba":{"alpha":1.0,"blue":0.25,"green":0.33,"red":0.42}},"bark_outline":0.01,"crown":{"base":0.33,"profile":"Hemisphere","radius":1.6,"top":1.14},"detail":0.02,"generator":1,"leaf_outline":6.0,"limbs":[{"angle":{"center":1.0471976,"shape":"Bell","spread":0.17453292},"bias":{"aim":0.71,"leaves":0.0,"size":0.19},"density":9.2,"end":0.68,"facing":"Around","per_node":1.0,"radius":0.7,"reach":{"center":0.9,"shape":"Bell","spread":0.1},"sides":4,"skew":0.038397245,"start":0.02,"wander":{"angle":0.286234,"spacing":0.15}},{"angle":{"center":0.75049156,"shape":"Bell","spread":0.17453292},"bias":{"aim":0.26,"leaves":0.0,"size":0.36},"density":12.0,"end":0.85,"facing":"Around","per_node":1.0,"radius":0.5,"reach":{"center":0.54,"shape":"Bell","spread":0.1},"sides":3,"skew":0.0,"start":0.4,"wander":{"angle":0.5532694,"spacing":0.06}}],"ornaments":{"tip_leaves":{"axial_droop":0.9738937,"lateral_droop":-0.27925268,"leaf":{"base_taper":0.0,"base_width":0.18,"gradient":"Lateral","inner_color":{"Hsla":{"alpha":1.0,"hue":180.0,"lightness":0.32202953,"saturation":0.3838863}},"jitter":0.0,"outer_color":{"Hsla":{"alpha":1.0,"hue":120.0,"lightness":0.22422908,"saturation":0.52838427}},"rake":0.0,"segments":1,"serration":0.0,"tip_taper":-0.13,"tip_width":0.22,"variation":0.06},"size":0.2049,"smallest":0.5,"sprig":{"angle":{"center":0.8220501,"spread":0.15707964},"fan":2,"outer_size":0.64,"pairs":4,"spacing":{"center":0.26,"spread":0.0}},"upright":"Rosette"}},"outline":true,"seed":1,"taper":0.9,"trunk":{"height":3.18,"radius":0.1,"sides":6}}},
       "name": "floppy",
       "nodes": [
         0,

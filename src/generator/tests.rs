@@ -693,7 +693,7 @@ fn limbs_kink_at_one_spacing_on_every_level() {
     let mut species = level_limbs(45.0);
     species.limbs.shown = 2;
     species.limbs.levels[1].wander = Toggle::on(Wander::degrees(45.0));
-    let spacing = kink_spacing(&Envelope::of(&species));
+    let spacing = kink_spacing(&Envelope::of(&species), &Wander::degrees(45.0));
     assert!((spacing - 0.3).abs() < 1e-6);
     let shortest = spacing * SPLIT_LENGTH * (0.5 - KINK_JITTER);
     let limbs = limbs(&species);
@@ -843,7 +843,7 @@ fn wander_leaves_tips_where_their_course_ends() {
         .take_while(|ring| (ring.center - base.center).angle_between(base.tangent) < 1e-3)
         .collect();
     let along = straight.last().unwrap().at;
-    let spacing = kink_spacing(&Envelope::of(&species));
+    let spacing = kink_spacing(&Envelope::of(&species), &species.trunk.wander.settings);
     assert!(along >= 0.6 * spacing - TRACE_STEP, "{along} {spacing}");
     // Every turn between stretches under twice the wander.
     let mut species = shown(2, Species::default());
@@ -860,6 +860,28 @@ fn wander_leaves_tips_where_their_course_ends() {
         }
     }
     assert!(sharpest < 90.0 + 1.0, "{sharpest}");
+}
+
+#[test]
+fn a_shorter_spacing_kinks_short_twigs() {
+    // The second level's twigs are mostly too short to kink at the default spacing; at a third of
+    // it they kink several times as often. With no bend, every ring between a limb's ends is a
+    // kink.
+    let mut species = level_limbs(45.0);
+    species.limbs.shown = 2;
+    let kinks = |spacing: f32| -> usize {
+        let mut species = species.clone();
+        species.limbs.levels[1].wander = Toggle::on(Wander {
+            spacing,
+            ..Wander::degrees(45.0)
+        });
+        (limbs(&species).iter())
+            .filter(|limb| limb.level == 2)
+            .map(|limb| limb.rings.len() - 2)
+            .sum()
+    };
+    let (default, shorter) = (kinks(0.15), kinks(0.05));
+    assert!(shorter > 2 * default, "{default} {shorter}");
 }
 
 #[test]

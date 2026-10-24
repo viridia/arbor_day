@@ -125,6 +125,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C148  | Buried limbs left out: a lateral whose tip ends inside its parent, as a Flame crown's narrow base leaves the lowest limbs inside a thick trunk, whose cards showed alone on it (TD3.4; `reference/bugs/trunkleaf.gltf`). |
 | C149  | Wander's kinks steady under the tip's straight run: split as if there were none, the kinks inside it taken out after, so the sprig's spacing, fold or card size no longer re-deals every kink, the trunk's included (TD3.4). The sprig's own coupling is C150. |
 | C150  | The sprig's leaves at a fixed size: Size is the middle leaf's length, the card the sprig's bounds in it, its UVs the part of the square texture the sprig fills, so a longer phalanx lengthens the card and leaves the fan alone (D29, TD3.8 to TD3.10, G7). `reference/` converted by each file's old layout, so its leaves keep their size. |
+| C151  | Wander's spacing: kinks and the base run a Spacing apart, per level, in crown radii, 0.15 by default, so short twigs can kink (D17, TD3.4). |
 
 ## Next
 
@@ -146,14 +147,7 @@ slots (C103), the painted leaf (C38), outlines (C66), carry-on's removal (C117),
 the golden trees (C146). Before the freeze (C113), the changes that would cost the finished trees
 a migration or a new look land while the trees are few, the golden trees showing each.
 
-1. **C151 Wander's spacing** (the author, 2026-10-24): kinks are 0.15 crown radii apart on every
-   level (D17), with a base run of about one spacing and the straight run under the tip's card
-   (its stretch below the fan) before and after them. On floppy's second level (spacing 0.24 m, straight
-   run 0.31 m) a twig under 0.55 m has no kinks, and one of 1 m one or two, so its wander angle
-   does almost nothing. A Spacing on the Wander operator, per level, in crown radii, 0.15 by
-   default, the base run following it: additive (G4, G6). Twigs shorter than the two runs stay
-   straight. E[1]
-2. **C125 Steady nodes**: moving Start or End moves each node, which jumps limbs about in two
+1. **C125 Steady nodes**: moving Start or End moves each node, which jumps limbs about in two
    ways. A lateral's length changes, so its own node count steps; its nodes draw in order from
    one `layout` stream and its limbs' streams are numbered by a running count, so one node more
    re-deals every node after it, and every level below. Each node from a stream of its own
@@ -161,7 +155,7 @@ a migration or a new look land while the trees are few, the golden trees showing
    drops one node. And a node's azimuth is the cheapest of its candidates (`node_azimuths`),
    which flips as crowding changes with the nodes' spacing; blend the two cheapest when their
    costs are near. Changes every plant's layout (X15's generator version). E[2]
-3. **C134 Facing, skew and angle as G5 has them** (the author, 2026-10-21 and 10-22): adjusting
+2. **C134 Facing, skew and angle as G5 has them** (the author, 2026-10-21 and 10-22): adjusting
    facing and skew seldom improves a plant, since the model decides what they promise to set.
    - Facing only where the parent has an upper side: an upright trunk has none, so Sides, Up and
      Down measure from an arbitrary side there. The trunk's level is always Around (crowding's
@@ -175,7 +169,7 @@ a migration or a new look land while the trees are few, the golden trees showing
      in one row; which, decided when built.
 
    E[2]
-4. **C145 Bias as curves** (was X55, its gate passed): Bias's Size a curve along the parent, first
+3. **C145 Bias as curves** (was X55, its gate passed): Bias's Size a curve along the parent, first
    node to last, in place of today's straight change, so a conifer's tip narrows faster than its
    base (C143's floor works around it); Leaves and Aim after, as fields. A curve's x is the
    place, 0 to 1; its y the field's own value in its units and range, not a factor on it. A few
@@ -213,10 +207,10 @@ a migration or a new look land while the trees are few, the golden trees showing
    between the ends, as on a straight wire, so below a small `dot(b, b)` it takes the line's
    distance from A to C. Open: whether reach and angle
    take curves too. E[3]
-5. **C147 Sprigs as a list** (X37's format, ahead of its feature): the tip leaves' sprig becomes
+4. **C147 Sprigs as a list** (X37's format, ahead of its feature): the tip leaves' sprig becomes
    a list holding one, the panel showing it as now, so several sprigs (X37) later need no
    migration. `reference/` converted. E[1]
-6. **C8 Working document in settings.** A settings group holding the working species and, once
+5. **C8 Working document in settings.** A settings group holding the working species and, once
    set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
    as seedling did. The document's name comes from the file name. Serialized by reflection, as
    `bevy_settings` does. A working document from before a schema change is lost (D32), but not
@@ -225,7 +219,7 @@ a migration or a new look land while the trees are few, the golden trees showing
    read as a species file is (C124, TD2.3), its pruned fields logged and the document marked
    edited. Stored as a list of open documents holding
    one, and the active one's index, so several (X26) need no change of format. E[3]
-7. **C113 File format freeze**, at D32's gate: from here a change that renames, moves or removes
+6. **C113 File format freeze**, at D32's gate: from here a change that renames, moves or removes
    a species field, or changes its type, needs a migration (X15). Before it, each item below
    either lands, is dropped, or is accepted as a later migration; prune the list as those
    choices are made. E[1], the items aside.

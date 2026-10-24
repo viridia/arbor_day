@@ -145,9 +145,9 @@ as seedling's `flex` did. Sag scales with the sine of the angle from up, as a ca
 does, so an upright limb does not sag; a bend toward a target angle turned an upright limb most. Wander then displaces the course as
 a lightning bolt is drawn, by midpoints between its base and its end, both fixed, so the tip stays
 where the course puts it at any wander, and a limb zigzags about a line it keeps returning to, as a
-tree steers back toward light and up. Kinks fall about one spacing in crown radii apart on every
-level; a zigzag reads by its period, so a long limb kinks several times and a twig once or not at
-all. Each stretch points no further off its course than the wander, so no turn is sharper than
+tree steers back toward light and up. Kinks fall about one spacing in crown radii apart, 0.15 by
+default, set per level; a zigzag reads by its period, so a long limb kinks several times and a twig
+once or not at all, and a level of short twigs needs a shorter spacing to wander visibly. Each stretch points no further off its course than the wander, so no turn is sharper than
 twice it, and no displacement is larger than a segment of two spacings gets, so a trunk, being
 long, zigzags evenly about its course rather than turning on one large corner, as a load-bearing
 stem keeps near a straight line. An axis leaves along its course for about a spacing, so a trunk

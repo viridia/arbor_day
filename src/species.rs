@@ -607,8 +607,8 @@ impl Default for Rise {
 }
 
 /// A stem or limb zigzagging about its course rather than running smooth, its tip where the course
-/// ends. Kinks fall about one spacing apart on every level, so long limbs kink several times and
-/// short twigs once or not at all.
+/// ends. Kinks fall about one spacing apart, so long limbs kink several times and short twigs once
+/// or not at all.
 #[derive(Reflect, Clone, PartialEq)]
 #[reflect(@Icon("icons/operators/wander.png"))]
 pub struct Wander {
@@ -620,13 +620,24 @@ pub struct Wander {
         @Caption("Angle"),
     )]
     pub angle: f32,
+    /// The distance between kinks, and the straight run at the base, as a share of the crown's
+    /// radius, so a scaled species keeps its form. A zigzag reads by its period: a level of short
+    /// twigs needs a shorter spacing to kink at all.
+    #[reflect(
+        @ValueRange::<f32>(0.02..=0.5),
+        @Precision(0),
+        @NumberInputUnits::new_static("ratio_percent"),
+        @Caption("Spacing"),
+    )]
+    pub spacing: f32,
 }
 
 impl Wander {
-    /// A wander of `angle` degrees.
+    /// A wander of `angle` degrees, its kinks 15% of the crown's radius apart.
     pub fn degrees(angle: f32) -> Self {
         Self {
             angle: angle.to_radians(),
+            spacing: 0.15,
         }
     }
 }

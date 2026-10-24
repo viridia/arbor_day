@@ -10,11 +10,7 @@ use super::{
     envelope::{Envelope, inside_envelope},
     skeleton::{Axis, Level, Ring, Skeleton},
 };
-use crate::species::LimbLevel;
-
-/// The distance between kinks on every limb and stem, in crown radii: a limb's zigzag reads by
-/// its period, so long limbs kink several times and short twigs once or not at all.
-const KINK_SPACING: f32 = 0.15;
+use crate::species::{LimbLevel, Wander};
 
 /// The step in tracing an axis, in metres.
 pub(super) const TRACE_STEP: f32 = 0.02;
@@ -128,10 +124,9 @@ pub(super) fn stem_rings(length: f32, from_up: f32, lean: f32, heading: f32) -> 
     trace.finish()
 }
 
-/// The distance between kinks on any limb or stem: `KINK_SPACING` crown radii, so a scaled
-/// species keeps its form.
-pub(super) fn kink_spacing(envelope: &Envelope) -> f32 {
-    KINK_SPACING * envelope.radius.max(0.01)
+/// The distance between kinks in metres: the wander's spacing in crown radii.
+pub(super) fn kink_spacing(envelope: &Envelope, wander: &Wander) -> f32 {
+    wander.spacing * envelope.radius.max(0.01)
 }
 
 /// A tube as it is traced: a point every step, from its start ring, and the direction it was

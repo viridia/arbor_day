@@ -328,7 +328,10 @@ mod tests {
         species.limbs.shown = 3;
         species.limbs.levels[2].fork.state = OperatorState::On;
         species.limbs.levels[2].fork.settings.chance = 0.5;
-        species.trunk.wander = Toggle::on(Wander { angle: 0.3 });
+        species.trunk.wander = Toggle::on(Wander {
+            angle: 0.3,
+            ..Wander::degrees(0.0)
+        });
         species.ornaments.tip_leaves.state = OperatorState::Off;
         assert!(round_trip(&species) == species);
     }

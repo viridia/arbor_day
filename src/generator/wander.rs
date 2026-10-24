@@ -14,7 +14,7 @@ use bevy::math::Vec3;
 use super::{
     envelope::{ENVELOPE_BISECTIONS, Envelope, inside_envelope},
     skeleton::{Axis, Level, Ring, Skeleton, WANDER_STREAM},
-    trace::rings_through,
+    trace::{kink_spacing, rings_through},
 };
 use crate::random::Rng;
 
@@ -46,13 +46,13 @@ pub(super) fn wander_axis(level: &Level, axis: &mut Axis) {
         return;
     };
     let rng = axis.rng.fork(WANDER_STREAM);
-    let wander = wander.angle;
+    let spacing = kink_spacing(&level.envelope, wander);
     let envelope = Some(&level.envelope);
     displace(
         &mut axis.rings,
         rng,
-        wander,
-        level.spacing,
+        wander.angle,
+        spacing,
         level.straight,
         envelope,
     );

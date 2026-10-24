@@ -47,7 +47,8 @@ that alters every plant's output is still E[0]. After `../ldd_template`'s G7.
 A new behaviour changes what a field means, or is derived from what is there, before it adds a
 field, since a limb level has many already. So the span's two fields became one start with a
 constant jitter; a facing and a skew replaced the divergence, competition placing the children
-(D26); wander became kinks at a fixed spacing rather than gaining a smoothness and a spacing (D17).
+(D26); wander became kinks rather than gaining a smoothness (D17), and gained a spacing only once
+a level's twigs proved too short to kink at the fixed one.
 A predictable range beats a guessed curve until a model is worth exposing (X22). Left out
 until a preset needs them: a jitter per level (a fir's even whorls), and a sharply bare stretch
 such as a bare leader tip.

@@ -165,7 +165,7 @@ fn stem_course(
         ring.center += base;
     }
     if let Some(wander) = species.trunk.wander.get() {
-        let spacing = kink_spacing(&Envelope::of(species));
+        let spacing = kink_spacing(&Envelope::of(species), wander);
         displace(
             &mut rings,
             rng.fork(WANDER_STREAM),
