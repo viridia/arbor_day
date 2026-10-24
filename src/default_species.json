@@ -30,7 +30,7 @@
       "density": 8.0,
       "per_node": 1.0,
       "facing": "Around",
-      "skew": 0.34906584,
+      "skew": 0.0,
       "start": 0.0,
       "end": 0.85,
       "angle": {

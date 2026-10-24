@@ -168,7 +168,8 @@ a migration or a new look land while the trees are few, the golden trees showing
      spiral, `node_azimuths`), its Facing row hidden.
    - Skew becomes Irregularity: how far limbs stray from crowding's pick, the random turn
      `placement.rs` adds after it, captioned by effect, a tidy spiral to scattered. Its field and
-     range stay (G1).
+     range stay (G1). It may go instead; its default is already 0, so a species that never set it
+     changes nothing either way.
    - Angle under Aim: Aim keeps each limb's heading and turns its angle, so an author setting the
      angle with Aim on sees Aim's result. The angle row says so while Aim is on, or the two meet
      in one row; which, decided when built.

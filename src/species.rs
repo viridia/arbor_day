@@ -468,7 +468,7 @@ impl Default for LimbLevel {
             density: 8.0,
             per_node: 1.0,
             facing: Facing::Around,
-            skew: 20.0_f32.to_radians(),
+            skew: 0.0,
             start: 0.0,
             end: 0.85,
             angle: degrees(60.0, 10.0),
