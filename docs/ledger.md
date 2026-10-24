@@ -208,7 +208,8 @@ a migration or a new look land while the trees are few, the golden trees showing
    `kk = 1.0 / dot(b, b)`, `b = A − 2B + C`, divides by zero when the control point is midway
    between the ends, as on a straight wire, so below a small `dot(b, b)` it takes the line's
    distance from A to C. Open: whether reach and angle
-   take curves too. E[3]
+   take curves too. Requirements in [curve-editor.md](curve-editor.md); designed after its
+   research, then split into chunks. E[4]
 4. **C147 Sprigs as a list** (X37's format, ahead of its feature): the tip leaves' sprig becomes
    a list holding one, the panel showing it as now, so several sprigs (X37) later need no
    migration. `reference/` converted. E[1]

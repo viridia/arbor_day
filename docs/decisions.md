@@ -386,3 +386,11 @@ reads the species back from it (C40, C41). There is no separate species file, so
 to invent, and no JSON file of another kind to open by mistake: a file that opens is a plant, and
 the mesh the game loads is never out of step with the species that made it. **Reversing it** adds
 a second file type, its extension, and the work of keeping the two in step.
+
+### D35 — The curve editor is a module of arbor_day, depending on Bevy alone
+
+The curve editor ([curve-editor.md](curve-editor.md)) is a sub-module of arbor_day, not a crate,
+until Panoply or Bevy takes it. It uses neither arbor_day's types nor `bevy_immediate`; arbor_day
+reaches it as any consumer would. **Reversing it** either way costs: a crate now adds a workspace
+member and its versioning before the API settles, and a dependency on arbor_day or
+`bevy_immediate` closes the way upstream.
