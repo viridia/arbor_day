@@ -188,7 +188,9 @@ shows as "Esc".
 The species is one resource, `Species` (`src/species.rs`). The panel edits a copy and writes it
 back with `set_if_neq`, and any change rebuilds the whole plant (`src/plant.rs`). The plant carries
 the species it was grown from as a component (`GrownFrom`) and figures about the result
-(`PlantStats`), which plans read.
+(`PlantStats`), which plans read. Among them is card facing: the share of the cards' area the game's
+camera sees from 45° down, averaged over 32 headings around the plant, with either side counting
+(`Geometry::facing`). A level card scores sin 45°, about 0.71, and an upright one 0.45.
 
 Limb levels are `LimbLevels`: a fixed array of three and a count of those shown, 1 to 3
 (`limbs.shown`), each depth's defaults in its `Default`; only the shown levels grow (`grown`). The

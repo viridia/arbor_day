@@ -29,6 +29,33 @@ impl Geometry {
     pub fn triangles(&self) -> usize {
         self.indices.len() / 3
     }
+
+    /// The share of the surface's area a camera looking down at `elevation` sees, turned all the
+    /// way around it: 1 if every triangle faced it, 0 if every one were edge-on. Either side counts,
+    /// as for double-sided cards. None for no area.
+    pub fn facing(&self, elevation: f32) -> Option<f32> {
+        const AZIMUTHS: usize = 32;
+        let (down, out) = elevation.sin_cos();
+        let views: Vec<Vec3> = (0..AZIMUTHS)
+            .map(|i| {
+                let (sin, cos) = (TAU * i as f32 / AZIMUTHS as f32).sin_cos();
+                Vec3::new(out * cos, -down, out * sin)
+            })
+            .collect();
+        let (mut seen, mut area) = (0.0, 0.0);
+        for triangle in self.indices.as_chunks::<3>().0 {
+            let [a, b, c] = triangle.map(|i| self.positions[i as usize]);
+            // Twice the area, square to the triangle.
+            let normal = (b - a).cross(c - a);
+            area += normal.length();
+            seen += views
+                .iter()
+                .map(|view| normal.dot(*view).abs())
+                .sum::<f32>()
+                / AZIMUTHS as f32;
+        }
+        (area > 0.0).then(|| seen / area)
+    }
 }
 
 /// A plant as generated.

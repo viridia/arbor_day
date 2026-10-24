@@ -1597,6 +1597,24 @@ fn winding_faces_the_normals() {
     }
 }
 
+#[test]
+fn facing_is_the_share_of_area_seen_around() {
+    let square = |corners: [Vec3; 4]| Geometry {
+        positions: corners.to_vec(),
+        indices: vec![0, 1, 2, 0, 2, 3],
+        ..Default::default()
+    };
+    let level = square([Vec3::ZERO, Vec3::X, Vec3::new(1.0, 0.0, 1.0), Vec3::Z]);
+    let upright = square([Vec3::ZERO, Vec3::X, Vec3::new(1.0, 1.0, 0.0), Vec3::Y]);
+    let down = PI / 4.0;
+    // Level, seen from 45° down: sin 45°. Upright: cos 45° times |cos| averaged around, 2/π.
+    let close = |a: f32, b: f32| (a - b).abs() < 0.005;
+    assert!(close(level.facing(down).unwrap(), down.sin()));
+    assert!(close(upright.facing(down).unwrap(), down.cos() * 2.0 / PI));
+    assert!(close(upright.facing(0.0).unwrap(), 2.0 / PI));
+    assert_eq!(Geometry::default().facing(down), None);
+}
+
 /// In a card's corners: the middle of its base, its base's left and right ends, the middle of
 /// its axial fold, and the middle of its tip.
 const BASE: usize = 1;

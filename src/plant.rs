@@ -16,6 +16,9 @@ use crate::{
 /// The leaf texture's alpha below which the leaves are cut out, in the view and in the saved file.
 pub const LEAF_CUTOFF: f32 = 0.5;
 
+/// How far the game's camera looks down, as the turntable's home view does (D7).
+const GAME_ELEVATION: f32 = std::f32::consts::FRAC_PI_4;
+
 pub struct PlantPlugin;
 
 impl Plugin for PlantPlugin {
@@ -57,6 +60,9 @@ pub struct PlantStats {
     pub cards: u32,
     /// Branch ends bearing leaves.
     pub leafy_tips: u32,
+    /// The share of the cards' area the game's camera sees from its height (`Geometry::facing`):
+    /// near 0, the cards are edge-on to it. None with no cards.
+    pub card_facing: Option<f32>,
     /// Limbs on each grown level, first to last.
     pub level_limbs: Vec<u32>,
     /// The bark's vertex color, as sRGB hex.
@@ -97,6 +103,7 @@ fn build_plant(
             limbs: level_limbs.iter().sum::<usize>() as u32,
             cards: (grown.leaves.positions.len() / CARD_CORNERS) as u32,
             leafy_tips: grown.leafy_tips as u32,
+            card_facing: grown.leaves.facing(GAME_ELEVATION),
             level_limbs: level_limbs.iter().map(|&count| count as u32).collect(),
             bark_color: color.to_srgba().to_hex(),
         };

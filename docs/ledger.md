@@ -120,6 +120,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C143  | Tip leaves' smallest: the floor on Bias's leaf scale per species, 50% by default as before, down to 25% so a conifer's tip closes (TD3.8). |
 | C47   | A sense of scale: a measuring stick and a silhouette beside the crown, with a HUD toggle of its own (TD1.6). |
 | C146  | Golden trees: each finished tree in `reference/` grown from its file and compared with its saved meshes and leaf texture (TD1.7, G6); X15's first measure. |
+| C70a  | Card facing in `PlantStats`: the share of the cards' area the game's camera sees, turned all the way around (TD2.1); a baseline in Notes. |
 
 ## Next
 
@@ -141,7 +142,7 @@ slots (C103), the painted leaf (C38), outlines (C66), carry-on's removal (C117),
 the golden trees (C146). Before the freeze (C113), the changes that would cost the finished trees
 a migration or a new look land while the trees are few, the golden trees showing each.
 
-1. **C70 Tips by steepness**: one card on a level tip and a rosette on an upright one (TD3.8)
+1. **C70b Tips by steepness**: one card on a level tip and a rosette on an upright one (TD3.8)
    meet at a sudden switch, between them three looks:
    - Level: one card along the twig, its side leaves painted pairs or side branches (D27).
    - Inclined: two or three cards in a level fan centred on the twig's heading.
@@ -155,23 +156,26 @@ a migration or a new look land while the trees are few, the golden trees showing
    rising with steepness, since a third card showed only in a narrow range of settings; the level
    fan on the heading and the nudged thresholds are what differ.
 
-   The switch from round twig to flat card shows where the two run in one line. An overlap hides
-   it, as the level card reaches back over its twig to its fold; so does a turn, as a rosette's
-   cards leave at an angle. A fan's cards are level, so on a rising twig even the middle card
-   turns. A card leaving its twig at angle θ stands past the tip by about its length × cos θ, so
-   rosettes and fans lengthen a limb where a level card does not: shorten each twig by its look's
-   overhang, so a tip's foliage ends at the limb's reach whatever the look. A long card, such as
-   a pine's needles, makes a rosette a starburst; pines bear none on uprights, which the upright
-   tips field keeps. An upright's cards folded back along the twig, overlapping it as the level
-   card does, is a later choice for that field.
+   The upright tips field becomes Bare, Single and Fan: Triple, the default, becomes Fan, and
+   Double goes, since no file in `reference/` sets it; the one file writing `"Triple"` is
+   converted. A fan's cards are level, so on a rising twig even the middle card turns. A long
+   card, such as a pine's needles, makes a rosette a starburst; pines bear none on uprights, which
+   the upright tips field keeps. An upright's cards folded back along the twig, overlapping it as
+   the level card does, is a later choice for that field.
 
-   First, a figure in `PlantStats` for how far cards are from edge-on to the game's camera (45°
-   down), to judge by numbers as well as by eye. Density counts per limb: a lateral's card and
-   its side branches' against a riser's rosette. If tops grow dense, side-branch density falls as
-   a limb steepens, rather than rosettes shrinking; no placement setting varies by steepness
-   yet (C116's Bias varies along the parent). Card counts multiply with levels, eight triangles
-   each since C39, so look at density against the budget too. E[3]
-2. **C125 Steady nodes**: moving Start or End moves each node, which jumps limbs about in two
+   Judged by card facing (C70a; Notes, the baseline) as well as by eye. Density counts per limb: a
+   lateral's card and its side branches' against a riser's rosette. If tops grow dense,
+   side-branch density falls as a limb steepens, rather than rosettes shrinking; no placement
+   setting varies by steepness yet (C116's Bias varies along the parent). Card counts multiply
+   with levels, eight triangles each since C39, so look at density against the budget too. E[3]
+2. **C70c Twigs shortened by their overhang**: the switch from round twig to flat card shows
+   where the two run in one line. An overlap hides it, as the level card reaches back over its
+   twig to its fold; so does a turn, as a rosette's or fan's cards leave at an angle. A card
+   leaving its twig at angle θ stands past the tip by about its length × cos θ, so rosettes and
+   fans lengthen a limb where a level card does not: shorten each twig by its look's overhang, so
+   a tip's foliage ends at the limb's reach whatever the look. In tracing (`straight_run`), after
+   C70b. E[2]
+3. **C125 Steady nodes**: moving Start or End moves each node, which jumps limbs about in two
    ways. A lateral's length changes, so its own node count steps; its nodes draw in order from
    one `layout` stream and its limbs' streams are numbered by a running count, so one node more
    re-deals every node after it, and every level below. Each node from a stream of its own
@@ -179,7 +183,7 @@ a migration or a new look land while the trees are few, the golden trees showing
    drops one node. And a node's azimuth is the cheapest of its candidates (`node_azimuths`),
    which flips as crowding changes with the nodes' spacing; blend the two cheapest when their
    costs are near. Changes every plant's layout (X15's generator version). E[2]
-3. **C134 Facing, skew and angle as G5 has them** (the author, 2026-10-21 and 10-22): adjusting
+4. **C134 Facing, skew and angle as G5 has them** (the author, 2026-10-21 and 10-22): adjusting
    facing and skew seldom improves a plant, since the model decides what they promise to set.
    - Facing only where the parent has an upper side: an upright trunk has none, so Sides, Up and
      Down measure from an arbitrary side there. The trunk's level is always Around (crowding's
@@ -192,7 +196,7 @@ a migration or a new look land while the trees are few, the golden trees showing
      in one row; which, decided when built.
 
    E[2]
-4. **C145 Bias as curves** (was X55, its gate passed): Bias's Size a curve along the parent, first
+5. **C145 Bias as curves** (was X55, its gate passed): Bias's Size a curve along the parent, first
    node to last, in place of today's straight change, so a conifer's tip narrows faster than its
    base (C143's floor works around it); Leaves and Aim after, as fields. A curve's x is the
    place, 0 to 1; its y the field's own value in its units and range, not a factor on it. A few
@@ -226,10 +230,10 @@ a migration or a new look land while the trees are few, the golden trees showing
    between the ends, as on a straight wire, so below a small `dot(b, b)` it takes the line's
    distance from A to C. Open: whether reach and angle
    take curves too. E[3]
-5. **C147 Sprigs as a list** (X37's format, ahead of its feature): the tip leaves' sprig becomes
+6. **C147 Sprigs as a list** (X37's format, ahead of its feature): the tip leaves' sprig becomes
    a list holding one, the panel showing it as now, so several sprigs (X37) later need no
    migration. `reference/` converted. E[1]
-6. **C8 Working document in settings.** A settings group holding the working species and, once
+7. **C8 Working document in settings.** A settings group holding the working species and, once
    set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
    as seedling did. The document's name comes from the file name. Serialized by reflection, as
    `bevy_settings` does. A working document from before a schema change is lost (D32), but not
@@ -238,18 +242,19 @@ a migration or a new look land while the trees are few, the golden trees showing
    read as a species file is (C124, TD2.3), its pruned fields logged and the document marked
    edited. Stored as a list of open documents holding
    one, and the active one's index, so several (X26) need no change of format. E[3]
-7. **C113 File format freeze**, at D32's gate: from here a change that renames, moves or removes
+8. **C113 File format freeze**, at D32's gate: from here a change that renames, moves or removes
    a species field, or changes its type, needs a migration (X15). Before it, each item below
    either lands, is dropped, or is accepted as a later migration; prune the list as those
    choices are made. E[1], the items aside.
    - **Migrated**, a field's type or meaning changing, `reference/` converted in the same chunk:
      - C145 Bias as curves: Size's number becomes a two-point curve, with no change of output.
      - C147 Sprigs as a list: the tip leaves' one sprig becomes a list of one.
-     - C70 Tips by steepness, if its fan changes the upright tips field's choices.
+     - C70b Tips by steepness: the upright tips field's Triple becomes Fan, leechgrass converted.
    - **Output changed**, files reading as before but growing differently, each tree judged close
      enough, retuned, or the change put behind an option:
      - C125 Steady nodes: every plant's layout.
-     - C70 Tips by steepness: its fans.
+     - C70b Tips by steepness: its fans.
+     - C70c Twigs shortened by their overhang: every steep tip's reach.
      - C134: a trunk level whose Facing is not Around.
 
    Additive changes, whose default or off state grows today's plant, need no place here (C132,
@@ -525,6 +530,9 @@ a migration or a new look land while the trees are few, the golden trees showing
 
 ## Notes
 
+- Card facing (C70a) before C70b, 2026-10-24: a level card scores 0.71, an upright one 0.45. The
+  reference trees run from 0.53 (the pines, poplar-orange, shadowfoil) to 0.67 (juniper1); the
+  default species 0.63.
 - A hemispherical crown reads better from a Column profile with Bias shortening the upper
   laterals than from the Hemisphere profile (the author, 2026-10-18): evidence for presets
   (X18) and for profiles beside the five (X43).
