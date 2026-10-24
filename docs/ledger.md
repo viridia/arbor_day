@@ -184,8 +184,9 @@ a migration or a new look land while the trees are few, the golden trees showing
    straight change is a two-point curve, so files convert with no change of output. A first
    slice of a general curve editor (particles, animation graphs), in three layers kept apart so
    each can move upstream:
-   - **Model**, the consumer's: points, any handles, a sampled polyline sorted by x (exact points
-     at kinks; a step two points at one x), the segment kinds it supports, its constraints
+   - **Model**, the consumer's: points, any handles, its segments, each a bevy_curve `Curve<f32>`
+     over its own span of x, which the consumer samples at runtime, the segment kinds it
+     supports, its constraints
      (x in 0 to 1, ends fixed, y in range); it applies, clamps or refuses each edit. So the editor
      never offers an interpolation the engine lacks. Here: points and monotone interpolation, no
      tangents.
@@ -197,9 +198,12 @@ a migration or a new look land while the trees are few, the golden trees showing
    - **Plot**: the author's `draw_path` (`../bevy_reactor_3/crates/bevy_reactor_nodegraph/src/
      draw_path.rs`, its shader `assets/draw_path.wesl`), a `UiMaterial` drawing a path of moves,
      lines and quadratics from a storage buffer by each pixel's least distance to every segment,
-     antialiased at a constant width. The polyline is a move and lines; testing every segment is
-     cheap at a popup's size (256 samples over 300 × 150 px). The grid is a second instance, one
-     color and width each. The row's thumbnail is the same material, small. Changes: an option
+     antialiased at a constant width. The polyline is a move and lines, drawn as smoothly as
+     quadratics once within a pixel of the curve: a shared flattener halves each segment, over
+     its own span, until it lies within 0.25 px on screen, so kinks are exact points and a step
+     two points at one x. Testing every segment stays cheap at a popup's size (a few hundred over
+     300 × 150 px); a driver plan checks a tight curve (elastic) for facets. The grid is a second
+     instance, one color and width each. The row's thumbnail is the same material, small. Changes: an option
      to take points in the node's own coordinates, since `update` makes them relative to the
      path's bounds, which suits a wire but not a fixed plot area; and the shader moved to a crate
      arbor_day, the node graph and any upstream widget share. Storage buffers rule out WebGL2,
@@ -517,6 +521,23 @@ a migration or a new look land while the trees are few, the golden trees showing
   stems below the fan, rosette cards splayed from the tip look odd. Fewer leaves per card, so
   less density. A second sprig, one more region of the leaf texture (X37's), chosen by the
   tip's look. *Gate:* a species whose rosettes look odd for their stems.
+
+- **X58** C145's plot drawn as scene content anchored to the plot node, to try the author's
+  unified UI proposal (`https://hackmd.io/@dreamertalin/H1ruQhFnGl`) before offering it to
+  Bevy: grid, curve and tangent lines as retained gizmos, one per width and style, under an
+  orthographic camera in layout pixels with its own MSAA, since gizmo lines have no edge
+  antialiasing of their own. The handles stay UI nodes and must draw over the curve, which over
+  the panel, so it needs the proposal's anchoring and render bands (its steps 2 and 3) and none
+  of its surfaces. Only the plot layer changes; model and editor stay. *Gate:* C145 landed on
+  `draw_path`.
+
+- **X59** Zoom and pan in C145's editor, for handles that reach past the curve. A slope tangent
+  drawn at a fixed length on screen, so only handles whose length means something (Bézier
+  points, weighted tangents) leave the view; the view fits points and handles with padding when
+  a drag ends, never during it, a handle clamped to the edge till then; wheel to zoom (an axis
+  with a modifier), middle-drag to pan, a key and one header button to fit again. No scrollbars.
+  The model bounds the view (x in 0 to 1), the editor owns it within them. *Gate:* tangents
+  built.
 
 
 ## Notes
