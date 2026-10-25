@@ -209,7 +209,12 @@ a migration or a new look land while the trees are few, the golden trees showing
    between the ends, as on a straight wire, so below a small `dot(b, b)` it takes the line's
    distance from A to C. Open: whether reach and angle
    take curves too. Requirements in [curve-editor.md](curve-editor.md); designed after its
-   research, then split into chunks. E[4]
+   research, then split into chunks. Settled for the design: no edit queue, as `EditableText`
+   has, but the slider's controlled pattern: the curve in as a component the consumer writes,
+   edits out as `EntityEvent`s with their phase, host commands as events. To sample a curve on
+   the GPU, the translation layer writes a redundant encoding: a shape-preserving cubic goes out
+   as Hermite segments, its slopes computed on the CPU, so the shader needs only a few kinds of
+   evaluator. E[4]
 4. **C147 Sprigs as a list** (X37's format, ahead of its feature): the tip leaves' sprig becomes
    a list holding one, the panel showing it as now, so several sprigs (X37) later need no
    migration. `reference/` converted. E[1]
