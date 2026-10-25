@@ -208,8 +208,9 @@ a migration or a new look land while the trees are few, the golden trees showing
    `kk = 1.0 / dot(b, b)`, `b = A − 2B + C`, divides by zero when the control point is midway
    between the ends, as on a straight wire, so below a small `dot(b, b)` it takes the line's
    distance from A to C. Open: whether reach and angle
-   take curves too. Requirements in [curve-editor.md](curve-editor.md); designed after its
-   research, then split into chunks. Settled for the design: no edit queue, as `EditableText`
+   take curves too. Requirements in [curve-editor.md](curve-editor.md), its survey in
+   [curve-editor-prior-art.md](curve-editor-prior-art.md), and a mock
+   (`https://claude.ai/artifact/JhDqLFzUGJo2neenUGNrQN`); designed next, then split into chunks. Settled for the design: no edit queue, as `EditableText`
    has, but the slider's controlled pattern: the curve in as a component the consumer writes,
    edits out as `EntityEvent`s with their phase, host commands as events. To sample a curve on
    the GPU, the translation layer writes a redundant encoding: a shape-preserving cubic goes out

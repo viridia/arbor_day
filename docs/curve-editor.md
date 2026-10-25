@@ -36,14 +36,19 @@ Requirements are numbered `CE<n>`; a number is never reused.
   decreasing. Two points may share an x, which makes a step; three may not.
 - **CE2 M** The consumer describes each axis: its bounds, each either clamped or open; its units
   and precision; and its snap step. Every point stays within clamped bounds.
-- **CE3 M** The consumer declares which segment kinds a curve may use, and the editor offers only
-  those. The kinds are: constant; linear; a shape-preserving cubic, which never overshoots its
-  points; and a cubic Bézier with a handle on each side of a point, which can leave a point
-  vertically and covers CSS's `cubic-bezier`.
+- **CE3 M** The consumer declares which segment kinds and handle modes a curve may use, and the
+  editor offers only those. The segment kinds are constant, linear and cubic. A cubic segment has
+  a handle at each end, with a length as well as a direction, so it can leave a point vertically
+  and covers CSS's `cubic-bezier`. Each handle has a mode:
+  - **auto-clamped**: computed so the curve never overshoots its points, and hidden;
+  - **aligned**: set by hand, kept opposite the point's other handle so the curve stays smooth;
+  - **free**: set by hand, independent of the other handle.
+
+  Handles are kept from making the curve double back on itself, so it stays a function of x.
 - **CE4 M** The consumer sets the minimum and maximum number of points, and may pin the end
   points' x, or both their x and y.
-- **CE5 M** Beyond its ends, a curve either holds its end values or repeats; the consumer declares
-  which.
+- **CE5 M** Beyond its ends, a curve holds its end values, continues at its end slopes, or
+  repeats; the consumer declares which.
 - **CE6 M** A curve is sampled as a `bevy_curve` `Curve<f32>`, giving its value and slope anywhere
   in its span. The same curve and x give the same result on every platform.
 - **CE7 M** A selection and a drag survive points being added or removed elsewhere on the curve.
@@ -99,11 +104,14 @@ Requirements are numbered `CE<n>`; a number is never reused.
   or selecting by rectangle.
 - **CE24 M** Clicking a point selects it. Dragging moves it, kept between its neighbours' x.
   Double-clicking inserts a point. Delete or Backspace deletes the selection.
-- **CE25 M** The selected point's x and y are shown in feathers number inputs, which can be typed
-  into or scrubbed.
-- **CE26 M** In a property panel, the editor opens as a popup from a row that shows the curve as a
-  thumbnail, as feathers' color input opens its picker. Other hosts embed the editor at whatever
-  size they choose.
+- **CE25 M** When exactly one point is selected, its x and y are shown in feathers number inputs,
+  which can be typed into or scrubbed. With none or several selected, the inputs are hidden or
+  disabled.
+- **CE34 S** When that point has a handle set by hand (aligned or free), the handle's x and y are
+  shown beside the point's, in the same way.
+- **CE26 M** The editor embeds in a host's layout at whatever size the host chooses: inline in a
+  property panel, expanded from a row that shows the curve as a thumbnail, or in a popup from such
+  a row. arbor_day embeds it inline, so it covers none of the 3D view.
 - **CE27 S** A grid, with each axis labelled in its units at its ends and middle.
 - **CE28 S** Arrow keys move the selection by one step, or by a larger step with a modifier; Tab
   moves the selection to the next point. Neither applies while a number input has focus.
@@ -111,6 +119,7 @@ Requirements are numbered `CE<n>`; a number is never reused.
 - **CE30 S** Several points can be selected, by modifier-click or by rectangle, and move together.
 - **CE31 C** One modifier constrains a drag to one axis; another snaps it to the grid.
 - **CE32 C** A repeating curve is drawn faintly beyond its span.
+- **CE33 C** Copy and paste a whole curve between editors whose consumers accept it.
 
 ### Kept possible
 
@@ -149,7 +158,8 @@ What the feathers editor draws:
 Blender first: its F-curve editor and its curve-mapping widget (RGB curves, falloff), to learn
 how points are added, which interpolation and handle types exist, how they are shown, and what to
 cut. Then, for what Blender lacks: Unity's `AnimationCurve` (weighted tangents), CSS easing
-pickers and Godot's `Curve`. The output is a short write-up, before the design.
+pickers and Godot's `Curve`. The write-up is
+[curve-editor-prior-art.md](curve-editor-prior-art.md).
 
 Read so far:
 
