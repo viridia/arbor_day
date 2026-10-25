@@ -171,55 +171,28 @@ a migration or a new look land while the trees are few, the golden trees showing
      in one row; which, decided when built.
 
    E[2]
-3. **C145 Bias as curves** (was X55, its gate passed): Bias's Size a curve along the parent, first
-   node to last, in place of today's straight change, so a conifer's tip narrows faster than its
-   base (C143's floor works around it); Leaves and Aim after, as fields. A curve's x is the
-   place, 0 to 1; its y the field's own value in its units and range, not a factor on it. A few
-   points, monotone interpolation so it never overshoots them; flat by default, and today's
-   straight change is a two-point curve, so files convert with no change of output. A first
-   slice of a general curve editor (particles, animation graphs), in three layers kept apart so
-   each can move upstream:
-   - **Model**, the consumer's: points, any handles, its segments, each a bevy_curve `Curve<f32>`
-     over its own span of x, which the consumer samples at runtime, the segment kinds it
-     supports, its constraints
-     (x in 0 to 1, ends fixed, y in range); it applies, clamps or refuses each edit. So the editor
-     never offers an interpolation the engine lacks. Here: points and monotone interpolation, no
-     tangents.
-   - **Editor**, headless with a feathers look: points as UI nodes, dragged, added by
-     double-click, deleted by key, the selected one's value in a number input; edits sent as
-     requests (move, insert, delete; move tangent and set kind designed but not built). It opens
-     as a popup from the row, as the color input's picker does; other hosts place it as they
-     want.
-   - **Plot**: the author's `draw_path` (`../bevy_reactor_3/crates/bevy_reactor_nodegraph/src/
-     draw_path.rs`, its shader `assets/draw_path.wesl`), a `UiMaterial` drawing a path of moves,
-     lines and quadratics from a storage buffer by each pixel's least distance to every segment,
-     antialiased at a constant width. The polyline is a move and lines, drawn as smoothly as
-     quadratics once within a pixel of the curve: a shared flattener halves each segment, over
-     its own span, until it lies within 0.25 px on screen, so kinks are exact points and a step
-     two points at one x. Testing every segment stays cheap at a popup's size (a few hundred over
-     300 × 150 px); a driver plan checks a tight curve (elastic) for facets. The grid is a second
-     instance, one color and width each. The row's thumbnail is the same material, small. Changes: an option
-     to take points in the node's own coordinates, since `update` makes them relative to the
-     path's bounds, which suits a wire but not a fixed plot area; and the shader moved to a crate
-     arbor_day, the node graph and any upstream widget share. Storage buffers rule out WebGL2,
-     so an upstream widget needs a uniform-array path or is WebGPU only.
-
-   Node-graph wires (X22) are `draw_path`'s quadratics, Quilez's SDF, with one fix: its
-   `kk = 1.0 / dot(b, b)`, `b = A − 2B + C`, divides by zero when the control point is midway
-   between the ends, as on a straight wire, so below a small `dot(b, b)` it takes the line's
-   distance from A to C. Open: whether reach and angle
-   take curves too. Requirements in [curve-editor.md](curve-editor.md), its survey in
-   [curve-editor-prior-art.md](curve-editor-prior-art.md), and a mock
-   (`https://claude.ai/artifact/JhDqLFzUGJo2neenUGNrQN`); designed next, then split into chunks. Settled for the design: no edit queue, as `EditableText`
-   has, but the slider's controlled pattern: the curve in as a component the consumer writes,
-   edits out as `EntityEvent`s with their phase, host commands as events. To sample a curve on
-   the GPU, the translation layer writes a redundant encoding: a shape-preserving cubic goes out
-   as Hermite segments, its slopes computed on the CPU, so the shader needs only a few kinds of
-   evaluator. E[4]
-4. **C147 Sprigs as a list** (X37's format, ahead of its feature): the tip leaves' sprig becomes
+3. **C145 Bias Size as a curve** (was X55, its gate passed): the first of the curve editor's
+   chunks, which are built to [curve-editor-design.md](curve-editor-design.md) (requirements in
+   [curve-editor.md](curve-editor.md), survey in
+   [curve-editor-prior-art.md](curve-editor-prior-art.md), mock at
+   `https://claude.ai/artifact/JhDqLFzUGJo2neenUGNrQN`). Bias's Size becomes a `ScalarCurve`, so
+   a conifer's tip can narrow faster than its base (C143's floor works around it today). This
+   chunk: the model (design 1: the curve, its constraints, preparing and sampling, `apply`), its
+   unit tests, and Size converted to two points that grow every tree as before, `reference/`
+   converted by script. The row shows the curve as a thumbnail (design 3, 5.1: the flattener and
+   the path material moved from `bevy_reactor`), with number inputs for the two ends' values
+   until C155's editor replaces them, so Size stays editable. E[3]
+4. **C155 The inline curve editor**: the headless parts and the feathers editor (design 2 to 5),
+   inline in the Bias row (design 6): select, drag, insert, delete, cancel, the point's inputs,
+   the grid and its labels; the edits applied with `ScalarCurve::apply`; its step in
+   `plans/widgets.py` (design 7). E[3]
+5. **C157 Bias Leaves and Aim as curves**: two more `ScalarCurve` fields, converted as Size was;
+   `bias_leaves` takes Size's greatest value over the nodes in place of `1 + |size|`. Decided
+   here: whether reach and angle take curves too. E[2]
+6. **C147 Sprigs as a list** (X37's format, ahead of its feature): the tip leaves' sprig becomes
    a list holding one, the panel showing it as now, so several sprigs (X37) later need no
    migration. `reference/` converted. E[1]
-5. **C8 Working document in settings.** A settings group holding the working species and, once
+7. **C8 Working document in settings.** A settings group holding the working species and, once
    set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
    as seedling did. The document's name comes from the file name. Serialized by reflection, as
    `bevy_settings` does. A working document from before a schema change is lost (D32), but not
@@ -228,12 +201,14 @@ a migration or a new look land while the trees are few, the golden trees showing
    read as a species file is (C124, TD2.3), its pruned fields logged and the document marked
    edited. Stored as a list of open documents holding
    one, and the active one's index, so several (X26) need no change of format. E[3]
-6. **C113 File format freeze**, at D32's gate: from here a change that renames, moves or removes
+8. **C113 File format freeze**, at D32's gate: from here a change that renames, moves or removes
    a species field, or changes its type, needs a migration (X15). Before it, each item below
    either lands, is dropped, or is accepted as a later migration; prune the list as those
    choices are made. E[1], the items aside.
    - **Migrated**, a field's type or meaning changing, `reference/` converted in the same chunk:
-     - C145 Bias as curves: Size's number becomes a two-point curve, with no change of output.
+     - C145 Bias Size as a curve: Size's number becomes a two-point curve, with no change of
+       output.
+     - C157 Bias Leaves and Aim as curves: the same for Leaves and Aim.
      - C147 Sprigs as a list: the tip leaves' one sprig becomes a list of one.
    - **Output changed**, files reading as before but growing differently, each tree judged close
      enough, retuned, or the change put behind an option:
@@ -280,6 +255,9 @@ a migration or a new look land while the trees are few, the golden trees showing
 
 ### Later
 
+- **C156 The curve editor's rest**: selecting by rectangle and moving several points, the keys
+  (arrows, Tab, Escape), and the ⋯ menu with presets, Reset, and Copy and Paste curve
+  ([curve-editor-design.md](curve-editor-design.md), 4 and 5). After C155. E[2]
 - **C132 Repeated forks**: a maple forks and forks again (sympodial), where the levels grow a
   leader with laterals (monopodial). A fork's copies may fork again, up to a number of
   generations, 1 being today's (TD3.7, "copies do not fork again"). A copy already reaches what
@@ -545,22 +523,28 @@ a migration or a new look land while the trees are few, the golden trees showing
   with its own normal (twice the leaf triangles), or a leaf shader that mirrors a back face's
   normal across the card. *Gate:* either read wrong from the game's camera on a soft species.
 
-- **X58** C145's plot drawn as scene content anchored to the plot node, to try the author's
+- **X58** The curve editor's plot drawn as scene content anchored to the plot node, to try the author's
   unified UI proposal (`https://hackmd.io/@dreamertalin/H1ruQhFnGl`) before offering it to
   Bevy: grid, curve and tangent lines as retained gizmos, one per width and style, under an
   orthographic camera in layout pixels with its own MSAA, since gizmo lines have no edge
   antialiasing of their own. The handles stay UI nodes and must draw over the curve, which over
   the panel, so it needs the proposal's anchoring and render bands (its steps 2 and 3) and none
-  of its surfaces. Only the plot layer changes; model and editor stay. *Gate:* C145 landed on
+  of its surfaces. Only the plot layer changes; model and editor stay. *Gate:* C155 landed on
   `draw_path`.
 
-- **X59** Zoom and pan in C145's editor, for handles that reach past the curve. A slope tangent
+- **X62** Hand-set direction handles in the curve editor: aligned and free handles, their drag and
+  their input rows, weighted segments in sampling ([curve-editor-design.md](curve-editor-design.md),
+  1.2, 1.4; CE34, CE37). Bias curves need only auto handles. *Gate:* a curve that needs them,
+  such as the crown profile as a curve or an easing curve.
+
+- **X59** Zoom and pan in the curve editor, for handles that reach past the curve. A slope tangent
   drawn at a fixed length on screen, so only handles whose length means something (Bézier
   points, weighted tangents) leave the view; the view fits points and handles with padding when
   a drag ends, never during it, a handle clamped to the edge till then; wheel to zoom (an axis
-  with a modifier), middle-drag to pan, a key and one header button to fit again. No scrollbars.
-  The model bounds the view (x in 0 to 1), the editor owns it within them. *Gate:* tangents
-  built.
+  with a modifier), middle-drag to pan, a key and one header button to fit again. No scrollbars in
+  the inline editor; a larger host may draw them from the view (CE36), the wheel over one zooming
+  its axis.
+  The model bounds the view (x in 0 to 1), the editor owns it within them. *Gate:* X62 landed.
 
 
 ## Notes

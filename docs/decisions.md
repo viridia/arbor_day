@@ -394,3 +394,28 @@ until Panoply or Bevy takes it. It uses neither arbor_day's types nor `bevy_imme
 reaches it as any consumer would. **Reversing it** either way costs: a crate now adds a workspace
 member and its versioning before the API settles, and a dependency on arbor_day or
 `bevy_immediate` closes the way upstream.
+
+### D36 — Auto handles are Fritsch–Carlson's
+
+A curve's auto direction handles follow Fritsch and Carlson's monotone cubic interpolation, so a
+curve of auto handles never overshoots its points ([curve-editor-design.md](curve-editor-design.md),
+1.3). It rules out Blender's Auto Clamped, which flattens only at turning points, and plain
+Catmull–Rom, which overshoots between uneven points. **Reversing it** changes the shape of every
+curve with auto handles, so every tree whose Bias curves have more than two points grows
+differently.
+
+### D37 — An edit proposes positions, from the drag's snapshot
+
+A move, handle move or cancel sends the positions it proposes, computed from the snapshot taken
+when the drag started plus the pointer's total offset, never a delta from the last event
+(curve-editor-design.md, 2). A consumer keeps no drag state, a clamped point follows the pointer
+back, and cancel is the snapshot sent again. **Reversing it** to deltas makes every consumer keep
+the snapshot itself, and points clamped at a bound drift from the pointer.
+
+### D38 — A handle's x stays within its segment; one Bézier per segment
+
+A direction handle's x offset is kept within its segment's span, which alone keeps the curve a
+function of x, and every segment is prepared as one cubic Bézier, which is also the encoding a
+shader reads (curve-editor-design.md, 1.2 and 1.4). It rules out Blender's shortening of handles
+at evaluation, and a GPU encoding per segment kind. **Reversing it** reinterprets files whose
+handles reach past their segment, and gives each shader an evaluator per kind.

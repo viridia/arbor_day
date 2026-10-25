@@ -107,8 +107,10 @@ Requirements are numbered `CE<n>`; a number is never reused.
 - **CE25 M** When exactly one point is selected, its x and y are shown in feathers number inputs,
   which can be typed into or scrubbed. With none or several selected, the inputs are hidden or
   disabled.
-- **CE34 S** When that point has a handle set by hand (aligned or free), the handle's x and y are
-  shown beside the point's, in the same way.
+- **CE34 S** When that point has handles set by hand (aligned or free), each one's x and y are
+  shown in the same way, a row per handle.
+- **CE37 M** Handles are shown only on selected points, and only where set by hand. Dragging a
+  handle moves that handle alone, whatever is selected; handles are never selected themselves.
 - **CE26 M** The editor embeds in a host's layout at whatever size the host chooses: inline in a
   property panel, expanded from a row that shows the curve as a thumbnail, or in a popup from such
   a row. arbor_day embeds it inline, so it covers none of the 3D view.
@@ -130,7 +132,8 @@ Requirements are numbered `CE<n>`; a number is never reused.
   - the curves share the x axis but may each have their own y axis, the view showing one y axis
     at a time or scaling each curve to the view's height.
 - **CE36** Zoom and pan: the view is a transform of its own, within the axes' bounds, and
-  gestures and edits are expressed in the curve's units, never the view's.
+  gestures and edits are expressed in the curve's units, never the view's. The host may set the
+  view. Scrollbars, if any, are the host's, drawn from the view; the inline editor has none.
 
 ### The plot
 
