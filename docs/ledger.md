@@ -102,33 +102,33 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C88   | Landed rows as citations; the file commands in TD1.7. |
 | C119  | End, beside Start (D30, TD3.3), default 85%. |
 | C120  | Wander up to the tip: the tip pinned, no kink inside the tip's straight run (D17, TD3.4). |
-| C116  | Bias in place of Size bias: size and angle by node index about the middle node, neutral when added (TD3.3); a fork's copies reach what their limb had left (TD3.7); a fork's roll is `Fuzzy`, and its chance 50% when added. |
+| C116  | Bias in place of Size bias (TD3.3); a fork's copies reach what their limb had left, its roll `Fuzzy` (TD3.7). |
 | C58   | Stems below the ground (TD3.2). |
 | C122  | Flare as a trunk operator (TD3.2), from X45. |
 | C127  | A trunk fork's copies rolled to the trunk's side, so the first carries on its tube untwisted (TD3.7). |
 | C124  | Best-effort open: a file's fields the species cannot take pruned and logged, the document marked edited (D32, TD2.3). |
-| C129  | Bevy main at `2614884` (D1), the family together; the leaf golden test writes its failure image to the temp directory, since `target/` is now shared above the repo (TD3.10). |
-| C130  | Aim in place of Bias's angle: laterals turned toward points on the envelope's outline, the upper ones toward its top (TD3.3), from the crown tests (Notes, 2026-10-21). |
-| C135  | Phantom nodes below a parent's first, so the lowest limbs join a settled spiral rather than leaving one side bare (TD3.3). |
-| C136  | Node gaps by balance: a node follows sooner while the limbs below it lean to one side, so the lowest limb is not left alone (TD3.3). |
-| C137  | Seedling models converted to species files, best effort, by `scripts/from_seedling.py`, into `reference/` in seedling's subfolders, the crown and its profile measured from the old leaves, a negative angle bias as Aim; `plans/gallery/reference.py` opens and shoots each. First three: poplar-orange, leechgrass, palecress; the other 44 after. |
+| C129  | Bevy main at `2614884` (D1); the leaf golden test's failure image in the temp directory (TD3.10). |
+| C130  | Aim in place of Bias's angle (TD3.3), from the crown tests (Notes, 2026-10-21). |
+| C135  | Phantom nodes below a parent's first (TD3.3). |
+| C136  | Node gaps by balance (TD3.3). |
+| C137  | Seedling models converted to species files in `reference/` by `scripts/from_seedling.py`; `plans/gallery/reference.py` shoots each. |
 | C139  | Operators as the species' layers (G4); guidelines admit expected corrections. |
-| C138  | Leaf size by Bias: Bias's leaves share scales the cards by each lateral's length over its parent's longest, multiplied down the levels, a parent's tip taking its last lateral's, no smaller than half (TD3.3, TD3.8). |
-| C140  | A fixed panel header: the document's name and file menu stay above the rows that scroll (TD1.7). |
-| C141  | A short twig's card reaches back past its root, its fold at the tip, as seedling's did, so palecress's leaves sit at its stalk (TD3.8). |
+| C138  | Leaf size by Bias (TD3.3, TD3.8). |
+| C140  | A fixed panel header (TD1.7). |
+| C141  | A short twig's card reaches back past its root (TD3.8). |
 | C142  | The trunk's radius down to 1 cm, the thinnest that reads at Panoply's camera distance, for flower stems and herbs. |
-| C143  | Tip leaves' smallest: the floor on Bias's leaf scale per species, 50% by default as before, down to 25% so a conifer's tip closes (TD3.8). |
-| C47   | A sense of scale: a measuring stick and a silhouette beside the crown, with a HUD toggle of its own (TD1.6). |
-| C146  | Golden trees: each finished tree in `reference/` grown from its file and compared with its saved meshes and leaf texture (TD1.7, G6); X15's first measure. |
-| C70a  | Card facing in `PlantStats`: the share of the cards' area the game's camera sees, turned all the way around (TD2.1); a baseline in Notes. |
-| C70b  | A rosette closing as its tip tilts: three cards upright, gathering into a fan toward the twig's heading and dropping out as they crowd, to one card along the twig at 45° (D27, TD3.8). Upright tips' Triple is now Rosette and Double is gone, `reference/` converted. |
-| C148  | Buried limbs left out: a lateral whose tip ends inside its parent, as a Flame crown's narrow base leaves the lowest limbs inside a thick trunk, whose cards showed alone on it (TD3.4; `reference/bugs/trunkleaf.gltf`). |
-| C149  | Wander's kinks steady under the tip's straight run: split as if there were none, the kinks inside it taken out after, so the sprig's spacing, fold or card size no longer re-deals every kink, the trunk's included (TD3.4). The sprig's own coupling is C150. |
-| C150  | The sprig's leaves at a fixed size: Size is the middle leaf's length, the card the sprig's bounds in it, its UVs the part of the square texture the sprig fills, so a longer phalanx lengthens the card and leaves the fan alone (D29, TD3.8 to TD3.10, G7). `reference/` converted by each file's old layout, so its leaves keep their size. |
-| C151  | Wander's spacing: kinks and the base run a Spacing apart, per level, in crown radii, 0.15 by default, so short twigs can kink (D17, TD3.4). |
-| C71   | Crown softness on the tip leaves, 0 by default: each card's normal blended toward the envelope's outward normal, the material double-sided at every weight, so nothing jumps above 0 and Panoply needs no material of its own (TD3.9); X13 withdrawn. Shots in `plans/gallery/shapes.py`. |
-| C152  | Cards bend with their twigs: a card along its twig runs from its base to the tip, its far half on along the twig's last stretch, and bends at each ring a straight card would miss by more than the detail threshold, so cards follow sagging and rising limbs (D27, TD3.9). Hemlock1 joins the golden trees. |
-| C145  | Bias Size as a curve: `src/curve/`'s model, view and path material ([curve-editor-design.md](curve-editor-design.md) 1, 3, 5.1), the path in a uniform array so it draws on WebGL2; Size stored as a `PlaceCurve` of `[place, value]` pairs, translated to and from the editor's form (design 6, CE8), the row a thumbnail over its ends' values; Leaves divides by the greatest node's size (TD3.3). `reference/` converted by `scripts/size_curve.py`, the golden trees unchanged. |
+| C143  | Tip leaves' smallest, the floor on Bias's leaf scale (TD3.8). |
+| C47   | A sense of scale: a measuring stick and a silhouette (TD1.6). |
+| C146  | Golden trees (TD1.7, G6); X15's first measure. |
+| C70a  | Card facing in `PlantStats` (TD2.1); a baseline in Notes. |
+| C70b  | Rosettes closing as their tip tilts (D27, TD3.8); Triple is Rosette, Double gone, `reference/` converted. |
+| C148  | Buried limbs left out (TD3.4). |
+| C149  | Wander's kinks steady under the tip's straight run (TD3.4). |
+| C150  | The sprig's leaves at a fixed size (D29, TD3.8 to TD3.10, G7); `reference/` converted. |
+| C151  | Wander's spacing (D17, TD3.4). |
+| C71   | Crown softness (TD3.9); X13 withdrawn. |
+| C152  | Cards bend with their twigs (D27, TD3.9); hemlock1 a golden tree. |
+| C145  | Bias Size as a curve: `src/curve/` ([curve-editor-design.md](curve-editor-design.md), 1, 3, 5, 6; TD3.3); `reference/` converted by `scripts/size_curve.py`. |
 
 ## Next
 
@@ -150,7 +150,22 @@ slots (C103), the painted leaf (C38), outlines (C66), carry-on's removal (C117),
 the golden trees (C146). Before the freeze (C113), the changes that would cost the finished trees
 a migration or a new look land while the trees are few, the golden trees showing each.
 
-1. **C125 Steady nodes**: moving Start or End moves each node, which jumps limbs about in two
+1. **C155 The inline curve editor**, built to [curve-editor-design.md](curve-editor-design.md)
+   (requirements in [curve-editor.md](curve-editor.md), survey in
+   [curve-editor-prior-art.md](curve-editor-prior-art.md), mock at
+   `https://claude.ai/artifact/JhDqLFzUGJo2neenUGNrQN`): the headless parts and the feathers
+   editor (design 2 to 5), inline in the Bias row (design 6): select, drag, insert, delete, cancel, the point's inputs,
+   the grid and its labels; the edits applied with `ScalarCurve::apply`; its step in
+   `plans/widgets.py` (design 7). Also the curve row's margins, which C145's row lacks, and a
+   thumbnail that reads as a graph when the curve is flat, where today it reads as a separator
+   (a grid line or two, say). E[3]
+2. **C156 The curve editor's rest**: selecting by rectangle and moving several points, the keys
+   (arrows, Tab, Escape), and the ⋯ menu with presets, Reset, and Copy and Paste curve
+   ([curve-editor-design.md](curve-editor-design.md), 4 and 5). E[2]
+3. **C157 Bias Leaves and Aim as curves**: two more `PlaceCurve` fields, converted as Size was
+   (`scripts/size_curve.py` generalized). Decided here: whether reach and angle take curves too.
+   E[2]
+4. **C125 Steady nodes**: moving Start or End moves each node, which jumps limbs about in two
    ways. A lateral's length changes, so its own node count steps; its nodes draw in order from
    one `layout` stream and its limbs' streams are numbered by a running count, so one node more
    re-deals every node after it, and every level below. Each node from a stream of its own
@@ -158,7 +173,7 @@ a migration or a new look land while the trees are few, the golden trees showing
    drops one node. And a node's azimuth is the cheapest of its candidates (`node_azimuths`),
    which flips as crowding changes with the nodes' spacing; blend the two cheapest when their
    costs are near. Changes every plant's layout (X15's generator version). E[2]
-2. **C134 Facing, skew and angle as G5 has them** (the author, 2026-10-21 and 10-22): adjusting
+5. **C134 Facing, skew and angle as G5 has them** (the author, 2026-10-21 and 10-22): adjusting
    facing and skew seldom improves a plant, since the model decides what they promise to set.
    - Facing only where the parent has an upper side: an upright trunk has none, so Sides, Up and
      Down measure from an arbitrary side there. The trunk's level is always Around (crowding's
@@ -172,30 +187,9 @@ a migration or a new look land while the trees are few, the golden trees showing
      in one row; which, decided when built.
 
    E[2]
-3. **C155 The inline curve editor**, built to [curve-editor-design.md](curve-editor-design.md)
-   (requirements in [curve-editor.md](curve-editor.md), survey in
-   [curve-editor-prior-art.md](curve-editor-prior-art.md), mock at
-   `https://claude.ai/artifact/JhDqLFzUGJo2neenUGNrQN`): the headless parts and the feathers editor (design 2 to 5),
-   inline in the Bias row (design 6): select, drag, insert, delete, cancel, the point's inputs,
-   the grid and its labels; the edits applied with `ScalarCurve::apply`; its step in
-   `plans/widgets.py` (design 7). Also the curve row's margins, which C145's row lacks, and a
-   thumbnail that reads as a graph when the curve is flat, where today it reads as a separator
-   (a grid line or two, say). E[3]
-4. **C157 Bias Leaves and Aim as curves**: two more `ScalarCurve` fields, converted as Size was
-   (`scripts/size_curve.py` generalized). Decided here: whether reach and angle take curves too.
-   E[2]
-5. **C147 Sprigs as a list** (X37's format, ahead of its feature): the tip leaves' sprig becomes
+6. **C147 Sprigs as a list** (X37's format, ahead of its feature): the tip leaves' sprig becomes
    a list holding one, the panel showing it as now, so several sprigs (X37) later need no
    migration. `reference/` converted. E[1]
-6. **C8 Working document in settings.** A settings group holding the working species and, once
-   set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
-   as seedling did. The document's name comes from the file name. Serialized by reflection, as
-   `bevy_settings` does. A working document from before a schema change is lost (D32), but not
-   silently: `bevy_settings` ignores unknown keys only at a resource's top level, and below it
-   drops a field that fails to deserialize without a word (`load_properties`), so the species is
-   read as a species file is (C124, TD2.3), its pruned fields logged and the document marked
-   edited. Stored as a list of open documents holding
-   one, and the active one's index, so several (X26) need no change of format. E[3]
 7. **C113 File format freeze**, at D32's gate: from here a change that renames, moves or removes
    a species field, or changes its type, needs a migration (X15). Before it, each item below
    either lands, is dropped, or is accepted as a later migration; prune the list as those
@@ -211,6 +205,16 @@ a migration or a new look land while the trees are few, the golden trees showing
 
    Additive changes, whose default or off state grows today's plant, need no place here (C132,
    C133, X12's modes with today's as the default), nor does X22, a species of its own kind.
+
+8. **C8 Working document in settings.** A settings group holding the working species and, once
+   set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
+   as seedling did. The document's name comes from the file name. Serialized by reflection, as
+   `bevy_settings` does. A working document from before a schema change is lost (D32), but not
+   silently: `bevy_settings` ignores unknown keys only at a resource's top level, and below it
+   drops a field that fails to deserialize without a word (`load_properties`), so the species is
+   read as a species file is (C124, TD2.3), its pruned fields logged and the document marked
+   edited. Stored as a list of open documents holding
+   one, and the active one's index, so several (X26) need no change of format. E[3]
 
 ### Quick wins
 
@@ -249,9 +253,6 @@ a migration or a new look land while the trees are few, the golden trees showing
 
 ### Later
 
-- **C156 The curve editor's rest**: selecting by rectangle and moving several points, the keys
-  (arrows, Tab, Escape), and the ⋯ menu with presets, Reset, and Copy and Paste curve
-  ([curve-editor-design.md](curve-editor-design.md), 4 and 5). After C155. E[2]
 - **C132 Repeated forks**: a maple forks and forks again (sympodial), where the levels grow a
   leader with laterals (monopodial). A fork's copies may fork again, up to a number of
   generations, 1 being today's (TD3.7, "copies do not fork again"). A copy already reaches what
