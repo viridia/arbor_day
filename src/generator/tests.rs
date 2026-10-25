@@ -10,8 +10,8 @@ use crate::{
     fuzzy::{Distribution, Fuzzy},
     random::Seed,
     species::{
-        Bias, Facing, Flare, Lean, Ornaments, Profile, Sag, Species, TipLeaves, Trunk, Upright,
-        Wander,
+        Bias, Facing, Flare, Lean, Ornaments, PlaceCurve, Profile, Sag, Species, TipLeaves, Trunk,
+        Upright, Wander,
     },
     toggle::{OperatorState, Toggle},
 };
@@ -414,6 +414,11 @@ fn limbs_reach_their_share_of_the_way_to_the_envelope() {
     }
 }
 
+/// A Size curve falling evenly from `1 + change` at the first node to `1 - change` at the last.
+fn tapering(change: f32) -> PlaceCurve {
+    PlaceCurve(vec![[0.0, 1.0 + change], [1.0, 1.0 - change]])
+}
+
 #[test]
 fn bias_size_changes_laterals_along_their_parent() {
     // Half way to the envelope, so 150% of it stays inside.
@@ -421,7 +426,7 @@ fn bias_size_changes_laterals_along_their_parent() {
     species.limbs.levels[0].reach.center = 0.5;
     let reach = species.limbs.levels[0].reach.center;
     species.limbs.levels[0].bias = Toggle::on(Bias {
-        size: 0.5,
+        size: tapering(0.5),
         aim: 0.0,
         leaves: 0.0,
     });
@@ -446,7 +451,7 @@ fn bias_size_changes_laterals_along_their_parent() {
 fn bias_leaves_scale_cards_along_their_parent() {
     let mut species = shown(2, straight());
     species.limbs.levels[0].bias = Toggle::on(Bias {
-        size: 0.6,
+        size: tapering(0.6),
         aim: 0.0,
         leaves: 0.5,
     });
@@ -487,7 +492,7 @@ fn bias_leaves_scale_cards_along_their_parent() {
     assert!(cards_of(0).count() > 0);
     // No smaller than the tip leaves' smallest.
     species.limbs.levels[0].bias.settings.leaves = 1.0;
-    species.limbs.levels[0].bias.settings.size = 0.8;
+    species.limbs.levels[0].bias.settings.size = tapering(0.8);
     for smallest in [0.5, 0.3] {
         species.ornaments.tip_leaves.settings.smallest = smallest;
         let skeleton = grow(&species);
@@ -502,9 +507,15 @@ fn bias_leaves_scale_cards_along_their_parent() {
     }
     // Longest at the last node, so full there.
     let level = &mut species.limbs.levels[0];
-    level.bias.settings.size = -0.6;
-    assert_eq!(bias_leaves(level, 15, 16), 1.0);
-    assert!((bias_leaves(level, 0, 16) - 0.4 / 1.6).abs() < 1e-6);
+    level.bias.settings.size = tapering(-0.6);
+    let sizes = bias_sizes(level, 16);
+    assert!((bias_leaves(level, &sizes, 15) - 1.0).abs() < 1e-6);
+    assert!((bias_leaves(level, &sizes, 0) - 0.4 / 1.6).abs() < 1e-6);
+    // Longest in the middle: the greatest of the nodes, not of the ends.
+    level.bias.settings.size.0.insert(1, [0.5, 2.0]);
+    let sizes = bias_sizes(level, 3);
+    assert!((bias_leaves(level, &sizes, 1) - 1.0).abs() < 1e-6);
+    assert!(bias_leaves(level, &sizes, 0) < 1.0);
 }
 
 #[test]
@@ -514,7 +525,7 @@ fn aim_turns_laterals_toward_the_outline() {
     let mut species = straight();
     let drawn = side_limbs(&species);
     species.limbs.levels[0].bias = Toggle::on(Bias {
-        size: 0.0,
+        size: tapering(0.0),
         aim: 1.0,
         leaves: 0.0,
     });
@@ -795,7 +806,7 @@ fn operators_not_on_grow_as_at_zero() {
     let mut biased = Species::default();
     let mut even = biased.clone();
     even.limbs.levels[0].bias = Toggle::on(Bias {
-        size: 0.0,
+        size: tapering(0.0),
         aim: 0.0,
         leaves: 0.0,
     });

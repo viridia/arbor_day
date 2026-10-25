@@ -37,6 +37,7 @@ use turntable::{
     TurntableCamera, TurntablePlugin, TurntableSubject, orbit_on_drag, zoom_on_scroll,
 };
 
+mod curve;
 mod document;
 mod fuzzy;
 mod generator;
@@ -90,7 +91,7 @@ fn main() {
             scale::ScalePlugin,
             look::LookPlugin,
             shortcut::ShortcutPlugin,
-            DocumentPlugin,
+            (DocumentPlugin, curve::CurvePlugin),
         ))
         .insert_resource(UiTheme(create_dark_theme()))
         .add_observer(use_game_fov)

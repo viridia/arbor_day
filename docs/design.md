@@ -320,10 +320,11 @@ no limbs, so the pattern has settled by the first real node rather than starting
 turn of 180° and then about 90°. Each
 limb then turns by its own random amount up to the level's skew, and leaves at its drawn angle from
 the parent, its reach a drawn share of the distance to the envelope. With Bias on, the reach
-changes with the node's index about the middle node's, from −1 at the first to 1 at the last,
-scaled by 1 less the size times it, so the level's mean holds. Each axis carries a leaf scale,
+is scaled by its Size curve (`PlaceCurve`, `docs/curve-editor-design.md` 6) at the node's index
+over the parent's last, 0 at the first node and 1 at the last; a lone node keeps the reach. Each
+axis carries a leaf scale,
 1 for a stem, a fork's copy taking its axis's; a lateral's is its parent's times its reach's share
-over the longest node's (1 plus the size's magnitude), taken by Bias's leaves share, so the
+over the greatest of the parent's nodes', taken by Bias's leaves share, so the
 longest laterals keep full leaves and the levels below keep theirs (TD3.8). Bias's aim turns each limb by its
 share toward a point on the envelope's outline at the limb's own compass heading
 (`outline_point`). The outline runs from where the profile is widest, up its side and across the

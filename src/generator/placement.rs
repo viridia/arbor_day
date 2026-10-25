@@ -195,7 +195,7 @@ pub(super) fn place_scions(level: &Level, skeleton: &mut Skeleton) {
 /// inside the crown, as many as the level's density gives for its length, each placed by
 /// `node_place`, its limbs turned about the parent by `node_azimuths` and their skew, each leaving
 /// at the level's angle from the parent, turned by Bias's `aim`, and reaching its share of the way
-/// to the envelope, scaled by `bias_size`; the nodes then moved by `balanced_places`. A fork's
+/// to the envelope, scaled by `bias_sizes`; the nodes then moved by `balanced_places`. A fork's
 /// copy's nodes start from its base. Each lateral's base radius is the level's share of the
 /// parent's radius where it leaves, so a level's radius changes that level alone.
 fn place_on(level: &Level, index: usize, parent: &Axis, placed: &mut Vec<Axis>) {
@@ -281,6 +281,7 @@ fn place_on(level: &Level, index: usize, parent: &Axis, placed: &mut Vec<Axis>) 
         .map(|limbs| limbs.iter().map(|limb| limb.azimuth).collect())
         .collect();
     let places = balanced_places(&places, &azimuths);
+    let sizes = bias_sizes(params, nodes);
     for (node, (place, limbs)) in places.into_iter().zip(node_limbs).enumerate() {
         let node = node as u32;
         let t = inside_start + inside * place;
@@ -294,7 +295,7 @@ fn place_on(level: &Level, index: usize, parent: &Axis, placed: &mut Vec<Axis>) 
             rng,
         } in limbs
         {
-            let size = bias_size(params, node, nodes);
+            let size = sizes[node as usize];
             let (sin, cos) = azimuth.sin_cos();
             let (angle_sin, angle_cos) = angle.sin_cos();
             let mut direction =
@@ -316,7 +317,7 @@ fn place_on(level: &Level, index: usize, parent: &Axis, placed: &mut Vec<Axis>) 
             };
             let kind = AxisKind::Lateral;
             placed.push(Axis {
-                leaf_scale: parent.leaf_scale * bias_leaves(params, node, nodes),
+                leaf_scale: parent.leaf_scale * bias_leaves(params, &sizes, node),
                 ..Axis::placed(level.number, kind, (index, at), start, reach, rng)
             });
         }
@@ -365,27 +366,28 @@ pub(super) fn balanced_places(places: &[f32], azimuths: &[Vec<f32>]) -> Vec<f32>
         .collect()
 }
 
-/// The share of the reach for laterals at node `node` of `nodes`: with Bias on, 1 plus its size at
-/// the first node, changing evenly through 1 at the middle to 1 less its size at the last;
-/// otherwise, and for a lone node, 1.
-pub(super) fn bias_size(params: &LimbLevel, node: u32, nodes: u32) -> f32 {
+/// The share of the reach for the laterals at each of `nodes` nodes: with Bias on, its size curve
+/// at the node's place, 0 at the first node and 1 at the last; otherwise, and for a lone node, 1.
+pub(super) fn bias_sizes(params: &LimbLevel, nodes: u32) -> Vec<f32> {
     match params.bias.get() {
         Some(bias) if nodes > 1 => {
-            // −1 at the first node, 1 at the last.
-            let place = 2.0 * node as f32 / (nodes - 1) as f32 - 1.0;
-            1.0 - bias.size * place
+            let size = bias.size.curve().prepare();
+            (0..nodes)
+                .map(|node| size.value(node as f32 / (nodes - 1) as f32))
+                .collect()
         }
-        _ => 1.0,
+        _ => vec![1.0; nodes as usize],
     }
 }
 
-/// The change to the leaves' size for laterals at node `node` of `nodes`: their `bias_size` over
-/// the longest node's, so 1 at the longest and falling evenly from there, taken by Bias's leaves
-/// share; otherwise, and for a lone node, 1.
-pub(super) fn bias_leaves(params: &LimbLevel, node: u32, nodes: u32) -> f32 {
+/// The change to the leaves' size for laterals at node `node`, given each node's `bias_sizes`:
+/// the node's size over the greatest, so 1 at the longest, taken by Bias's leaves share;
+/// otherwise, and for a lone node, 1.
+pub(super) fn bias_leaves(params: &LimbLevel, sizes: &[f32], node: u32) -> f32 {
     match params.bias.get() {
-        Some(bias) if nodes > 1 => {
-            let ratio = bias_size(params, node, nodes) / (1.0 + bias.size.abs());
+        Some(bias) if sizes.len() > 1 => {
+            let greatest = sizes.iter().copied().fold(f32::EPSILON, f32::max);
+            let ratio = sizes[node as usize] / greatest;
             1.0 - bias.leaves * (1.0 - ratio)
         }
         _ => 1.0,

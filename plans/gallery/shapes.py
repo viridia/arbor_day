@@ -9,8 +9,8 @@ default.
 - wander, turned on for the shots: the first level's limbs zigzag about their course at the most
   wander, 45°, and the second level's shorter twigs kink once or not at all;
 - facing: the second level's limbs to the sides (the default), up, down and around, then skewed;
-- bias: the second level's twigs longer at each limb's first node and shorter toward its tip, at
-  60%, then the other way, short near each limb's root;
+- bias: the second level's twigs longer at each limb's first node and shorter toward its tip, 160%
+  falling to 40%, then the other way, short near each limb's root;
 - aim: the first level's limbs turned toward the crown's outline, the upper ones toward its top,
   half way, then all the way;
 - forks: every first-level limb forking, the Y level, then upright, then three ways, the second
@@ -31,10 +31,10 @@ def add_level(driver, last):
     driver.click(f"Shell/Panel/levels[{last}]/add_operator/add")
 
 
-def set_number(driver, path, text):
-    """Replaces a number input's text and lets the plant rebuild. A click places the cursor rather
-    than selecting, so clear what is there first."""
-    driver.click(f"Shell/Panel/{path}/input")
+def set_number(driver, path, text, input="input"):
+    """Replaces the text of a row's number input, named `input`, and lets the plant rebuild. A
+    click places the cursor rather than selecting, so clear what is there first."""
+    driver.click(f"Shell/Panel/{path}/{input}")
     driver.key("End")
     for _ in range(6):
         driver.key("Backspace")
@@ -102,9 +102,11 @@ def run(driver):
     # Twigs longer low on each limb and shorter toward its tip, as a conifer's; then the other
     # way, short near each limb's root.
     driver.set_resource(SPECIES, "On", at="limbs.levels[1].bias.state")
-    set_number(driver, "levels[1]/bias/size", "60")
+    set_number(driver, "levels[1]/bias/size", "160", input="start")
+    set_number(driver, "levels[1]/bias/size", "40", input="end")
     driver.screenshot("bias")
-    set_number(driver, "levels[1]/bias/size", "-60")
+    set_number(driver, "levels[1]/bias/size", "40", input="start")
+    set_number(driver, "levels[1]/bias/size", "160", input="end")
     driver.screenshot("bias_reversed")
     driver.set_resource(SPECIES, "Off", at="limbs.levels[1].bias.state")
 

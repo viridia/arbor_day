@@ -5,7 +5,8 @@
 - an enum's select: picking a profile redraws the crown envelope, drawn as lines around the
   plant, and picking a limb level's facing sets it;
 - a checkbox: the outline, whose bark hull hides when it is cleared;
-- a color field's row: a swatch that opens a picker, where a typed color tints the trunk."""
+- a color field's row: a swatch that opens a picker, where a typed color tints the trunk;
+- a curve's row: Bias's Size as a thumbnail, its ends typed into the inputs below it."""
 
 from driver import Between
 
@@ -24,6 +25,16 @@ def pick(driver, field, variant):
     """Opens a field's select and picks a variant."""
     driver.click(f"Shell/Panel/{field}/select")
     driver.click(f"Shell/Panel/{field}/{variant}")
+
+
+def retype(driver, path, text):
+    """Replaces a number input's text. A click places the cursor, so clear the field first."""
+    driver.click(path)
+    driver.key("End")
+    for _ in range(6):
+        driver.key("Backspace")
+    driver.type(text)
+    driver.key("Enter")
 
 
 def run(driver):
@@ -109,4 +120,13 @@ def run(driver):
     driver.key("Escape")
     driver.absent(f"{COLOR}/wheel")
     driver.screenshot("closed")
+
+    # A curve: the first level's Bias Size, flat at 100% by default, then a conifer's taper.
+    driver.set_resource(SPECIES, "On", at="limbs.levels[0].bias.state")
+    driver.present(f"{LIMBS}/bias/size/thumbnail")
+    retype(driver, f"{LIMBS}/bias/size/start", "160")
+    driver.expect("Plant", GROWN_FROM, Between(1.59, 1.61), at="limbs[0].bias.size[0][1]")
+    retype(driver, f"{LIMBS}/bias/size/end", "40")
+    driver.expect("Plant", GROWN_FROM, Between(0.39, 0.41), at="limbs[0].bias.size[1][1]")
+    driver.screenshot("curve")
     driver.exit()

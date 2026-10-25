@@ -54,9 +54,10 @@ Requirements are numbered `CE<n>`; a number is never reused.
 - **CE7 M** A selection and a drag survive points being added or removed elsewhere on the curve.
   When the consumer replaces the whole curve, with a preset or a reset, the selection is cleared
   or trimmed to the points that remain; on undo, the host restores it (CE17).
-- **CE8 M** A curve serializes by reflection, its points as a short list. A field that was a
-  single number converts to a curve that gives the same result, so saved files keep their
-  meaning.
+- **CE8 M** The consumer owns its curve's storage and encoding; the editor sees only the copy it
+  is given. In arbor_day, a curve field serializes by reflection as a short list of points, and a
+  field that was a single number converts to a curve that gives the same result, so saved files
+  keep their meaning.
 - **CE9 M** Each consumer sets a default curve; arbor_day's Bias curves default to flat.
 
 ### Edits

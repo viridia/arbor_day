@@ -19,6 +19,10 @@ use serde::{
 use std::{any::TypeId, fmt, ops::RangeInclusive};
 
 use crate::{
+    curve::{
+        CurveAxis, CurveConstraints, CurveExtrapolation, CurvePoint, CurveSegment, HandleMode,
+        ScalarCurve,
+    },
     fuzzy::{Distribution, Fuzzy, Interval},
     properties::{
         Caption, ControlGroup, Flatten, Icon, Precision, ShownCount, Spinbox, Stripe, ValueRange,
@@ -642,24 +646,23 @@ impl Wander {
     }
 }
 
-/// Laterals changing along their parent, by their node's place. Size changes their length about
-/// the middle node's, which keeps the level's: positive, longer at the base and shorter toward the
-/// tip, as a conifer's; negative, the other way, short near a limb's root so its leaves fill the
-/// crown's middle. Aim turns them toward the crown's outline, the upper ones toward its top, so
-/// their leaves cover the crown's middle from above. Leaves carries the size change to the leaves
-/// the laterals bear, so a tall, thin cone keeps its shape.
+/// Laterals changing along their parent, by their node's place. Size scales their length: longer
+/// at the base and shorter toward the tip, as a conifer's; or the other way, short near a limb's
+/// root so its leaves fill the crown's middle. Aim turns them toward the crown's outline, the
+/// upper ones toward its top, so their leaves cover the crown's middle from above. Leaves carries
+/// the size change to the leaves the laterals bear, so a tall, thin cone keeps its shape.
 #[derive(Reflect, Clone, PartialEq)]
 #[reflect(@Icon("icons/operators/size-bias.png"))]
 pub struct Bias {
-    /// How much longer the laterals at the parent's first node are, as a share of the reach, and
-    /// shorter at its last, changing evenly between: 60% is 160% at the base and 40% at the tip.
+    /// The laterals' length as a share of the reach, over their node's place from the parent's
+    /// first node (0) to its last (1): 160% to 40% is a conifer's taper.
     #[reflect(
-        @ValueRange::<f32>(-1.0..=1.0),
+        @ValueRange::<f32>(0.0..=2.0),
         @Precision(0),
         @NumberInputUnits::new_static("ratio_percent"),
         @Caption("Size"),
     )]
-    pub size: f32,
+    pub size: PlaceCurve,
     /// How far the laterals turn from their drawn angle toward a point on the crown's outline, at
     /// their own compass heading: the first node's toward where the crown is widest, the last's
     /// toward its top, those between spread evenly along the outline. 100% points them there.
@@ -687,9 +690,58 @@ pub struct Bias {
 impl Default for Bias {
     fn default() -> Self {
         Self {
-            size: 0.0,
+            size: PlaceCurve::flat(1.0),
             aim: 0.0,
             leaves: 0.0,
+        }
+    }
+}
+
+/// A number that changes along a parent: its value at points from the parent's first node (0) to
+/// its last (1), joined smoothly without overshooting them. Written as a list of `[place, value]`
+/// pairs; edited and sampled as a [`ScalarCurve`].
+#[derive(Reflect, Clone, PartialEq, Debug)]
+pub struct PlaceCurve(pub Vec<[f32; 2]>);
+
+impl PlaceCurve {
+    /// `value` everywhere.
+    pub fn flat(value: f32) -> Self {
+        // Two points, the fewest a curve takes: a file's points apply over a default's, and
+        // reflection never shortens a list.
+        Self(vec![[0.0, value], [1.0, value]])
+    }
+
+    /// The curve through the points, a cubic with auto handles between each two.
+    pub fn curve(&self) -> ScalarCurve {
+        ScalarCurve {
+            points: (self.0.iter())
+                .map(|&[x, y]| CurvePoint { x, y, ..default() })
+                .collect(),
+            extrapolation: CurveExtrapolation::Hold,
+        }
+    }
+
+    /// The points of `curve`, its segment kinds and handles dropped: edit it within
+    /// [`PlaceCurve::constraints`], which allows only what this form holds.
+    pub fn from_curve(curve: &ScalarCurve) -> Self {
+        Self(
+            curve
+                .points
+                .iter()
+                .map(|point| [point.x, point.y])
+                .collect(),
+        )
+    }
+
+    /// What a [`PlaceCurve`]'s editor allows: places from 0 to 1, the ends pinned there, values
+    /// within `y`, cubic segments with auto handles only.
+    pub fn constraints(y: CurveAxis) -> CurveConstraints {
+        CurveConstraints {
+            y,
+            segments: vec![CurveSegment::Cubic],
+            handles: vec![HandleMode::Auto],
+            extrapolation: vec![CurveExtrapolation::Hold],
+            ..default()
         }
     }
 }

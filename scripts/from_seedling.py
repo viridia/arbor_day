@@ -122,6 +122,12 @@ def sag_or_rise(level, flex, crown_radius):
         level["rise"] = {"amount": clamp(turn * 2 / math.pi, 0.0, 0.99)}
 
 
+def size_curve(change):
+    """Bias's Size falling evenly from `1 + change` at the first node to `1 - change` at the last,
+    as `[place, value]` pairs."""
+    return [[0.0, 1 + change], [1.0, 1 - change]]
+
+
 def monopodial(sapling, crown_radius, notes):
     """Each branch group as a limb level: nodes from its interval, limbs per node from its
     symmetry, and its length taper as Bias's size."""
@@ -144,7 +150,7 @@ def monopodial(sapling, crown_radius, notes):
         angle_bias = group.get("angleBias", 0)
         aim = clamp(-angle_bias / max(mid(group["angle"]), 0.01), 0.0, 1.0)
         if length_taper > 0 or aim > 0:
-            level["bias"] = {"size": length_taper / (2 - length_taper), "aim": aim}
+            level["bias"] = {"size": size_curve(length_taper / (2 - length_taper)), "aim": aim}
         if angle_bias > 0:
             notes.append(f"branch[{index}].angleBias {angle_bias}: no counterpart when positive")
         levels.append(level)

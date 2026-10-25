@@ -9,7 +9,7 @@ those above it:
 
 | File | Holds | Depends on |
 | --- | --- | --- |
-| `model.rs` | The curve, its constraints, sampling, applying an edit | `bevy_math`, `bevy_curve`, `bevy_reflect` |
+| `model.rs` | The curve, its constraints, sampling, applying an edit; `CurveValue` | `bevy_math`, `bevy_curve`, `bevy_reflect`, `bevy_ecs` |
 | `edit.rs` | The events between editor, consumer and host | `model.rs`, `bevy_ecs` |
 | `view.rs` | The mapping, the curve's path in pixels, grid lines | `model.rs`, `bevy_ui` |
 | `gesture.rs` | Pointer and key handling, hover, selection | `edit.rs`, `view.rs`, `bevy_picking` |
@@ -42,9 +42,10 @@ pub enum CurveExtrapolation { Hold, Continue, Repeat }
 
 Each cubic segment leaves and enters its points along a **direction handle**, Adobe's name for
 the line from a point to the control point that sets the curve's direction and pull there. A
-handle's `Vec2` is its offset from its point, in the curve's units. `Auto` stores no offset, so
-a Bias curve serializes as its points' x, y and segment, a short list (CE8). Points are ordered by
-x; two may share an x, making a step (CE1).
+handle's `Vec2` is its offset from its point, in the curve's units. `Aligned` and `Free` store
+their offset; `Auto` computes it (1.3). Points are ordered by x; two may share an x, making a step
+(CE1). The consumer stores the curve in a form of its own and translates (CE8): this is the
+editor's form, not a file format.
 
 ### 1.1 The constraints
 
@@ -54,11 +55,11 @@ The consumer's declaration of what its curve may be (CE2 to CE5):
 pub struct CurveConstraints {
     pub x: CurveAxis,
     pub y: CurveAxis,
-    pub segments: EnumSet<CurveSegment>,
-    pub handles: EnumSet<HandleMode>,
+    pub segments: Vec<CurveSegment>,
+    pub handles: Vec<HandleMode>,
     pub points: RangeInclusive<usize>,
     pub pin_ends: PinEnds,          // None, X, or XY
-    pub extrapolation: EnumSet<CurveExtrapolation>,
+    pub extrapolation: Vec<CurveExtrapolation>,
 }
 
 pub struct CurveAxis {
@@ -69,7 +70,8 @@ pub struct CurveAxis {
 }
 ```
 
-Units and precision are the feathers editor's business: the axis carries numbers only, and the
+The sets are short lists, read with `contains`, so the model takes no set crate. Units and
+precision are the feathers editor's business: the axis carries numbers only, and the
 host gives the feathers editor the number-input units it already uses for the field.
 
 ### 1.2 Preparing and sampling
@@ -85,9 +87,10 @@ A `ScalarCurve` is not sampled directly. `ScalarCurve::prepare` resolves it into
 `PreparedCurve` implements `bevy_curve`'s `Curve<f32>` over the x span, with its extrapolation applied
 past the ends, and gives value and slope (CE6). A segment whose control points' x lie at thirds
 of its span is marked unweighted: its y is a cubic polynomial in x, evaluated directly. A weighted
-segment, with a hand-set handle, finds t for x by Newton's method, bracketed by bisection, a fixed
+segment, with an aligned or free handle, finds t for x by Newton's method, bracketed by bisection, a fixed
 number of iterations. Both use only addition, multiplication, division and `sqrt`, so a curve and
-an x give the same result on every platform.
+an x give the same result on every platform. A cubic is evaluated in powers of t from differences
+of its controls, so equal controls give exactly their value: a flat Size scales by exactly 1.
 
 The prepared form is the curve's single encoding. The GPU takes the same array of control points
 (the translation layer of the ledger's note), so a shader needs one evaluator, or two if it skips
@@ -114,7 +117,8 @@ from a file cannot break it.
 
 `ScalarCurve::apply(&mut self, op: &CurveEditOp, constraints: &CurveConstraints) -> Applied` is the standard
 consumer's judgement (CE10): clamp each point to the clamped axes, between its neighbours' x
-(CE24), within the pins; refuse an insert past `points.end()` or a delete below `points.start()`,
+(CE24), within the pins, and an aligned or free handle's control point within a clamped y axis,
+which keeps the curve within it, since a segment lies within its control points' hull; refuse an insert past `points.end()` or a delete below `points.start()`,
 and a kind or mode the constraints leave out; place an insert on the curve at the pointer's x (CE15,
 survey finding 4). It returns whether the curve changed, and for an insert, the new point's index.
 A consumer with other rules writes its own; arbor_day uses this one.
@@ -131,19 +135,21 @@ observer, like `slider_self_update`, applies edits to the copy for a host that w
 pub struct CurveEdit {
     #[event_target]
     pub editor: Entity,
+    pub curve: CurveRef,
     pub op: CurveEditOp,
     pub phase: Phase,               // Start, Update, Finish, Cancel; one-off edits are Finish
 }
 
+// In model.rs: an edit to one curve, its points by index.
 pub enum CurveEditOp {
-    Move(Vec<(PointRef, Vec2)>),                    // proposed positions
-    MoveHandle(PointRef, HandleSide, Vec2),         // proposed offset
-    SetPoint(PointRef, Vec2),                       // typed into an input
-    Insert(CurveRef, Vec2),                         // the pointer's position
-    Delete(Vec<PointRef>),
-    SetSegment(PointRef, CurveSegment),
-    SetHandleMode(PointRef, HandleSide, HandleMode),
-    Replace(CurveRef, ScalarCurve),                 // preset, reset, paste
+    Move(Vec<(usize, Vec2)>),                       // proposed positions
+    MoveHandle(usize, HandleSide, Vec2),            // proposed offset
+    SetPoint(usize, Vec2),                          // typed into an input
+    Insert(Vec2),                                   // the pointer's position
+    Delete(Vec<usize>),
+    SetSegment(usize, CurveSegment),
+    SetHandleMode(usize, HandleSide, HandleMode),
+    Replace(ScalarCurve),                           // preset, reset, paste
 }
 
 pub struct PointRef { pub curve: CurveRef, pub index: u32 }
@@ -158,8 +164,9 @@ receives every `Update` (CE14) and regrows the tree from each.
 
 **The curve is named in every reference.** `CurveRef` is the entity holding the curve's
 `CurveValue`. With one curve it is the editor itself; several curves (CE35) are child entities,
-each with its own value and constraints, and a selection or a move spans them by naming each point's
-curve. Nothing in the single-curve design changes when the second curve arrives.
+each with its own value and constraints. A selection spans them by naming each point's curve
+(`PointRef`), and a move across curves is one event per curve, so `apply` and the op stay
+within one curve. Nothing in the single-curve design changes when the second curve arrives.
 
 ### 2.1 Selection
 
@@ -180,12 +187,15 @@ axes' bounds stretched to the node; zoom and pan (CE36) would make it a transfor
 within the bounds, and nothing else would change, since gestures and edits are in the curve's
 units.
 
-From the prepared curve and the view, `view.rs` keeps two components up to date on the plot node,
-for whatever draws them:
+From the prepared curve and the view, `view.rs` keeps two components up to date on the plot node
+(`CurvePlot`), a child of the entity holding the curve's `CurveValue` and constraints, for
+whatever draws them:
 
 - **`CurvePath`**: the curve as a polyline in layout pixels. Each segment is halved, over its own
-  span, until each piece lies within a quarter pixel of the curve, so a kink stays a point and a
-  step two points at one x (CE40).
+  parameter, until each piece lies within a quarter pixel of the curve, so a kink stays a point and
+  a step two points at one x (CE40). A path holds at most `MAX_PATH_POINTS` (257), the path
+  material's uniform array; a curve needing more is flattened again at twice the tolerance until
+  it fits.
 - **`CurveGrid`**: the grid lines' pixel positions and values, from each axis's bounds and step,
   each marked major or minor, the ends and middle marked for labels (CE27).
 
@@ -206,7 +216,7 @@ pub enum CurveGesture {
 - **Hit testing** is geometric: the nearest point or handle within `CurveHitRadius` pixels, else
   the curve within the same radius, else empty space. The result is published as `CurveHover`,
   for styling and for the next press (CE22).
-- **Handles** are shown, and hit, only on selected points, and only where set by hand (CE37).
+- **Handles** are shown, and hit, only on selected points, and only where aligned or free (CE37).
 - **Press** on a point selects it (with a modifier, adds it), and a drag from there moves the
   selection, handles and all; on a handle, moves that one handle and leaves the selection as it
   is; on empty space, starts a rectangle, which takes points only (CE24, CE30).
@@ -229,8 +239,8 @@ It assembles, top to bottom:
   handle, placed from the view and styled from `CurveHover` and `CurveSelection` (CE41). Nodes keep
   the points to feathers' own styling and focus rings; the shader draws only lines.
 - **An input row**: feathers number inputs for the selected point's x and y, disabled unless
-  exactly one point is selected (CE25); and below them, a row each for that point's hand-set
-  handles, In and Out, their x and y (CE34). An input sends `SetPoint` or `MoveHandle`, `Update` while scrubbing, `Finish` on
+  exactly one point is selected (CE25); and below them, a row each for that point's aligned or
+  free handles, In and Out, their x and y (CE34). An input sends `SetPoint` or `MoveHandle`, `Update` while scrubbing, `Finish` on
   commit.
 
 `FeathersCurveThumbnail` is the plot alone, small, with no gestures: what a collapsed row shows
@@ -238,23 +248,27 @@ It assembles, top to bottom:
 
 ### 5.1 The path material
 
-`plot.rs` holds `bevy_reactor`'s `DrawPathMaterial`, moved here (the ledger's note under C145),
-with two changes: points in the node's own coordinates rather than relative to the path's bounds,
-and the quadratic's division by zero guarded for the node graph's straight wires. The curve's path
-is lines only. Its fragment shader tests every segment; a few hundred segments over a plot of
-300 × 170 pixels is cheap. It reads a storage buffer, so the plot is WebGPU only, and says so
-(CE43).
+`plot.rs` holds `PathMaterial`, after `bevy_reactor`'s `DrawPathMaterial`, stroking lines only, in
+the node's own coordinates, its color a theme token (`CurveStroke`). The lines are a uniform array
+of 256 rather than a storage buffer, so the plot draws on WebGL2 as well as WebGPU (CE43); 4 KiB,
+within WebGL2's 16 KiB uniform block. Its fragment shader tests every line; a few hundred over a
+plot of 300 × 170 pixels is cheap.
 
 ## 6. arbor_day
 
-- **The fields.** `Bias::size` becomes a `ScalarCurve`, x the place along the parent, y the share
-  of the reach. Today's `1 + size` at the first node and `1 − size` at the last convert to two
-  points joined by a cubic with auto handles, which with two points is that same straight line, so
-  every tree grows as before (CE8). `bias_size` samples the curve at the node's place; `bias_leaves`
-  divides by the curve's greatest value over the nodes instead of `1 + |size|`. A script converts
-  `reference/`. Leaves and Aim follow as their own chunk.
-- **The constraints** come from the field's reflect attributes, as a number row's look does: a
-  `@CurveAxes` attribute for x, `@ValueRange` for y, and the presets as a list of curves.
+- **The fields.** `Bias::size` is a `PlaceCurve`, arbor_day's form for a number along a parent:
+  `[place, value]` pairs, written as such, x the place from the first node to the last, y the
+  share of the reach. It translates to a `ScalarCurve` of cubic, auto segments for the editor and
+  the generator, and back from the editor's edits, the exemplar of a consumer storing only what
+  its constraints allow (CE8). Today's `1 + size` at the first node and `1 − size` at the last
+  convert to two points, which with auto handles is that same straight line, so every tree grows as
+  before; `scripts/size_curve.py` converts `reference/`. `bias_sizes` samples the curve at each
+  node's place; `bias_leaves` divides by the greatest over the nodes instead of `1 + |size|`.
+  Leaves and Aim follow as their own chunk.
+- **The constraints** are the form's (`PlaceCurve::constraints`): x from 0 to 1, the ends pinned,
+  cubic segments, auto handles, holding past the ends; y from the field's `@ValueRange`, its step
+  from `@Step`. An attribute for x waits for a curve over another domain (X63), the presets for
+  C155.
 - **The row** is a disclosure: collapsed, the caption and a thumbnail on one line; expanded, the
   feathers editor below it (the mock's first frame). Which rows are open lives in the panel's UI
   state.

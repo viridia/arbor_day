@@ -337,6 +337,30 @@ mod tests {
     }
 
     #[test]
+    fn a_place_curve_is_written_as_pairs_and_reads_back() {
+        let mut species = Species::default();
+        let bias = &mut species.limbs.levels[0].bias;
+        bias.state = OperatorState::On;
+        bias.settings.size.0[0][1] = 1.6;
+        let written = write(&species, &registry()).unwrap();
+        let file: serde_json::Value = serde_json::from_str(&written).unwrap();
+        assert_eq!(
+            file["limbs"][0]["bias"]["size"],
+            serde_json::json!([[0.0, 1.6], [1.0, 1.0]])
+        );
+        assert!(round_trip(&species) == species);
+        // A third point, past the template's two.
+        let read = edited(&species, |file| {
+            file["limbs"][0]["bias"]["size"] =
+                serde_json::json!([[0.0, 1.6], [0.5, 1.0], [1.0, 0.4]]);
+        })
+        .unwrap();
+        assert!(read.pruned.is_empty(), "{:?}", read.pruned);
+        let points = &read.species.limbs.levels[0].bias.settings.size.0;
+        assert_eq!(points, &[[0.0, 1.6], [0.5, 1.0], [1.0, 0.4]]);
+    }
+
+    #[test]
     fn a_bare_plant_has_no_tip_leaves() {
         // On in the default, so a file without them is bare.
         let mut species = Species::default();

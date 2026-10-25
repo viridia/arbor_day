@@ -128,6 +128,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C151  | Wander's spacing: kinks and the base run a Spacing apart, per level, in crown radii, 0.15 by default, so short twigs can kink (D17, TD3.4). |
 | C71   | Crown softness on the tip leaves, 0 by default: each card's normal blended toward the envelope's outward normal, the material double-sided at every weight, so nothing jumps above 0 and Panoply needs no material of its own (TD3.9); X13 withdrawn. Shots in `plans/gallery/shapes.py`. |
 | C152  | Cards bend with their twigs: a card along its twig runs from its base to the tip, its far half on along the twig's last stretch, and bends at each ring a straight card would miss by more than the detail threshold, so cards follow sagging and rising limbs (D27, TD3.9). Hemlock1 joins the golden trees. |
+| C145  | Bias Size as a curve: `src/curve/`'s model, view and path material ([curve-editor-design.md](curve-editor-design.md) 1, 3, 5.1), the path in a uniform array so it draws on WebGL2; Size stored as a `PlaceCurve` of `[place, value]` pairs, translated to and from the editor's form (design 6, CE8), the row a thumbnail over its ends' values; Leaves divides by the greatest node's size (TD3.3). `reference/` converted by `scripts/size_curve.py`, the golden trees unchanged. |
 
 ## Next
 
@@ -171,28 +172,22 @@ a migration or a new look land while the trees are few, the golden trees showing
      in one row; which, decided when built.
 
    E[2]
-3. **C145 Bias Size as a curve** (was X55, its gate passed): the first of the curve editor's
-   chunks, which are built to [curve-editor-design.md](curve-editor-design.md) (requirements in
-   [curve-editor.md](curve-editor.md), survey in
+3. **C155 The inline curve editor**, built to [curve-editor-design.md](curve-editor-design.md)
+   (requirements in [curve-editor.md](curve-editor.md), survey in
    [curve-editor-prior-art.md](curve-editor-prior-art.md), mock at
-   `https://claude.ai/artifact/JhDqLFzUGJo2neenUGNrQN`). Bias's Size becomes a `ScalarCurve`, so
-   a conifer's tip can narrow faster than its base (C143's floor works around it today). This
-   chunk: the model (design 1: the curve, its constraints, preparing and sampling, `apply`), its
-   unit tests, and Size converted to two points that grow every tree as before, `reference/`
-   converted by script. The row shows the curve as a thumbnail (design 3, 5.1: the flattener and
-   the path material moved from `bevy_reactor`), with number inputs for the two ends' values
-   until C155's editor replaces them, so Size stays editable. E[3]
-4. **C155 The inline curve editor**: the headless parts and the feathers editor (design 2 to 5),
+   `https://claude.ai/artifact/JhDqLFzUGJo2neenUGNrQN`): the headless parts and the feathers editor (design 2 to 5),
    inline in the Bias row (design 6): select, drag, insert, delete, cancel, the point's inputs,
    the grid and its labels; the edits applied with `ScalarCurve::apply`; its step in
-   `plans/widgets.py` (design 7). E[3]
-5. **C157 Bias Leaves and Aim as curves**: two more `ScalarCurve` fields, converted as Size was;
-   `bias_leaves` takes Size's greatest value over the nodes in place of `1 + |size|`. Decided
-   here: whether reach and angle take curves too. E[2]
-6. **C147 Sprigs as a list** (X37's format, ahead of its feature): the tip leaves' sprig becomes
+   `plans/widgets.py` (design 7). Also the curve row's margins, which C145's row lacks, and a
+   thumbnail that reads as a graph when the curve is flat, where today it reads as a separator
+   (a grid line or two, say). E[3]
+4. **C157 Bias Leaves and Aim as curves**: two more `ScalarCurve` fields, converted as Size was
+   (`scripts/size_curve.py` generalized). Decided here: whether reach and angle take curves too.
+   E[2]
+5. **C147 Sprigs as a list** (X37's format, ahead of its feature): the tip leaves' sprig becomes
    a list holding one, the panel showing it as now, so several sprigs (X37) later need no
    migration. `reference/` converted. E[1]
-7. **C8 Working document in settings.** A settings group holding the working species and, once
+6. **C8 Working document in settings.** A settings group holding the working species and, once
    set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
    as seedling did. The document's name comes from the file name. Serialized by reflection, as
    `bevy_settings` does. A working document from before a schema change is lost (D32), but not
@@ -201,14 +196,13 @@ a migration or a new look land while the trees are few, the golden trees showing
    read as a species file is (C124, TD2.3), its pruned fields logged and the document marked
    edited. Stored as a list of open documents holding
    one, and the active one's index, so several (X26) need no change of format. E[3]
-8. **C113 File format freeze**, at D32's gate: from here a change that renames, moves or removes
+7. **C113 File format freeze**, at D32's gate: from here a change that renames, moves or removes
    a species field, or changes its type, needs a migration (X15). Before it, each item below
    either lands, is dropped, or is accepted as a later migration; prune the list as those
    choices are made. E[1], the items aside.
    - **Migrated**, a field's type or meaning changing, `reference/` converted in the same chunk:
-     - C145 Bias Size as a curve: Size's number becomes a two-point curve, with no change of
-       output.
-     - C157 Bias Leaves and Aim as curves: the same for Leaves and Aim.
+     - C157 Bias Leaves and Aim as curves: their numbers become two-point curves, as Size's did
+       (C145), with no change of output.
      - C147 Sprigs as a list: the tip leaves' one sprig becomes a list of one.
    - **Output changed**, files reading as before but growing differently, each tree judged close
      enough, retuned, or the change put behind an option:
@@ -530,12 +524,15 @@ a migration or a new look land while the trees are few, the golden trees showing
   antialiasing of their own. The handles stay UI nodes and must draw over the curve, which over
   the panel, so it needs the proposal's anchoring and render bands (its steps 2 and 3) and none
   of its surfaces. Only the plot layer changes; model and editor stay. *Gate:* C155 landed on
-  `draw_path`.
+  the path material.
 
-- **X62** Hand-set direction handles in the curve editor: aligned and free handles, their drag and
-  their input rows, weighted segments in sampling ([curve-editor-design.md](curve-editor-design.md),
-  1.2, 1.4; CE34, CE37). Bias curves need only auto handles. *Gate:* a curve that needs them,
-  such as the crown profile as a curve or an easing curve.
+- **X62** Aligned and free handles in the curve editor: their drag, their input rows (CE34,
+  CE37), and `examples/curve_editor.rs`, one editor allowing every kind and mode, as the stage for
+  a video of handle dragging. The model holds them since C145 (weighted sampling, the clamps);
+  arbor_day's curves allow auto handles only. The crown profile as a curve could use them (an
+  hourglass crown), though whether authors should shape a crown that way is open. The leaf
+  outline is not a customer: its handles may point back past the base (ivy), so it is no
+  function of length. *Gate:* C155 landed.
 
 - **X59** Zoom and pan in the curve editor, for handles that reach past the curve. A slope tangent
   drawn at a fixed length on screen, so only handles whose length means something (Bézier
@@ -545,6 +542,10 @@ a migration or a new look land while the trees are few, the golden trees showing
   the inline editor; a larger host may draw them from the view (CE36), the wheel over one zooming
   its axis.
   The model bounds the view (x in 0 to 1), the editor owns it within them. *Gate:* X62 landed.
+
+- **X63** A curve field's x axis from an attribute: today every curve row takes x from 0 to 1, its
+  ends pinned, as a place along the parent ([curve-editor-design.md](curve-editor-design.md), 6).
+  *Gate:* a curve over another domain, such as height in metres.
 
 
 ## Notes

@@ -1,6 +1,7 @@
 //! The property editor: panel rows for the fields of a reflected struct, one row per field, each
 //! named after its field. Booleans get a checkbox, numbers a number input, fuzzy numbers a center,
-//! a spread and a shape toggle, colors a swatch that opens a picker, enums of unit variants a
+//! a spread and a shape toggle, colors a swatch that opens a picker, curves a thumbnail over
+//! inputs for their ends' values, enums of unit variants a
 //! select, nested structs a subpane of rows of their own, or in a subpane a heading over them, or
 //! with [`Flatten`] their rows in place of their own, an array with a [`ShownCount`] a subpane per
 //! shown item, and every other field a label giving its
@@ -61,9 +62,11 @@ use bevy_immediate::{
 };
 
 use crate::{
+    curve::{CurveAxis, CurveConstraints, CurveEditOp, CurveValue, ScalarCurve, curve_thumbnail},
     fuzzy::{Distribution, Fuzzy, Interval},
     random::Seed,
     shortcut::shortcut,
+    species::PlaceCurve,
     spread_strip::{StripRange, spread_strip},
     toggle::{OperatorState, set_toggle_state, toggle_state},
 };
@@ -95,8 +98,18 @@ impl_capability_set!(
         color_plane::CapabilityUiColorPlane,
         CapabilityEnumSelect,
         CapabilityColorInput,
+        CapabilityCurve,
     )
 );
+
+/// Lets the panel read the curve a thumbnail shows.
+pub struct CapabilityCurve;
+
+impl ImmCapability for CapabilityCurve {
+    fn build<Caps: CapSet>(app: &mut App, cap_req: &mut ImmCapAccessRequests<Caps>) {
+        cap_req.request_component_read::<CurveValue>(app.world_mut());
+    }
+}
 
 /// Lets the panel bind a feathers color input: read the color it shows, and take the color the
 /// user last picked.
@@ -407,6 +420,20 @@ fn field_row(
         interval_row(row, name, caption, attrs, interval);
     } else if let Some(seed) = field.try_downcast_mut::<Seed>() {
         seed_row(row, name, caption, seed);
+    } else if let Some(place) = field.try_downcast_mut::<PlaceCurve>() {
+        let mut curve = place.curve();
+        curve_row(
+            row,
+            name,
+            caption,
+            attrs,
+            PlaceCurve::constraints,
+            &mut curve,
+        );
+        let edited = PlaceCurve::from_curve(&curve);
+        if edited != *place {
+            *place = edited;
+        }
     } else if let Some(number) = field.try_downcast_mut::<f32>() {
         number_row(row, name, caption, attrs, number);
     } else if let Some(number) = field.try_downcast_mut::<f64>() {
@@ -979,6 +1006,69 @@ fn seed_row(row: ImmEntity<CapsPanel>, name: &'static str, caption: &'static str
                     || bsn! { @icon("icons/ifl.png") Node { height: px(18) } },
                 );
             });
+        });
+    });
+}
+
+/// A curve's row: its caption and a thumbnail named `thumbnail`, then number inputs for its first
+/// and last points' values, named `start` and `end`. The edits are judged by the constraints
+/// that `constraints` builds from the y axis, which the field's [`ValueRange`] bounds.
+fn curve_row(
+    row: ImmEntity<CapsPanel>,
+    name: &'static str,
+    caption: &'static str,
+    attrs: &CustomAttributes,
+    constraints: impl FnOnce(CurveAxis) -> CurveConstraints,
+    curve: &mut ScalarCurve,
+) {
+    let look = NumberLook::from_attributes::<f32>(attrs);
+    let mut y = CurveAxis::unit();
+    if let Some(NumericRange::F32(range)) = &look.range {
+        y = CurveAxis {
+            min: *range.start(),
+            max: *range.end(),
+            clamped: true,
+            step: look.step.map_or(0.01, |step| step as f32),
+        };
+    }
+    let constraints = constraints(y);
+    row.on_spawn_insert(move || row_node(name)).add(|ui| {
+        ui.ch().on_spawn_insert(caption_line).add(|ui| {
+            ui.ch().on_spawn_apply_scene(move || label(caption));
+            let initial = (CurveValue(curve.clone()), constraints.clone());
+            let mut thumbnail = ui
+                .ch_id("thumbnail")
+                .on_spawn_apply_scene(curve_thumbnail)
+                .on_spawn_insert(move || (Name::new("thumbnail"), initial.clone()));
+            if !thumbnail.will_be_spawned() {
+                let shown = thumbnail.cap_get_component::<CurveValue>().ok().flatten();
+                if shown.is_none_or(|shown| shown.0 != *curve) {
+                    thumbnail
+                        .entity_commands()
+                        .insert(CurveValue(curve.clone()));
+                }
+            }
+        });
+        let Some(last) = curve.points.len().checked_sub(1) else {
+            return;
+        };
+        ui.ch().on_spawn_insert(widget_line).add(|ui| {
+            for (input, label, index) in [("start", "Start", 0), ("end", "End", last)] {
+                let point = curve.points[index];
+                let mut y = point.y;
+                number_input(
+                    ui.ch_id(input),
+                    input,
+                    Some(label),
+                    look.clone(),
+                    Val::Auto,
+                    &mut y,
+                );
+                if y != point.y {
+                    let set = CurveEditOp::SetPoint(index, Vec2::new(point.x, y));
+                    curve.apply(&set, &constraints);
+                }
+            }
         });
     });
 }
