@@ -57,6 +57,14 @@ pub enum CurveGesture {
         offset: Vec2,
         axes: [CurveAxis; 2],
     },
+    /// Selecting the points of `curve` inside the rectangle from `from` to `to`, in the curve's
+    /// units, as well as those selected before it began (`base`).
+    SelectRect {
+        curve: Entity,
+        from: Vec2,
+        to: Vec2,
+        base: Vec<PointRef>,
+    },
 }
 
 impl CurveGesture {
@@ -92,7 +100,45 @@ pub(super) fn plugin(app: &mut App) {
         .add_observer(end_drag)
         .add_observer(release_plot)
         .add_observer(cancel_on_removal)
-        .add_observer(delete_selected);
+        .add_observer(plot_keys);
+}
+
+/// `base` and the points of `curve`, held by entity `owner`, inside the rectangle from `from` to
+/// `to`.
+fn rect_selection(
+    curve: &ScalarCurve,
+    owner: Entity,
+    from: Vec2,
+    to: Vec2,
+    base: &[PointRef],
+) -> Vec<PointRef> {
+    let (min, max) = (from.min(to), from.max(to));
+    let mut points = base.to_vec();
+    for (index, point) in curve.points.iter().enumerate() {
+        let at = Vec2::new(point.x, point.y);
+        let point = PointRef {
+            curve: owner,
+            index,
+        };
+        if at.cmpge(min).all() && at.cmple(max).all() && !points.contains(&point) {
+            points.push(point);
+        }
+    }
+    points
+}
+
+/// The point Tab selects among `count`, the `selected` indices in order, or the previous one with
+/// Shift (`back`); none past either end, so focus moves on.
+fn tab_point(selected: &[usize], count: usize, back: bool) -> Option<usize> {
+    if back {
+        match selected.first() {
+            None => count.checked_sub(1),
+            Some(&index) => index.checked_sub(1),
+        }
+    } else {
+        let next = selected.last().map_or(0, |&index| index + 1);
+        (next < count).then_some(next)
+    }
 }
 
 /// A plot with gestures, and the curve it shows.
@@ -191,7 +237,8 @@ fn leave_plot(event: On<PointerLeave>, mut hovers: Query<(&CurveGesture, &mut Cu
 }
 
 /// A press on a point selects it, or with Shift or Ctrl adds it or takes it away, and starts
-/// moving the selection. A press elsewhere clears the selection; a second one inserts a point.
+/// moving the selection. A press elsewhere clears the selection, unless adding, and starts a
+/// rectangle. A second press inserts a point, or on a point deletes it.
 fn press_plot(
     mut press: On<PointerPress>,
     plots: Plots,
@@ -224,8 +271,10 @@ fn press_plot(
         KeyCode::SuperLeft,
         KeyCode::SuperRight,
     ]);
+    // Clicks in quick succession keep counting, so two quick double-clicks are a fourth click.
+    let double = press.count.is_multiple_of(2);
     let Some(index) = plot.hit(local) else {
-        if press.count == 2 {
+        if double {
             if let Ok(mut seen) = seen.get_mut(curve) {
                 seen.sent = Some(Sent::Insert);
             }
@@ -235,11 +284,35 @@ fn press_plot(
                 op: CurveEditOp::Insert(plot.view.to_curve(local)),
                 phase: CurveEditPhase::Finish,
             });
-        } else if !adding && !selection.points.is_empty() {
+            return;
+        }
+        if !adding && !selection.points.is_empty() {
             selection.points.clear();
         }
+        let at = plot.view.to_curve(local);
+        if let Ok(mut current) = gestures.get_mut(press.entity) {
+            *current = CurveGesture::SelectRect {
+                curve,
+                from: at,
+                to: at,
+                base: selection.points.clone(),
+            };
+        }
+        capture.capture(press.pointer.id, press.entity, press.hit.clone());
         return;
     };
+    if double {
+        if let Ok(mut seen) = seen.get_mut(curve) {
+            seen.sent = Some(Sent::Delete(vec![index]));
+        }
+        commands.trigger(CurveEdit {
+            editor: curve,
+            curve,
+            op: CurveEditOp::Delete(vec![index]),
+            phase: CurveEditPhase::Finish,
+        });
+        return;
+    }
     let point = PointRef { curve, index };
     let selected = selection.points.contains(&point);
     if adding && selected {
@@ -281,6 +354,7 @@ fn drag_points(
     mut drag: On<PointerDrag>,
     plots: Plots,
     mut gestures: Query<&mut CurveGesture>,
+    mut selections: Query<&mut CurveSelection>,
     mut commands: Commands,
 ) {
     let (Some(plot), Ok(mut gesture)) = (plots.get(drag.entity), gestures.get_mut(drag.entity))
@@ -288,11 +362,27 @@ fn drag_points(
         return;
     };
     drag.propagate(false);
-    let CurveGesture::MovePoints { curve, offset, .. } = gesture.as_mut() else {
-        return;
+    let moved = plot.view.delta_to_curve(drag.distance / plots.ui_scale.0);
+    let curve = match gesture.as_mut() {
+        CurveGesture::Idle => return,
+        CurveGesture::SelectRect {
+            curve,
+            from,
+            to,
+            base,
+        } => {
+            *to = *from + moved;
+            let points = rect_selection(plot.curve, *curve, *from, *to, base);
+            if let Ok(mut selection) = selections.get_mut(*curve) {
+                selection.set_if_neq(CurveSelection { points });
+            }
+            return;
+        }
+        CurveGesture::MovePoints { curve, offset, .. } => {
+            *offset = moved;
+            *curve
+        }
     };
-    let curve = *curve;
-    *offset = plot.view.delta_to_curve(drag.distance / plots.ui_scale.0);
     if let Some(op) = gesture.proposed() {
         commands.trigger(CurveEdit {
             editor: curve,
@@ -318,7 +408,13 @@ fn end_drag(
     if let CurveGesture::MovePoints { offset, .. } = gesture.as_mut() {
         *offset = plot.view.delta_to_curve(drag.distance / plots.ui_scale.0);
     }
-    finish(&mut gesture, drag.pointer.id, &mut capture, &mut commands);
+    finish(
+        &mut gesture,
+        drag.entity,
+        drag.pointer.id,
+        &mut capture,
+        &mut commands,
+    );
 }
 
 /// A press that never became a drag ends here; a drag ends at whichever of its end and the release
@@ -333,6 +429,7 @@ fn release_plot(
         release.propagate(false);
         finish(
             &mut gesture,
+            release.entity,
             release.pointer.id,
             &mut capture,
             &mut commands,
@@ -340,20 +437,27 @@ fn release_plot(
     }
 }
 
+/// Ends the gesture on `plot`, and releases the pointer if the plot holds it, which it still does
+/// after Escape ended the gesture early.
 fn finish(
-    gesture: &mut CurveGesture,
+    gesture: &mut Mut<CurveGesture>,
+    plot: Entity,
     pointer: PointerId,
     capture: &mut PointerCaptureMap,
     commands: &mut Commands,
 ) {
-    let ended = std::mem::take(gesture);
-    if let (CurveGesture::MovePoints { curve, .. }, Some(op)) = (&ended, ended.proposed()) {
-        commands.trigger(CurveEdit {
-            editor: *curve,
-            curve: *curve,
-            op,
-            phase: CurveEditPhase::Finish,
-        });
+    if **gesture != CurveGesture::Idle {
+        let ended = std::mem::take(gesture.as_mut());
+        if let (CurveGesture::MovePoints { curve, .. }, Some(op)) = (&ended, ended.proposed()) {
+            commands.trigger(CurveEdit {
+                editor: *curve,
+                curve: *curve,
+                op,
+                phase: CurveEditPhase::Finish,
+            });
+        }
+    }
+    if capture.get(&pointer).is_some_and(|(held, _)| held == plot) {
         capture.release(pointer);
     }
 }
@@ -384,44 +488,110 @@ fn cancel_on_removal(
     });
 }
 
-/// Delete or Backspace, on a focused plot, deletes the selection.
-fn delete_selected(
+/// Keys on a focused plot. Escape cancels the gesture in progress: a move proposes its snapshot, a
+/// rectangle restores the selection it began with. While idle, Delete and Backspace delete the
+/// selection; arrows move it by a step of the axis, ten with Shift; Tab selects the next point,
+/// with Shift the previous one, and past either end lets focus move on.
+fn plot_keys(
     mut input: On<FocusedInput<KeyboardInput>>,
     plots: Plots,
-    gestures: Query<&CurveGesture>,
-    selections: Query<&CurveSelection>,
+    keys: Res<ButtonInput<KeyCode>>,
+    mut gestures: Query<&mut CurveGesture>,
+    mut selections: Query<&mut CurveSelection>,
     mut seen: Query<&mut SeenCurve>,
     mut commands: Commands,
 ) {
     let plot_entity = input.focused_entity;
-    let key = &input.input;
-    if key.state != ButtonState::Pressed
-        || !matches!(key.key_code, KeyCode::Delete | KeyCode::Backspace)
-    {
+    let (code, state) = (input.input.key_code, input.input.state);
+    if state != ButtonState::Pressed {
         return;
     }
-    let (Some(plot), Ok(CurveGesture::Idle)) = (plots.get(plot_entity), gestures.get(plot_entity))
+    let (Some(plot), Ok(mut gesture)) = (plots.get(plot_entity), gestures.get_mut(plot_entity))
     else {
         return;
     };
-    input.propagate(false);
     let curve = plot.curve_entity;
-    let indices = selections
-        .get(curve)
-        .map(|selection| selection.indices(curve))
-        .unwrap_or_default();
-    if indices.is_empty() {
+    let Ok(mut selection) = selections.get_mut(curve) else {
         return;
+    };
+    let shift = keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]);
+    let selected = selection.indices(curve);
+    let idle = *gesture == CurveGesture::Idle;
+    let handled = match code {
+        KeyCode::Escape if !idle => {
+            match std::mem::take(gesture.as_mut()) {
+                CurveGesture::MovePoints {
+                    curve, snapshot, ..
+                } => commands.trigger(CurveEdit {
+                    editor: curve,
+                    curve,
+                    op: CurveEditOp::Move(snapshot),
+                    phase: CurveEditPhase::Cancel,
+                }),
+                CurveGesture::SelectRect { base, .. } => {
+                    selection.set_if_neq(CurveSelection { points: base });
+                }
+                CurveGesture::Idle => {}
+            }
+            true
+        }
+        _ if !idle => false,
+        KeyCode::Tab => match tab_point(&selected, plot.curve.points.len(), shift) {
+            Some(index) => {
+                selection.points = vec![PointRef { curve, index }];
+                true
+            }
+            None => false,
+        },
+        _ if selected.is_empty() => false,
+        KeyCode::Delete | KeyCode::Backspace => {
+            if let Ok(mut seen) = seen.get_mut(curve) {
+                seen.sent = Some(Sent::Delete(selected.clone()));
+            }
+            commands.trigger(CurveEdit {
+                editor: curve,
+                curve,
+                op: CurveEditOp::Delete(selected),
+                phase: CurveEditPhase::Finish,
+            });
+            true
+        }
+        KeyCode::ArrowLeft | KeyCode::ArrowRight | KeyCode::ArrowUp | KeyCode::ArrowDown => {
+            let direction = match code {
+                KeyCode::ArrowLeft => Vec2::NEG_X,
+                KeyCode::ArrowRight => Vec2::X,
+                KeyCode::ArrowUp => Vec2::Y,
+                _ => Vec2::NEG_Y,
+            };
+            let (x, y) = (&plot.constraints.x, &plot.constraints.y);
+            let steps = if shift { 10.0 } else { 1.0 };
+            let delta = direction * Vec2::new(x.step, y.step) * steps;
+            // Only the coordinate moved is rounded, so the other keeps whatever it held.
+            let moves = (selected.iter())
+                .filter_map(|&index| {
+                    let point = plot.curve.points.get(index)?;
+                    let at = Vec2::new(point.x, point.y) + delta;
+                    let at = if delta.x != 0.0 {
+                        Vec2::new(x.round(at.x), at.y)
+                    } else {
+                        Vec2::new(at.x, y.round(at.y))
+                    };
+                    Some((index, at))
+                })
+                .collect();
+            commands.trigger(CurveEdit {
+                editor: curve,
+                curve,
+                op: CurveEditOp::Move(moves),
+                phase: CurveEditPhase::Finish,
+            });
+            true
+        }
+        _ => false,
+    };
+    if handled {
+        input.propagate(false);
     }
-    if let Ok(mut seen) = seen.get_mut(curve) {
-        seen.sent = Some(Sent::Delete(indices.clone()));
-    }
-    commands.trigger(CurveEdit {
-        editor: curve,
-        curve,
-        op: CurveEditOp::Delete(indices),
-        phase: CurveEditPhase::Finish,
-    });
 }
 
 #[cfg(test)]
@@ -448,6 +618,44 @@ mod tests {
         assert_eq!(index, 1);
         assert!((at.x - 0.6).abs() < 1e-6, "{at}");
         assert!((at.y - 0.6).abs() < 1e-6, "{at}");
+    }
+
+    #[test]
+    fn a_rectangle_adds_the_points_inside_it_to_its_base() {
+        let curve = ScalarCurve {
+            points: [(0.0, 0.5), (0.3, 0.6), (0.6, 0.2), (1.0, 0.9)]
+                .into_iter()
+                .map(|(x, y)| crate::curve::CurvePoint { x, y, ..default() })
+                .collect(),
+            extrapolation: crate::curve::CurveExtrapolation::Hold,
+        };
+        let owner = Entity::PLACEHOLDER;
+        let at = |index| PointRef {
+            curve: owner,
+            index,
+        };
+        // Dragged up and to the left: the corners in either order.
+        let inside = rect_selection(&curve, owner, Vec2::new(0.7, 0.1), Vec2::new(0.2, 0.7), &[]);
+        assert_eq!(inside, vec![at(1), at(2)]);
+        let added = rect_selection(
+            &curve,
+            owner,
+            Vec2::new(0.2, 0.1),
+            Vec2::new(0.7, 0.7),
+            &[at(2), at(3)],
+        );
+        assert_eq!(added, vec![at(2), at(3), at(1)]);
+    }
+
+    #[test]
+    fn tab_steps_through_the_points_and_out_past_either_end() {
+        assert_eq!(tab_point(&[], 3, false), Some(0));
+        assert_eq!(tab_point(&[], 3, true), Some(2));
+        assert_eq!(tab_point(&[0, 1], 3, false), Some(2));
+        assert_eq!(tab_point(&[1, 2], 3, true), Some(0));
+        assert_eq!(tab_point(&[2], 3, false), None);
+        assert_eq!(tab_point(&[0], 3, true), None);
+        assert_eq!(tab_point(&[], 0, false), None);
     }
 
     #[test]

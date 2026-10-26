@@ -104,7 +104,8 @@ Requirements are numbered `CE<n>`; a number is never reused.
 - **CE23 M** One gesture is active at a time: idle, moving the selected points, moving a handle,
   or selecting by rectangle.
 - **CE24 M** Clicking a point selects it. Dragging moves it, kept between its neighbours' x.
-  Double-clicking inserts a point. Delete or Backspace deletes the selection.
+  Double-clicking empty space inserts a point, and double-clicking a point deletes it. Delete or
+  Backspace deletes the selection.
 - **CE25 M** When exactly one point is selected, its x and y are shown in feathers number inputs,
   which can be typed into or scrubbed. With none or several selected, the inputs are hidden or
   disabled.

@@ -210,7 +210,8 @@ interaction in progress is one value, as in `bevy_reactor`'s node graph (CE23):
 pub enum CurveGesture {
     Idle,
     MovePoints { curve: Entity, snapshot: Vec<(usize, Vec2)>, offset: Vec2, axes: [CurveAxis; 2] },
-    // To come: MoveHandle (X62), SelectRect (C156).
+    SelectRect { curve: Entity, from: Vec2, to: Vec2, base: Vec<PointRef> },
+    // To come: MoveHandle (X62).
 }
 ```
 
@@ -228,11 +229,19 @@ They are on the plot node, `CurveGestures`, beside `CurveHover` and `CurveHitRad
   drag sends `Start` and
   `Finish` with the points where they were; it ends at the drag's end or the release, whichever
   comes first. The editor captures the pointer for it, as the slider does.
+- **A rectangle** runs from the press to the pointer, in the curve's units, so a view that zooms
+  leaves it alone. The selection is the points inside it, after those selected at the press
+  (`base`) when adding, updated as it is dragged. The feathers editor draws it in the selection's
+  color, outlined and faintly filled.
 - **The plot despawned mid-drag** sends `Cancel` with the snapshot, if the editor is still there.
-- **Double-click** inserts: a `PointerPress` whose `count` is 2.
+- **Double-click**, a `PointerPress` whose `count` is even, so two quick double-clicks are two,
+  inserts a point on empty space and
+  deletes one on a point; the consumer refuses a pinned end's delete.
 - **Keys**, while the plot has focus: Delete and Backspace delete the selection; arrows move it by
-  the axis step, a modifier for ten steps; Tab moves to the next point; Escape cancels a drag
-  (CE28).
+  the axis step, Shift for ten steps, rounding only the coordinate moved; Tab selects the next
+  point and Shift+Tab the previous, as a radio group moves its focus, and past either end lets
+  focus leave the plot; Escape cancels a move, proposing its snapshot, or a rectangle, restoring
+  `base` (CE28). Escape leaves the pointer captured until its release.
 
 ## 5. The feathers editor
 
@@ -282,8 +291,8 @@ plot of 300 × 170 pixels is cheap.
 - **The constraints** are the form's (`PlaceCurve::constraints`): x from 0 to 1 to hundredths,
   the ends pinned, cubic segments, auto handles, holding past the ends; y from the field's
   `@ValueRange`, its step from `@Step`, its precision from `@Precision` in the field's units (1%
-  for Bias). An attribute for x waits for a curve over another domain (X63), the presets for
-  C156.
+  for Bias). An attribute for x waits for a curve over another domain (X63). The menu offers
+  Reset alone (C156c); presets wait for the crown profile.
 - **The row** is a disclosure: collapsed, the toggle, caption and a thumbnail on one line;
   expanded, the feathers editor below it (the mock's first frame), its inputs captioned Position and
   the field's caption, x labelled Base, Middle and Tip. Whether a row is open is its toggle's

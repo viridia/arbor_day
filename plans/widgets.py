@@ -7,9 +7,10 @@
 - a checkbox: the outline, whose bark hull hides when it is cleared;
 - a color field's row: a swatch that opens a picker, where a typed color tints the trunk;
 - a curve's row: Bias's Size as a thumbnail, opened into its editor, where a point is selected
-  and typed into, a double-click inserts one and Delete removes it; then a step and a steep rise,
-  judged by eye for facets and an even width. The driver cannot drag, so dragging a point is
-  checked by hand."""
+  and typed into, a double-click inserts one and Delete removes it, Tab selects the next point and
+  arrows move it, and a double-click on a point deletes it; then a step and a steep rise, judged by eye for facets and an even width. The
+  driver cannot drag, so dragging a point, selecting by rectangle and Escape are checked by
+  hand."""
 
 from driver import Between
 
@@ -143,6 +144,27 @@ def run(driver):
     driver.present(f"{size}/editor/plot/point2")
     driver.screenshot("curve_inserted")
     driver.key("Delete")
+    driver.absent(f"{size}/editor/plot/point2")
+    driver.expect("Plant", GROWN_FROM, Between(0.99, 1.01), at="limbs[0].bias.size[1][0]")
+    # Keys, the plot still focused and nothing selected: Tab selects the base, an arrow moves it
+    # a step of 1%, ten with Shift; Tab again selects the tip.
+    driver.key("Tab")
+    driver.key("ArrowDown")
+    driver.expect("Plant", GROWN_FROM, Between(0.985, 0.995), at="limbs[0].bias.size[0][1]")
+    driver.press("ShiftLeft")
+    driver.key("ArrowUp")
+    driver.release("ShiftLeft")
+    driver.expect("Plant", GROWN_FROM, Between(1.085, 1.095), at="limbs[0].bias.size[0][1]")
+    driver.key("Tab")
+    driver.key("ArrowDown")
+    driver.expect("Plant", GROWN_FROM, Between(0.385, 0.395), at="limbs[0].bias.size[1][1]")
+    driver.expect("Plant", GROWN_FROM, Between(1.085, 1.095), at="limbs[0].bias.size[0][1]")
+    # A double-click on a point deletes it: one inserted at the middle again, then removed.
+    driver.click(f"{size}/editor/plot")
+    driver.click(f"{size}/editor/plot")
+    driver.present(f"{size}/editor/plot/point2")
+    driver.click(f"{size}/editor/plot/point1")
+    driver.click(f"{size}/editor/plot/point1")
     driver.absent(f"{size}/editor/plot/point2")
     driver.expect("Plant", GROWN_FROM, Between(0.99, 1.01), at="limbs[0].bias.size[1][0]")
     # A step at the middle and a steep rise after it.

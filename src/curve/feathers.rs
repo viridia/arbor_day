@@ -6,7 +6,7 @@ use bevy::{
         controls::{
             FeathersNumberInput, HardLimit, NumberInputPrecision, NumberInputUnits, UnitsRegistry,
         },
-        theme::{ThemeBackgroundColor, ThemeBorderColor, ThemeTextColor, ThemeToken},
+        theme::{ThemeBackgroundColor, ThemeBorderColor, ThemeTextColor, ThemeToken, UiTheme},
         tokens,
     },
     input_focus::{Focusable, tab_navigation::TabIndex},
@@ -19,7 +19,7 @@ use bevy::{
 
 use super::{
     edit::{CurveEdit, CurveEditPhase, CurveSelection, PointRef, SeenCurve},
-    gesture::{CurveGestures, CurveHover},
+    gesture::{CurveGesture, CurveGestures, CurveHover},
     model::{CurveConstraints, CurveEditOp, CurveValue, PinEnds},
     plot::CurveStroke,
     view::{CurvePlot, CurveView},
@@ -41,6 +41,11 @@ const HALF_LABEL: f32 = 7.0;
 /// The grid at a quarter of each axis, the ends and middle drawn brighter.
 const GRID_MINOR: ThemeToken = tokens::PANE_BODY_BG;
 const GRID_MAJOR: ThemeToken = tokens::GROUP_BORDER;
+
+/// The selection's color: a selected point's ring, and the rectangle's outline and, faintly, its
+/// fill.
+const SELECTION: ThemeToken = tokens::CHECKBOX_BG_CHECKED;
+const SELECTION_FILL_ALPHA: f32 = 0.14;
 
 /// A curve drawn small, with no gestures, as a collapsed row shows it. Insert a [`CurveValue`]
 /// and its [`CurveConstraints`] on the same entity, and write the value when the curve changes.
@@ -156,6 +161,19 @@ pub fn curve_editor(x_caption: &'static str, y_caption: &'static str) -> impl Sc
                     Focusable
                     TabIndex(0)
                     @fill()
+                    Children [
+                        // Before the markers, which the editor adds as the curve's points, so
+                        // they draw over it.
+                        SelectionRectOutline
+                        Node {
+                            position_type: PositionType::Absolute,
+                            display: Display::None,
+                            border: UiRect::all(px(1)),
+                        }
+                        ThemeBorderColor(SELECTION)
+                        BackgroundColor
+                        Pickable::IGNORE
+                    ]
                 ]
                 --
                 // The x labels: the first starts at its line, the last ends at its, the middle
@@ -275,6 +293,10 @@ struct PointInput {
     y: bool,
 }
 
+/// The rectangle being dragged out on the plot it is a child of, hidden while there is none.
+#[derive(Component, Clone, Copy, Debug, Default)]
+struct SelectionRectOutline;
+
 /// A node marking point `index` of the plot it is a child of.
 #[derive(Component, Clone, Copy, Debug)]
 struct PointMarker {
@@ -295,7 +317,7 @@ impl MarkerLook {
         match self {
             Self::Plain => (4.0, 1.5, tokens::TEXT_MAIN, tokens::WINDOW_BG),
             Self::Hovered => (4.0, 1.5, tokens::BUTTON_TEXT, tokens::WINDOW_BG),
-            Self::Selected => (5.0, 2.5, tokens::BUTTON_TEXT, tokens::CHECKBOX_BG_CHECKED),
+            Self::Selected => (5.0, 2.5, tokens::BUTTON_TEXT, SELECTION),
         }
     }
 }
@@ -305,6 +327,7 @@ pub(super) fn plugin(app: &mut App) {
         PostUpdate,
         (
             place_markers,
+            place_selection_rect,
             label_axes,
             show_selected_point.after(super::edit::follow_point_count),
         )
@@ -403,6 +426,49 @@ fn place_markers(
     }
 }
 
+/// Draws the rectangle being dragged out on each plot, and hides it otherwise.
+fn place_selection_rect(
+    plots: Query<
+        (Entity, &CurvePlot, &ComputedNode, &CurveGesture, &Children),
+        Changed<CurveGesture>,
+    >,
+    parents: Query<&ChildOf>,
+    curves: Query<&CurveConstraints>,
+    mut outlines: Query<(&mut Node, &mut BackgroundColor), With<SelectionRectOutline>>,
+    theme: Res<UiTheme>,
+) {
+    for (plot, settings, node, gesture, children) in &plots {
+        let rect = match gesture {
+            CurveGesture::SelectRect { from, to, .. } => Some((*from, *to)),
+            _ => None,
+        };
+        let owner = super::view::curve_owner(plot, &parents, |owner| curves.contains(owner));
+        let constraints = owner.and_then(|owner| curves.get(owner).ok());
+        for child in children {
+            let Ok((mut outline, mut fill)) = outlines.get_mut(*child) else {
+                continue;
+            };
+            let (Some((from, to)), Some(constraints)) = (rect, constraints) else {
+                outline.display = Display::None;
+                continue;
+            };
+            let size = node.size() * node.inverse_scale_factor();
+            let view = CurveView::new(constraints, size, settings.inset);
+            let (a, b) = (view.to_pixels(from), view.to_pixels(to));
+            let (min, max) = (a.min(b), a.max(b));
+            outline.display = Display::Flex;
+            outline.left = px(min.x);
+            outline.top = px(min.y);
+            outline.width = px(max.x - min.x);
+            outline.height = px(max.y - min.y);
+            // A theme token has no alpha of its own, so the fill is set from the theme here.
+            fill.set_if_neq(BackgroundColor(
+                theme.color(&SELECTION).with_alpha(SELECTION_FILL_ALPHA),
+            ));
+        }
+    }
+}
+
 /// Writes each grid label from its editor's axes and format.
 fn label_axes(
     editors: Query<
@@ -443,8 +509,8 @@ fn label_axes(
 }
 
 /// Shows the selected point's x and y in the inputs, which are enabled only while exactly one
-/// point is selected, and only for a coordinate the constraints let it move in. Each input rounds
-/// to its axis's precision, written in the input's units.
+/// point is selected, and only for a coordinate the constraints let it move in; with none or
+/// several, they show 0. Each input rounds to its axis's precision, written in the input's units.
 fn show_selected_point(
     editors: Query<
         (
@@ -512,11 +578,14 @@ fn show_selected_point(
                     entity.insert(InteractionDisabled);
                 }
             }
-            if let Some((_, at)) = point {
-                let value = NumericValue::F32(if input.y { at.y } else { at.x });
-                if *shown != value || configure {
-                    entity.insert(value);
-                }
+            // With no single point, 0 stands in for showing no value (X65).
+            let value = NumericValue::F32(match point {
+                Some((_, at)) if input.y => at.y,
+                Some((_, at)) => at.x,
+                None => 0.0,
+            });
+            if *shown != value || configure {
+                entity.insert(value);
             }
         }
     }
