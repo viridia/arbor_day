@@ -6,7 +6,10 @@
   plant, and picking a limb level's facing sets it;
 - a checkbox: the outline, whose bark hull hides when it is cleared;
 - a color field's row: a swatch that opens a picker, where a typed color tints the trunk;
-- a curve's row: Bias's Size as a thumbnail, its ends typed into the inputs below it."""
+- a curve's row: Bias's Size as a thumbnail, opened into its editor, where a point is selected
+  and typed into, a double-click inserts one and Delete removes it; then a step and a steep rise,
+  judged by eye for facets and an even width. The driver cannot drag, so dragging a point is
+  checked by hand."""
 
 from driver import Between
 
@@ -121,12 +124,35 @@ def run(driver):
     driver.absent(f"{COLOR}/wheel")
     driver.screenshot("closed")
 
-    # A curve: the first level's Bias Size, flat at 100% by default, then a conifer's taper.
+    # A curve: the first level's Bias Size, flat at 100% by default. A click lands on the plot
+    # under a point's marker, which selects that point.
     driver.set_resource(SPECIES, "On", at="limbs.levels[0].bias.state")
-    driver.present(f"{LIMBS}/bias/size/thumbnail")
-    retype(driver, f"{LIMBS}/bias/size/start", "160")
-    driver.expect("Plant", GROWN_FROM, Between(1.59, 1.61), at="limbs[0].bias.size[0][1]")
-    retype(driver, f"{LIMBS}/bias/size/end", "40")
+    size = f"{LIMBS}/bias/size"
+    driver.present(f"{size}/thumbnail")
+    driver.click(f"{size}/open")
+    driver.absent(f"{size}/thumbnail")
+    driver.click(f"{size}/editor/plot/point1")
+    retype(driver, f"{size}/editor/y", "40")
     driver.expect("Plant", GROWN_FROM, Between(0.39, 0.41), at="limbs[0].bias.size[1][1]")
-    driver.screenshot("curve")
+    driver.screenshot("curve_typed")
+    # A double-click away from the points inserts one on the curve, at the middle; Delete, with
+    # the plot focused, removes it again.
+    driver.click(f"{size}/editor/plot")
+    driver.click(f"{size}/editor/plot")
+    driver.expect("Plant", GROWN_FROM, Between(0.49, 0.51), at="limbs[0].bias.size[1][0]")
+    driver.present(f"{size}/editor/plot/point2")
+    driver.screenshot("curve_inserted")
+    driver.key("Delete")
+    driver.absent(f"{size}/editor/plot/point2")
+    driver.expect("Plant", GROWN_FROM, Between(0.99, 1.01), at="limbs[0].bias.size[1][0]")
+    # A step at the middle and a steep rise after it.
+    shape = [[0.0, 0.4], [0.5, 0.4], [0.5, 1.6], [0.56, 2.0], [1.0, 0.2]]
+    driver.set_resource(SPECIES, shape, at="limbs.levels[0].bias.settings.size.0")
+    driver.present(f"{size}/editor/plot/point4")
+    driver.screenshot("curve_shapes")
+    # Closed again, the row shows the same curve as a thumbnail.
+    driver.click(f"{size}/open")
+    driver.present(f"{size}/thumbnail")
+    driver.absent(f"{size}/editor")
+    driver.screenshot("curve_closed")
     driver.exit()

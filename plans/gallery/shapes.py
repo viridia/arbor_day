@@ -102,11 +102,12 @@ def run(driver):
     # Twigs longer low on each limb and shorter toward its tip, as a conifer's; then the other
     # way, short near each limb's root.
     driver.set_resource(SPECIES, "On", at="limbs.levels[1].bias.state")
-    set_number(driver, "levels[1]/bias/size", "160", input="start")
-    set_number(driver, "levels[1]/bias/size", "40", input="end")
+    size = "limbs.levels[1].bias.settings.size.0"
+    driver.set_resource(SPECIES, [[0.0, 1.6], [1.0, 0.4]], at=size)
+    driver.frames(2)
     driver.screenshot("bias")
-    set_number(driver, "levels[1]/bias/size", "40", input="start")
-    set_number(driver, "levels[1]/bias/size", "160", input="end")
+    driver.set_resource(SPECIES, [[0.0, 0.4], [1.0, 1.6]], at=size)
+    driver.frames(2)
     driver.screenshot("bias_reversed")
     driver.set_resource(SPECIES, "Off", at="limbs.levels[1].bias.state")
 

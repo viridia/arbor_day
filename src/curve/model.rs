@@ -694,7 +694,7 @@ impl Default for CurveConstraints {
     }
 }
 
-/// One axis's bounds and step.
+/// One axis's bounds, step and precision.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct CurveAxis {
     pub min: f32,
@@ -703,16 +703,28 @@ pub struct CurveAxis {
     pub clamped: bool,
     /// The increment for snapping, arrow keys and grid lines.
     pub step: f32,
+    /// The finest increment a dragged point lands on, and the inputs show; 0 for any value.
+    pub precision: f32,
 }
 
 impl CurveAxis {
-    /// From 0 to 1, clamped, in steps of 0.05.
+    /// From 0 to 1, clamped, in steps of 0.05, to hundredths.
     pub fn unit() -> Self {
         Self {
             min: 0.0,
             max: 1.0,
             clamped: true,
             step: 0.05,
+            precision: 0.01,
+        }
+    }
+
+    /// `value` to the nearest multiple of the precision.
+    pub fn round(&self, value: f32) -> f32 {
+        if self.precision > 0.0 {
+            (value / self.precision).round() * self.precision
+        } else {
+            value
         }
     }
 
@@ -739,7 +751,10 @@ pub enum PinEnds {
 }
 
 /// An edit to one curve, its points by index.
-#[allow(dead_code, reason = "the inline editor (C155) sends the rest")]
+#[allow(
+    dead_code,
+    reason = "the editor's menu (C156) and hand-set handles (X62) send the rest"
+)]
 #[derive(Clone, Debug, PartialEq)]
 pub enum CurveEditOp {
     /// Moves points to proposed positions, as a drag does.

@@ -129,6 +129,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C71   | Crown softness (TD3.9); X13 withdrawn. |
 | C152  | Cards bend with their twigs (D27, TD3.9); hemlock1 a golden tree. |
 | C145  | Bias Size as a curve: `src/curve/` ([curve-editor-design.md](curve-editor-design.md), 1, 3, 5, 6; TD3.3); `reference/` converted by `scripts/size_curve.py`. |
+| C155  | The inline curve editor ([curve-editor-design.md](curve-editor-design.md), 2 to 7). |
 
 ## Next
 
@@ -150,22 +151,17 @@ slots (C103), the painted leaf (C38), outlines (C66), carry-on's removal (C117),
 the golden trees (C146). Before the freeze (C113), the changes that would cost the finished trees
 a migration or a new look land while the trees are few, the golden trees showing each.
 
-1. **C155 The inline curve editor**, built to [curve-editor-design.md](curve-editor-design.md)
-   (requirements in [curve-editor.md](curve-editor.md), survey in
-   [curve-editor-prior-art.md](curve-editor-prior-art.md), mock at
-   `https://claude.ai/artifact/JhDqLFzUGJo2neenUGNrQN`): the headless parts and the feathers
-   editor (design 2 to 5), inline in the Bias row (design 6): select, drag, insert, delete, cancel, the point's inputs,
-   the grid and its labels; the edits applied with `ScalarCurve::apply`; its step in
-   `plans/widgets.py` (design 7). Also the curve row's margins, which C145's row lacks, and a
-   thumbnail that reads as a graph when the curve is flat, where today it reads as a separator
-   (a grid line or two, say). E[3]
-2. **C156 The curve editor's rest**: selecting by rectangle and moving several points, the keys
-   (arrows, Tab, Escape), and the ⋯ menu with presets, Reset, and Copy and Paste curve
-   ([curve-editor-design.md](curve-editor-design.md), 4 and 5). E[2]
-3. **C157 Bias Leaves and Aim as curves**: two more `PlaceCurve` fields, converted as Size was
+1. **C156 The curve editor's rest**, to [curve-editor-design.md](curve-editor-design.md)
+   (requirements in [curve-editor.md](curve-editor.md), mock at
+   `https://claude.ai/artifact/JhDqLFzUGJo2neenUGNrQN`): selecting by rectangle (several points
+   already move together, picked with Shift), the keys (arrows, Tab, Escape), and the ⋯ menu
+   with presets, Reset, and Copy and Paste curve (design 4 and 5); the host's selection commands
+   (`SelectCurve`, `CurveSelectionChanged`) and `curve_self_update` (design 2), which nothing in
+   arbor_day needs until then. E[2]
+2. **C157 Bias Leaves and Aim as curves**: two more `PlaceCurve` fields, converted as Size was
    (`scripts/size_curve.py` generalized). Decided here: whether reach and angle take curves too.
    E[2]
-4. **C125 Steady nodes**: moving Start or End moves each node, which jumps limbs about in two
+3. **C125 Steady nodes**: moving Start or End moves each node, which jumps limbs about in two
    ways. A lateral's length changes, so its own node count steps; its nodes draw in order from
    one `layout` stream and its limbs' streams are numbered by a running count, so one node more
    re-deals every node after it, and every level below. Each node from a stream of its own
@@ -173,7 +169,7 @@ a migration or a new look land while the trees are few, the golden trees showing
    drops one node. And a node's azimuth is the cheapest of its candidates (`node_azimuths`),
    which flips as crowding changes with the nodes' spacing; blend the two cheapest when their
    costs are near. Changes every plant's layout (X15's generator version). E[2]
-5. **C134 Facing, skew and angle as G5 has them** (the author, 2026-10-21 and 10-22): adjusting
+4. **C134 Facing, skew and angle as G5 has them** (the author, 2026-10-21 and 10-22): adjusting
    facing and skew seldom improves a plant, since the model decides what they promise to set.
    - Facing only where the parent has an upper side: an upright trunk has none, so Sides, Up and
      Down measure from an arbitrary side there. The trunk's level is always Around (crowding's
@@ -187,10 +183,10 @@ a migration or a new look land while the trees are few, the golden trees showing
      in one row; which, decided when built.
 
    E[2]
-6. **C147 Sprigs as a list** (X37's format, ahead of its feature): the tip leaves' sprig becomes
+5. **C147 Sprigs as a list** (X37's format, ahead of its feature): the tip leaves' sprig becomes
    a list holding one, the panel showing it as now, so several sprigs (X37) later need no
    migration. `reference/` converted. E[1]
-7. **C113 File format freeze**, at D32's gate: from here a change that renames, moves or removes
+6. **C113 File format freeze**, at D32's gate: from here a change that renames, moves or removes
    a species field, or changes its type, needs a migration (X15). Before it, each item below
    either lands, is dropped, or is accepted as a later migration; prune the list as those
    choices are made. E[1], the items aside.
@@ -206,7 +202,7 @@ a migration or a new look land while the trees are few, the golden trees showing
    Additive changes, whose default or off state grows today's plant, need no place here (C132,
    C133, X12's modes with today's as the default), nor does X22, a species of its own kind.
 
-8. **C8 Working document in settings.** A settings group holding the working species and, once
+7. **C8 Working document in settings.** A settings group holding the working species and, once
    set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
    as seedling did. The document's name comes from the file name. Serialized by reflection, as
    `bevy_settings` does. A working document from before a schema change is lost (D32), but not
@@ -543,6 +539,13 @@ a migration or a new look land while the trees are few, the golden trees showing
   the inline editor; a larger host may draw them from the view (CE36), the wheel over one zooming
   its axis.
   The model bounds the view (x in 0 to 1), the editor owns it within them. *Gate:* X62 landed.
+
+- **X64** Report upstream: a feathers number input re-enabled by removing `InteractionDisabled`
+  stays drawn disabled. `number_input_on_remove_disabled` observes `Remove`, which runs while the
+  component is still there, so `Has<InteractionDisabled>` reads true and it restyles as disabled.
+  The curve editor works around it in `src/curve/feathers.rs` (`restyle_number_input`) by
+  re-inserting the text field's `Hovered`, which restyles from the input's state. *Gate:* a fix
+  in the Bevy we build against, and the workaround dropped.
 
 - **X63** A curve field's x axis from an attribute: today every curve row takes x from 0 to 1, its
   ends pinned, as a place along the parent ([curve-editor-design.md](curve-editor-design.md), 6).

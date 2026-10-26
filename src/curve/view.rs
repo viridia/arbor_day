@@ -41,13 +41,44 @@ impl CurveView {
 
     /// The pixel, from the plot's top left, at `point` in the curve's units.
     pub fn to_pixels(self, point: Vec2) -> Vec2 {
-        let inner = (self.size - Vec2::splat(2.0 * self.inset)).max(Vec2::ZERO);
-        let share = (point - self.min) / (self.max - self.min).max(Vec2::splat(f32::EPSILON));
+        let share = (point - self.min) / self.span();
+        let inner = self.inner();
         Vec2::new(
             self.inset + share.x * inner.x,
             self.inset + (1.0 - share.y) * inner.y,
         )
     }
+
+    /// The point, in the curve's units, at `pixel` from the plot's top left.
+    pub fn to_curve(self, pixel: Vec2) -> Vec2 {
+        let share = (pixel - Vec2::splat(self.inset)) / self.inner().max(Vec2::ONE);
+        self.min + Vec2::new(share.x, 1.0 - share.y) * self.span()
+    }
+
+    /// A movement of `delta` pixels, y down, in the curve's units, y up.
+    pub fn delta_to_curve(self, delta: Vec2) -> Vec2 {
+        Vec2::new(delta.x, -delta.y) / self.inner().max(Vec2::ONE) * self.span()
+    }
+
+    fn inner(self) -> Vec2 {
+        (self.size - Vec2::splat(2.0 * self.inset)).max(Vec2::ZERO)
+    }
+
+    fn span(self) -> Vec2 {
+        (self.max - self.min).max(Vec2::splat(f32::EPSILON))
+    }
+}
+
+/// The nearest of `entity`'s ancestors that `holds_curve`: the entity holding the curve a plot
+/// inside it shows.
+pub(super) fn curve_owner(
+    entity: Entity,
+    parents: &Query<&ChildOf>,
+    holds_curve: impl Fn(Entity) -> bool,
+) -> Option<Entity> {
+    parents
+        .iter_ancestors(entity)
+        .find(|&ancestor| holds_curve(ancestor))
 }
 
 /// On a plot node: the curve as a polyline, in logical pixels from the node's top left, of at most
@@ -55,7 +86,7 @@ impl CurveView {
 #[derive(Component, Clone, Debug, Default, PartialEq)]
 pub struct CurvePath(pub Vec<Vec2>);
 
-/// A node that plots the curve of its parent, which holds a [`CurveValue`] and its
+/// A node that plots the curve of its nearest ancestor holding a [`CurveValue`] and its
 /// [`CurveConstraints`]. Its [`CurvePath`] follows the curve and the node's size.
 #[derive(Component, Clone, Default)]
 #[require(CurvePath, Node)]
@@ -126,13 +157,15 @@ fn distance_to_segment(point: Vec2, a: Vec2, b: Vec2) -> f32 {
     point.distance(a + along * t)
 }
 
-/// Refreshes each plot's path when its parent's curve or the plot's size changes.
+/// Refreshes each plot's path when its curve or the plot's size changes.
 pub(super) fn update_curve_paths(
-    mut plots: Query<(&CurvePlot, &ChildOf, Ref<ComputedNode>, &mut CurvePath)>,
+    mut plots: Query<(Entity, &CurvePlot, Ref<ComputedNode>, &mut CurvePath)>,
+    parents: Query<&ChildOf>,
     curves: Query<(Ref<CurveValue>, Ref<CurveConstraints>)>,
 ) {
-    for (plot, parent, node, mut path) in &mut plots {
-        let Ok((curve, constraints)) = curves.get(parent.parent()) else {
+    for (entity, plot, node, mut path) in &mut plots {
+        let owner = curve_owner(entity, &parents, |owner| curves.contains(owner));
+        let Some((curve, constraints)) = owner.and_then(|owner| curves.get(owner).ok()) else {
             continue;
         };
         if !(node.is_changed() || curve.is_changed() || constraints.is_changed()) {
@@ -188,6 +221,16 @@ mod tests {
                 assert!(distance_to_path(point, &path) <= FLATNESS + 1e-3, "{point}");
             }
         }
+    }
+
+    #[test]
+    fn pixels_map_back_to_the_curve() {
+        let view = CurveView::new(&CurveConstraints::default(), Vec2::new(300.0, 170.0), 8.0);
+        let point = Vec2::new(0.3, 0.8);
+        assert!(view.to_curve(view.to_pixels(point)).distance(point) < 1e-5);
+        let moved = view.to_pixels(point) + Vec2::new(14.2, -7.7);
+        let delta = view.delta_to_curve(Vec2::new(14.2, -7.7));
+        assert!((view.to_curve(moved) - (point + delta)).length() < 1e-5);
     }
 
     #[test]

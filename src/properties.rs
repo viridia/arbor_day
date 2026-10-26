@@ -18,11 +18,11 @@ use bevy::{
         constants::{fonts, icons, size},
         containers::{subpane, subpane_body, subpane_header},
         controls::{
-            ButtonVariant, ColorInputValue, FeathersCheckbox, FeathersColorInput, FeathersListRow,
-            FeathersMenu, FeathersMenuDivider, FeathersMenuItem, FeathersMenuPopup,
-            FeathersMenuToolButton, FeathersNumberInput, FeathersSelect, FeathersToolButton,
-            HardLimit, NumberInputPrecision, NumberInputStep, NumberInputUnits, OptionIndex,
-            SoftLimit,
+            ButtonVariant, ColorInputValue, FeathersCheckbox, FeathersColorInput,
+            FeathersDisclosureToggle, FeathersListRow, FeathersMenu, FeathersMenuDivider,
+            FeathersMenuItem, FeathersMenuPopup, FeathersMenuToolButton, FeathersNumberInput,
+            FeathersSelect, FeathersToolButton, HardLimit, NumberInputPrecision, NumberInputStep,
+            NumberInputUnits, OptionIndex, SoftLimit, UnitsRegistry,
         },
         display::{caption as option_caption, icon, label},
         theme::{ThemeTextColor, ThemeToken, ThemedText},
@@ -37,7 +37,7 @@ use bevy::{
         structs::Struct,
     },
     text::FontSourceTemplate,
-    ui::Selected,
+    ui::{Checked, Selected},
     ui_widgets::{
         NumericRange, SetSelected, ValueChange,
         popover::{Popover, PopoverAlign, PopoverPlacement, PopoverSide},
@@ -62,7 +62,10 @@ use bevy_immediate::{
 };
 
 use crate::{
-    curve::{CurveAxis, CurveConstraints, CurveEditOp, CurveValue, ScalarCurve, curve_thumbnail},
+    curve::{
+        CurveAxis, CurveConstraints, CurveEdit, CurveEditorFormat, CurveValue, ScalarCurve,
+        curve_editor, curve_thumbnail,
+    },
     fuzzy::{Distribution, Fuzzy, Interval},
     random::Seed,
     shortcut::shortcut,
@@ -102,12 +105,14 @@ impl_capability_set!(
     )
 );
 
-/// Lets the panel read the curve a thumbnail shows.
+/// Lets the panel read the curve a thumbnail or editor shows, and take the editor's edits.
 pub struct CapabilityCurve;
 
 impl ImmCapability for CapabilityCurve {
     fn build<Caps: CapSet>(app: &mut App, cap_req: &mut ImmCapAccessRequests<Caps>) {
         cap_req.request_component_read::<CurveValue>(app.world_mut());
+        cap_req.request_component_write::<PendingCurveEdits>(app.world_mut());
+        cap_req.request_resource_read::<UnitsRegistry>(app.world_mut());
     }
 }
 
@@ -1010,9 +1015,10 @@ fn seed_row(row: ImmEntity<CapsPanel>, name: &'static str, caption: &'static str
     });
 }
 
-/// A curve's row: its caption and a thumbnail named `thumbnail`, then number inputs for its first
-/// and last points' values, named `start` and `end`. The edits are judged by the constraints
-/// that `constraints` builds from the y axis, which the field's [`ValueRange`] bounds.
+/// A curve's row: a disclosure toggle named `open` and its caption, then while closed a thumbnail
+/// named `thumbnail`, and while open the curve's editor below, named `editor`. The editor's edits
+/// are judged by the constraints that `constraints` builds from the y axis, which the field's
+/// [`ValueRange`] bounds. x is a place along the parent, so it is captioned and labelled as one.
 fn curve_row(
     row: ImmEntity<CapsPanel>,
     name: &'static str,
@@ -1024,53 +1030,108 @@ fn curve_row(
     let look = NumberLook::from_attributes::<f32>(attrs);
     let mut y = CurveAxis::unit();
     if let Some(NumericRange::F32(range)) = &look.range {
-        y = CurveAxis {
-            min: *range.start(),
-            max: *range.end(),
-            clamped: true,
-            step: look.step.map_or(0.01, |step| step as f32),
-        };
+        y.min = *range.start();
+        y.max = *range.end();
+        y.step = look.step.map_or(0.01, |step| step as f32);
+    }
+    // The field's precision is in the units shown; the axis's is in the curve's.
+    if let (Some(places), Ok(registry)) = (look.precision, row.cap_get_resource::<UnitsRegistry>())
+    {
+        let units = registry.resolve(look.units.as_ref());
+        y.precision = units.display_to_canonical(10f64.powi(-places)) as f32;
     }
     let constraints = constraints(y);
-    row.on_spawn_insert(move || row_node(name)).add(|ui| {
-        ui.ch().on_spawn_insert(caption_line).add(|ui| {
-            ui.ch().on_spawn_apply_scene(move || label(caption));
-            let initial = (CurveValue(curve.clone()), constraints.clone());
-            let mut thumbnail = ui
-                .ch_id("thumbnail")
-                .on_spawn_apply_scene(curve_thumbnail)
-                .on_spawn_insert(move || (Name::new("thumbnail"), initial.clone()));
-            if !thumbnail.will_be_spawned() {
-                let shown = thumbnail.cap_get_component::<CurveValue>().ok().flatten();
-                if shown.is_none_or(|shown| shown.0 != *curve) {
-                    thumbnail
-                        .entity_commands()
-                        .insert(CurveValue(curve.clone()));
-                }
-            }
-        });
-        let Some(last) = curve.points.len().checked_sub(1) else {
-            return;
-        };
+    let format = CurveEditorFormat {
+        x_units: Some(NumberInputUnits::new_static("ratio_percent")),
+        y_units: look.units.clone(),
+        x_labels: Some(["Base", "Middle", "Tip"]),
+    };
+    let row_node = move || {
+        let (name, node) = row_node(name);
+        (
+            name,
+            Node {
+                row_gap: px(4),
+                ..node
+            },
+        )
+    };
+    row.on_spawn_insert(row_node).add(|ui| {
+        let mut open = false;
         ui.ch().on_spawn_insert(widget_line).add(|ui| {
-            for (input, label, index) in [("start", "Start", 0), ("end", "End", last)] {
-                let point = curve.points[index];
-                let mut y = point.y;
-                number_input(
-                    ui.ch_id(input),
-                    input,
-                    Some(label),
-                    look.clone(),
-                    Val::Auto,
-                    &mut y,
+            let toggle = ui
+                .ch_id("open")
+                .on_spawn_apply_scene(|| bsn! { @FeathersDisclosureToggle #open });
+            if let Ok(entity) = toggle.cap_get_entity() {
+                open = entity.contains::<Checked>();
+            }
+            toggle.checked(&mut open);
+            ui.ch().on_spawn_apply_scene(move || label(caption));
+            if !open {
+                curve_widget(
+                    ui.ch_id("thumbnail"),
+                    "thumbnail",
+                    curve_thumbnail,
+                    curve,
+                    &constraints,
                 );
-                if y != point.y {
-                    let set = CurveEditOp::SetPoint(index, Vec2::new(point.x, y));
-                    curve.apply(&set, &constraints);
-                }
             }
         });
+        if open {
+            let initial = (PendingCurveEdits::default(), format.clone());
+            let mut editor = ui
+                .ch_id("editor")
+                .on_spawn_insert(move || initial.clone())
+                .on_spawn_observe(store_curve_edit);
+            if let Ok(Some(mut pending)) = editor.cap_get_component_mut::<PendingCurveEdits>() {
+                for edit in pending.0.drain(..) {
+                    curve.apply(&edit.op, &constraints);
+                }
+            }
+            curve_widget(
+                editor,
+                "editor",
+                move || curve_editor("Position", caption),
+                curve,
+                &constraints,
+            );
+        }
     });
+}
+
+/// On a curve editor: the edits it proposed since the panel's last pass.
+#[derive(Component, Clone, Default)]
+struct PendingCurveEdits(Vec<CurveEdit>);
+
+fn store_curve_edit(edit: On<CurveEdit>, mut pending: Query<&mut PendingCurveEdits>) {
+    if let Ok(mut pending) = pending.get_mut(edit.editor) {
+        pending.0.push(edit.event().clone());
+    }
+}
+
+/// A curve thumbnail or editor from `scene`, named `name`, showing `curve`.
+fn curve_widget<'r, 'w, 's, S: Scene>(
+    widget: ImmEntity<'r, 'w, 's, CapsPanel>,
+    name: &'static str,
+    scene: impl FnOnce() -> S,
+    curve: &ScalarCurve,
+    constraints: &CurveConstraints,
+) -> ImmEntity<'r, 'w, 's, CapsPanel> {
+    let initial = (
+        Name::new(name),
+        CurveValue(curve.clone()),
+        constraints.clone(),
+    );
+    let mut widget = widget
+        .on_spawn_apply_scene(scene)
+        .on_spawn_insert(move || initial.clone());
+    if !widget.will_be_spawned() {
+        let shown = widget.cap_get_component::<CurveValue>().ok().flatten();
+        if shown.is_none_or(|shown| shown.0 != *curve) {
+            widget.entity_commands().insert(CurveValue(curve.clone()));
+        }
+    }
+    widget
 }
 
 /// A fuzzy number's row: its center and spread (`center_and_spread`), and a button that toggles

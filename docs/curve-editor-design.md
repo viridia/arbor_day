@@ -67,12 +67,14 @@ pub struct CurveAxis {
     pub max: f32,
     pub clamped: bool,              // open bounds bind the view, not the points
     pub step: f32,                  // snapping, arrow keys, grid
+    pub precision: f32,             // where a dragged point lands, what the inputs show; 0 for any
 }
 ```
 
-The sets are short lists, read with `contains`, so the model takes no set crate. Units and
-precision are the feathers editor's business: the axis carries numbers only, and the
-host gives the feathers editor the number-input units it already uses for the field.
+The sets are short lists, read with `contains`, so the model takes no set crate. Units are the
+feathers editor's business: the axis carries numbers only, its precision too, in the curve's own
+units, and the host gives the feathers editor the number-input units it already uses for the
+field. The step is coarse, for snapping on request; the precision is the finest a value lands on.
 
 ### 1.2 Preparing and sampling
 
@@ -135,9 +137,9 @@ observer, like `slider_self_update`, applies edits to the copy for a host that w
 pub struct CurveEdit {
     #[event_target]
     pub editor: Entity,
-    pub curve: CurveRef,
+    pub curve: Entity,
     pub op: CurveEditOp,
-    pub phase: Phase,               // Start, Update, Finish, Cancel; one-off edits are Finish
+    pub phase: CurveEditPhase,      // Start, Update, Finish, Cancel; one-off edits are Finish
 }
 
 // In model.rs: an edit to one curve, its points by index.
@@ -152,7 +154,7 @@ pub enum CurveEditOp {
     Replace(ScalarCurve),                           // preset, reset, paste
 }
 
-pub struct PointRef { pub curve: CurveRef, pub index: u32 }
+pub struct PointRef { pub curve: Entity, pub index: usize }
 ```
 
 **A move proposes positions, not a delta.** At a drag's start the editor snapshots the selected
@@ -162,8 +164,7 @@ bound follows the pointer back (CE12), and the consumer keeps no drag state. `Ca
 or from the editor being despawned mid-drag, proposes the snapshot itself (CE13). The consumer
 receives every `Update` (CE14) and regrows the tree from each.
 
-**The curve is named in every reference.** `CurveRef` is the entity holding the curve's
-`CurveValue`. With one curve it is the editor itself; several curves (CE35) are child entities,
+**The curve is named in every reference**, as the entity holding the curve's `CurveValue`. With one curve it is the editor itself; several curves (CE35) are child entities,
 each with its own value and constraints. A selection spans them by naming each point's curve
 (`PointRef`), and a move across curves is one event per curve, so `apply` and the op stay
 within one curve. Nothing in the single-curve design changes when the second curve arrives.
@@ -176,9 +177,10 @@ and the editor triggers `CurveSelectionChanged` whenever it changes, for a host 
 selection with its undo steps (CE17).
 
 Selection is indices, adjusted as text editors adjust a cursor (CE7). The editor remembers the
-insert or delete it last sent; when the consumer writes `CurveValue` with one point more or fewer
-in that place, the editor shifts the selection past it, and selects an inserted point. Any other
-change of point count is a replacement: the selection is trimmed to the points that remain.
+curve as it last saw it and the insert or delete it last sent (`SeenCurve`); when the consumer
+writes `CurveValue` with one point more, the new point is the first that differs and is selected,
+and with the deleted points gone, the rest shift down past them. Any other change of point count
+is a replacement: the selection is trimmed to the points that remain.
 
 ## 3. The view
 
@@ -187,17 +189,17 @@ axes' bounds stretched to the node; zoom and pan (CE36) would make it a transfor
 within the bounds, and nothing else would change, since gestures and edits are in the curve's
 units.
 
-From the prepared curve and the view, `view.rs` keeps two components up to date on the plot node
-(`CurvePlot`), a child of the entity holding the curve's `CurveValue` and constraints, for
-whatever draws them:
-
-- **`CurvePath`**: the curve as a polyline in layout pixels. Each segment is halved, over its own
+From the prepared curve and the view, `view.rs` keeps **`CurvePath`** up to date on the plot node
+(`CurvePlot`), a descendant of the entity holding the curve's `CurveValue` and constraints: the
+curve as a polyline in layout pixels. Each segment is halved, over its own
   parameter, until each piece lies within a quarter pixel of the curve, so a kink stays a point and
   a step two points at one x (CE40). A path holds at most `MAX_PATH_POINTS` (257), the path
-  material's uniform array; a curve needing more is flattened again at twice the tolerance until
-  it fits.
-- **`CurveGrid`**: the grid lines' pixel positions and values, from each axis's bounds and step,
-  each marked major or minor, the ends and middle marked for labels (CE27).
+material's uniform array; a curve needing more is flattened again at twice the tolerance until
+it fits.
+
+The grid is fixed: a line at each quarter of each axis, the ends and middle labelled (CE27), as
+the mock draws it. It needs no headless part: the feathers editor places lines and labels by
+percentages of an inset node.
 
 ## 4. Gestures
 
@@ -207,20 +209,26 @@ interaction in progress is one value, as in `bevy_reactor`'s node graph (CE23):
 ```rust
 pub enum CurveGesture {
     Idle,
-    MovePoints { snapshot: Vec<(PointRef, Vec2)>, anchor: Vec2 },
-    MoveHandle { point: PointRef, side: HandleSide, snapshot: Vec2, anchor: Vec2 },
-    SelectRect { anchor: Vec2, rect: Rect },
+    MovePoints { curve: Entity, snapshot: Vec<(usize, Vec2)>, offset: Vec2, axes: [CurveAxis; 2] },
+    // To come: MoveHandle (X62), SelectRect (C156).
 }
 ```
 
-- **Hit testing** is geometric: the nearest point or handle within `CurveHitRadius` pixels, else
-  the curve within the same radius, else empty space. The result is published as `CurveHover`,
-  for styling and for the next press (CE22).
+They are on the plot node, `CurveGestures`, beside `CurveHover` and `CurveHitRadius`.
+
+- **Hit testing** is geometric: the nearest point (or, with X62, handle) within `CurveHitRadius`
+  pixels. The result is published as `CurveHover`, for styling (CE22); a press tests afresh.
 - **Handles** are shown, and hit, only on selected points, and only where aligned or free (CE37).
 - **Press** on a point selects it (with a modifier, adds it), and a drag from there moves the
   selection, handles and all; on a handle, moves that one handle and leaves the selection as it
-  is; on empty space, starts a rectangle, which takes points only (CE24, CE30).
-  The editor captures the pointer for the drag, as the slider does.
+  is; on empty space, starts a rectangle, which takes points only (CE24, CE30). Shift, Ctrl and
+  Cmd are the modifier. Each proposed position, snapshot plus offset, is rounded to its axes'
+  precision, as a slider rounds a drag, so what a point stores is what its inputs show; until the
+  pointer moves, points stay where they were. The move starts at the press, so a press without a
+  drag sends `Start` and
+  `Finish` with the points where they were; it ends at the drag's end or the release, whichever
+  comes first. The editor captures the pointer for it, as the slider does.
+- **The plot despawned mid-drag** sends `Cancel` with the snapshot, if the editor is still there.
 - **Double-click** inserts: a `PointerPress` whose `count` is 2.
 - **Keys**, while the plot has focus: Delete and Backspace delete the selection; arrows move it by
   the axis step, a modifier for ten steps; Tab moves to the next point; Escape cancels a drag
@@ -228,22 +236,28 @@ pub enum CurveGesture {
 
 ## 5. The feathers editor
 
-`FeathersCurveEditor` is a scene component, as `FeathersSlider` is, requiring the headless parts.
-It assembles, top to bottom:
+`curve_editor(x_caption, y_caption)` is a scene, as `curve_thumbnail` is; the host inserts the
+curve, its constraints and a `CurveEditorFormat` (each axis's number-input units, and labels for
+x in place of its values) beside it. It assembles, top to bottom:
 
 - **A header row**: the host's caption and disclosure toggle, and a menu button with the
   consumer's presets, Reset, and Copy and Paste curve (CE29, CE33). Feathers has no submenus, so
   the presets are items of their own.
-- **The plot**: a node with `CurvePath` drawn by the path material, the grid as a second instance
-  of it, labels as text nodes at `CurveGrid`'s marked lines, and a node per point and per visible
-  handle, placed from the view and styled from `CurveHover` and `CurveSelection` (CE41). Nodes keep
-  the points to feathers' own styling and focus rings; the shader draws only lines.
+- **The plot**: a node with `CurvePath` drawn by the path material, over the grid's lines as
+  one-pixel nodes, the y labels in a gutter to its left and the x labels under it, and a node per
+  point and per visible handle, placed from the view and styled from `CurveHover` and
+  `CurveSelection` (CE41). Nodes keep the points to feathers' own styling; the shader draws only
+  the curve.
 - **An input row**: feathers number inputs for the selected point's x and y, disabled unless
   exactly one point is selected (CE25); and below them, a row each for that point's aligned or
-  free handles, In and Out, their x and y (CE34). An input sends `SetPoint` or `MoveHandle`, `Update` while scrubbing, `Finish` on
-  commit.
+  free handles, In and Out, their x and y (CE34). An input sends `SetPoint` or `MoveHandle`,
+  `Update` while scrubbing, `Finish` on commit. Each rounds to its axis's precision, its decimal
+  places worked out through its units (0.01 shown as a percentage is 1%: no decimals).
 
-`FeathersCurveThumbnail` is the plot alone, small, with no gestures: what a collapsed row shows
+`FeathersCurveThumbnail` is the plot alone, small, with no gestures: 48 × 24 at the row's right
+end, the open plot's 2:1, so the curve keeps its slopes; the editor's background, stroke and grid,
+its lines inside the ends, so closed and open read as one widget and a flat curve reads as a
+graph. No border, as feathers' color plane and wheel have none. It is what a collapsed row shows
 (CE26).
 
 ### 5.1 The path material
@@ -265,13 +279,15 @@ plot of 300 × 170 pixels is cheap.
   before; `scripts/size_curve.py` converts `reference/`. `bias_sizes` samples the curve at each
   node's place; `bias_leaves` divides by the greatest over the nodes instead of `1 + |size|`.
   Leaves and Aim follow as their own chunk.
-- **The constraints** are the form's (`PlaceCurve::constraints`): x from 0 to 1, the ends pinned,
-  cubic segments, auto handles, holding past the ends; y from the field's `@ValueRange`, its step
-  from `@Step`. An attribute for x waits for a curve over another domain (X63), the presets for
-  C155.
-- **The row** is a disclosure: collapsed, the caption and a thumbnail on one line; expanded, the
-  feathers editor below it (the mock's first frame). Which rows are open lives in the panel's UI
-  state.
+- **The constraints** are the form's (`PlaceCurve::constraints`): x from 0 to 1 to hundredths,
+  the ends pinned, cubic segments, auto handles, holding past the ends; y from the field's
+  `@ValueRange`, its step from `@Step`, its precision from `@Precision` in the field's units (1%
+  for Bias). An attribute for x waits for a curve over another domain (X63), the presets for
+  C156.
+- **The row** is a disclosure: collapsed, the toggle, caption and a thumbnail on one line;
+  expanded, the feathers editor below it (the mock's first frame), its inputs captioned Position and
+  the field's caption, x labelled Base, Middle and Tip. Whether a row is open is its toggle's
+  `Checked`, so it lasts as long as the row.
 - **The edits** reach the row as a color input's do: an observer stores each `CurveEdit` on the
   editor, and the immediate-mode row takes them each frame, applies them to the species field with
   `ScalarCurve::apply`, and writes `CurveValue` when the field differs. The species changing
@@ -283,9 +299,10 @@ plot of 300 × 170 pixels is cheap.
   extrapolations, the same result for a weighted and an unweighted form of one curve);
   `apply`'s clamps and refusals; selection adjusting across insert and delete; and the flattener,
   every piece within 0.25 px of the curve, a kink one point, a step two points at one x.
-- **A step in `plans/widgets.py`**, no new plan: expand a Bias curve, drag a point and read the
-  inputs back; then set, with `driver.set`, a curve holding a step, a kink and a steep cubic, and
-  screenshot it, judged by eye for facets and even width.
+- **A step in `plans/widgets.py`**, no new plan: expand a Bias curve, select a point by clicking
+  its marker and type its value, insert with two clicks and delete with Delete; then set a curve
+  holding a step, a kink and a steep cubic, and screenshot it, judged by eye for facets and even
+  width. The driver cannot drag, so a drag is checked by hand.
 
 ## 8. Checked against what is kept possible
 
