@@ -16,6 +16,13 @@ mod view;
 use bevy::prelude::*;
 
 pub use edit::CurveEdit;
+#[allow(
+    unused_imports,
+    reason = "the host's selection API; arbor_day uses it from undo (C7)"
+)]
+pub use edit::{
+    CurveSelection, CurveSelectionChanged, PointRef, SelectCurve, SelectedPoints, curve_self_update,
+};
 pub use feathers::{CurveEditorFormat, curve_editor, curve_thumbnail};
 pub use model::{
     CurveAxis, CurveConstraints, CurveExtrapolation, CurvePoint, CurveSegment, CurveValue,
@@ -28,10 +35,11 @@ pub struct CurvePlugin;
 impl Plugin for CurvePlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins((plot::PathMaterialPlugin, gesture::plugin, feathers::plugin))
+            .add_observer(edit::select_curve)
             .add_systems(
                 PostUpdate,
                 (
-                    edit::follow_point_count,
+                    (edit::follow_point_count, edit::notify_selection).chain(),
                     view::update_curve_paths.after(bevy::ui::UiSystems::Layout),
                 ),
             );

@@ -3,7 +3,7 @@
 
 use bevy::prelude::*;
 
-use super::model::{CurveEditOp, CurveValue, ScalarCurve};
+use super::model::{CurveConstraints, CurveEditOp, CurveValue, ScalarCurve};
 
 /// Where an edit stands in the interaction that made it. An edit made in one go, such as an
 /// insert, is `Finish`.
@@ -62,6 +62,87 @@ impl CurveSelection {
         match self.points.as_slice() {
             [point] => Some(*point),
             _ => None,
+        }
+    }
+}
+
+/// Applies each edit to the curve's [`CurveValue`] with [`ScalarCurve::apply`], for a host that
+/// wants nothing more of its curve. Added as an observer on the editor, as `slider_self_update` is
+/// on a slider.
+#[allow(dead_code, reason = "arbor_day's panel judges edits itself")]
+pub fn curve_self_update(
+    edit: On<CurveEdit>,
+    mut curves: Query<(&mut CurveValue, &CurveConstraints)>,
+) {
+    let Ok((mut value, constraints)) = curves.get_mut(edit.curve) else {
+        return;
+    };
+    let mut curve = value.0.clone();
+    if curve.apply(&edit.op, constraints).changed {
+        value.0 = curve;
+    }
+}
+
+/// The host's command to change an editor's selection.
+#[allow(
+    dead_code,
+    reason = "nothing in arbor_day selects for the editor until undo (C7)"
+)]
+#[derive(EntityEvent, Clone, Debug)]
+pub struct SelectCurve {
+    #[event_target]
+    pub editor: Entity,
+    pub points: SelectedPoints,
+}
+
+/// The points a [`SelectCurve`] selects.
+#[allow(
+    dead_code,
+    reason = "nothing in arbor_day selects for the editor until undo (C7)"
+)]
+#[derive(Clone, Debug, PartialEq)]
+pub enum SelectedPoints {
+    All,
+    None,
+    Given(Vec<PointRef>),
+}
+
+/// Sent to an editor whenever its [`CurveSelection`] changes, for a host keeping the selection
+/// with its undo steps.
+#[derive(EntityEvent, Clone, Debug)]
+pub struct CurveSelectionChanged {
+    #[event_target]
+    pub editor: Entity,
+}
+
+pub(super) fn select_curve(
+    select: On<SelectCurve>,
+    mut selections: Query<(&mut CurveSelection, Option<&CurveValue>)>,
+) {
+    let Ok((mut selection, value)) = selections.get_mut(select.editor) else {
+        return;
+    };
+    // One curve per editor for now: the curve is on the editor's own entity.
+    let curve = select.editor;
+    let points = match &select.points {
+        SelectedPoints::All => {
+            let count = value.map_or(0, |value| value.0.points.len());
+            (0..count).map(|index| PointRef { curve, index }).collect()
+        }
+        SelectedPoints::None => Vec::new(),
+        SelectedPoints::Given(points) => points.clone(),
+    };
+    selection.set_if_neq(CurveSelection { points });
+}
+
+/// Tells each editor whose selection changed, after the change at its creation.
+pub(super) fn notify_selection(
+    selections: Query<(Entity, Ref<CurveSelection>)>,
+    mut commands: Commands,
+) {
+    for (editor, selection) in &selections {
+        if selection.is_changed() && !selection.is_added() {
+            commands.trigger(CurveSelectionChanged { editor });
         }
     }
 }
@@ -152,6 +233,89 @@ mod tests {
                 .collect(),
             extrapolation: CurveExtrapolation::Hold,
         }
+    }
+
+    /// Counts [`CurveSelectionChanged`] events.
+    #[derive(Resource, Default)]
+    struct Notified(usize);
+
+    /// An app with an editor showing a curve of `xs`, nothing selected.
+    fn editor(xs: &[f32]) -> (App, Entity) {
+        let mut app = App::new();
+        app.init_resource::<Notified>()
+            .add_observer(select_curve)
+            .add_observer(
+                |_: On<CurveSelectionChanged>, mut notified: ResMut<Notified>| {
+                    notified.0 += 1;
+                },
+            )
+            .add_systems(PostUpdate, notify_selection);
+        let editor = (app.world_mut())
+            .spawn((
+                CurveValue(curve(xs)),
+                CurveConstraints::default(),
+                CurveSelection::default(),
+            ))
+            .observe(curve_self_update)
+            .id();
+        app.update();
+        (app, editor)
+    }
+
+    fn selected(app: &App, editor: Entity) -> Vec<usize> {
+        let selection = app.world().get::<CurveSelection>(editor).unwrap();
+        selection.indices(editor)
+    }
+
+    fn select(app: &mut App, editor: Entity, points: SelectedPoints) {
+        app.world_mut().trigger(SelectCurve { editor, points });
+        app.update();
+    }
+
+    #[test]
+    fn the_host_selects_all_none_or_given_points() {
+        let (mut app, editor) = editor(&[0.0, 0.5, 1.0]);
+        select(&mut app, editor, SelectedPoints::All);
+        assert_eq!(selected(&app, editor), vec![0, 1, 2]);
+        let given = vec![PointRef {
+            curve: editor,
+            index: 1,
+        }];
+        select(&mut app, editor, SelectedPoints::Given(given));
+        assert_eq!(selected(&app, editor), vec![1]);
+        select(&mut app, editor, SelectedPoints::None);
+        assert_eq!(selected(&app, editor), Vec::<usize>::new());
+    }
+
+    #[test]
+    fn the_host_hears_of_each_change_of_selection() {
+        let (mut app, editor) = editor(&[0.0, 0.5, 1.0]);
+        assert_eq!(app.world().resource::<Notified>().0, 0, "not at creation");
+        select(&mut app, editor, SelectedPoints::All);
+        assert_eq!(app.world().resource::<Notified>().0, 1);
+        select(&mut app, editor, SelectedPoints::All);
+        assert_eq!(
+            app.world().resource::<Notified>().0,
+            1,
+            "not when unchanged"
+        );
+        select(&mut app, editor, SelectedPoints::None);
+        assert_eq!(app.world().resource::<Notified>().0, 2);
+    }
+
+    #[test]
+    fn self_update_applies_edits_as_the_consumer_would() {
+        let (mut app, editor) = editor(&[0.0, 0.5, 1.0]);
+        app.world_mut().trigger(CurveEdit {
+            editor,
+            curve: editor,
+            op: CurveEditOp::Move(vec![(1, Vec2::new(0.25, 2.0))]),
+            phase: CurveEditPhase::Finish,
+        });
+        let value = app.world().get::<CurveValue>(editor).unwrap();
+        let moved = &value.0.points[1];
+        // Clamped to the y axis's bound, as `apply` judges it.
+        assert_eq!((moved.x, moved.y), (0.25, 1.0));
     }
 
     #[test]

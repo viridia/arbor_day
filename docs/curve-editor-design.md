@@ -172,9 +172,10 @@ within one curve. Nothing in the single-curve design changes when the second cur
 ### 2.1 Selection
 
 The editor holds it in `CurveSelection { points: Vec<PointRef> }` (CE16). Handles are never
-selected: one is grabbed for a drag and let go, so the selection is points alone. The host changes it by triggering `SelectCurve::All`, `None` or `Points(..)` on the editor,
-and the editor triggers `CurveSelectionChanged` whenever it changes, for a host keeping the
-selection with its undo steps (CE17).
+selected: one is grabbed for a drag and let go, so the selection is points alone. The host changes it by triggering `SelectCurve` on the editor with `SelectedPoints::All`, `None`
+or `Given(..)`, and the editor triggers `CurveSelectionChanged` at the end of any frame the
+selection changed in, except its first, for a host keeping the selection with its undo steps
+(CE17).
 
 Selection is indices, adjusted as text editors adjust a cursor (CE7). The editor remembers the
 curve as it last saw it and the insert or delete it last sent (`SeenCurve`); when the consumer
