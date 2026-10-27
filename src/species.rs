@@ -652,7 +652,7 @@ impl Wander {
 /// upper ones toward its top, so their leaves cover the crown's middle from above. Leaves carries
 /// the size change to the leaves the laterals bear, so a tall, thin cone keeps its shape.
 #[derive(Reflect, Clone, PartialEq)]
-#[reflect(@Icon("icons/operators/size-bias.png"))]
+#[reflect(Default, @Icon("icons/operators/size-bias.png"))]
 pub struct Bias {
     /// The laterals' length as a share of the reach, over their node's place from the parent's
     /// first node (0) to its last (1): 160% to 40% is a conifer's taper.

@@ -4,9 +4,14 @@ use bevy::{
     feathers::{
         constants::{fonts, size},
         controls::{
-            FeathersNumberInput, HardLimit, NumberInputPrecision, NumberInputUnits, UnitsRegistry,
+            FeathersMenu, FeathersMenuDivider, FeathersMenuItem, FeathersMenuPopup,
+            FeathersMenuToolButton, FeathersNumberInput, HardLimit, NumberInputPrecision,
+            NumberInputUnits, UnitsRegistry,
         },
-        theme::{ThemeBackgroundColor, ThemeBorderColor, ThemeTextColor, ThemeToken, UiTheme},
+        theme::{
+            ThemeBackgroundColor, ThemeBorderColor, ThemeTextColor, ThemeToken, ThemedText,
+            UiTheme,
+        },
         tokens,
     },
     input_focus::{Focusable, tab_navigation::TabIndex},
@@ -14,13 +19,16 @@ use bevy::{
     prelude::*,
     text::{FontSourceTemplate, LineHeight},
     ui::InteractionDisabled,
-    ui_widgets::{NumericFormat, NumericRange, NumericValue, ValueChange},
+    ui_widgets::{
+        Activate, NumericFormat, NumericRange, NumericValue, ValueChange,
+        popover::{Popover, PopoverAlign, PopoverPlacement, PopoverSide},
+    },
 };
 
 use super::{
     edit::{CurveEdit, CurveEditPhase, CurveSelection, PointRef, SeenCurve},
     gesture::{CurveGesture, CurveGestures, CurveHover},
-    model::{CurveConstraints, CurveEditOp, CurveValue, PinEnds},
+    model::{CurveConstraints, CurveEditOp, CurveValue, PinEnds, ScalarCurve},
     plot::CurveStroke,
     view::{CurvePlot, CurveView},
 };
@@ -230,6 +238,74 @@ pub struct CurveEditorFormat {
     pub x_labels: Option<[&'static str; 3]>,
 }
 
+/// A curve editor's ⋯ menu, at its row's right end, for the host to place in the editor's header
+/// line and aim with a [`CurveMenuTarget`]. It lists the host's `items`, if any, above a divider,
+/// then Copy curve and Paste curve, named `copy` and `paste`. An item holding a
+/// [`CurveMenuReplace`] replaces the curve when picked; the host observes its other items itself.
+pub fn curve_menu(items: Option<Box<dyn SceneList>>) -> impl Scene {
+    bsn! {
+        @FeathersMenu
+        Node { margin: UiRect::left(Val::Auto) }
+        Children [
+            @FeathersMenuToolButton {
+                @caption: bsn! { Text("…") ThemedText },
+                @arrow: false,
+            }
+            --
+            @FeathersMenuPopup
+            // Aligned to the button's right edge, as the button is at the row's right end.
+            Popover {
+                positions: vec![
+                    PopoverPlacement {
+                        side: PopoverSide::Bottom,
+                        align: PopoverAlign::End,
+                        gap: 2.0,
+                    },
+                    PopoverPlacement {
+                        side: PopoverSide::Top,
+                        align: PopoverAlign::End,
+                        gap: 2.0,
+                    },
+                ],
+                window_margin: 10.0,
+            }
+            Children [
+                {items.map(|items| bsn_list! { {items} -- @FeathersMenuDivider })}
+                --
+                @curve_menu_item("Copy curve") ClipboardItem::Copy #copy
+                --
+                @curve_menu_item("Paste curve") ClipboardItem::Paste #paste
+            ]
+        ]
+    }
+}
+
+/// A menu item captioned `caption`, for a [`curve_menu`]'s items.
+pub fn curve_menu_item(caption: &'static str) -> impl Scene {
+    bsn! { @FeathersMenuItem { @caption: bsn! { Text(caption) ThemedText } } }
+}
+
+/// On a [`curve_menu`]: the editor it acts on.
+#[derive(Component, Clone, Copy, Debug)]
+pub struct CurveMenuTarget(pub Entity);
+
+/// On an item of a [`curve_menu`]: picked, it proposes this curve in place of the editor's.
+#[derive(Component, Clone, Debug, Default)]
+pub struct CurveMenuReplace(pub ScalarCurve);
+
+/// The curve last copied from any [`curve_menu`]. The app's own rather than the system clipboard,
+/// so Paste curve knows when it has nothing to paste.
+#[derive(Resource, Clone, Debug, Default)]
+struct CurveClipboard(Option<ScalarCurve>);
+
+/// A [`curve_menu`]'s own items.
+#[derive(Component, Clone, Copy, Debug, Default, PartialEq, Eq)]
+enum ClipboardItem {
+    #[default]
+    Copy,
+    Paste,
+}
+
 /// An absolutely placed node filling its parent.
 fn fill() -> impl Scene {
     bsn! {
@@ -323,16 +399,82 @@ impl MarkerLook {
 }
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_observer(edit_from_input).add_systems(
-        PostUpdate,
-        (
-            place_markers,
-            place_selection_rect,
-            label_axes,
-            show_selected_point.after(super::edit::follow_point_count),
-        )
-            .after(bevy::ui::UiSystems::Layout),
-    );
+    app.init_resource::<CurveClipboard>()
+        .add_observer(edit_from_input)
+        .add_observer(pick_menu_item)
+        .add_systems(Update, enable_paste)
+        .add_systems(
+            PostUpdate,
+            (
+                place_markers,
+                place_selection_rect,
+                label_axes,
+                show_selected_point.after(super::edit::follow_point_count),
+            )
+                .after(bevy::ui::UiSystems::Layout),
+        );
+}
+
+/// Copies the editor's curve, or proposes the clipboard's or an item's curve in its place.
+fn pick_menu_item(
+    activate: On<Activate>,
+    items: Query<
+        (Option<&ClipboardItem>, Option<&CurveMenuReplace>),
+        Or<(With<ClipboardItem>, With<CurveMenuReplace>)>,
+    >,
+    parents: Query<&ChildOf>,
+    menus: Query<&CurveMenuTarget>,
+    curves: Query<&CurveValue>,
+    mut clipboard: ResMut<CurveClipboard>,
+    mut commands: Commands,
+) {
+    let Ok((own, replace)) = items.get(activate.entity) else {
+        return;
+    };
+    let Some(editor) = (parents.iter_ancestors(activate.entity))
+        .find_map(|ancestor| menus.get(ancestor).ok())
+        .map(|target| target.0)
+    else {
+        return;
+    };
+    let curve = match (own, replace) {
+        (Some(ClipboardItem::Copy), _) => {
+            // One curve per editor for now: the curve is on the editor's own entity.
+            if let Ok(value) = curves.get(editor) {
+                clipboard.0 = Some(value.0.clone());
+            }
+            return;
+        }
+        (Some(ClipboardItem::Paste), _) => clipboard.0.clone(),
+        (None, replace) => replace.map(|replace| replace.0.clone()),
+    };
+    let Some(curve) = curve else {
+        return;
+    };
+    commands.trigger(CurveEdit {
+        editor,
+        curve: editor,
+        op: CurveEditOp::Replace(curve),
+        phase: CurveEditPhase::Finish,
+    });
+}
+
+/// Disables every Paste curve while the clipboard is empty.
+fn enable_paste(
+    clipboard: Res<CurveClipboard>,
+    items: Query<(Entity, &ClipboardItem, Has<InteractionDisabled>)>,
+    mut commands: Commands,
+) {
+    for (item, own, disabled) in &items {
+        let empty = clipboard.0.is_none();
+        if *own == ClipboardItem::Paste && empty != disabled {
+            if empty {
+                commands.entity(item).insert(InteractionDisabled);
+            } else {
+                commands.entity(item).remove::<InteractionDisabled>();
+            }
+        }
+    }
 }
 
 /// Keeps a marker per point on each editor's plot, placed and styled from the selection and hover.

@@ -8,7 +8,8 @@
 - a color field's row: a swatch that opens a picker, where a typed color tints the trunk;
 - a curve's row: Bias's Size as a thumbnail, opened into its editor, where a point is selected
   and typed into, a double-click inserts one and Delete removes it, Tab selects the next point and
-  arrows move it, and a double-click on a point deletes it; then a step and a steep rise, judged by eye for facets and an even width. The
+  arrows move it, and a double-click on a point deletes it; then a step and a steep rise, judged by eye for facets and an even width;
+  then its ⋯ menu's Copy, Reset and Paste. The
   driver cannot drag, so dragging a point, selecting by rectangle and Escape are checked by
   hand."""
 
@@ -172,6 +173,21 @@ def run(driver):
     driver.set_resource(SPECIES, shape, at="limbs.levels[0].bias.settings.size.0")
     driver.present(f"{size}/editor/plot/point4")
     driver.screenshot("curve_shapes")
+    # The ⋯ menu: Paste does nothing while nothing is copied; Reset flattens the curve to Bias's
+    # default, and Paste brings back the copied shape.
+    driver.click(f"{size}/menu")
+    driver.screenshot("curve_menu")
+    driver.click(f"{size}/menu/paste")
+    driver.present(f"{size}/editor/plot/point4")
+    driver.click(f"{size}/menu/copy")
+    driver.click(f"{size}/menu")
+    driver.click(f"{size}/menu/reset")
+    driver.absent(f"{size}/editor/plot/point2")
+    driver.expect("Plant", GROWN_FROM, Between(0.99, 1.01), at="limbs[0].bias.size[0][1]")
+    driver.click(f"{size}/menu")
+    driver.click(f"{size}/menu/paste")
+    driver.present(f"{size}/editor/plot/point4")
+    driver.expect("Plant", GROWN_FROM, Between(0.39, 0.41), at="limbs[0].bias.size[0][1]")
     # Closed again, the row shows the same curve as a thumbnail.
     driver.click(f"{size}/open")
     driver.present(f"{size}/thumbnail")

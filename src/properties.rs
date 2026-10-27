@@ -63,8 +63,9 @@ use bevy_immediate::{
 
 use crate::{
     curve::{
-        CurveAxis, CurveConstraints, CurveEdit, CurveEditorFormat, CurveValue, ScalarCurve,
-        curve_editor, curve_thumbnail,
+        CurveAxis, CurveConstraints, CurveEdit, CurveEditorFormat, CurveMenuReplace,
+        CurveMenuTarget, CurveValue, ScalarCurve, curve_editor, curve_menu, curve_menu_item,
+        curve_thumbnail,
     },
     fuzzy::{Distribution, Fuzzy, Interval},
     random::Seed,
@@ -113,6 +114,7 @@ impl ImmCapability for CapabilityCurve {
         cap_req.request_component_read::<CurveValue>(app.world_mut());
         cap_req.request_component_write::<PendingCurveEdits>(app.world_mut());
         cap_req.request_resource_read::<UnitsRegistry>(app.world_mut());
+        cap_req.request_resource_read::<AppTypeRegistry>(app.world_mut());
     }
 }
 
@@ -371,6 +373,7 @@ fn field_row(
     notes: &HeaderNotes,
     in_pane: bool,
 ) {
+    let parent = fields.get_represented_type_info();
     let Some(field) = fields.field_at_mut(index) else {
         return;
     };
@@ -427,12 +430,14 @@ fn field_row(
         seed_row(row, name, caption, seed);
     } else if let Some(place) = field.try_downcast_mut::<PlaceCurve>() {
         let mut curve = place.curve();
+        let reset = default_field::<PlaceCurve>(&row, parent, name).map(|reset| reset.curve());
         curve_row(
             row,
             name,
             caption,
             attrs,
             PlaceCurve::constraints,
+            reset,
             &mut curve,
         );
         let edited = PlaceCurve::from_curve(&curve);
@@ -1015,9 +1020,25 @@ fn seed_row(row: ImmEntity<CapsPanel>, name: &'static str, caption: &'static str
     });
 }
 
+/// The value field `name` takes in the default of `parent`, a struct type reflecting `Default`.
+fn default_field<T: FromReflect>(
+    row: &ImmEntity<CapsPanel>,
+    parent: Option<&TypeInfo>,
+    name: &str,
+) -> Option<T> {
+    let registry = row.cap_get_resource::<AppTypeRegistry>().ok()?;
+    let registry = registry.read();
+    let default = (registry.get_type_data::<ReflectDefault>(parent?.type_id()))?.default();
+    let ReflectRef::Struct(default) = default.reflect_ref() else {
+        return None;
+    };
+    T::from_reflect(default.field(name)?)
+}
+
 /// A curve's row: a disclosure toggle named `open` and its caption, then while closed a thumbnail
-/// named `thumbnail`, and while open the curve's editor below, named `editor`. The editor's edits
-/// are judged by the constraints that `constraints` builds from the y axis, which the field's
+/// named `thumbnail`, and while open the curve's menu, named `menu`, and its editor below, named
+/// `editor`. The menu offers Reset, named `reset`, to `reset` if given. The editor's edits are
+/// judged by the constraints that `constraints` builds from the y axis, which the field's
 /// [`ValueRange`] bounds. x is a place along the parent, so it is captioned and labelled as one.
 fn curve_row(
     row: ImmEntity<CapsPanel>,
@@ -1025,6 +1046,7 @@ fn curve_row(
     caption: &'static str,
     attrs: &CustomAttributes,
     constraints: impl FnOnce(CurveAxis) -> CurveConstraints,
+    reset: Option<ScalarCurve>,
     curve: &mut ScalarCurve,
 ) {
     let look = NumberLook::from_attributes::<f32>(attrs);
@@ -1058,6 +1080,8 @@ fn curve_row(
     };
     row.on_spawn_insert(row_node).add(|ui| {
         let mut open = false;
+        // The menu's entity, while it is new, so the editor below can aim it.
+        let mut new_menu = None;
         ui.ch().on_spawn_insert(widget_line).add(|ui| {
             let toggle = ui
                 .ch_id("open")
@@ -1075,6 +1099,21 @@ fn curve_row(
                     curve,
                     &constraints,
                 );
+            } else {
+                let menu = ui
+                    .ch_id("menu")
+                    .on_spawn_apply_scene(move || {
+                        let items = reset.clone().map(|reset| -> Box<dyn SceneList> {
+                            Box::new(bsn_list! {
+                                @curve_menu_item("Reset") CurveMenuReplace({reset}) #reset
+                            })
+                        });
+                        curve_menu(items)
+                    })
+                    .on_spawn_insert(|| Name::new("menu"));
+                if menu.will_be_spawned() {
+                    new_menu = Some(menu.entity());
+                }
             }
         });
         if open {
@@ -1087,6 +1126,10 @@ fn curve_row(
                 for edit in pending.0.drain(..) {
                     curve.apply(&edit.op, &constraints);
                 }
+            }
+            if let Some(menu) = new_menu {
+                let target = CurveMenuTarget(editor.entity());
+                editor.commands().entity(menu).insert(target);
             }
             curve_widget(
                 editor,

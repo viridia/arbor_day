@@ -13,7 +13,7 @@ const SOLVE_STEPS: u32 = 16;
 
 /// A number that changes along another, drawn as a curve: y over x, through points ordered by x.
 /// Two points may share an x, making a step.
-#[derive(Reflect, Clone, Debug, PartialEq)]
+#[derive(Reflect, Clone, Debug, PartialEq, Default)]
 pub struct ScalarCurve {
     pub points: Vec<CurvePoint>,
     pub extrapolation: CurveExtrapolation,

@@ -250,9 +250,13 @@ They are on the plot node, `CurveGestures`, beside `CurveHover` and `CurveHitRad
 curve, its constraints and a `CurveEditorFormat` (each axis's number-input units, and labels for
 x in place of its values) beside it. It assembles, top to bottom:
 
-- **A header row**: the host's caption and disclosure toggle, and a menu button with the
-  consumer's presets, Reset, and Copy and Paste curve (CE29, CE33). Feathers has no submenus, so
-  the presets are items of their own.
+- **A header row**: the host's caption and disclosure toggle, and `curve_menu(items)`, a ⋯ menu
+  the host places at the row's right end and aims at the editor with `CurveMenuTarget` (CE29,
+  CE33). The host's items (presets, Reset) come first, above a divider; feathers has no
+  submenus, so each preset is an item of its own. An item holding `CurveMenuReplace(ScalarCurve)`
+  sends a `Replace` when picked, so the host needs no handler; it observes its other items
+  itself. Then the editor's own Copy curve and Paste curve, through an app-wide clipboard
+  rather than the system's, so Paste is disabled while nothing is copied.
 - **The plot**: a node with `CurvePath` drawn by the path material, over the grid's lines as
   one-pixel nodes, the y labels in a gutter to its left and the x labels under it, and a node per
   point and per visible handle, placed from the view and styled from `CurveHover` and
@@ -293,7 +297,8 @@ plot of 300 × 170 pixels is cheap.
   the ends pinned, cubic segments, auto handles, holding past the ends; y from the field's
   `@ValueRange`, its step from `@Step`, its precision from `@Precision` in the field's units (1%
   for Bias). An attribute for x waits for a curve over another domain (X63). The menu offers
-  Reset alone (C156c); presets wait for the crown profile.
+  Reset alone, to the field's value in its struct's `Default`, read by reflection, so a curve
+  field whose struct reflects none has no Reset; presets wait for the crown profile.
 - **The row** is a disclosure: collapsed, the toggle, caption and a thumbnail on one line;
   expanded, the feathers editor below it (the mock's first frame), its inputs captioned Position and
   the field's caption, x labelled Base, Middle and Tip. Whether a row is open is its toggle's

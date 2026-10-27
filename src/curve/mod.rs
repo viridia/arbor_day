@@ -23,7 +23,10 @@ pub use edit::CurveEdit;
 pub use edit::{
     CurveSelection, CurveSelectionChanged, PointRef, SelectCurve, SelectedPoints, curve_self_update,
 };
-pub use feathers::{CurveEditorFormat, curve_editor, curve_thumbnail};
+pub use feathers::{
+    CurveEditorFormat, CurveMenuReplace, CurveMenuTarget, curve_editor, curve_menu,
+    curve_menu_item, curve_thumbnail,
+};
 pub use model::{
     CurveAxis, CurveConstraints, CurveExtrapolation, CurvePoint, CurveSegment, CurveValue,
     HandleMode, ScalarCurve,

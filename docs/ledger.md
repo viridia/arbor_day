@@ -132,6 +132,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C155  | The inline curve editor ([curve-editor-design.md](curve-editor-design.md), 2 to 7). |
 | C156a | Curve selection by rectangle, the editor's keys, and double-click deleting a point ([curve-editor-design.md](curve-editor-design.md), 4); X65. |
 | C156b | The host's selection commands and `curve_self_update` ([curve-editor-design.md](curve-editor-design.md), 2, 2.1), tested in a `World`. |
+| C156c | The curve editor's ⋯ menu: Reset, Copy and Paste curve ([curve-editor-design.md](curve-editor-design.md), 5, 6). |
 
 ## Next
 
@@ -153,19 +154,10 @@ slots (C103), the painted leaf (C38), outlines (C66), carry-on's removal (C117),
 the golden trees (C146). Before the freeze (C113), the changes that would cost the finished trees
 a migration or a new look land while the trees are few, the golden trees showing each.
 
-1. **C156c The ⋯ menu** (design 5): a `curve_menu()` scene the host places in its header line,
-   aimed at its editor. The editor's own items are Copy and Paste curve, through an app-wide
-   resource rather than the system clipboard, so Paste knows when to be disabled; the host
-   passes items of its own as a scene list, and an item holding a curve
-   (`CurveMenuReplace(ScalarCurve)`) sends a `Replace` when picked, so the host needs no
-   handlers; other items the host observes itself. Bias's curves take Reset alone, to the
-   curve that grows the plant as if Bias were off (Size flat at 100%), which is the field's
-   value in `Bias::default`; presets wait for the crown profile as a curve, the mock's Bias
-   presets dropped. E[2]
-2. **C157 Bias Leaves and Aim as curves**: two more `PlaceCurve` fields, converted as Size was
+1. **C157 Bias Leaves and Aim as curves**: two more `PlaceCurve` fields, converted as Size was
    (`scripts/size_curve.py` generalized). Decided here: whether reach and angle take curves too.
    E[2]
-3. **C125 Steady nodes**: moving Start or End moves each node, which jumps limbs about in two
+2. **C125 Steady nodes**: moving Start or End moves each node, which jumps limbs about in two
    ways. A lateral's length changes, so its own node count steps; its nodes draw in order from
    one `layout` stream and its limbs' streams are numbered by a running count, so one node more
    re-deals every node after it, and every level below. Each node from a stream of its own
@@ -173,7 +165,7 @@ a migration or a new look land while the trees are few, the golden trees showing
    drops one node. And a node's azimuth is the cheapest of its candidates (`node_azimuths`),
    which flips as crowding changes with the nodes' spacing; blend the two cheapest when their
    costs are near. Changes every plant's layout (X15's generator version). E[2]
-4. **C134 Facing, skew and angle as G5 has them** (the author, 2026-10-21 and 10-22): adjusting
+3. **C134 Facing, skew and angle as G5 has them** (the author, 2026-10-21 and 10-22): adjusting
    facing and skew seldom improves a plant, since the model decides what they promise to set.
    - Facing only where the parent has an upper side: an upright trunk has none, so Sides, Up and
      Down measure from an arbitrary side there. The trunk's level is always Around (crowding's
@@ -187,10 +179,10 @@ a migration or a new look land while the trees are few, the golden trees showing
      in one row; which, decided when built.
 
    E[2]
-5. **C147 Sprigs as a list** (X37's format, ahead of its feature): the tip leaves' sprig becomes
+4. **C147 Sprigs as a list** (X37's format, ahead of its feature): the tip leaves' sprig becomes
    a list holding one, the panel showing it as now, so several sprigs (X37) later need no
    migration. `reference/` converted. E[1]
-6. **C113 File format freeze**, at D32's gate: from here a change that renames, moves or removes
+5. **C113 File format freeze**, at D32's gate: from here a change that renames, moves or removes
    a species field, or changes its type, needs a migration (X15). Before it, each item below
    either lands, is dropped, or is accepted as a later migration; prune the list as those
    choices are made. E[1], the items aside.
@@ -206,7 +198,7 @@ a migration or a new look land while the trees are few, the golden trees showing
    Additive changes, whose default or off state grows today's plant, need no place here (C132,
    C133, X12's modes with today's as the default), nor does X22, a species of its own kind.
 
-7. **C8 Working document in settings.** A settings group holding the working species and, once
+6. **C8 Working document in settings.** A settings group holding the working species and, once
    set, the file path, so a restart returns to unsaved edits and Save writes to the right file,
    as seedling did. The document's name comes from the file name. Serialized by reflection, as
    `bevy_settings` does. A working document from before a schema change is lost (D32), but not
