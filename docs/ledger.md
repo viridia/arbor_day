@@ -135,6 +135,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C156c | The curve editor's ⋯ menu: Reset, Copy and Paste curve ([curve-editor-design.md](curve-editor-design.md), 5, 6). |
 | C158  | `src/lib.rs` holding `curve`, and `examples/curve_editor.rs`, each editor beside its curve as its app stores it ([curve-editor-design.md](curve-editor-design.md), 7). |
 | C159a | Handles on the curve editor's plot, dragged; the editor a scene component; a `cubic-bezier` row in the example ([curve-editor-design.md](curve-editor-design.md), 4, 5, 7). |
+| C159b | In and Out inputs for the selected point's handles, as offsets ([curve-editor-design.md](curve-editor-design.md), 5). |
 
 ## Next
 
@@ -253,9 +254,6 @@ a migration or a new look land while the trees are few, the golden trees showing
 
 ### Later
 
-- **C159b In and Out inputs** (C159 was X62): a row each for the selected point's shown handles
-  (CE34), sending `MoveHandle`, as the mock's "In and Out inputs" frame draws them (b). Spawned
-  unless the host's `@handle_inputs` prop is false, as `@point_inputs` spawns the point's. E[1]
 - **C159c A curve of mixed segments and handle modes** in `examples/curve_editor.rs`, stored as
   the whole `ScalarCurve` written with `{:#?}`, which shows its structure with no new
   dependency. With it, an aligned handle's opposite: `apply` turns it from its current offset,
@@ -551,29 +549,25 @@ a migration or a new look land while the trees are few, the golden trees showing
   its axis.
   The model bounds the view (x in 0 to 1), the editor owns it within them. *Gate:* C159a landed.
 
-- **X67** Feathers' number input, upstream: bugs to report, each worked around here or lived
-  with until it is fixed in the Bevy we build against. The first three are about how the input
-  formats and rounds its value, and could go as one issue. A no-value state (was X65) is not
+- **X67** Feathers' number input, upstream: bugs, each worked around here or lived with until it
+  is fixed in the Bevy we build against, some with a PR open. A no-value state (was X65) is not
   proposed: it drew objections on Discord, and the curve editor swaps in a placeholder instead
-  (C160). *Gate:* each item fixed in the Bevy we build against, and its workaround dropped.
-  - **Text left in its editing form** (was X35): an input left without a change (Enter, or focus
-    lost) keeps its editing text, so an angle shows `20d` rather than `20°`, beside its interior
-    caption (C77). Its text is rewritten only when `NumericValue` changes; leaving edit mode
-    should rewrite it in the display form. Lived with.
-  - **Chevrons skip the precision**: scrubbing and typing round to `NumberInputPrecision`, but
-    `chevron_on_press` adds the step in `f64` and converts back unrounded, so a fractional step
-    drifts by an `f32` step (0.35 becoming `0.35000002`). The curve editor rounds each value from
-    its inputs to the axis's precision (`edit_from_input`).
-  - **The display ignores the precision**, a question rather than a bug: the text is the
-    shortest decimal that reproduces the `f32`, so a value off the precision prints in full.
-    Precision governs only what a user enters. Formatting to it would have hidden both drifts
-    above; ask whether that is intended.
-  - **Re-enabled, drawn disabled** (was X64): an input re-enabled by removing
+  (C160). The display showing a value in full, past its precision, is intended: it never lies
+  to the user. *Gate:* each item fixed in the Bevy we build against, and its workaround dropped.
+  - **Text left in its editing form** (was X35), PR open: an input left without a change
+    (Enter, or focus lost) keeps its editing text, so an angle shows `20d` rather than `20°`,
+    beside its interior caption (C77). Its text is rewritten only when `NumericValue` changes;
+    leaving edit mode should rewrite it in the display form. Lived with.
+  - **Chevrons skip the precision**, to report: scrubbing and typing round to
+    `NumberInputPrecision`, but `chevron_on_press` adds the step in `f64` and converts back
+    unrounded, so a fractional step drifts by an `f32` step (0.35 becoming `0.35000002`). The
+    curve editor rounds each value from its inputs to the axis's precision (`edit_from_input`).
+  - **Re-enabled, drawn disabled** (was X64), PR open: an input re-enabled by removing
     `InteractionDisabled` stays drawn disabled. `number_input_on_remove_disabled` observes
     `Remove`, which runs while the component is still there, so `Has<InteractionDisabled>` reads
     true and it restyles as disabled. The curve editor re-inserts the text field's `Hovered`,
     which restyles from the input's state (`restyle_number_input`).
-  - **Scrub speed tied to the step**: without a `SoftLimit`, a scrub moves `NumberInputStep` ×
+  - **Scrub speed tied to the step**, to report: without a `SoftLimit`, a scrub moves `NumberInputStep` ×
     0.01 per pixel, so an input with a fine step creeps (the curve editor's Bias y, 1% per
     100 px), and a `SoftLimit` to speed it up draws the slider bar, wrong for an open-ended
     value. Either a component setting the speed alone, or a default formula that scrubs a step

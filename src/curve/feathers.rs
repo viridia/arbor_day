@@ -119,12 +119,16 @@ pub struct FeathersCurveEditorProps {
     /// inputs out, for a curve whose points the author never types, such as one whose only points
     /// are its pinned ends.
     pub point_inputs: Option<(&'static str, &'static str)>,
+    /// Whether the selected point's handles have inputs, by default true: a row each, In and Out,
+    /// for the handle's offset from the point, shown while that handle is.
+    pub handle_inputs: bool,
 }
 
 impl Default for FeathersCurveEditorProps {
     fn default() -> Self {
         Self {
             point_inputs: Some(("x", "y")),
+            handle_inputs: true,
         }
     }
 }
@@ -243,17 +247,50 @@ impl FeathersCurveEditor {
                 Children [
                     @FeathersNumberInput { @interior_label_text: {Some(x_caption)} }
                     #x
-                    PointInput { y: false }
+                    CoordinateInput { y: false }
                     Node { flex_grow: 1.0 }
                     --
                     @FeathersNumberInput { @interior_label_text: {Some(y_caption)} }
                     #y
-                    PointInput { y: true }
+                    CoordinateInput { y: true }
                     Node { flex_grow: 1.0 }
                 ]
             })}
+            --
+            {props.handle_inputs.then(|| bsn_list! {
+                @handle_input_row(HandleSide::Left) -- @handle_input_row(HandleSide::Right)
+            })}
         ]
         }
+    }
+}
+
+/// The inputs for the selected point's handle on `side`, hidden while it shows none: `In Δx` and
+/// `In Δy`, named `in_dx` and `in_dy`, or likewise Out.
+fn handle_input_row(side: HandleSide) -> impl Scene {
+    let (x_caption, y_caption, x_name, y_name) = match side {
+        HandleSide::Left => ("In Δx", "In Δy", "in_dx", "in_dy"),
+        HandleSide::Right => ("Out Δx", "Out Δy", "out_dx", "out_dy"),
+    };
+    let handle = Some(side);
+    bsn! {
+        HandleInputRow
+        Node {
+            flex_direction: FlexDirection::Row,
+            column_gap: px(4),
+            display: Display::None,
+        }
+        Children [
+            @FeathersNumberInput { @interior_label_text: {Some(x_caption)} }
+            Name({x_name})
+            CoordinateInput { handle: {handle}, y: false }
+            Node { flex_grow: 1.0 }
+            --
+            @FeathersNumberInput { @interior_label_text: {Some(y_caption)} }
+            Name({y_name})
+            CoordinateInput { handle: {handle}, y: true }
+            Node { flex_grow: 1.0 }
+        ]
     }
 }
 
@@ -382,11 +419,17 @@ fn axis_label(y: bool, share: f32, justify: Justify) -> impl Scene {
     }
 }
 
-/// A number input for the selected point's x, or its `y`.
+/// A number input for the selected point's x, or its `y`; with `handle`, for that handle's offset
+/// from the point.
 #[derive(Component, Clone, Copy, Debug, Default)]
-struct PointInput {
+struct CoordinateInput {
+    handle: Option<HandleSide>,
     y: bool,
 }
+
+/// A row of [`CoordinateInput`]s for a handle, shown while the selected point shows that handle.
+#[derive(Component, Clone, Copy, Debug, Default)]
+struct HandleInputRow;
 
 /// The rectangle being dragged out on the plot it is a child of, hidden while there is none.
 #[derive(Component, Clone, Copy, Debug, Default)]
@@ -831,7 +874,8 @@ fn label_axes(
 
 /// Shows the selected point's x and y in the inputs, which are enabled only while exactly one
 /// point is selected, and only for a coordinate the constraints let it move in; with none or
-/// several, they show 0. Each input rounds to its axis's precision, written in the input's units.
+/// several, they show 0. A handle's inputs show its offset, their row only while the point shows
+/// that handle. Each input rounds to its axis's precision, written in the input's units.
 fn show_selected_point(
     editors: Query<
         (
@@ -849,7 +893,13 @@ fn show_selected_point(
         )>,
     >,
     children: Query<&Children>,
-    inputs: Query<(&PointInput, &NumericValue, Has<InteractionDisabled>)>,
+    inputs: Query<(
+        &CoordinateInput,
+        &NumericValue,
+        Has<InteractionDisabled>,
+        &ChildOf,
+    )>,
+    mut rows: Query<&mut Node, With<HandleInputRow>>,
     registry: Res<UnitsRegistry>,
     mut commands: Commands,
 ) {
@@ -861,7 +911,7 @@ fn show_selected_point(
         });
         let last = curve.0.points.len().saturating_sub(1);
         for descendant in children.iter_descendants(editor) {
-            let Ok((input, shown, disabled)) = inputs.get(descendant) else {
+            let Ok((input, shown, disabled, row)) = inputs.get(descendant) else {
                 continue;
             };
             let mut entity = commands.entity(descendant);
@@ -884,18 +934,40 @@ fn show_selected_point(
                         units.canonical_to_display(axis.step as f64),
                     ));
                 }
-                if axis.clamped {
+                // A handle's offset has bounds of its own, which `apply` keeps.
+                if axis.clamped && input.handle.is_none() {
                     entity.insert(HardLimit(NumericRange::F32(axis.min..=axis.max)));
                 }
             }
-            let movable = point.is_some_and(|(index, _)| {
-                let end = index == 0 || index == last;
-                match constraints.pin_ends {
-                    PinEnds::None => true,
-                    PinEnds::X => input.y || !end,
-                    PinEnds::XY => !end,
+            // What the input shows, and whether it may be edited. With no single point, 0 stands in
+            // for showing no value (C160).
+            let (movable, at) = match input.handle {
+                Some(side) => {
+                    let offset = point.and_then(|(index, _)| curve.0.manual_handle(index, side));
+                    if let Ok(mut row) = rows.get_mut(row.parent()) {
+                        let display = if offset.is_some() {
+                            Display::Flex
+                        } else {
+                            Display::None
+                        };
+                        if row.display != display {
+                            row.display = display;
+                        }
+                    }
+                    (offset.is_some(), offset.unwrap_or_default())
                 }
-            });
+                None => {
+                    let movable = point.is_some_and(|(index, _)| {
+                        let end = index == 0 || index == last;
+                        match constraints.pin_ends {
+                            PinEnds::None => true,
+                            PinEnds::X => input.y || !end,
+                            PinEnds::XY => !end,
+                        }
+                    });
+                    (movable, point.map_or(Vec2::ZERO, |(_, at)| at))
+                }
+            };
             if movable == disabled {
                 if movable {
                     entity.remove::<InteractionDisabled>();
@@ -904,12 +976,7 @@ fn show_selected_point(
                     entity.insert(InteractionDisabled);
                 }
             }
-            // With no single point, 0 stands in for showing no value (C160).
-            let value = NumericValue::F32(match point {
-                Some((_, at)) if input.y => at.y,
-                Some((_, at)) => at.x,
-                None => 0.0,
-            });
+            let value = NumericValue::F32(if input.y { at.y } else { at.x });
             if *shown != value || configure {
                 entity.insert(value);
             }
@@ -933,11 +1000,12 @@ fn restyle_number_input(input: EntityWorldMut) {
     }
 }
 
-/// A value typed, scrubbed or stepped into a point input proposes the selected point there,
-/// rounded to its axis's precision: feathers' chevrons step without rounding.
+/// A value typed, scrubbed or stepped into a point input proposes the selected point there, or
+/// into a handle's input, the handle at that offset, rounded to its axis's precision: feathers'
+/// chevrons step without rounding.
 fn edit_from_input(
     change: On<ValueChange<f32>>,
-    inputs: Query<&PointInput>,
+    inputs: Query<&CoordinateInput>,
     parents: Query<&ChildOf>,
     editors: Query<(&CurveValue, &CurveConstraints, &CurveSelection), With<FeathersCurveEditor>>,
     mut commands: Commands,
@@ -957,7 +1025,11 @@ fn edit_from_input(
     let Some(point) = selection.single() else {
         return;
     };
-    let Some(at) = curve.0.points.get(point.index) else {
+    let at = match input.handle {
+        Some(side) => curve.0.manual_handle(point.index, side),
+        None => (curve.0.points.get(point.index)).map(|at| Vec2::new(at.x, at.y)),
+    };
+    let Some(at) = at else {
         return;
     };
     let at = if input.y {
@@ -965,10 +1037,14 @@ fn edit_from_input(
     } else {
         Vec2::new(constraints.x.round(change.value), at.y)
     };
+    let op = match input.handle {
+        Some(side) => CurveEditOp::MoveHandle(point.index, side, at),
+        None => CurveEditOp::SetPoint(point.index, at),
+    };
     commands.trigger(CurveEdit {
         editor,
         curve: point.curve,
-        op: CurveEditOp::SetPoint(point.index, at),
+        op,
         phase: if change.is_final {
             CurveEditPhase::Finish
         } else {
