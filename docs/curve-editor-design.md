@@ -249,10 +249,11 @@ They are on the plot node, `CurveGestures`, beside `CurveHover` and `CurveHitRad
 
 ## 5. The feathers editor
 
-`curve_editor(x_caption, y_caption)` is a scene, as `curve_thumbnail` is; the host inserts the
-curve and its constraints beside it, and a `CurveEditorFormat` (each axis's number-input units,
-labels for x in place of its values, and whether to leave out the point inputs, for a curve whose
-points are never typed) in place of the default, plain numbers with the inputs shown. It assembles, top to bottom:
+`FeathersCurveEditor` is a scene component, as feathers' widgets are; the host inserts the curve
+and its constraints beside it. Its fields, kept on the component, say how values are written:
+each axis's number-input units, and labels for x in place of its values; by default, plain
+numbers. Its props say which inputs are spawned: `@point_inputs`, their captions, `None` for a
+curve whose points are never typed. It assembles, top to bottom:
 
 - **A header row**: the host's caption and disclosure toggle, and `curve_menu(items)`, a ⋯ menu
   the host places at the row's right end and aims at the editor with `CurveMenuTarget` (CE29,
@@ -268,8 +269,9 @@ points are never typed) in place of the default, plain numbers with the inputs s
   draws the curve, and each selected point's stem, from its In handle through the point to its
   Out handle, as a node of its own with a `CurvePath`, under the markers.
 - **An input row**: feathers number inputs for the selected point's x and y, disabled unless
-  exactly one point is selected (CE25); and below them, a row each for that point's aligned or
-  free handles, In and Out, their x and y (CE34). An input sends `SetPoint` or `MoveHandle`,
+  exactly one point is selected (CE25); and below them, a row each for that point's shown
+  handles, In and Out, their offsets from the point as stored, captioned `In Δx` and so on
+  (CE34), so they hold still while the point moves. An input sends `SetPoint` or `MoveHandle`,
   `Update` while scrubbing, `Finish` on commit. Each rounds to its axis's precision, its decimal
   places worked out through its units (0.01 shown as a percentage is 1%: no decimals).
 

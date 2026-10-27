@@ -100,12 +100,38 @@ pub fn curve_thumbnail() -> impl Scene {
 
 /// A curve editor: a plot whose points are selected, dragged, inserted by double-click and
 /// deleted with Delete, labelled at the ends and middle of each axis, over number inputs for the
-/// selected point's x and y, captioned `x_caption` and `y_caption`. Insert a [`CurveValue`] and its
-/// [`CurveConstraints`] on the same entity, and a [`CurveEditorFormat`] unless plain numbers will
-/// do; it receives each [`CurveEdit`], and the curve is written back as the host judges them.
-pub fn curve_editor(x_caption: &'static str, y_caption: &'static str) -> impl Scene {
-    bsn! {
-        FeathersCurveEditor
+/// selected point's x and y. Insert a [`CurveValue`] and its [`CurveConstraints`] on the same
+/// entity; it receives each [`CurveEdit`], and the curve is written back as the host judges them.
+/// Its fields say how the axes' values are written, in the labels and the inputs; by default as
+/// plain numbers.
+#[derive(SceneComponent, Clone, Debug, Default)]
+#[scene(FeathersCurveEditorProps)]
+pub struct FeathersCurveEditor {
+    pub x_units: Option<NumberInputUnits>,
+    pub y_units: Option<NumberInputUnits>,
+    /// Labels for the x axis's start, middle and end in place of their values.
+    pub x_labels: Option<[&'static str; 3]>,
+}
+
+/// Props used to construct a [`FeathersCurveEditor`] scene.
+pub struct FeathersCurveEditorProps {
+    /// Captions for the selected point's x and y inputs, by default `x` and `y`. None leaves the
+    /// inputs out, for a curve whose points the author never types, such as one whose only points
+    /// are its pinned ends.
+    pub point_inputs: Option<(&'static str, &'static str)>,
+}
+
+impl Default for FeathersCurveEditorProps {
+    fn default() -> Self {
+        Self {
+            point_inputs: Some(("x", "y")),
+        }
+    }
+}
+
+impl FeathersCurveEditor {
+    fn scene(props: FeathersCurveEditorProps) -> impl Scene {
+        bsn! {
         CurveSelection
         SeenCurve
         Node {
@@ -209,51 +235,27 @@ pub fn curve_editor(x_caption: &'static str, y_caption: &'static str) -> impl Sc
                 ]
             ]
             --
-            PointInputRow
-            Node {
-                flex_direction: FlexDirection::Row,
-                column_gap: px(4),
-            }
-            Children [
-                @FeathersNumberInput { @interior_label_text: {Some(x_caption)} }
-                #x
-                PointInput { y: false }
-                Node { flex_grow: 1.0 }
-                --
-                @FeathersNumberInput { @interior_label_text: {Some(y_caption)} }
-                #y
-                PointInput { y: true }
-                Node { flex_grow: 1.0 }
-            ]
+            {props.point_inputs.map(|(x_caption, y_caption)| bsn! {
+                Node {
+                    flex_direction: FlexDirection::Row,
+                    column_gap: px(4),
+                }
+                Children [
+                    @FeathersNumberInput { @interior_label_text: {Some(x_caption)} }
+                    #x
+                    PointInput { y: false }
+                    Node { flex_grow: 1.0 }
+                    --
+                    @FeathersNumberInput { @interior_label_text: {Some(y_caption)} }
+                    #y
+                    PointInput { y: true }
+                    Node { flex_grow: 1.0 }
+                ]
+            })}
         ]
+        }
     }
 }
-
-/// Marks a [`curve_editor`].
-#[derive(Component, Clone, Default)]
-pub struct FeathersCurveEditor;
-
-/// On a [`curve_editor`]: how its axes' values are written, in the labels and the inputs. An
-/// editor without one writes plain numbers. Not part of the editor's scene, so a host may insert
-/// it before or after the scene is applied.
-#[derive(Component, Clone, Debug, Default)]
-pub struct CurveEditorFormat {
-    pub x_units: Option<NumberInputUnits>,
-    pub y_units: Option<NumberInputUnits>,
-    /// Labels for the x axis's start, middle and end in place of their values.
-    pub x_labels: Option<[&'static str; 3]>,
-    /// Leaves out the selected point's x and y inputs, for a curve whose points the author never
-    /// types, such as one whose only points are its pinned ends.
-    pub hide_point_inputs: bool,
-}
-
-/// The format of an editor without a [`CurveEditorFormat`].
-const PLAIN_FORMAT: CurveEditorFormat = CurveEditorFormat {
-    x_units: None,
-    y_units: None,
-    x_labels: None,
-    hide_point_inputs: false,
-};
 
 /// A curve editor's ⋯ menu, at its row's right end, for the host to place in the editor's header
 /// line and aim with a [`CurveMenuTarget`]. It lists the host's `items`, if any, above a divider,
@@ -386,10 +388,6 @@ struct PointInput {
     y: bool,
 }
 
-/// The row holding a [`curve_editor`]'s [`PointInput`]s.
-#[derive(Component, Clone, Copy, Debug, Default)]
-struct PointInputRow;
-
 /// The rectangle being dragged out on the plot it is a child of, hidden while there is none.
 #[derive(Component, Clone, Copy, Debug, Default)]
 struct SelectionRectOutline;
@@ -468,7 +466,7 @@ pub(super) fn plugin(app: &mut App) {
     app.init_resource::<CurveClipboard>()
         .add_observer(edit_from_input)
         .add_observer(pick_menu_item)
-        .add_systems(Update, (enable_paste, hide_point_inputs))
+        .add_systems(Update, enable_paste)
         .add_systems(
             PostUpdate,
             (
@@ -795,15 +793,14 @@ fn place_selection_rect(
 /// Writes each grid label from its editor's axes and format.
 fn label_axes(
     editors: Query<
-        (Entity, &CurveConstraints, Option<&CurveEditorFormat>),
-        Or<(Changed<CurveConstraints>, Changed<CurveEditorFormat>)>,
+        (Entity, &CurveConstraints, &FeathersCurveEditor),
+        Or<(Changed<CurveConstraints>, Changed<FeathersCurveEditor>)>,
     >,
     children: Query<&Children>,
     mut labels: Query<(&AxisLabel, &mut Text)>,
     registry: Res<UnitsRegistry>,
 ) {
     for (editor, constraints, format) in &editors {
-        let format = format.unwrap_or(&PLAIN_FORMAT);
         for descendant in children.iter_descendants(editor) {
             let Ok((label, mut text)) = labels.get_mut(descendant) else {
                 continue;
@@ -832,26 +829,6 @@ fn label_axes(
     }
 }
 
-/// Hides each editor's point inputs if its format says to.
-fn hide_point_inputs(
-    editors: Query<(Entity, &CurveEditorFormat), Changed<CurveEditorFormat>>,
-    children: Query<&Children>,
-    mut rows: Query<&mut Node, With<PointInputRow>>,
-) {
-    for (editor, format) in &editors {
-        let display = if format.hide_point_inputs {
-            Display::None
-        } else {
-            Display::Flex
-        };
-        for descendant in children.iter_descendants(editor) {
-            if let Ok(mut row) = rows.get_mut(descendant) {
-                row.display = display;
-            }
-        }
-    }
-}
-
 /// Shows the selected point's x and y in the inputs, which are enabled only while exactly one
 /// point is selected, and only for a coordinate the constraints let it move in; with none or
 /// several, they show 0. Each input rounds to its axis's precision, written in the input's units.
@@ -862,13 +839,13 @@ fn show_selected_point(
             &CurveValue,
             Ref<CurveConstraints>,
             &CurveSelection,
-            Option<Ref<CurveEditorFormat>>,
+            Ref<FeathersCurveEditor>,
         ),
         Or<(
             Changed<CurveValue>,
             Changed<CurveConstraints>,
             Changed<CurveSelection>,
-            Changed<CurveEditorFormat>,
+            Changed<FeathersCurveEditor>,
         )>,
     >,
     children: Query<&Children>,
@@ -877,9 +854,7 @@ fn show_selected_point(
     mut commands: Commands,
 ) {
     for (editor, curve, constraints, selection, format) in &editors {
-        let configure =
-            format.as_ref().is_some_and(|format| format.is_changed()) || constraints.is_changed();
-        let format = format.as_deref().unwrap_or(&PLAIN_FORMAT);
+        let configure = format.is_changed() || constraints.is_changed();
         let point = (selection.single()).and_then(|point| {
             let at = curve.0.points.get(point.index)?;
             Some((point.index, Vec2::new(at.x, at.y)))

@@ -63,9 +63,8 @@ use bevy_immediate::{
 
 use crate::{
     curve::{
-        CurveAxis, CurveConstraints, CurveEdit, CurveEditorFormat, CurveMenuReplace,
-        CurveMenuTarget, CurveValue, ScalarCurve, curve_editor, curve_menu, curve_menu_item,
-        curve_thumbnail,
+        CurveAxis, CurveConstraints, CurveEdit, CurveMenuReplace, CurveMenuTarget, CurveValue,
+        FeathersCurveEditor, ScalarCurve, curve_menu, curve_menu_item, curve_thumbnail,
     },
     fuzzy::{Distribution, Fuzzy, Interval},
     random::Seed,
@@ -1067,12 +1066,7 @@ fn curve_row(
         }
     }
     let constraints = constraints(y);
-    let format = CurveEditorFormat {
-        x_units: Some(NumberInputUnits::new_static("ratio_percent")),
-        y_units: look.units.clone(),
-        x_labels: Some(["Base", "Middle", "Tip"]),
-        ..default()
-    };
+    let y_units = look.units.clone();
     let row_node = move || {
         let (name, node) = row_node(name);
         (
@@ -1122,10 +1116,9 @@ fn curve_row(
             }
         });
         if open {
-            let initial = (PendingCurveEdits::default(), format.clone());
             let mut editor = ui
                 .ch_id("editor")
-                .on_spawn_insert(move || initial.clone())
+                .on_spawn_insert(PendingCurveEdits::default)
                 .on_spawn_observe(store_curve_edit);
             if let Ok(Some(mut pending)) = editor.cap_get_component_mut::<PendingCurveEdits>() {
                 for edit in pending.0.drain(..) {
@@ -1139,7 +1132,16 @@ fn curve_row(
             curve_widget(
                 editor,
                 "editor",
-                move || curve_editor("Position", caption),
+                move || {
+                    bsn! {
+                        @FeathersCurveEditor {
+                            @point_inputs: {Some(("Position", caption))},
+                            x_units: {Some(NumberInputUnits::new_static("ratio_percent"))},
+                            y_units: {y_units},
+                            x_labels: {Some(["Base", "Middle", "Tip"])},
+                        }
+                    }
+                },
                 curve,
                 &constraints,
             );

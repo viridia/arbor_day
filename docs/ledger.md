@@ -134,7 +134,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C156b | The host's selection commands and `curve_self_update` ([curve-editor-design.md](curve-editor-design.md), 2, 2.1), tested in a `World`. |
 | C156c | The curve editor's ⋯ menu: Reset, Copy and Paste curve ([curve-editor-design.md](curve-editor-design.md), 5, 6). |
 | C158  | `src/lib.rs` holding `curve`, and `examples/curve_editor.rs`, each editor beside its curve as its app stores it ([curve-editor-design.md](curve-editor-design.md), 7). |
-| C159a | Handles on the curve editor's plot, dragged; a `cubic-bezier` row in the example ([curve-editor-design.md](curve-editor-design.md), 4, 5, 7). |
+| C159a | Handles on the curve editor's plot, dragged; the editor a scene component; a `cubic-bezier` row in the example ([curve-editor-design.md](curve-editor-design.md), 4, 5, 7). |
 
 ## Next
 
@@ -253,10 +253,9 @@ a migration or a new look land while the trees are few, the golden trees showing
 
 ### Later
 
-- **C159b In and Out inputs** (C159 was X62): a row each for the selected point's shown handles,
-  their x and y (CE34), sending `MoveHandle`. Whether they show the handle's offset, as stored,
-  or its control point, as Blender does, is open; the control point reads as the point's own
-  inputs do, and is what the example's `cubic-bezier` row stores, its point inputs hidden. E[1]
+- **C159b In and Out inputs** (C159 was X62): a row each for the selected point's shown handles
+  (CE34), sending `MoveHandle`, as the mock's "In and Out inputs" frame draws them (b). Spawned
+  unless the host's `@handle_inputs` prop is false, as `@point_inputs` spawns the point's. E[1]
 - **C159c A curve of mixed segments and handle modes** in `examples/curve_editor.rs`, stored as
   the whole `ScalarCurve` written with `{:#?}`, which shows its structure with no new
   dependency. With it, an aligned handle's opposite: `apply` turns it from its current offset,
@@ -574,6 +573,11 @@ a migration or a new look land while the trees are few, the golden trees showing
     `Remove`, which runs while the component is still there, so `Has<InteractionDisabled>` reads
     true and it restyles as disabled. The curve editor re-inserts the text field's `Hovered`,
     which restyles from the input's state (`restyle_number_input`).
+  - **Scrub speed tied to the step**: without a `SoftLimit`, a scrub moves `NumberInputStep` ×
+    0.01 per pixel, so an input with a fine step creeps (the curve editor's Bias y, 1% per
+    100 px), and a `SoftLimit` to speed it up draws the slider bar, wrong for an open-ended
+    value. Either a component setting the speed alone, or a default formula that scrubs a step
+    in a few pixels. Lived with.
 
 - **X63** A curve field's x axis from an attribute: today every curve row takes x from 0 to 1, its
   ends pinned, as a place along the parent ([curve-editor-design.md](curve-editor-design.md), 6).

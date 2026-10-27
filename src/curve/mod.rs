@@ -20,7 +20,7 @@ pub use edit::{
     SelectedPoints, curve_self_update,
 };
 pub use feathers::{
-    CurveEditorFormat, CurveMenuReplace, CurveMenuTarget, curve_editor, curve_menu,
+    CurveMenuReplace, CurveMenuTarget, FeathersCurveEditor, FeathersCurveEditorProps, curve_menu,
     curve_menu_item, curve_thumbnail,
 };
 pub use model::{

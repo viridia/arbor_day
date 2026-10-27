@@ -3,8 +3,8 @@
 //! what its constraints allow.
 
 use arbor_day::curve::{
-    CurveConstraints, CurveEditorFormat, CurveExtrapolation, CurvePlugin, CurvePoint, CurveSegment, CurveValue,
-    DirectionHandle, HandleMode, PinEnds, ScalarCurve, curve_editor, curve_self_update,
+    CurveConstraints, CurveExtrapolation, CurvePlugin, CurvePoint, CurveSegment, CurveValue,
+    DirectionHandle, FeathersCurveEditor, HandleMode, PinEnds, ScalarCurve, curve_self_update,
 };
 use bevy::{
     feathers::{
@@ -56,12 +56,12 @@ enum Stored {
 }
 
 impl Stored {
-    /// How the row's editor writes its values: a `cubic-bezier`'s points are its pinned ends, so
-    /// it has no point inputs.
-    fn format(self) -> CurveEditorFormat {
-        CurveEditorFormat {
-            hide_point_inputs: matches!(self, Self::CubicBezier),
-            ..default()
+    /// The captions of the row's point inputs: a `cubic-bezier`'s points are its pinned ends, so it
+    /// has none.
+    fn point_inputs(self) -> Option<(&'static str, &'static str)> {
+        match self {
+            Self::Pairs => Some(("x", "y")),
+            Self::CubicBezier => None,
         }
     }
 
@@ -148,12 +148,11 @@ fn row(
             Children [
                 @label(caption)
                 --
-                @curve_editor("x", "y")
+                @FeathersCurveEditor { @point_inputs: {stored.point_inputs()} }
                 #editor
                 ~{CurveValue(curve.clone())}
                 ~{constraints.clone()}
                 ~{stored}
-                ~{stored.format()}
                 on(curve_self_update)
             ]
             --
