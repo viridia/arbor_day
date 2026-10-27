@@ -15,13 +15,9 @@ mod view;
 
 use bevy::prelude::*;
 
-pub use edit::CurveEdit;
-#[allow(
-    unused_imports,
-    reason = "the host's selection API; arbor_day uses it from undo (C7)"
-)]
 pub use edit::{
-    CurveSelection, CurveSelectionChanged, PointRef, SelectCurve, SelectedPoints, curve_self_update,
+    CurveEdit, CurveEditPhase, CurveSelection, CurveSelectionChanged, PointRef, SelectCurve,
+    SelectedPoints, curve_self_update,
 };
 pub use feathers::{
     CurveEditorFormat, CurveMenuReplace, CurveMenuTarget, curve_editor, curve_menu,

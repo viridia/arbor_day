@@ -133,6 +133,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C156a | Curve selection by rectangle, the editor's keys, and double-click deleting a point ([curve-editor-design.md](curve-editor-design.md), 4); X65. |
 | C156b | The host's selection commands and `curve_self_update` ([curve-editor-design.md](curve-editor-design.md), 2, 2.1), tested in a `World`. |
 | C156c | The curve editor's ⋯ menu: Reset, Copy and Paste curve ([curve-editor-design.md](curve-editor-design.md), 5, 6). |
+| C158  | `src/lib.rs` holding `curve`, and `examples/curve_editor.rs`, each editor beside its curve as its app stores it ([curve-editor-design.md](curve-editor-design.md), 7). |
 
 ## Next
 
@@ -210,6 +211,12 @@ a migration or a new look land while the trees are few, the golden trees showing
 
 ### Quick wins
 
+- **C160 A placeholder for no point**: while no single point is selected, the curve editor's
+  point inputs are disabled and show 0, which reads as a value (CE25). Swap the input row for a
+  placeholder row of the same height, its captions over "—" as the mock has it, by toggling
+  `Display::None`, so the inputs keep their entities and configuration. Several points selected
+  could show their count. A pinned end's x stays a disabled input, so `restyle_number_input`
+  (X67) stays. E[1]
 - **C131 Reference trees**: the species in `reference/`, converted from seedling (C137), tuned
   by the author and saved from arbor_day, which fills in their meshes; the first three are tuned, the
   other 44 are as converted. `plans/gallery/reference.py` shoots each from the default view; add a
@@ -245,6 +252,16 @@ a migration or a new look land while the trees are few, the golden trees showing
 
 ### Later
 
+- **C159 Aligned and free handles** (was X62, its gate passed): the curve editor draws handles
+  on the selected points and drags them (the `MoveHandle` gesture), with In and Out input rows
+  (CE34, CE37). The model holds them since C145 (weighted sampling, the clamps); arbor_day's
+  curves allow auto handles only. Two rows join `examples/curve_editor.rs`: one cubic segment
+  with its ends pinned and aligned handles, stored as CSS's `cubic-bezier(x1, y1, x2, y2)`; and
+  a curve of mixed segments and handle modes, stored as the whole `ScalarCurve` in RON. The
+  driver cannot drag, so handle drags are checked by hand. The crown profile as a curve could
+  use them (an hourglass crown), though whether authors should shape a crown that way is open.
+  The leaf outline is not a customer: its handles may point back past the base (ivy), so it is
+  no function of length. E[3]
 - **C132 Repeated forks**: a maple forks and forks again (sympodial), where the levels grow a
   leader with laterals (monopodial). A fork's copies may fork again, up to a number of
   generations, 1 being today's (TD3.7, "copies do not fork again"). A copy already reaches what
@@ -414,11 +431,6 @@ a migration or a new look land while the trees are few, the golden trees showing
   base, which shows close up but not at game distance. *Gate:* a preset
   (X18) that another limb level cannot make dense enough.
 
-- **X35** Report upstream: a feathers number input left without a change (Enter, or focus lost)
-  keeps its editing text, so an angle shows `20d` rather than `20°`, beside its interior caption
-  (C77). Its text is rewritten only when `NumericValue` changes; leaving edit mode should
-  rewrite it in the display form. *Gate:* a fix in the Bevy we build against.
-
 - **X37** Variety among the tips' leaves: several sprigs painted as regions of the one leaf
   texture (requirements, Foliage), each tip's card drawing one from its foliage stream (D16).
   Its list of sprigs is C147's. *Gate:* C38 landed, and the crown's tips reading as one sprig repeated.
@@ -519,13 +531,12 @@ a migration or a new look land while the trees are few, the golden trees showing
   of its surfaces. Only the plot layer changes; model and editor stay. *Gate:* C155 landed on
   the path material.
 
-- **X62** Aligned and free handles in the curve editor: their drag, their input rows (CE34,
-  CE37), and `examples/curve_editor.rs`, one editor allowing every kind and mode, as the stage for
-  a video of handle dragging. The model holds them since C145 (weighted sampling, the clamps);
-  arbor_day's curves allow auto handles only. The crown profile as a curve could use them (an
-  hourglass crown), though whether authors should shape a crown that way is open. The leaf
-  outline is not a customer: its handles may point back past the base (ivy), so it is no
-  function of length. *Gate:* C155 landed.
+- **X66** Several curves in one editor (CE35): each a child entity with its own value and
+  constraints, the view's y range per curve. Every reference already names its curve
+  ([curve-editor-design.md](curve-editor-design.md), 2, 8); what assumes the curve is on the
+  editor's own entity is the selection (`select_curve`, `follow_point_count`), the markers and
+  the menu. A row of its own in `examples/curve_editor.rs`. *Gate:* a host showing two curves
+  together, such as Bias's Size and Leaves, or Panoply's editor.
 
 - **X59** Zoom and pan in the curve editor, for handles that reach past the curve. A slope tangent
   drawn at a fixed length on screen, so only handles whose length means something (Bézier
@@ -534,23 +545,30 @@ a migration or a new look land while the trees are few, the golden trees showing
   with a modifier), middle-drag to pan, a key and one header button to fit again. No scrollbars in
   the inline editor; a larger host may draw them from the view (CE36), the wheel over one zooming
   its axis.
-  The model bounds the view (x in 0 to 1), the editor owns it within them. *Gate:* X62 landed.
+  The model bounds the view (x in 0 to 1), the editor owns it within them. *Gate:* C159 landed.
 
-- **X64** Report upstream: a feathers number input re-enabled by removing `InteractionDisabled`
-  stays drawn disabled. `number_input_on_remove_disabled` observes `Remove`, which runs while the
-  component is still there, so `Has<InteractionDisabled>` reads true and it restyles as disabled.
-  The curve editor works around it in `src/curve/feathers.rs` (`restyle_number_input`) by
-  re-inserting the text field's `Hovered`, which restyles from the input's state. *Gate:* a fix
-  in the Bevy we build against, and the workaround dropped.
-
-- **X65** Propose upstream: a feathers number input showing no value, as the curve editor's point
-  inputs should while no single point is selected (CE25; the mock shows "—"). Today they are
-  disabled and show 0, a stand-in. A marker component on the input (a placeholder
-  while present, the value shown again when removed) rather than a `NumericValue::None`, which
-  sliders, `ValueChange` and the limits would all have to handle; perhaps a second placeholder
-  for several points whose values differ (ARIA's `mixed`). Writing the text field directly was
-  tried and dropped as a hack on feathers' internals. *Gate:* the state in the Bevy we build
-  against.
+- **X67** Feathers' number input, upstream: bugs to report, each worked around here or lived
+  with until it is fixed in the Bevy we build against. The first three are about how the input
+  formats and rounds its value, and could go as one issue. A no-value state (was X65) is not
+  proposed: it drew objections on Discord, and the curve editor swaps in a placeholder instead
+  (C160). *Gate:* each item fixed in the Bevy we build against, and its workaround dropped.
+  - **Text left in its editing form** (was X35): an input left without a change (Enter, or focus
+    lost) keeps its editing text, so an angle shows `20d` rather than `20°`, beside its interior
+    caption (C77). Its text is rewritten only when `NumericValue` changes; leaving edit mode
+    should rewrite it in the display form. Lived with.
+  - **Chevrons skip the precision**: scrubbing and typing round to `NumberInputPrecision`, but
+    `chevron_on_press` adds the step in `f64` and converts back unrounded, so a fractional step
+    drifts by an `f32` step (0.35 becoming `0.35000002`). The curve editor rounds each value from
+    its inputs to the axis's precision (`edit_from_input`).
+  - **The display ignores the precision**, a question rather than a bug: the text is the
+    shortest decimal that reproduces the `f32`, so a value off the precision prints in full.
+    Precision governs only what a user enters. Formatting to it would have hidden both drifts
+    above; ask whether that is intended.
+  - **Re-enabled, drawn disabled** (was X64): an input re-enabled by removing
+    `InteractionDisabled` stays drawn disabled. `number_input_on_remove_disabled` observes
+    `Remove`, which runs while the component is still there, so `Has<InteractionDisabled>` reads
+    true and it restyles as disabled. The curve editor re-inserts the text field's `Hovered`,
+    which restyles from the input's state (`restyle_number_input`).
 
 - **X63** A curve field's x axis from an attribute: today every curve row takes x from 0 to 1, its
   ends pinned, as a place along the parent ([curve-editor-design.md](curve-editor-design.md), 6).

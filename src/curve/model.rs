@@ -312,18 +312,19 @@ impl ScalarCurve {
     }
 
     /// Inserts a point on the curve at `at`'s x, clamped as a moved point is, after the points at
-    /// or before that x. Returns its index.
+    /// or before that x, each coordinate rounded to its axis's precision, as a dragged point's is.
+    /// Returns its index.
     fn insert(&mut self, at: Vec2, constraints: &CurveConstraints) -> Option<usize> {
         if self.points.len() >= *constraints.points.end() {
             return None;
         }
-        let mut x = constraints.x.clamp(at.x);
+        let mut x = constraints.x.clamp(constraints.x.round(at.x));
         if constraints.pin_ends != PinEnds::None
             && let (Some(first), Some(last)) = (self.points.first(), self.points.last())
         {
             x = x.clamp(first.x, last.x);
         }
-        let y = constraints.y.clamp(self.prepare().value(x));
+        let y = constraints.y.clamp(constraints.y.round(self.prepare().value(x)));
         let index = self.points.partition_point(|point| point.x <= x);
         let segment = (index.checked_sub(1))
             .and_then(|before| self.points.get(before))
@@ -592,10 +593,6 @@ impl PreparedCurve {
     }
 
     /// The curve's slope at `x`, dy over dx.
-    #[allow(
-        dead_code,
-        reason = "for consumers that drive a rate; Bias reads values only"
-    )]
     pub fn slope(&self, x: f32) -> f32 {
         self.value_and_slope(x).1
     }
@@ -719,12 +716,18 @@ impl CurveAxis {
         }
     }
 
-    /// `value` to the nearest multiple of the precision.
+    /// `value` to the nearest multiple of the precision. A fine precision divides by its count per
+    /// unit rather than multiplying by itself, so 0.35 lands on the `f32` nearest 0.35, which
+    /// prints as `0.35`, not one step off it, which prints as `0.35000002`.
     pub fn round(&self, value: f32) -> f32 {
-        if self.precision > 0.0 {
-            (value / self.precision).round() * self.precision
+        if self.precision <= 0.0 {
+            return value;
+        }
+        let per_unit = (1.0 / self.precision).round();
+        if self.precision < 1.0 && per_unit * self.precision == 1.0 {
+            (value * per_unit).round() / per_unit
         } else {
-            value
+            (value / self.precision).round() * self.precision
         }
     }
 
@@ -751,10 +754,6 @@ pub enum PinEnds {
 }
 
 /// An edit to one curve, its points by index.
-#[allow(
-    dead_code,
-    reason = "the editor's menu (C156) and hand-set handles (X62) send the rest"
-)]
 #[derive(Clone, Debug, PartialEq)]
 pub enum CurveEditOp {
     /// Moves points to proposed positions, as a drag does.
@@ -922,6 +921,28 @@ mod tests {
         };
         let applied = moved.apply(&CurveEditOp::SetPoint(2, Vec2::new(1.0, 0.0)), &pinned);
         assert!(!applied.changed);
+    }
+
+    #[test]
+    fn an_inserted_point_lands_on_each_axis_precision() {
+        let mut inserted = curve(&[(0.0, 0.0), (1.0, 0.7)]);
+        let applied = inserted.apply(
+            &CurveEditOp::Insert(Vec2::new(0.4567, 0.9)),
+            &CurveConstraints::default(),
+        );
+        assert_eq!(applied.inserted, Some(1));
+        let point = inserted.points[1];
+        assert_eq!((point.x.to_string(), point.y.to_string()), ("0.46".into(), "0.32".into()));
+    }
+
+    #[test]
+    fn a_rounded_value_prints_as_its_precision() {
+        let axis = CurveAxis::unit();
+        for hundredths in 0..=200 {
+            let written = format!("{}", f64::from(hundredths) / 100.0);
+            let near = hundredths as f32 * 0.01 + 0.003;
+            assert_eq!(axis.round(near).to_string(), written);
+        }
     }
 
     #[test]

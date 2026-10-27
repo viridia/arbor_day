@@ -122,7 +122,7 @@ consumer's judgement (CE10): clamp each point to the clamped axes, between its n
 (CE24), within the pins, and an aligned or free handle's control point within a clamped y axis,
 which keeps the curve within it, since a segment lies within its control points' hull; refuse an insert past `points.end()` or a delete below `points.start()`,
 and a kind or mode the constraints leave out; place an insert on the curve at the pointer's x (CE15,
-survey finding 4). It returns whether the curve changed, and for an insert, the new point's index.
+survey finding 4), each coordinate rounded to its axis's precision, as a drag rounds. It returns whether the curve changed, and for an insert, the new point's index.
 A consumer with other rules writes its own; arbor_day uses this one.
 
 ## 2. Edits and events
@@ -212,13 +212,13 @@ pub enum CurveGesture {
     Idle,
     MovePoints { curve: Entity, snapshot: Vec<(usize, Vec2)>, offset: Vec2, axes: [CurveAxis; 2] },
     SelectRect { curve: Entity, from: Vec2, to: Vec2, base: Vec<PointRef> },
-    // To come: MoveHandle (X62).
+    // To come: MoveHandle (C159).
 }
 ```
 
 They are on the plot node, `CurveGestures`, beside `CurveHover` and `CurveHitRadius`.
 
-- **Hit testing** is geometric: the nearest point (or, with X62, handle) within `CurveHitRadius`
+- **Hit testing** is geometric: the nearest point (or, with C159, handle) within `CurveHitRadius`
   pixels. The result is published as `CurveHover`, for styling (CE22); a press tests afresh.
 - **Handles** are shown, and hit, only on selected points, and only where aligned or free (CE37).
 - **Press** on a point selects it (with a modifier, adds it), and a drag from there moves the
@@ -247,8 +247,8 @@ They are on the plot node, `CurveGestures`, beside `CurveHover` and `CurveHitRad
 ## 5. The feathers editor
 
 `curve_editor(x_caption, y_caption)` is a scene, as `curve_thumbnail` is; the host inserts the
-curve, its constraints and a `CurveEditorFormat` (each axis's number-input units, and labels for
-x in place of its values) beside it. It assembles, top to bottom:
+curve and its constraints beside it, and a `CurveEditorFormat` (each axis's number-input units,
+and labels for x in place of its values) in place of the default, plain numbers. It assembles, top to bottom:
 
 - **A header row**: the host's caption and disclosure toggle, and `curve_menu(items)`, a ⋯ menu
   the host places at the row's right end and aims at the editor with `CurveMenuTarget` (CE29,
@@ -318,6 +318,11 @@ plot of 300 × 170 pixels is cheap.
   its marker and type its value, insert with two clicks and delete with Delete; then set a curve
   holding a step, a kink and a steep cubic, and screenshot it, judged by eye for facets and even
   width. The driver cannot drag, so a drag is checked by hand.
+- **`examples/curve_editor.rs`**, one row per configuration the editor supports: an editor
+  beside its curve as its app stores it, rewritten on each edit, since what an app stores is
+  its own choice (CE8). Rows: implicit slopes stored as `[x, y]` pairs; aligned handles and
+  mixed segments come with C159, several curves with X66. `curve` is arbor_day's library, for
+  the example's sake. `plans/curve_editor.py` types into each row and reads its stored form.
 
 ## 8. Checked against what is kept possible
 

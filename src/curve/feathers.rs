@@ -6,7 +6,7 @@ use bevy::{
         controls::{
             FeathersMenu, FeathersMenuDivider, FeathersMenuItem, FeathersMenuPopup,
             FeathersMenuToolButton, FeathersNumberInput, HardLimit, NumberInputPrecision,
-            NumberInputUnits, UnitsRegistry,
+            NumberInputStep, NumberInputUnits, UnitsRegistry,
         },
         theme::{
             ThemeBackgroundColor, ThemeBorderColor, ThemeTextColor, ThemeToken, ThemedText,
@@ -101,9 +101,9 @@ pub fn curve_thumbnail() -> impl Scene {
 
 /// A curve editor: a plot whose points are selected, dragged, inserted by double-click and
 /// deleted with Delete, labelled at the ends and middle of each axis, over number inputs for the
-/// selected point's x and y, captioned `x_caption` and `y_caption`. Insert a [`CurveValue`], its
-/// [`CurveConstraints`] and a [`CurveEditorFormat`] on the same entity; it receives each
-/// [`CurveEdit`], and the curve is written back as the host judges them.
+/// selected point's x and y, captioned `x_caption` and `y_caption`. Insert a [`CurveValue`] and its
+/// [`CurveConstraints`] on the same entity, and a [`CurveEditorFormat`] unless plain numbers will
+/// do; it receives each [`CurveEdit`], and the curve is written back as the host judges them.
 pub fn curve_editor(x_caption: &'static str, y_caption: &'static str) -> impl Scene {
     bsn! {
         FeathersCurveEditor
@@ -229,7 +229,9 @@ pub fn curve_editor(x_caption: &'static str, y_caption: &'static str) -> impl Sc
 #[derive(Component, Clone, Default)]
 pub struct FeathersCurveEditor;
 
-/// On a [`curve_editor`]: how its axes' values are written, in the labels and the inputs.
+/// On a [`curve_editor`]: how its axes' values are written, in the labels and the inputs. An
+/// editor without one writes plain numbers. Not part of the editor's scene, so a host may insert
+/// it before or after the scene is applied.
 #[derive(Component, Clone, Debug, Default)]
 pub struct CurveEditorFormat {
     pub x_units: Option<NumberInputUnits>,
@@ -237,6 +239,13 @@ pub struct CurveEditorFormat {
     /// Labels for the x axis's start, middle and end in place of their values.
     pub x_labels: Option<[&'static str; 3]>,
 }
+
+/// The format of an editor without a [`CurveEditorFormat`].
+const PLAIN_FORMAT: CurveEditorFormat = CurveEditorFormat {
+    x_units: None,
+    y_units: None,
+    x_labels: None,
+};
 
 /// A curve editor's ⋯ menu, at its row's right end, for the host to place in the editor's header
 /// line and aim with a [`CurveMenuTarget`]. It lists the host's `items`, if any, above a divider,
@@ -614,7 +623,7 @@ fn place_selection_rect(
 /// Writes each grid label from its editor's axes and format.
 fn label_axes(
     editors: Query<
-        (Entity, &CurveConstraints, &CurveEditorFormat),
+        (Entity, &CurveConstraints, Option<&CurveEditorFormat>),
         Or<(Changed<CurveConstraints>, Changed<CurveEditorFormat>)>,
     >,
     children: Query<&Children>,
@@ -622,6 +631,7 @@ fn label_axes(
     registry: Res<UnitsRegistry>,
 ) {
     for (editor, constraints, format) in &editors {
+        let format = format.unwrap_or(&PLAIN_FORMAT);
         for descendant in children.iter_descendants(editor) {
             let Ok((label, mut text)) = labels.get_mut(descendant) else {
                 continue;
@@ -660,7 +670,7 @@ fn show_selected_point(
             &CurveValue,
             Ref<CurveConstraints>,
             &CurveSelection,
-            Ref<CurveEditorFormat>,
+            Option<Ref<CurveEditorFormat>>,
         ),
         Or<(
             Changed<CurveValue>,
@@ -675,7 +685,9 @@ fn show_selected_point(
     mut commands: Commands,
 ) {
     for (editor, curve, constraints, selection, format) in &editors {
-        let configure = format.is_changed() || constraints.is_changed();
+        let configure =
+            format.as_ref().is_some_and(|format| format.is_changed()) || constraints.is_changed();
+        let format = format.as_deref().unwrap_or(&PLAIN_FORMAT);
         let point = (selection.single()).and_then(|point| {
             let at = curve.0.points.get(point.index)?;
             Some((point.index, Vec2::new(at.x, at.y)))
@@ -695,10 +707,13 @@ fn show_selected_point(
                 if let Some(units) = units {
                     entity.insert(units.clone());
                 }
+                let units = registry.resolve(units.as_ref());
                 if axis.precision > 0.0 {
-                    let shown = (registry.resolve(units.as_ref()))
-                        .canonical_to_display(axis.precision as f64);
+                    let shown = units.canonical_to_display(axis.precision as f64);
                     entity.insert(NumberInputPrecision(-shown.log10().round() as i32));
+                }
+                if axis.step > 0.0 {
+                    entity.insert(NumberInputStep(units.canonical_to_display(axis.step as f64)));
                 }
                 if axis.clamped {
                     entity.insert(HardLimit(NumericRange::F32(axis.min..=axis.max)));
@@ -720,7 +735,7 @@ fn show_selected_point(
                     entity.insert(InteractionDisabled);
                 }
             }
-            // With no single point, 0 stands in for showing no value (X65).
+            // With no single point, 0 stands in for showing no value (C160).
             let value = NumericValue::F32(match point {
                 Some((_, at)) if input.y => at.y,
                 Some((_, at)) => at.x,
@@ -734,7 +749,7 @@ fn show_selected_point(
 }
 
 /// Restyles a number input just enabled. Feathers restyles it as the disabled marker is removed,
-/// while the marker is still there, so it stays drawn disabled (X64); a hover change restyles it
+/// while the marker is still there, so it stays drawn disabled (X67); a hover change restyles it
 /// from the input's state, so its text field's hover is set again.
 fn restyle_number_input(input: EntityWorldMut) {
     let children: Vec<Entity> = input
@@ -749,12 +764,13 @@ fn restyle_number_input(input: EntityWorldMut) {
     }
 }
 
-/// A value typed or scrubbed into a point input proposes the selected point there.
+/// A value typed, scrubbed or stepped into a point input proposes the selected point there,
+/// rounded to its axis's precision: feathers' chevrons step without rounding.
 fn edit_from_input(
     change: On<ValueChange<f32>>,
     inputs: Query<&PointInput>,
     parents: Query<&ChildOf>,
-    editors: Query<(&CurveValue, &CurveSelection), With<FeathersCurveEditor>>,
+    editors: Query<(&CurveValue, &CurveConstraints, &CurveSelection), With<FeathersCurveEditor>>,
     mut commands: Commands,
 ) {
     let Ok(input) = inputs.get(change.source) else {
@@ -766,7 +782,7 @@ fn edit_from_input(
     else {
         return;
     };
-    let Ok((curve, selection)) = editors.get(editor) else {
+    let Ok((curve, constraints, selection)) = editors.get(editor) else {
         return;
     };
     let Some(point) = selection.single() else {
@@ -776,9 +792,9 @@ fn edit_from_input(
         return;
     };
     let at = if input.y {
-        Vec2::new(at.x, change.value)
+        Vec2::new(at.x, constraints.y.round(change.value))
     } else {
-        Vec2::new(change.value, at.y)
+        Vec2::new(constraints.x.round(change.value), at.y)
     };
     commands.trigger(CurveEdit {
         editor,

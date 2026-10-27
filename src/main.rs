@@ -20,6 +20,7 @@ use bevy::{
     ui_widgets::{ControlOrientation, ScrollArea, split_pane_self_update},
     window::{ExitCondition, PrimaryWindow},
 };
+use arbor_day::curve;
 use bevy_immediate::{
     Imm,
     attach::{BevyImmediateAttachPlugin, ImmediateAttach},
@@ -37,7 +38,6 @@ use turntable::{
     TurntableCamera, TurntablePlugin, TurntableSubject, orbit_on_drag, zoom_on_scroll,
 };
 
-mod curve;
 mod document;
 mod fuzzy;
 mod generator;

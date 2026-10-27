@@ -1054,13 +1054,17 @@ fn curve_row(
     if let Some(NumericRange::F32(range)) = &look.range {
         y.min = *range.start();
         y.max = *range.end();
-        y.step = look.step.map_or(0.01, |step| step as f32);
+        y.step = 0.01;
     }
-    // The field's precision is in the units shown; the axis's is in the curve's.
-    if let (Some(places), Ok(registry)) = (look.precision, row.cap_get_resource::<UnitsRegistry>())
-    {
+    // The field's step and precision are in the units shown; the axis's are in the curve's.
+    if let Ok(registry) = row.cap_get_resource::<UnitsRegistry>() {
         let units = registry.resolve(look.units.as_ref());
-        y.precision = units.display_to_canonical(10f64.powi(-places)) as f32;
+        if let Some(step) = look.step {
+            y.step = units.display_to_canonical(step) as f32;
+        }
+        if let Some(places) = look.precision {
+            y.precision = units.display_to_canonical(10f64.powi(-places)) as f32;
+        }
     }
     let constraints = constraints(y);
     let format = CurveEditorFormat {

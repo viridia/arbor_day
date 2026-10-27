@@ -18,10 +18,6 @@ pub enum CurveEditPhase {
 
 /// An edit the editor proposes. The consumer judges it, with [`ScalarCurve::apply`] or rules of
 /// its own, and writes the curve's [`CurveValue`] back; the editor never changes the curve itself.
-#[allow(
-    dead_code,
-    reason = "arbor_day's panel shows one curve and judges every phase alike; undo (C7) will read them"
-)]
 #[derive(EntityEvent, Clone, Debug)]
 pub struct CurveEdit {
     #[event_target]
@@ -69,7 +65,6 @@ impl CurveSelection {
 /// Applies each edit to the curve's [`CurveValue`] with [`ScalarCurve::apply`], for a host that
 /// wants nothing more of its curve. Added as an observer on the editor, as `slider_self_update` is
 /// on a slider.
-#[allow(dead_code, reason = "arbor_day's panel judges edits itself")]
 pub fn curve_self_update(
     edit: On<CurveEdit>,
     mut curves: Query<(&mut CurveValue, &CurveConstraints)>,
@@ -84,10 +79,6 @@ pub fn curve_self_update(
 }
 
 /// The host's command to change an editor's selection.
-#[allow(
-    dead_code,
-    reason = "nothing in arbor_day selects for the editor until undo (C7)"
-)]
 #[derive(EntityEvent, Clone, Debug)]
 pub struct SelectCurve {
     #[event_target]
@@ -96,10 +87,6 @@ pub struct SelectCurve {
 }
 
 /// The points a [`SelectCurve`] selects.
-#[allow(
-    dead_code,
-    reason = "nothing in arbor_day selects for the editor until undo (C7)"
-)]
 #[derive(Clone, Debug, PartialEq)]
 pub enum SelectedPoints {
     All,
