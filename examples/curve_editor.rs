@@ -3,8 +3,8 @@
 //! what its constraints allow.
 
 use arbor_day::curve::{
-    CurveConstraints, CurveExtrapolation, CurvePlugin, CurvePoint, CurveSegment, CurveValue,
-    HandleMode, ScalarCurve, curve_editor, curve_self_update,
+    CurveConstraints, CurveEditorFormat, CurveExtrapolation, CurvePlugin, CurvePoint, CurveSegment, CurveValue,
+    DirectionHandle, HandleMode, PinEnds, ScalarCurve, curve_editor, curve_self_update,
 };
 use bevy::{
     feathers::{
@@ -50,9 +50,21 @@ enum Stored {
     /// segments with auto handles only, so the points are the whole curve.
     #[default]
     Pairs,
+    /// CSS's `cubic-bezier(x1, y1, x2, y2)`: its constraints allow one cubic segment between
+    /// pinned ends, so its two inner control points are the whole curve.
+    CubicBezier,
 }
 
 impl Stored {
+    /// How the row's editor writes its values: a `cubic-bezier`'s points are its pinned ends, so
+    /// it has no point inputs.
+    fn format(self) -> CurveEditorFormat {
+        CurveEditorFormat {
+            hide_point_inputs: matches!(self, Self::CubicBezier),
+            ..default()
+        }
+    }
+
     fn write(self, curve: &ScalarCurve) -> String {
         match self {
             Self::Pairs => {
@@ -60,6 +72,22 @@ impl Stored {
                     .map(|point| format!("  [{}, {}],", point.x, point.y))
                     .collect();
                 format!("[\n{}\n]", pairs.join("\n"))
+            }
+            Self::CubicBezier => {
+                let prepared = curve.prepare();
+                let Some(segment) = prepared.segments().first() else {
+                    return String::new();
+                };
+                let [_, a, b, _] = segment.controls;
+                // To four places, so a sum of rounded offsets prints as typed.
+                let short = |value: f32| (value * 1e4).round() / 1e4;
+                format!(
+                    "cubic-bezier({}, {}, {}, {})",
+                    short(a.x),
+                    short(a.y),
+                    short(b.x),
+                    short(b.y)
+                )
             }
         }
     }
@@ -83,6 +111,14 @@ fn ui() -> impl SceneList {
         ThemeBackgroundColor(tokens::WINDOW_BG)
         Children [
             @row("auto", "Implicit slopes", auto_curve(), auto_constraints(), Stored::Pairs)
+            --
+            @row(
+                "bezier",
+                "One cubic, its handles aligned",
+                ease_curve(),
+                bezier_constraints(),
+                Stored::CubicBezier
+            )
         ]
     }
 }
@@ -117,6 +153,7 @@ fn row(
                 ~{CurveValue(curve.clone())}
                 ~{constraints.clone()}
                 ~{stored}
+                ~{stored.format()}
                 on(curve_self_update)
             ]
             --
@@ -148,6 +185,37 @@ fn auto_constraints() -> CurveConstraints {
     CurveConstraints {
         segments: vec![CurveSegment::Cubic],
         handles: vec![HandleMode::Auto],
+        extrapolation: vec![CurveExtrapolation::Hold],
+        ..default()
+    }
+}
+
+/// CSS's `ease`, `cubic-bezier(0.25, 0.1, 0.25, 1)`.
+fn ease_curve() -> ScalarCurve {
+    ScalarCurve {
+        points: vec![
+            CurvePoint {
+                right: DirectionHandle::Aligned(Vec2::new(0.25, 0.1)),
+                ..default()
+            },
+            CurvePoint {
+                x: 1.0,
+                y: 1.0,
+                left: DirectionHandle::Aligned(Vec2::new(-0.75, 0.0)),
+                ..default()
+            },
+        ],
+        extrapolation: CurveExtrapolation::Hold,
+    }
+}
+
+/// One cubic segment, its ends pinned, its handles aligned.
+fn bezier_constraints() -> CurveConstraints {
+    CurveConstraints {
+        segments: vec![CurveSegment::Cubic],
+        handles: vec![HandleMode::Aligned],
+        points: 2..=2,
+        pin_ends: PinEnds::XY,
         extrapolation: vec![CurveExtrapolation::Hold],
         ..default()
     }

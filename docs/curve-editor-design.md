@@ -211,16 +211,19 @@ interaction in progress is one value, as in `bevy_reactor`'s node graph (CE23):
 pub enum CurveGesture {
     Idle,
     MovePoints { curve: Entity, snapshot: Vec<(usize, Vec2)>, offset: Vec2, axes: [CurveAxis; 2] },
+    MoveHandle { curve: Entity, index: usize, side: HandleSide, snapshot: Vec2, offset: Vec2, axes: [CurveAxis; 2] },
     SelectRect { curve: Entity, from: Vec2, to: Vec2, base: Vec<PointRef> },
-    // To come: MoveHandle (C159).
 }
 ```
 
 They are on the plot node, `CurveGestures`, beside `CurveHover` and `CurveHitRadius`.
 
-- **Hit testing** is geometric: the nearest point (or, with C159, handle) within `CurveHitRadius`
-  pixels. The result is published as `CurveHover`, for styling (CE22); a press tests afresh.
-- **Handles** are shown, and hit, only on selected points, and only where aligned or free (CE37).
+- **Hit testing** is geometric: the nearest point or handle within `CurveHitRadius` pixels, a
+  point winning a tie. The result is published as `CurveHover`, a `CurveTarget`, for styling
+  (CE22); a press tests afresh.
+- **Handles** are shown, and hit, only on selected points, and only where aligned or free and
+  shaping a cubic segment (`ScalarCurve::manual_handle`, CE37). A handle's move proposes its
+  offset, snapshot plus the pointer's, rounded as a point's position is.
 - **Press** on a point selects it (with a modifier, adds it), and a drag from there moves the
   selection, handles and all; on a handle, moves that one handle and leaves the selection as it
   is; on empty space, starts a rectangle, which takes points only (CE24, CE30). Shift, Ctrl and
@@ -248,7 +251,8 @@ They are on the plot node, `CurveGestures`, beside `CurveHover` and `CurveHitRad
 
 `curve_editor(x_caption, y_caption)` is a scene, as `curve_thumbnail` is; the host inserts the
 curve and its constraints beside it, and a `CurveEditorFormat` (each axis's number-input units,
-and labels for x in place of its values) in place of the default, plain numbers. It assembles, top to bottom:
+labels for x in place of its values, and whether to leave out the point inputs, for a curve whose
+points are never typed) in place of the default, plain numbers with the inputs shown. It assembles, top to bottom:
 
 - **A header row**: the host's caption and disclosure toggle, and `curve_menu(items)`, a ⋯ menu
   the host places at the row's right end and aims at the editor with `CurveMenuTarget` (CE29,
@@ -260,8 +264,9 @@ and labels for x in place of its values) in place of the default, plain numbers.
 - **The plot**: a node with `CurvePath` drawn by the path material, over the grid's lines as
   one-pixel nodes, the y labels in a gutter to its left and the x labels under it, and a node per
   point and per visible handle, placed from the view and styled from `CurveHover` and
-  `CurveSelection` (CE41). Nodes keep the points to feathers' own styling; the shader draws only
-  the curve.
+  `CurveSelection` (CE41). Nodes keep the points to feathers' own styling. The path material
+  draws the curve, and each selected point's stem, from its In handle through the point to its
+  Out handle, as a node of its own with a `CurvePath`, under the markers.
 - **An input row**: feathers number inputs for the selected point's x and y, disabled unless
   exactly one point is selected (CE25); and below them, a row each for that point's aligned or
   free handles, In and Out, their x and y (CE34). An input sends `SetPoint` or `MoveHandle`,
@@ -320,8 +325,9 @@ plot of 300 × 170 pixels is cheap.
   width. The driver cannot drag, so a drag is checked by hand.
 - **`examples/curve_editor.rs`**, one row per configuration the editor supports: an editor
   beside its curve as its app stores it, rewritten on each edit, since what an app stores is
-  its own choice (CE8). Rows: implicit slopes stored as `[x, y]` pairs; aligned handles and
-  mixed segments come with C159, several curves with X66. `curve` is arbor_day's library, for
+  its own choice (CE8). Rows: implicit slopes stored as `[x, y]` pairs; one cubic with aligned
+  handles and its ends pinned, stored as CSS's `cubic-bezier(x1, y1, x2, y2)`; mixed segments
+  come with C159c, several curves with X66. `curve` is arbor_day's library, for
   the example's sake. `plans/curve_editor.py` types into each row and reads its stored form.
 
 ## 8. Checked against what is kept possible

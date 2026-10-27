@@ -134,6 +134,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C156b | The host's selection commands and `curve_self_update` ([curve-editor-design.md](curve-editor-design.md), 2, 2.1), tested in a `World`. |
 | C156c | The curve editor's ⋯ menu: Reset, Copy and Paste curve ([curve-editor-design.md](curve-editor-design.md), 5, 6). |
 | C158  | `src/lib.rs` holding `curve`, and `examples/curve_editor.rs`, each editor beside its curve as its app stores it ([curve-editor-design.md](curve-editor-design.md), 7). |
+| C159a | Handles on the curve editor's plot, dragged; a `cubic-bezier` row in the example ([curve-editor-design.md](curve-editor-design.md), 4, 5, 7). |
 
 ## Next
 
@@ -252,16 +253,20 @@ a migration or a new look land while the trees are few, the golden trees showing
 
 ### Later
 
-- **C159 Aligned and free handles** (was X62, its gate passed): the curve editor draws handles
-  on the selected points and drags them (the `MoveHandle` gesture), with In and Out input rows
-  (CE34, CE37). The model holds them since C145 (weighted sampling, the clamps); arbor_day's
-  curves allow auto handles only. Two rows join `examples/curve_editor.rs`: one cubic segment
-  with its ends pinned and aligned handles, stored as CSS's `cubic-bezier(x1, y1, x2, y2)`; and
-  a curve of mixed segments and handle modes, stored as the whole `ScalarCurve` in RON. The
-  driver cannot drag, so handle drags are checked by hand. The crown profile as a curve could
-  use them (an hourglass crown), though whether authors should shape a crown that way is open.
-  The leaf outline is not a customer: its handles may point back past the base (ivy), so it is
-  no function of length. E[3]
+- **C159b In and Out inputs** (C159 was X62): a row each for the selected point's shown handles,
+  their x and y (CE34), sending `MoveHandle`. Whether they show the handle's offset, as stored,
+  or its control point, as Blender does, is open; the control point reads as the point's own
+  inputs do, and is what the example's `cubic-bezier` row stores, its point inputs hidden. E[1]
+- **C159c A curve of mixed segments and handle modes** in `examples/curve_editor.rs`, stored as
+  the whole `ScalarCurve` written with `{:#?}`, which shows its structure with no new
+  dependency. With it, an aligned handle's opposite: `apply` turns it from its current offset,
+  so a drag that clamps it loses its length for the rest of the drag, and Cancel leaves it so.
+  The crown profile as a curve could use aligned and free handles (an hourglass crown), though
+  whether authors should shape a crown that way is open. The leaf outline is not a customer: its
+  handles may point back past the base (ivy), so it is no function of length. E[2]
+- **C161 Choosing segment kinds and handle modes**: the editor offers only the kinds and modes
+  the consumer allows (CE3), but nothing yet lets an author change either (`SetSegment`,
+  `SetHandleMode`). Starts by updating the mocks. E[2]
 - **C132 Repeated forks**: a maple forks and forks again (sympodial), where the levels grow a
   leader with laterals (monopodial). A fork's copies may fork again, up to a number of
   generations, 1 being today's (TD3.7, "copies do not fork again"). A copy already reaches what
@@ -545,7 +550,7 @@ a migration or a new look land while the trees are few, the golden trees showing
   with a modifier), middle-drag to pan, a key and one header button to fit again. No scrollbars in
   the inline editor; a larger host may draw them from the view (CE36), the wheel over one zooming
   its axis.
-  The model bounds the view (x in 0 to 1), the editor owns it within them. *Gate:* C159 landed.
+  The model bounds the view (x in 0 to 1), the editor owns it within them. *Gate:* C159a landed.
 
 - **X67** Feathers' number input, upstream: bugs to report, each worked around here or lived
   with until it is fixed in the Bevy we build against. The first three are about how the input

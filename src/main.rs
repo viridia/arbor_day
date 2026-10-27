@@ -1,5 +1,6 @@
 //! An authoring app for low-poly plants. For now, a shell: a parameter panel beside a 3D view.
 
+use arbor_day::curve;
 use bevy::{
     camera::Viewport,
     ecs::system::SystemParam,
@@ -20,7 +21,6 @@ use bevy::{
     ui_widgets::{ControlOrientation, ScrollArea, split_pane_self_update},
     window::{ExitCondition, PrimaryWindow},
 };
-use arbor_day::curve;
 use bevy_immediate::{
     Imm,
     attach::{BevyImmediateAttachPlugin, ImmediateAttach},

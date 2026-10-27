@@ -1,5 +1,7 @@
 """The curve editor example: each row's editor beside its curve as its app stores it.
-- implicit slopes, stored as `[x, y]` pairs: a point typed into shows in the pairs."""
+- implicit slopes, stored as `[x, y]` pairs: a point typed into shows in the pairs.
+- one cubic, stored as CSS's `cubic-bezier`: a selected point shows its handle, and a click on
+  the handle leaves the curve and the selection as they were. Drags are checked by hand."""
 
 EXAMPLE = "curve_editor"
 TEXT = "bevy_ui::widget::text::Text"
@@ -24,4 +26,20 @@ def run(driver):
     retype(driver, "auto/editor/y", "0.5")
     driver.expect("auto/stored", TEXT, "[\n  [0, 0.8],\n  [0.4, 0.5],\n  [1, 0.6],\n]")
     driver.screenshot("auto_typed")
+
+    ease = "cubic-bezier(0.25, 0.1, 0.25, 1)"
+    driver.expect("bezier/stored", TEXT, ease)
+    driver.absent("bezier/editor/plot/out0")
+    driver.click("bezier/editor/plot/point0")
+    driver.present("bezier/editor/plot/out0")
+    driver.present("bezier/editor/plot/stem0")
+    driver.absent("bezier/editor/plot/in1")
+    driver.click("bezier/editor/plot/out0")
+    driver.present("bezier/editor/plot/out0")
+    driver.expect("bezier/stored", TEXT, ease)
+    driver.screenshot("bezier_handle")
+    driver.click("bezier/editor/plot/point1")
+    driver.present("bezier/editor/plot/in1")
+    driver.absent("bezier/editor/plot/out0")
+    driver.screenshot("bezier_other_handle")
     driver.exit()

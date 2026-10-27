@@ -1,5 +1,5 @@
-//! Pointer and key handling on a curve's plot: which point the pointer is over, selecting points,
-//! and the edits a drag, a double-click or the Delete key proposes.
+//! Pointer and key handling on a curve's plot: which point or handle the pointer is over,
+//! selecting points, and the edits a drag, a double-click or the Delete key proposes.
 
 use bevy::{
     ecs::system::SystemParam,
@@ -18,8 +18,8 @@ use bevy::{
 
 use super::{
     edit::{CurveEdit, CurveEditPhase, CurveSelection, PointRef, SeenCurve, Sent},
-    model::{CurveAxis, CurveConstraints, CurveEditOp, CurveValue, ScalarCurve},
-    view::{CurvePlot, CurveView, curve_owner},
+    model::{CurveAxis, CurveConstraints, CurveEditOp, CurveValue, HandleSide, ScalarCurve},
+    view::{CurvePlot, CurveView, curve_owner, shown_handles},
 };
 
 /// On a [`CurvePlot`]: pointer and key handling. Selecting needs a [`CurveSelection`] on the entity
@@ -38,10 +38,17 @@ impl Default for CurveHitRadius {
     }
 }
 
-/// On a plot with [`CurveGestures`]: the point under the pointer, for styling. It holds still
-/// during a drag.
+/// On a plot with [`CurveGestures`]: the point or handle under the pointer, for styling. It holds
+/// still during a drag.
 #[derive(Component, Clone, Copy, Debug, Default, PartialEq)]
-pub struct CurveHover(pub Option<PointRef>);
+pub struct CurveHover(pub Option<CurveTarget>);
+
+/// What the pointer can be over on a plot: a point, or a handle of a selected point.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CurveTarget {
+    Point(PointRef),
+    Handle(PointRef, HandleSide),
+}
 
 /// On a plot with [`CurveGestures`]: the interaction in progress.
 #[derive(Component, Clone, Debug, Default, PartialEq)]
@@ -57,6 +64,16 @@ pub enum CurveGesture {
         offset: Vec2,
         axes: [CurveAxis; 2],
     },
+    /// Moving the handle on `side` of point `index` of `curve`, from its offset when pressed
+    /// (`snapshot`) by the pointer's `offset` since, rounded as a moved point is.
+    MoveHandle {
+        curve: Entity,
+        index: usize,
+        side: HandleSide,
+        snapshot: Vec2,
+        offset: Vec2,
+        axes: [CurveAxis; 2],
+    },
     /// Selecting the points of `curve` inside the rectangle from `from` to `to`, in the curve's
     /// units, as well as those selected before it began (`base`).
     SelectRect {
@@ -68,27 +85,66 @@ pub enum CurveGesture {
 }
 
 impl CurveGesture {
-    /// The move this gesture proposes. Points stay where they were until the pointer moves.
+    /// The curve this gesture moves points or a handle of.
+    fn moved_curve(&self) -> Option<Entity> {
+        match self {
+            Self::MovePoints { curve, .. } | Self::MoveHandle { curve, .. } => Some(*curve),
+            Self::Idle | Self::SelectRect { .. } => None,
+        }
+    }
+
+    /// The move this gesture proposes. Points and handles stay where they were until the pointer
+    /// moves.
     fn proposed(&self) -> Option<CurveEditOp> {
-        let Self::MovePoints {
-            snapshot,
-            offset,
-            axes: [x, y],
-            ..
-        } = self
-        else {
-            return None;
-        };
-        let moves = (snapshot.iter())
-            .map(|&(index, at)| {
-                if *offset == Vec2::ZERO {
-                    return (index, at);
-                }
-                let to = at + *offset;
-                (index, Vec2::new(x.round(to.x), y.round(to.y)))
-            })
-            .collect();
-        Some(CurveEditOp::Move(moves))
+        let round = |at: Vec2, [x, y]: &[CurveAxis; 2]| Vec2::new(x.round(at.x), y.round(at.y));
+        match self {
+            Self::MovePoints {
+                snapshot,
+                offset,
+                axes,
+                ..
+            } => {
+                let moves = (snapshot.iter())
+                    .map(|&(index, at)| {
+                        if *offset == Vec2::ZERO {
+                            return (index, at);
+                        }
+                        (index, round(at + *offset, axes))
+                    })
+                    .collect();
+                Some(CurveEditOp::Move(moves))
+            }
+            Self::MoveHandle {
+                index,
+                side,
+                snapshot,
+                offset,
+                axes,
+                ..
+            } => {
+                let at = if *offset == Vec2::ZERO {
+                    *snapshot
+                } else {
+                    round(*snapshot + *offset, axes)
+                };
+                Some(CurveEditOp::MoveHandle(*index, *side, at))
+            }
+            Self::Idle | Self::SelectRect { .. } => None,
+        }
+    }
+
+    /// The move back to where this gesture began, for a cancel.
+    fn restored(&self) -> Option<CurveEditOp> {
+        match self {
+            Self::MovePoints { snapshot, .. } => Some(CurveEditOp::Move(snapshot.clone())),
+            Self::MoveHandle {
+                index,
+                side,
+                snapshot,
+                ..
+            } => Some(CurveEditOp::MoveHandle(*index, *side, *snapshot)),
+            Self::Idle | Self::SelectRect { .. } => None,
+        }
     }
 }
 
@@ -163,16 +219,21 @@ impl Plot<'_> {
         Some((centred + Vec2::splat(0.5)) * self.node.size() * self.node.inverse_scale_factor())
     }
 
-    /// The nearest point within the hit radius of `local`.
-    fn hit(&self, local: Vec2) -> Option<usize> {
-        (self.curve.points.iter().enumerate())
-            .map(|(index, point)| {
-                let pixel = self.view.to_pixels(Vec2::new(point.x, point.y));
-                (index, pixel.distance(local))
-            })
+    /// The nearest point, or handle of a `selected` point, within the hit radius of `local`. A
+    /// point wins over a handle at the same distance.
+    fn hit(&self, local: Vec2, selected: &[usize]) -> Option<CurveTarget> {
+        let curve = self.curve_entity;
+        let points = (self.curve.points.iter().enumerate()).map(|(index, point)| {
+            let target = CurveTarget::Point(PointRef { curve, index });
+            (target, Vec2::new(point.x, point.y))
+        });
+        let handles = (shown_handles(self.curve, selected).into_iter())
+            .map(|(index, side, at)| (CurveTarget::Handle(PointRef { curve, index }, side), at));
+        (points.chain(handles))
+            .map(|(target, at)| (target, self.view.to_pixels(at).distance(local)))
             .filter(|&(_, distance)| distance <= self.radius)
             .min_by(|a, b| a.1.total_cmp(&b.1))
-            .map(|(index, _)| index)
+            .map(|(target, _)| target)
     }
 }
 
@@ -217,6 +278,7 @@ impl Plots<'_, '_> {
 fn hover_point(
     event: On<PointerMove>,
     plots: Plots,
+    selections: Query<&CurveSelection>,
     mut hovers: Query<(&CurveGesture, &mut CurveHover)>,
 ) {
     let Some(plot) = plots.get(event.entity) else {
@@ -225,9 +287,11 @@ fn hover_point(
     let Ok((CurveGesture::Idle, mut hover)) = hovers.get_mut(event.entity) else {
         return;
     };
-    let index = (plot.local(event.pointer.position)).and_then(|local| plot.hit(local));
-    let curve = plot.curve_entity;
-    hover.set_if_neq(CurveHover(index.map(|index| PointRef { curve, index })));
+    let selected = (selections.get(plot.curve_entity))
+        .map(|selection| selection.indices(plot.curve_entity))
+        .unwrap_or_default();
+    let target = (plot.local(event.pointer.position)).and_then(|local| plot.hit(local, &selected));
+    hover.set_if_neq(CurveHover(target));
 }
 
 fn leave_plot(event: On<PointerLeave>, mut hovers: Query<(&CurveGesture, &mut CurveHover)>) {
@@ -237,7 +301,8 @@ fn leave_plot(event: On<PointerLeave>, mut hovers: Query<(&CurveGesture, &mut Cu
 }
 
 /// A press on a point selects it, or with Shift or Ctrl adds it or takes it away, and starts
-/// moving the selection. A press elsewhere clears the selection, unless adding, and starts a
+/// moving the selection. A press on a handle moves that handle, the selection left as it is. A
+/// press elsewhere clears the selection, unless adding, and starts a
 /// rectangle. A second press inserts a point, or on a point deletes it.
 fn press_plot(
     mut press: On<PointerPress>,
@@ -273,7 +338,37 @@ fn press_plot(
     ]);
     // Clicks in quick succession keep counting, so two quick double-clicks are a fourth click.
     let double = press.count.is_multiple_of(2);
-    let Some(index) = plot.hit(local) else {
+    let index = match plot.hit(local, &selection.indices(curve)) {
+        Some(CurveTarget::Handle(point, side)) => {
+            let Some(snapshot) = plot.curve.manual_handle(point.index, side) else {
+                return;
+            };
+            let gesture = CurveGesture::MoveHandle {
+                curve,
+                index: point.index,
+                side,
+                snapshot,
+                offset: Vec2::ZERO,
+                axes: [plot.constraints.x, plot.constraints.y],
+            };
+            if let Some(op) = gesture.proposed() {
+                commands.trigger(CurveEdit {
+                    editor: curve,
+                    curve,
+                    op,
+                    phase: CurveEditPhase::Start,
+                });
+            }
+            if let Ok(mut current) = gestures.get_mut(press.entity) {
+                *current = gesture;
+            }
+            capture.capture(press.pointer.id, press.entity, press.hit.clone());
+            return;
+        }
+        Some(CurveTarget::Point(point)) => Some(point.index),
+        None => None,
+    };
+    let Some(index) = index else {
         if double {
             if let Ok(mut seen) = seen.get_mut(curve) {
                 seen.sent = Some(Sent::Insert);
@@ -378,7 +473,8 @@ fn drag_points(
             }
             return;
         }
-        CurveGesture::MovePoints { curve, offset, .. } => {
+        CurveGesture::MovePoints { curve, offset, .. }
+        | CurveGesture::MoveHandle { curve, offset, .. } => {
             *offset = moved;
             *curve
         }
@@ -405,7 +501,9 @@ fn end_drag(
         return;
     };
     drag.propagate(false);
-    if let CurveGesture::MovePoints { offset, .. } = gesture.as_mut() {
+    if let CurveGesture::MovePoints { offset, .. } | CurveGesture::MoveHandle { offset, .. } =
+        gesture.as_mut()
+    {
         *offset = plot.view.delta_to_curve(drag.distance / plots.ui_scale.0);
     }
     finish(
@@ -448,10 +546,10 @@ fn finish(
 ) {
     if **gesture != CurveGesture::Idle {
         let ended = std::mem::take(gesture.as_mut());
-        if let (CurveGesture::MovePoints { curve, .. }, Some(op)) = (&ended, ended.proposed()) {
+        if let (Some(curve), Some(op)) = (ended.moved_curve(), ended.proposed()) {
             commands.trigger(CurveEdit {
-                editor: *curve,
-                curve: *curve,
+                editor: curve,
+                curve,
                 op,
                 phase: CurveEditPhase::Finish,
             });
@@ -468,16 +566,16 @@ fn cancel_on_removal(
     gestures: Query<&CurveGesture>,
     mut commands: Commands,
 ) {
-    let Ok(CurveGesture::MovePoints {
-        curve, snapshot, ..
-    }) = gestures.get(removed.entity)
-    else {
+    let Ok(gesture) = gestures.get(removed.entity) else {
+        return;
+    };
+    let (Some(curve), Some(op)) = (gesture.moved_curve(), gesture.restored()) else {
         return;
     };
     let edit = CurveEdit {
-        editor: *curve,
-        curve: *curve,
-        op: CurveEditOp::Move(snapshot.clone()),
+        editor: curve,
+        curve,
+        op,
         phase: CurveEditPhase::Cancel,
     };
     // The editor may be going too.
@@ -519,19 +617,16 @@ fn plot_keys(
     let idle = *gesture == CurveGesture::Idle;
     let handled = match code {
         KeyCode::Escape if !idle => {
-            match std::mem::take(gesture.as_mut()) {
-                CurveGesture::MovePoints {
-                    curve, snapshot, ..
-                } => commands.trigger(CurveEdit {
+            let ended = std::mem::take(gesture.as_mut());
+            if let (Some(curve), Some(op)) = (ended.moved_curve(), ended.restored()) {
+                commands.trigger(CurveEdit {
                     editor: curve,
                     curve,
-                    op: CurveEditOp::Move(snapshot),
+                    op,
                     phase: CurveEditPhase::Cancel,
-                }),
-                CurveGesture::SelectRect { base, .. } => {
-                    selection.set_if_neq(CurveSelection { points: base });
-                }
-                CurveGesture::Idle => {}
+                });
+            } else if let CurveGesture::SelectRect { base, .. } = ended {
+                selection.set_if_neq(CurveSelection { points: base });
             }
             true
         }
@@ -656,6 +751,27 @@ mod tests {
         assert_eq!(tab_point(&[2], 3, false), None);
         assert_eq!(tab_point(&[0], 3, true), None);
         assert_eq!(tab_point(&[], 0, false), None);
+    }
+
+    #[test]
+    fn a_handle_lands_on_each_axis_precision_and_cancels_to_its_snapshot() {
+        let snapshot = Vec2::new(0.123, -0.2);
+        let gesture = CurveGesture::MoveHandle {
+            curve: Entity::PLACEHOLDER,
+            index: 1,
+            side: HandleSide::Right,
+            snapshot,
+            offset: Vec2::new(0.1, 0.004),
+            axes: [CurveAxis::unit(), CurveAxis::unit()],
+        };
+        let Some(CurveEditOp::MoveHandle(1, HandleSide::Right, at)) = gesture.proposed() else {
+            panic!("a handle move");
+        };
+        assert!(at.abs_diff_eq(Vec2::new(0.22, -0.2), 1e-6), "{at}");
+        assert_eq!(
+            gesture.restored(),
+            Some(CurveEditOp::MoveHandle(1, HandleSide::Right, snapshot))
+        );
     }
 
     #[test]

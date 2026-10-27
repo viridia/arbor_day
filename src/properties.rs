@@ -1071,6 +1071,7 @@ fn curve_row(
         x_units: Some(NumberInputUnits::new_static("ratio_percent")),
         y_units: look.units.clone(),
         x_labels: Some(["Base", "Middle", "Tip"]),
+        ..default()
     };
     let row_node = move || {
         let (name, node) = row_node(name);

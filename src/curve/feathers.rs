@@ -9,8 +9,7 @@ use bevy::{
             NumberInputStep, NumberInputUnits, UnitsRegistry,
         },
         theme::{
-            ThemeBackgroundColor, ThemeBorderColor, ThemeTextColor, ThemeToken, ThemedText,
-            UiTheme,
+            ThemeBackgroundColor, ThemeBorderColor, ThemeTextColor, ThemeToken, ThemedText, UiTheme,
         },
         tokens,
     },
@@ -27,10 +26,10 @@ use bevy::{
 
 use super::{
     edit::{CurveEdit, CurveEditPhase, CurveSelection, PointRef, SeenCurve},
-    gesture::{CurveGesture, CurveGestures, CurveHover},
-    model::{CurveConstraints, CurveEditOp, CurveValue, PinEnds, ScalarCurve},
+    gesture::{CurveGesture, CurveGestures, CurveHover, CurveTarget},
+    model::{CurveConstraints, CurveEditOp, CurveValue, HandleSide, PinEnds, ScalarCurve},
     plot::CurveStroke,
-    view::{CurvePlot, CurveView},
+    view::{CurvePath, CurvePlot, CurveView, shown_handles},
 };
 
 /// The editor's plot, its labels included, in logical pixels.
@@ -170,8 +169,12 @@ pub fn curve_editor(x_caption: &'static str, y_caption: &'static str) -> impl Sc
                     TabIndex(0)
                     @fill()
                     Children [
-                        // Before the markers, which the editor adds as the curve's points, so
-                        // they draw over it.
+                        // Before the markers, which the editor adds as the curve's points and
+                        // handles, so they draw over these.
+                        HandleStems
+                        @fill()
+                        Pickable::IGNORE
+                        --
                         SelectionRectOutline
                         Node {
                             position_type: PositionType::Absolute,
@@ -206,6 +209,7 @@ pub fn curve_editor(x_caption: &'static str, y_caption: &'static str) -> impl Sc
                 ]
             ]
             --
+            PointInputRow
             Node {
                 flex_direction: FlexDirection::Row,
                 column_gap: px(4),
@@ -238,6 +242,9 @@ pub struct CurveEditorFormat {
     pub y_units: Option<NumberInputUnits>,
     /// Labels for the x axis's start, middle and end in place of their values.
     pub x_labels: Option<[&'static str; 3]>,
+    /// Leaves out the selected point's x and y inputs, for a curve whose points the author never
+    /// types, such as one whose only points are its pinned ends.
+    pub hide_point_inputs: bool,
 }
 
 /// The format of an editor without a [`CurveEditorFormat`].
@@ -245,6 +252,7 @@ const PLAIN_FORMAT: CurveEditorFormat = CurveEditorFormat {
     x_units: None,
     y_units: None,
     x_labels: None,
+    hide_point_inputs: false,
 };
 
 /// A curve editor's ⋯ menu, at its row's right end, for the host to place in the editor's header
@@ -378,6 +386,10 @@ struct PointInput {
     y: bool,
 }
 
+/// The row holding a [`curve_editor`]'s [`PointInput`]s.
+#[derive(Component, Clone, Copy, Debug, Default)]
+struct PointInputRow;
+
 /// The rectangle being dragged out on the plot it is a child of, hidden while there is none.
 #[derive(Component, Clone, Copy, Debug, Default)]
 struct SelectionRectOutline;
@@ -407,15 +419,61 @@ impl MarkerLook {
     }
 }
 
+/// The node holding the stems of the handles shown on the plot it is a child of, under the
+/// markers.
+#[derive(Component, Clone, Copy, Debug, Default)]
+struct HandleStems;
+
+/// A stem from point `index` through its shown handles, a child of [`HandleStems`].
+#[derive(Component, Clone, Copy, Debug)]
+struct HandleStem {
+    index: usize,
+}
+
+/// A node marking the handle on `side` of point `index` of the plot it is a child of.
+#[derive(Component, Clone, Copy, Debug)]
+struct HandleMarker {
+    index: usize,
+    side: HandleSide,
+    hovered: bool,
+}
+
+impl HandleMarker {
+    /// Radius, border width, fill and border: a ring in the selection's color, filled with the
+    /// plot's background so the stem ends at its edge.
+    fn style(hovered: bool) -> (f32, f32, ThemeToken, ThemeToken) {
+        if hovered {
+            (4.0, 1.5, tokens::WINDOW_BG, tokens::BUTTON_TEXT)
+        } else {
+            (4.0, 1.5, tokens::WINDOW_BG, SELECTION)
+        }
+    }
+}
+
+/// A marker's node: a circle of `radius` at `centre`, from its plot's top left.
+fn marker_node(centre: Vec2, radius: f32, border: f32) -> Node {
+    Node {
+        position_type: PositionType::Absolute,
+        left: px(centre.x - radius),
+        top: px(centre.y - radius),
+        width: px(radius * 2.0),
+        height: px(radius * 2.0),
+        border: UiRect::all(px(border)),
+        border_radius: BorderRadius::MAX,
+        ..default()
+    }
+}
+
 pub(super) fn plugin(app: &mut App) {
     app.init_resource::<CurveClipboard>()
         .add_observer(edit_from_input)
         .add_observer(pick_menu_item)
-        .add_systems(Update, enable_paste)
+        .add_systems(Update, (enable_paste, hide_point_inputs))
         .add_systems(
             PostUpdate,
             (
                 place_markers,
+                place_handles,
                 place_selection_rect,
                 label_axes,
                 show_selected_point.after(super::edit::follow_point_count),
@@ -528,7 +586,7 @@ fn place_markers(
             };
             let look = if selection.points.contains(&point_ref) {
                 MarkerLook::Selected
-            } else if hover.0 == Some(point_ref) {
+            } else if hover.0 == Some(CurveTarget::Point(point_ref)) {
                 MarkerLook::Hovered
             } else {
                 MarkerLook::Plain
@@ -558,20 +616,134 @@ fn place_markers(
             commands.spawn((
                 PointMarker { index, look },
                 Name::new(format!("point{index}")),
-                Node {
-                    position_type: PositionType::Absolute,
-                    left: px(centre.x - radius),
-                    top: px(centre.y - radius),
-                    width: px(radius * 2.0),
-                    height: px(radius * 2.0),
-                    border: UiRect::all(px(border)),
-                    border_radius: BorderRadius::MAX,
-                    ..default()
-                },
+                marker_node(centre, radius, border),
                 ThemeBackgroundColor(fill),
                 ThemeBorderColor(edge),
                 Pickable::IGNORE,
                 ChildOf(plot),
+            ));
+        }
+    }
+}
+
+/// Keeps a marker per shown handle on each editor's plot, named `in<index>` or `out<index>`, and a
+/// stem per selected point with any, from its In handle through the point to its Out handle.
+fn place_handles(
+    plots: Query<(Entity, &CurvePlot, &ComputedNode, &CurveHover, &Children), With<CurveGestures>>,
+    parents: Query<&ChildOf>,
+    curves: Query<(&CurveValue, &CurveConstraints, &CurveSelection)>,
+    layers: Query<Option<&Children>, With<HandleStems>>,
+    mut markers: Query<(&mut HandleMarker, &mut Node)>,
+    mut stems: Query<(&HandleStem, &mut CurvePath)>,
+    mut commands: Commands,
+) {
+    for (plot, settings, node, hover, children) in &plots {
+        let owner = super::view::curve_owner(plot, &parents, |owner| curves.contains(owner));
+        let Some((curve_entity, (curve, constraints, selection))) =
+            owner.and_then(|owner| Some((owner, curves.get(owner).ok()?)))
+        else {
+            continue;
+        };
+        let size = node.size() * node.inverse_scale_factor();
+        let view = CurveView::new(constraints, size, settings.inset);
+        let handles = shown_handles(&curve.0, &selection.indices(curve_entity));
+
+        let mut placed = vec![false; handles.len()];
+        for child in children {
+            let Ok((mut marker, mut placement)) = markers.get_mut(*child) else {
+                continue;
+            };
+            let Some(at) = (handles.iter())
+                .position(|&(index, side, _)| index == marker.index && side == marker.side)
+            else {
+                commands.entity(*child).despawn();
+                continue;
+            };
+            placed[at] = true;
+            let point = PointRef {
+                curve: curve_entity,
+                index: marker.index,
+            };
+            let hovered = hover.0 == Some(CurveTarget::Handle(point, marker.side));
+            let (radius, border, fill, edge) = HandleMarker::style(hovered);
+            placement.set_if_neq(marker_node(view.to_pixels(handles[at].2), radius, border));
+            if marker.hovered != hovered {
+                marker.hovered = hovered;
+                commands
+                    .entity(*child)
+                    .insert((ThemeBackgroundColor(fill), ThemeBorderColor(edge)));
+            }
+        }
+        for (&(index, side, at), _) in handles.iter().zip(&placed).filter(|(_, placed)| !**placed) {
+            let (radius, border, fill, edge) = HandleMarker::style(false);
+            let name = match side {
+                HandleSide::Left => format!("in{index}"),
+                HandleSide::Right => format!("out{index}"),
+            };
+            commands.spawn((
+                HandleMarker {
+                    index,
+                    side,
+                    hovered: false,
+                },
+                Name::new(name),
+                marker_node(view.to_pixels(at), radius, border),
+                ThemeBackgroundColor(fill),
+                ThemeBorderColor(edge),
+                Pickable::IGNORE,
+                ChildOf(plot),
+            ));
+        }
+
+        // Each stem in pixels, by point.
+        let mut paths: Vec<(usize, Vec<Vec2>)> = Vec::new();
+        for &(index, side, at) in &handles {
+            let point = &curve.0.points[index];
+            let centre = view.to_pixels(Vec2::new(point.x, point.y));
+            let handle = view.to_pixels(at);
+            match paths.last_mut() {
+                Some((last, path)) if *last == index => path.push(handle),
+                _ if side == HandleSide::Left => paths.push((index, vec![handle, centre])),
+                _ => paths.push((index, vec![centre, handle])),
+            }
+        }
+        let Some((layer, layer_children)) =
+            (children.iter()).find_map(|child| Some((child, layers.get(child).ok()?)))
+        else {
+            continue;
+        };
+        let mut drawn = vec![false; paths.len()];
+        for child in layer_children.into_iter().flatten() {
+            let Ok((stem, mut path)) = stems.get_mut(*child) else {
+                continue;
+            };
+            match paths.iter().position(|(index, _)| *index == stem.index) {
+                Some(at) => {
+                    drawn[at] = true;
+                    path.set_if_neq(CurvePath(paths[at].1.clone()));
+                }
+                None => commands.entity(*child).despawn(),
+            }
+        }
+        for ((index, path), _) in paths.into_iter().zip(drawn).filter(|(_, drawn)| !drawn) {
+            commands.spawn((
+                HandleStem { index },
+                Name::new(format!("stem{index}")),
+                Node {
+                    position_type: PositionType::Absolute,
+                    left: px(0),
+                    right: px(0),
+                    top: px(0),
+                    bottom: px(0),
+                    ..default()
+                },
+                CurvePath(path),
+                CurveStroke {
+                    color: SELECTION,
+                    width: 1.0,
+                },
+                Pickable::IGNORE,
+                ChildOf(layer),
             ));
         }
     }
@@ -660,6 +832,26 @@ fn label_axes(
     }
 }
 
+/// Hides each editor's point inputs if its format says to.
+fn hide_point_inputs(
+    editors: Query<(Entity, &CurveEditorFormat), Changed<CurveEditorFormat>>,
+    children: Query<&Children>,
+    mut rows: Query<&mut Node, With<PointInputRow>>,
+) {
+    for (editor, format) in &editors {
+        let display = if format.hide_point_inputs {
+            Display::None
+        } else {
+            Display::Flex
+        };
+        for descendant in children.iter_descendants(editor) {
+            if let Ok(mut row) = rows.get_mut(descendant) {
+                row.display = display;
+            }
+        }
+    }
+}
+
 /// Shows the selected point's x and y in the inputs, which are enabled only while exactly one
 /// point is selected, and only for a coordinate the constraints let it move in; with none or
 /// several, they show 0. Each input rounds to its axis's precision, written in the input's units.
@@ -713,7 +905,9 @@ fn show_selected_point(
                     entity.insert(NumberInputPrecision(-shown.log10().round() as i32));
                 }
                 if axis.step > 0.0 {
-                    entity.insert(NumberInputStep(units.canonical_to_display(axis.step as f64)));
+                    entity.insert(NumberInputStep(
+                        units.canonical_to_display(axis.step as f64),
+                    ));
                 }
                 if axis.clamped {
                     entity.insert(HardLimit(NumericRange::F32(axis.min..=axis.max)));

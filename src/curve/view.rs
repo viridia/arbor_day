@@ -3,7 +3,7 @@
 
 use bevy::prelude::*;
 
-use super::model::{CurveConstraints, CurveValue, PreparedCurve};
+use super::model::{CurveConstraints, CurveValue, HandleSide, PreparedCurve, ScalarCurve};
 
 /// The farthest a polyline strays from the curve it stands for, in pixels.
 const FLATNESS: f32 = 0.25;
@@ -79,6 +79,26 @@ pub(super) fn curve_owner(
     parents
         .iter_ancestors(entity)
         .find(|&ancestor| holds_curve(ancestor))
+}
+
+/// The handles shown on the `selected` points of `curve`, each with its control point in the
+/// curve's units.
+pub(super) fn shown_handles(
+    curve: &ScalarCurve,
+    selected: &[usize],
+) -> Vec<(usize, HandleSide, Vec2)> {
+    let mut handles = Vec::new();
+    for &index in selected {
+        let Some(point) = curve.points.get(index) else {
+            continue;
+        };
+        for side in [HandleSide::Left, HandleSide::Right] {
+            if let Some(offset) = curve.manual_handle(index, side) {
+                handles.push((index, side, Vec2::new(point.x, point.y) + offset));
+            }
+        }
+    }
+    handles
 }
 
 /// On a plot node: the curve as a polyline, in logical pixels from the node's top left, of at most

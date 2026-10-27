@@ -174,6 +174,21 @@ impl ScalarCurve {
         }
     }
 
+    /// The offset of point `index`'s handle on `side`, if it is set by hand (aligned or free) and
+    /// shapes a cubic segment: the handles an editor shows.
+    pub fn manual_handle(&self, index: usize, side: HandleSide) -> Option<Vec2> {
+        let span = self.span(index, side)?;
+        let point = self.points[index];
+        let (handle, segment) = match side {
+            HandleSide::Left => (point.left, self.points[index - 1].segment),
+            HandleSide::Right => (point.right, point.segment),
+        };
+        if segment != CurveSegment::Cubic || handle.mode() == HandleMode::Auto {
+            return None;
+        }
+        Some(handle_offset(handle, side, 0.0, span))
+    }
+
     /// `apply`'s edit, the clamps aside; returns the new point's index for an insert.
     fn apply_op(&mut self, op: &CurveEditOp, constraints: &CurveConstraints) -> Option<usize> {
         let last = self.points.len().checked_sub(1)?;
@@ -324,7 +339,9 @@ impl ScalarCurve {
         {
             x = x.clamp(first.x, last.x);
         }
-        let y = constraints.y.clamp(constraints.y.round(self.prepare().value(x)));
+        let y = constraints
+            .y
+            .clamp(constraints.y.round(self.prepare().value(x)));
         let index = self.points.partition_point(|point| point.x <= x);
         let segment = (index.checked_sub(1))
             .and_then(|before| self.points.get(before))
@@ -932,7 +949,10 @@ mod tests {
         );
         assert_eq!(applied.inserted, Some(1));
         let point = inserted.points[1];
-        assert_eq!((point.x.to_string(), point.y.to_string()), ("0.46".into(), "0.32".into()));
+        assert_eq!(
+            (point.x.to_string(), point.y.to_string()),
+            ("0.46".into(), "0.32".into())
+        );
     }
 
     #[test]
@@ -1007,5 +1027,22 @@ mod tests {
             panic!("{:?}", bent.points[1].left);
         };
         assert!(left.normalize().dot(Vec2::new(-1.0, -1.0).normalize()) > 0.9999);
+    }
+
+    #[test]
+    fn only_handles_set_by_hand_on_cubic_segments_are_shown() {
+        let mut bent = curve(&[(0.0, 0.0), (0.5, 0.5), (1.0, 0.0)]);
+        bent.points[1].left = DirectionHandle::Free(Vec2::new(-0.1, 0.2));
+        bent.points[1].right = DirectionHandle::Aligned(Vec2::new(0.1, 0.0));
+        bent.points[0].right = DirectionHandle::Free(Vec2::new(0.1, 0.0));
+        assert_eq!(
+            bent.manual_handle(1, HandleSide::Left),
+            Some(Vec2::new(-0.1, 0.2))
+        );
+        assert_eq!(bent.manual_handle(0, HandleSide::Left), None);
+        assert_eq!(bent.manual_handle(2, HandleSide::Left), None);
+        bent.points[1].segment = CurveSegment::Linear;
+        assert_eq!(bent.manual_handle(1, HandleSide::Right), None);
+        assert!(bent.manual_handle(0, HandleSide::Right).is_some());
     }
 }
