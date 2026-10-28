@@ -25,7 +25,7 @@ pub use feathers::{
 };
 pub use model::{
     CurveAxis, CurveConstraints, CurveExtrapolation, CurvePoint, CurveSegment, CurveValue,
-    DirectionHandle, HandleMode, HandleSide, PinEnds, ScalarCurve,
+    HandleMode, HandleSide, PinEnds, ScalarCurve,
 };
 
 /// Draws curve plots and thumbnails, and runs curve editors.

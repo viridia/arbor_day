@@ -26,10 +26,13 @@ pub struct CurvePoint {
     pub y: f32,
     /// The segment from this point to the next; ignored on the last point.
     pub segment: CurveSegment,
-    /// The handle toward the previous point.
-    pub left: DirectionHandle,
-    /// The handle toward the next point.
-    pub right: DirectionHandle,
+    /// Both handles' mode: a point's, not a side's, since aligned is a relation between the two.
+    pub handles: HandleMode,
+    /// The handle toward the previous point, as an offset from the point in the curve's units;
+    /// ignored while auto.
+    pub left: Vec2,
+    /// The handle toward the next point, likewise.
+    pub right: Vec2,
 }
 
 /// How a segment runs from its point to the next.
@@ -44,48 +47,17 @@ pub enum CurveSegment {
     Cubic,
 }
 
-/// The line from a point to the control point that sets a cubic segment's direction and pull
-/// there, as an offset from the point in the curve's units.
-#[derive(Reflect, Clone, Copy, Debug, PartialEq, Default)]
-pub enum DirectionHandle {
+/// How a point's direction handles are set: the lines from the point to the control points that
+/// set a cubic segment's direction and pull there.
+#[derive(Reflect, Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum HandleMode {
     /// Computed from the neighbouring points, so that the curve never overshoots them.
     #[default]
     Auto,
-    /// Set by hand. Moving it turns the point's other handle, if also aligned, to stay on the same
-    /// line, so the curve stays smooth through the point.
-    Aligned(Vec2),
-    /// Set by hand, independent of the point's other handle, so the curve can turn sharply.
-    Free(Vec2),
-}
-
-/// A [`DirectionHandle`]'s kind, without its offset.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum HandleMode {
-    /// [`DirectionHandle::Auto`].
-    Auto,
-    /// [`DirectionHandle::Aligned`].
+    /// Set by hand, the two kept on one line, so the curve stays smooth through the point.
     Aligned,
-    /// [`DirectionHandle::Free`].
+    /// Set by hand, each independent of the other, so the curve can turn sharply.
     Free,
-}
-
-impl DirectionHandle {
-    /// The handle's kind.
-    pub fn mode(&self) -> HandleMode {
-        match self {
-            Self::Auto => HandleMode::Auto,
-            Self::Aligned(_) => HandleMode::Aligned,
-            Self::Free(_) => HandleMode::Free,
-        }
-    }
-
-    fn with_offset(mode: HandleMode, offset: Vec2) -> Self {
-        match mode {
-            HandleMode::Auto => Self::Auto,
-            HandleMode::Aligned => Self::Aligned(offset),
-            HandleMode::Free => Self::Free(offset),
-        }
-    }
 }
 
 /// Which of a point's handles: toward the previous point, or the next.
@@ -120,6 +92,7 @@ impl ScalarCurve {
         }
         let slopes = auto_slopes(&points);
         let mut segments = Vec::with_capacity(points.len().saturating_sub(1));
+        let mut starts = Vec::with_capacity(segments.capacity());
         for (index, pair) in points.windows(2).enumerate() {
             let (a, b) = (pair[0], pair[1]);
             let span = b.x - a.x;
@@ -140,16 +113,20 @@ impl ScalarCurve {
                     end,
                 ],
                 CurveSegment::Cubic => {
-                    let out = handle_offset(a.right, HandleSide::Right, slopes[index], span);
-                    let into = handle_offset(b.left, HandleSide::Left, slopes[index + 1], span);
+                    let out =
+                        handle_offset(a.handles, a.right, HandleSide::Right, slopes[index], span);
+                    let into =
+                        handle_offset(b.handles, b.left, HandleSide::Left, slopes[index + 1], span);
                     [start, start + out, end + into, end]
                 }
             };
             segments.push(Bezier::new(controls));
+            starts.push(index);
         }
         let at = |point: Option<&CurvePoint>| point.map_or(Vec2::ZERO, |p| Vec2::new(p.x, p.y));
         PreparedCurve {
             segments,
+            starts,
             first: at(points.first()),
             last: at(points.last()),
             extrapolation: self.extrapolation,
@@ -179,14 +156,14 @@ impl ScalarCurve {
     pub fn manual_handle(&self, index: usize, side: HandleSide) -> Option<Vec2> {
         let span = self.span(index, side)?;
         let point = self.points[index];
-        let (handle, segment) = match side {
+        let (stored, segment) = match side {
             HandleSide::Left => (point.left, self.points[index - 1].segment),
             HandleSide::Right => (point.right, point.segment),
         };
-        if segment != CurveSegment::Cubic || handle.mode() == HandleMode::Auto {
+        if segment != CurveSegment::Cubic || point.handles == HandleMode::Auto {
             return None;
         }
-        Some(handle_offset(handle, side, 0.0, span))
+        Some(handle_offset(point.handles, stored, side, 0.0, span))
     }
 
     /// `apply`'s edit, the clamps aside; returns the new point's index for an insert.
@@ -236,18 +213,18 @@ impl ScalarCurve {
                     self.points.remove(index);
                 }
             }
-            CurveEditOp::SetSegment(index, segment) => {
-                if constraints.segments.contains(segment)
-                    && let Some(point) = self.points.get_mut(*index)
-                {
-                    point.segment = *segment;
+            CurveEditOp::SetSegment(indices, segment) => {
+                if constraints.segments.contains(segment) {
+                    for &index in indices.iter().filter(|&&index| index <= last) {
+                        self.points[index].segment = *segment;
+                    }
                 }
             }
-            CurveEditOp::SetHandleMode(index, side, mode) => {
-                if constraints.handles.contains(mode)
-                    && let Some(offset) = self.handle_offset(*index, *side)
-                {
-                    *self.handle_mut(*index, *side) = DirectionHandle::with_offset(*mode, offset);
+            CurveEditOp::SetHandleMode(indices, mode) => {
+                if constraints.handles.contains(mode) {
+                    for &index in indices.iter().filter(|&&index| index <= last) {
+                        self.set_handle_mode(index, *mode);
+                    }
                 }
             }
             CurveEditOp::Replace(curve) => {
@@ -255,8 +232,7 @@ impl ScalarCurve {
                     && constraints.extrapolation.contains(&curve.extrapolation)
                     && curve.points.iter().all(|point| {
                         constraints.segments.contains(&point.segment)
-                            && constraints.handles.contains(&point.left.mode())
-                            && constraints.handles.contains(&point.right.mode())
+                            && constraints.handles.contains(&point.handles)
                     });
                 if allowed {
                     *self = curve.clone();
@@ -291,8 +267,36 @@ impl ScalarCurve {
         point.y = constraints.y.clamp(point.y);
     }
 
-    /// Sets a handle by hand: an auto one becomes aligned, or free if the constraints leave out
-    /// aligned. An aligned handle turns its opposite, if also aligned, onto its line.
+    /// Sets point `index`'s handles to `mode`. Set by hand, they start from the offsets they had,
+    /// computed if auto; newly aligned, the left turns onto the right's line.
+    fn set_handle_mode(&mut self, index: usize, mode: HandleMode) {
+        let was = self.points[index].handles;
+        if mode != HandleMode::Auto && was == HandleMode::Auto {
+            for side in [HandleSide::Left, HandleSide::Right] {
+                if let Some(offset) = self.handle_offset(index, side) {
+                    *self.offset_mut(index, side) = offset;
+                }
+            }
+        }
+        self.points[index].handles = mode;
+        if mode == HandleMode::Aligned
+            && was != HandleMode::Aligned
+            && let (Some(left), Some(right)) = (
+                self.handle_offset(index, HandleSide::Left),
+                self.handle_offset(index, HandleSide::Right),
+            )
+            && let Some(direction) = right.try_normalize()
+        {
+            let turned = self.fit_offset(index, HandleSide::Left, -direction * left.length());
+            *self.offset_mut(index, HandleSide::Left) = turned;
+        }
+    }
+
+    /// Sets a handle by hand: an auto point becomes aligned, or free if the constraints leave out
+    /// aligned. An aligned point's other handle turns onto the moved one's line, keeping its
+    /// length: the moved one's direction is limited so that the other still fits its segment, as
+    /// a moved point is kept within its bounds, so a drag that reaches the limit and comes back
+    /// leaves the other as it was.
     fn move_handle(
         &mut self,
         index: usize,
@@ -300,29 +304,34 @@ impl ScalarCurve {
         offset: Vec2,
         constraints: &CurveConstraints,
     ) {
-        if index >= self.points.len() || self.handle_offset(index, side).is_none() {
+        if index >= self.points.len() || self.span(index, side).is_none() {
             return;
         }
         let allows = |mode| constraints.handles.contains(&mode);
-        let mode = match self.handle_mut(index, side).mode() {
+        let mode = match self.points[index].handles {
             HandleMode::Auto if allows(HandleMode::Aligned) => HandleMode::Aligned,
             HandleMode::Auto if allows(HandleMode::Free) => HandleMode::Free,
             HandleMode::Auto => return,
             mode => mode,
         };
-        let offset = self.clamp_offset(index, side, offset);
-        *self.handle_mut(index, side) = DirectionHandle::with_offset(mode, offset);
-        let opposite = match side {
-            HandleSide::Left => HandleSide::Right,
-            HandleSide::Right => HandleSide::Left,
+        self.set_handle_mode(index, mode);
+        let opposite = side.opposite();
+        let other = (mode == HandleMode::Aligned)
+            .then(|| {
+                Some((
+                    self.handle_offset(index, opposite)?,
+                    self.span(index, opposite)?,
+                ))
+            })
+            .flatten();
+        let offset = match other {
+            Some((other, span)) => limit_direction(offset, other.length(), span),
+            None => offset,
         };
-        if mode == HandleMode::Aligned
-            && let DirectionHandle::Aligned(other) = *self.handle_mut(index, opposite)
-            && let Some(direction) = offset.try_normalize()
-        {
-            let turned = -direction * other.length();
-            let turned = self.clamp_offset(index, opposite, turned);
-            *self.handle_mut(index, opposite) = DirectionHandle::Aligned(turned);
+        let offset = self.clamp_offset(index, side, offset);
+        *self.offset_mut(index, side) = offset;
+        if let (Some((other, _)), Some(direction)) = (other, offset.try_normalize()) {
+            *self.offset_mut(index, opposite) = -direction * other.length();
         }
     }
 
@@ -361,7 +370,7 @@ impl ScalarCurve {
         Some(index)
     }
 
-    fn handle_mut(&mut self, index: usize, side: HandleSide) -> &mut DirectionHandle {
+    fn offset_mut(&mut self, index: usize, side: HandleSide) -> &mut Vec2 {
         let point = &mut self.points[index];
         match side {
             HandleSide::Left => &mut point.left,
@@ -384,12 +393,13 @@ impl ScalarCurve {
     fn handle_offset(&self, index: usize, side: HandleSide) -> Option<Vec2> {
         let span = self.span(index, side)?;
         let point = self.points[index];
-        let handle = match side {
+        let stored = match side {
             HandleSide::Left => point.left,
             HandleSide::Right => point.right,
         };
         Some(handle_offset(
-            handle,
+            point.handles,
+            stored,
             side,
             auto_slopes(&self.points)[index],
             span,
@@ -406,35 +416,77 @@ impl ScalarCurve {
         Vec2::new(x, offset.y)
     }
 
-    /// Every aligned or free handle kept within its segment and, if `y` is clamped, its control
-    /// point within `y`'s bounds.
+    /// `offset` shortened, its direction kept, until its x lies within the span to the neighbour
+    /// on `side`.
+    fn fit_offset(&self, index: usize, side: HandleSide, offset: Vec2) -> Vec2 {
+        let span = self.span(index, side).unwrap_or(0.0);
+        if offset.x.abs() > span {
+            offset * (span / offset.x.abs())
+        } else {
+            offset
+        }
+    }
+
+    /// Every handle set by hand kept within its segment and, if `y` is clamped, its control point
+    /// within `y`'s bounds.
     fn clamp_handles(&mut self, y: &CurveAxis) {
         for index in 0..self.points.len() {
+            if self.points[index].handles == HandleMode::Auto {
+                continue;
+            }
             let point_y = self.points[index].y;
             for side in [HandleSide::Left, HandleSide::Right] {
-                let handle = *self.handle_mut(index, side);
-                if let DirectionHandle::Aligned(offset) | DirectionHandle::Free(offset) = handle {
-                    let mut offset = self.clamp_offset(index, side, offset);
-                    // A segment lies within its control points' hull, so this bounds the curve.
-                    offset.y = y.clamp(point_y + offset.y) - point_y;
-                    *self.handle_mut(index, side) =
-                        DirectionHandle::with_offset(handle.mode(), offset);
-                }
+                let stored = *self.offset_mut(index, side);
+                let mut offset = self.clamp_offset(index, side, stored);
+                // A segment lies within its control points' hull, so this bounds the curve.
+                offset.y = y.clamp(point_y + offset.y) - point_y;
+                *self.offset_mut(index, side) = offset;
             }
         }
     }
 }
 
-/// `handle`'s offset on `side` of a point whose auto slope is `slope`, over a segment `span` wide,
-/// its x kept within the segment. An auto handle reaches a third of the span.
-fn handle_offset(handle: DirectionHandle, side: HandleSide, slope: f32, span: f32) -> Vec2 {
+impl HandleSide {
+    /// The point's other side.
+    pub fn opposite(self) -> Self {
+        match self {
+            Self::Left => Self::Right,
+            Self::Right => Self::Left,
+        }
+    }
+}
+
+/// `offset` turned, its length kept, so that the opposite handle of length `other` on its line
+/// fits a segment `span` wide: its direction's x, the share of a handle's length that runs along
+/// x, at most `span / other`.
+fn limit_direction(offset: Vec2, other: f32, span: f32) -> Vec2 {
+    let Some(direction) = offset.try_normalize() else {
+        return offset;
+    };
+    if other <= 0.0 {
+        return offset;
+    }
+    let most = (span / other).min(1.0);
+    if direction.x.abs() <= most {
+        return offset;
+    }
+    // Of a level handle, take the upward direction.
+    let y = (1.0 - most * most).sqrt();
+    let y = if direction.y < 0.0 { -y } else { y };
+    Vec2::new(most.copysign(direction.x), y) * offset.length()
+}
+
+/// A handle's offset on `side` of a point whose handles are `mode`, stored as `stored`, whose auto
+/// slope is `slope`, over a segment `span` wide, its x kept within the segment. An auto handle
+/// reaches a third of the span.
+fn handle_offset(mode: HandleMode, stored: Vec2, side: HandleSide, slope: f32, span: f32) -> Vec2 {
     let sign = match side {
         HandleSide::Left => -1.0,
         HandleSide::Right => 1.0,
     };
-    let offset = match handle {
-        DirectionHandle::Auto => Vec2::new(span, slope * span) * (sign / 3.0),
-        DirectionHandle::Aligned(offset) | DirectionHandle::Free(offset) => offset,
+    let offset = match mode {
+        HandleMode::Auto => Vec2::new(span, slope * span) * (sign / 3.0),
+        HandleMode::Aligned | HandleMode::Free => stored,
     };
     let x = match side {
         HandleSide::Left => offset.x.clamp(-span, 0.0),
@@ -593,6 +645,8 @@ fn power_coefficients(a: f32, b: f32, c: f32, d: f32) -> [f32; 3] {
 #[derive(Clone, Debug)]
 pub struct PreparedCurve {
     segments: Vec<Bezier>,
+    /// The point each segment starts from.
+    starts: Vec<usize>,
     first: Vec2,
     last: Vec2,
     extrapolation: CurveExtrapolation,
@@ -602,6 +656,12 @@ impl PreparedCurve {
     /// The segments in order of x, without the zero-width ones at steps.
     pub fn segments(&self) -> &[Bezier] {
         &self.segments
+    }
+
+    /// The segment from point `index` to the next, none at a step or past the last point.
+    pub fn segment_from(&self, index: usize) -> Option<&Bezier> {
+        let at = self.starts.iter().position(|&start| start == index)?;
+        self.segments.get(at)
     }
 
     /// The curve's value at `x`.
@@ -782,10 +842,10 @@ pub enum CurveEditOp {
     /// Adds a point on the curve at this position's x.
     Insert(Vec2),
     Delete(Vec<usize>),
-    /// Sets the kind of the segment from a point to the next.
-    SetSegment(usize, CurveSegment),
-    /// Sets a handle's mode, keeping its current offset.
-    SetHandleMode(usize, HandleSide, HandleMode),
+    /// Sets the kind of the segment from each of these points to the next.
+    SetSegment(Vec<usize>, CurveSegment),
+    /// Sets these points' handle mode, each handle starting from the offset it had.
+    SetHandleMode(Vec<usize>, HandleMode),
     /// Replaces the whole curve: a preset, a reset or a paste.
     Replace(ScalarCurve),
 }
@@ -913,7 +973,8 @@ mod tests {
     fn a_free_handle_bends_the_curve_and_stays_a_function() {
         let mut bent = curve(&[(0.0, 0.0), (1.0, 0.0)]);
         // Reaching past the next point: kept within the segment.
-        bent.points[0].right = DirectionHandle::Free(Vec2::new(2.0, 1.0));
+        bent.points[0].handles = HandleMode::Free;
+        bent.points[0].right = Vec2::new(2.0, 1.0);
         let prepared = bent.prepare();
         assert!(prepared.segments()[0].weighted);
         assert!(prepared.segments()[0].controls[1].x <= 1.0);
@@ -994,7 +1055,7 @@ mod tests {
             ..default()
         };
         let mut line = curve(&[(0.0, 0.0), (1.0, 1.0)]);
-        let segment = CurveEditOp::SetSegment(0, CurveSegment::Constant);
+        let segment = CurveEditOp::SetSegment(vec![0], CurveSegment::Constant);
         assert!(!line.apply(&segment, &constraints).changed);
         let handle = CurveEditOp::MoveHandle(0, HandleSide::Right, Vec2::new(0.2, 0.5));
         assert!(!line.apply(&handle, &constraints).changed);
@@ -1007,9 +1068,8 @@ mod tests {
         let constraints = CurveConstraints::default();
         let lift = CurveEditOp::MoveHandle(0, HandleSide::Right, Vec2::new(0.3, 0.8));
         curve.apply(&lift, &constraints);
-        let DirectionHandle::Aligned(offset) = curve.points[0].right else {
-            panic!("{:?}", curve.points[0].right);
-        };
+        assert_eq!(curve.points[0].handles, HandleMode::Aligned);
+        let offset = curve.points[0].right;
         assert!(offset.abs_diff_eq(Vec2::new(0.3, 0.1), 1e-6), "{offset}");
         let prepared = curve.prepare();
         assert!((0..=100).all(|i| prepared.value(i as f32 / 100.0) <= 1.0 + 1e-6));
@@ -1019,22 +1079,78 @@ mod tests {
     fn a_moved_auto_handle_becomes_aligned_and_turns_its_opposite() {
         let mut bent = curve(&[(0.0, 0.0), (0.5, 0.5), (1.0, 0.0)]);
         let constraints = CurveConstraints::default();
-        let left = CurveEditOp::SetHandleMode(1, HandleSide::Left, HandleMode::Aligned);
-        bent.apply(&left, &constraints);
         let right = CurveEditOp::MoveHandle(1, HandleSide::Right, Vec2::new(0.1, 0.1));
         bent.apply(&right, &constraints);
-        let DirectionHandle::Aligned(left) = bent.points[1].left else {
-            panic!("{:?}", bent.points[1].left);
-        };
+        assert_eq!(bent.points[1].handles, HandleMode::Aligned);
+        let left = bent.points[1].left;
         assert!(left.normalize().dot(Vec2::new(-1.0, -1.0).normalize()) > 0.9999);
+        // The auto handle had a third of its span, flat at the peak.
+        assert!(near(left.length(), 0.5 / 3.0), "{left}");
+    }
+
+    #[test]
+    fn set_by_hand_handles_start_where_auto_ones_were() {
+        let mut bent = curve(&[(0.0, 0.0), (0.4, 0.5), (1.0, 0.2)]);
+        let before = bent.prepare();
+        let set = CurveEditOp::SetHandleMode(vec![0, 1, 2], HandleMode::Free);
+        bent.apply(&set, &CurveConstraints::default());
+        assert!(
+            bent.points
+                .iter()
+                .all(|point| point.handles == HandleMode::Free)
+        );
+        let after = bent.prepare();
+        for (a, b) in before.segments().iter().zip(after.segments()) {
+            for (a, b) in a.controls.iter().zip(b.controls) {
+                assert!(a.abs_diff_eq(b, 1e-6), "{a} {b}");
+            }
+        }
+    }
+
+    #[test]
+    fn an_aligned_handle_dragged_to_the_limit_leaves_the_other_whole() {
+        // The left handle is longer than its segment is wide, so the right may turn only so far
+        // toward level.
+        let mut point = curve(&[(0.0, 0.5), (0.5, 0.5), (1.0, 0.5)]);
+        point.points[1].handles = HandleMode::Aligned;
+        point.points[1].left = Vec2::new(-0.4, -0.4);
+        point.points[1].right = Vec2::new(0.1, 0.1);
+        let constraints = CurveConstraints {
+            y: CurveAxis {
+                min: -2.0,
+                max: 3.0,
+                ..CurveAxis::unit()
+            },
+            ..default()
+        };
+        let length = point.points[1].left.length();
+        let start = point.points[1].right;
+        for proposed in [Vec2::new(0.3, 0.01), Vec2::new(0.3, -0.01), start] {
+            let drag = CurveEditOp::MoveHandle(1, HandleSide::Right, proposed);
+            point.apply(&drag, &constraints);
+            let (left, right) = (point.points[1].left, point.points[1].right);
+            assert!(near(left.length(), length), "{left}");
+            assert!(left.x >= -0.5 - 1e-6, "{left}");
+            assert!(
+                left.normalize().dot(-right.normalize()) > 0.9999,
+                "{left} {right}"
+            );
+        }
+        assert!(
+            point.points[1]
+                .left
+                .abs_diff_eq(Vec2::new(-0.4, -0.4), 1e-6)
+        );
     }
 
     #[test]
     fn only_handles_set_by_hand_on_cubic_segments_are_shown() {
         let mut bent = curve(&[(0.0, 0.0), (0.5, 0.5), (1.0, 0.0)]);
-        bent.points[1].left = DirectionHandle::Free(Vec2::new(-0.1, 0.2));
-        bent.points[1].right = DirectionHandle::Aligned(Vec2::new(0.1, 0.0));
-        bent.points[0].right = DirectionHandle::Free(Vec2::new(0.1, 0.0));
+        bent.points[1].handles = HandleMode::Free;
+        bent.points[1].left = Vec2::new(-0.1, 0.2);
+        bent.points[1].right = Vec2::new(0.1, 0.0);
+        bent.points[0].handles = HandleMode::Free;
+        bent.points[0].right = Vec2::new(0.1, 0.0);
         assert_eq!(
             bent.manual_handle(1, HandleSide::Left),
             Some(Vec2::new(-0.1, 0.2))

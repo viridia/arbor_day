@@ -1,13 +1,15 @@
 //! Feathers widgets for curves.
 
 use bevy::{
+    asset::embedded_asset,
     feathers::{
         constants::{fonts, size},
         controls::{
-            FeathersMenu, FeathersMenuDivider, FeathersMenuItem, FeathersMenuPopup,
-            FeathersMenuToolButton, FeathersNumberInput, HardLimit, NumberInputPrecision,
-            NumberInputStep, NumberInputUnits, UnitsRegistry,
+            FeathersMenu, FeathersMenuButton, FeathersMenuDivider, FeathersMenuItem,
+            FeathersMenuPopup, FeathersMenuToolButton, FeathersNumberInput, HardLimit,
+            NumberInputPrecision, NumberInputStep, NumberInputUnits, UnitsRegistry,
         },
+        display::icon,
         theme::{
             ThemeBackgroundColor, ThemeBorderColor, ThemeTextColor, ThemeToken, ThemedText, UiTheme,
         },
@@ -27,9 +29,12 @@ use bevy::{
 use super::{
     edit::{CurveEdit, CurveEditPhase, CurveSelection, PointRef, SeenCurve},
     gesture::{CurveGesture, CurveGestures, CurveHover, CurveTarget},
-    model::{CurveConstraints, CurveEditOp, CurveValue, HandleSide, PinEnds, ScalarCurve},
+    model::{
+        CurveConstraints, CurveEditOp, CurveSegment, CurveValue, HandleMode, HandleSide, PinEnds,
+        ScalarCurve,
+    },
     plot::CurveStroke,
-    view::{CurvePath, CurvePlot, CurveView, shown_handles},
+    view::{CurvePath, CurvePlot, CurveView, flatten_segment, shown_handles},
 };
 
 /// The editor's plot, its labels included, in logical pixels.
@@ -201,6 +206,10 @@ impl FeathersCurveEditor {
                     Children [
                         // Before the markers, which the editor adds as the curve's points and
                         // handles, so they draw over these.
+                        SpanHighlights
+                        @fill()
+                        Pickable::IGNORE
+                        --
                         HandleStems
                         @fill()
                         Pickable::IGNORE
@@ -239,21 +248,33 @@ impl FeathersCurveEditor {
                 ]
             ]
             --
-            {props.point_inputs.map(|(x_caption, y_caption)| bsn! {
+            {props.point_inputs.map(|(x_caption, y_caption)| bsn_list! {
+                PointRow { placeholder: false }
                 Node {
                     flex_direction: FlexDirection::Row,
                     column_gap: px(4),
+                    display: Display::None,
                 }
                 Children [
                     @FeathersNumberInput { @interior_label_text: {Some(x_caption)} }
                     #x
                     CoordinateInput { y: false }
-                    Node { flex_grow: 1.0 }
+                    Node { flex_grow: 1.0, flex_basis: px(0) }
                     --
                     @FeathersNumberInput { @interior_label_text: {Some(y_caption)} }
                     #y
                     CoordinateInput { y: true }
-                    Node { flex_grow: 1.0 }
+                    Node { flex_grow: 1.0, flex_basis: px(0) }
+                ]
+                --
+                #no_point
+                PointRow { placeholder: true }
+                Node {
+                    flex_direction: FlexDirection::Row,
+                    column_gap: px(4),
+                }
+                Children [
+                    @placeholder_field(x_caption) -- @placeholder_field(y_caption)
                 ]
             })}
             --
@@ -265,12 +286,12 @@ impl FeathersCurveEditor {
     }
 }
 
-/// The inputs for the selected point's handle on `side`, hidden while it shows none: `In Δx` and
-/// `In Δy`, named `in_dx` and `in_dy`, or likewise Out.
+/// The inputs for the selected point's handle on `side`, hidden while it shows none: `Δx In` and
+/// `Δy In`, named `in_dx` and `in_dy`, or likewise Out.
 fn handle_input_row(side: HandleSide) -> impl Scene {
     let (x_caption, y_caption, x_name, y_name) = match side {
-        HandleSide::Left => ("In Δx", "In Δy", "in_dx", "in_dy"),
-        HandleSide::Right => ("Out Δx", "Out Δy", "out_dx", "out_dy"),
+        HandleSide::Left => ("Δx In", "Δy In", "in_dx", "in_dy"),
+        HandleSide::Right => ("Δx Out", "Δy Out", "out_dx", "out_dy"),
     };
     let handle = Some(side);
     bsn! {
@@ -284,24 +305,75 @@ fn handle_input_row(side: HandleSide) -> impl Scene {
             @FeathersNumberInput { @interior_label_text: {Some(x_caption)} }
             Name({x_name})
             CoordinateInput { handle: {handle}, y: false }
-            Node { flex_grow: 1.0 }
+            Node { flex_grow: 1.0, flex_basis: px(0) }
             --
             @FeathersNumberInput { @interior_label_text: {Some(y_caption)} }
             Name({y_name})
             CoordinateInput { handle: {handle}, y: true }
-            Node { flex_grow: 1.0 }
+            Node { flex_grow: 1.0, flex_basis: px(0) }
         ]
     }
 }
 
-/// A curve editor's ⋯ menu, at its row's right end, for the host to place in the editor's header
-/// line and aim with a [`CurveMenuTarget`]. It lists the host's `items`, if any, above a divider,
-/// then Copy curve and Paste curve, named `copy` and `paste`. An item holding a
-/// [`CurveMenuReplace`] replaces the curve when picked; the host observes its other items itself.
+/// A field drawn as a disabled number input captioned `caption`, showing "—" for no value.
+fn placeholder_field(caption: &'static str) -> impl Scene {
+    bsn! {
+        Node {
+            height: size::ROW_HEIGHT,
+            flex_grow: 1.0,
+            flex_basis: px(0),
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::SpaceBetween,
+            // As far in as a number input's interior caption and value, past its chevrons.
+            padding: UiRect::horizontal(px(20)),
+            border_radius: BorderRadius::all(px(4)),
+        }
+        ThemeBackgroundColor(tokens::SLIDER_BG_DISABLED)
+        Children [
+            @placeholder_text(caption) -- @placeholder_text("—")
+        ]
+    }
+}
+
+fn placeholder_text(text: &'static str) -> impl Scene {
+    bsn! {
+        Text(text)
+        TextFont {
+            font: FontSourceTemplate::Families(fonts::SANS),
+            font_size: size::COMPACT_FONT,
+        }
+        ThemeTextColor(tokens::TEXT_INPUT_TEXT_DISABLED)
+        Pickable::IGNORE
+    }
+}
+
+/// A curve editor's header tools, at its row's right end, for the host to place in the editor's
+/// header line and aim with a [`CurveMenuTarget`]: dropdowns for the selected points' segment
+/// kind and handle mode, named `kind` and `mode`, each there only while the constraints offer a
+/// choice; then a ⋯ menu. The menu lists the host's `items`, if any, above a divider, then Copy
+/// curve and Paste curve, named `copy` and `paste`. An item holding a [`CurveMenuReplace`]
+/// replaces the curve when picked; the host observes its other items itself.
 pub fn curve_menu(items: Option<Box<dyn SceneList>>) -> impl Scene {
     bsn! {
+        Node {
+            margin: UiRect::left(Val::Auto),
+            column_gap: px(4),
+            align_items: AlignItems::Center,
+        }
+        Children [
+            @choice_menu(ChoiceGroup::Segment) #kind
+            --
+            @choice_menu(ChoiceGroup::Mode) #mode
+            --
+            @overflow_menu(items)
+        ]
+    }
+}
+
+/// The ⋯ menu of a [`curve_menu`].
+fn overflow_menu(items: Option<Box<dyn SceneList>>) -> impl Scene {
+    bsn! {
         @FeathersMenu
-        Node { margin: UiRect::left(Val::Auto) }
         Children [
             @FeathersMenuToolButton {
                 @caption: bsn! { Text("…") ThemedText },
@@ -342,8 +414,162 @@ pub fn curve_menu_item(caption: &'static str) -> impl Scene {
 }
 
 /// On a [`curve_menu`]: the editor it acts on.
-#[derive(Component, Clone, Copy, Debug)]
+#[derive(Component, Clone, Debug, FromTemplate)]
 pub struct CurveMenuTarget(pub Entity);
+
+/// Which of a point's settings a [`curve_menu`]'s dropdown sets.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+enum ChoiceGroup {
+    /// The kind of the segment after the point.
+    #[default]
+    Segment,
+    /// The point's handle mode.
+    Mode,
+}
+
+impl ChoiceGroup {
+    /// Each choice's name, caption and icon, in the order of [`SEGMENTS`] or [`MODES`].
+    fn choices(self) -> [(&'static str, &'static str, &'static str); 3] {
+        match self {
+            Self::Segment => [
+                (
+                    "constant",
+                    "Constant",
+                    "embedded://arbor_day/curve/icons/step.png",
+                ),
+                (
+                    "linear",
+                    "Linear",
+                    "embedded://arbor_day/curve/icons/line.png",
+                ),
+                (
+                    "cubic",
+                    "Cubic",
+                    "embedded://arbor_day/curve/icons/bezier.png",
+                ),
+            ],
+            Self::Mode => [
+                (
+                    "auto",
+                    "Auto",
+                    "embedded://arbor_day/curve/icons/smooth.png",
+                ),
+                (
+                    "aligned",
+                    "Aligned",
+                    "embedded://arbor_day/curve/icons/straight.png",
+                ),
+                ("free", "Free", "embedded://arbor_day/curve/icons/sharp.png"),
+            ],
+        }
+    }
+
+    /// Which choices the constraints allow.
+    fn allowed(self, constraints: &CurveConstraints) -> [bool; 3] {
+        match self {
+            Self::Segment => SEGMENTS.map(|kind| constraints.segments.contains(&kind)),
+            Self::Mode => MODES.map(|mode| constraints.handles.contains(&mode)),
+        }
+    }
+
+    /// The choice point `index` of `curve` has.
+    fn current(self, curve: &ScalarCurve, index: usize) -> Option<usize> {
+        let point = curve.points.get(index)?;
+        match self {
+            Self::Segment => SEGMENTS.iter().position(|&kind| kind == point.segment),
+            Self::Mode => MODES.iter().position(|&mode| mode == point.handles),
+        }
+    }
+
+    /// The selected points this group acts on: for a segment kind, those with a segment after.
+    fn points(self, selection: &CurveSelection, curve: Entity, count: usize) -> Vec<usize> {
+        match self {
+            Self::Segment => outgoing(selection, curve, count),
+            Self::Mode => selection.indices(curve),
+        }
+    }
+
+    /// The edit that sets choice `choice` on `points`.
+    fn op(self, points: Vec<usize>, choice: usize) -> CurveEditOp {
+        match self {
+            Self::Segment => CurveEditOp::SetSegment(points, SEGMENTS[choice]),
+            Self::Mode => CurveEditOp::SetHandleMode(points, MODES[choice]),
+        }
+    }
+}
+
+const SEGMENTS: [CurveSegment; 3] = [
+    CurveSegment::Constant,
+    CurveSegment::Linear,
+    CurveSegment::Cubic,
+];
+const MODES: [HandleMode; 3] = [HandleMode::Auto, HandleMode::Aligned, HandleMode::Free];
+
+/// On a [`curve_menu`]'s dropdown: the setting it chooses.
+#[derive(Component, Clone, Copy, Debug, Default)]
+struct ChoiceMenu(ChoiceGroup);
+
+/// In a dropdown's button: the icon of one choice, or with none, the text shown while the
+/// selected points differ or none is selected.
+#[derive(Component, Clone, Copy, Debug, Default)]
+struct ChoiceCaption(Option<usize>);
+
+/// A dropdown's item for choice `0` of its group.
+#[derive(Component, Clone, Copy, Debug, Default)]
+struct ChoiceItem(usize);
+
+/// A dropdown choosing among `group`'s choices, its button showing the selected points' choice, as
+/// the color input's shows its swatch, or "—" while they differ; each item an icon and a name.
+/// Hidden until [`show_choices`] finds the constraints offer a choice.
+fn choice_menu(group: ChoiceGroup) -> impl Scene {
+    let [a, b, c] = group.choices();
+    bsn! {
+        @FeathersMenu
+        ChoiceMenu({group})
+        Node { display: Display::None }
+        Children [
+            @FeathersMenuToolButton {
+                @caption: bsn_list! {
+                    @choice_icon(a.2) ChoiceCaption({Some(0)})
+                    --
+                    @choice_icon(b.2) ChoiceCaption({Some(1)})
+                    --
+                    @choice_icon(c.2) ChoiceCaption({Some(2)})
+                    --
+                    Text("—") ThemedText ChoiceCaption
+                },
+            }
+            --
+            @FeathersMenuPopup
+            Children [
+                @choice_item(0, a) -- @choice_item(1, b) -- @choice_item(2, c)
+            ]
+        ]
+    }
+}
+
+fn choice_icon(path: &'static str) -> impl Scene {
+    bsn! { @icon(path) Node { height: px(16), display: Display::None } }
+}
+
+/// The item for choice `index`, named, captioned and drawn by `choice`.
+fn choice_item(
+    index: usize,
+    (name, caption, path): (&'static str, &'static str, &'static str),
+) -> impl Scene {
+    bsn! {
+        @FeathersMenuItem {
+            // Directly in the item, a row already, so its font reaches the text.
+            @caption: bsn_list! {
+                @icon(path) Node { height: px(16), margin: UiRect::right(px(8)) }
+                --
+                Text(caption) ThemedText
+            }
+        }
+        ChoiceItem({index})
+        Name({name})
+    }
+}
 
 /// On an item of a [`curve_menu`]: picked, it proposes this curve in place of the editor's.
 #[derive(Component, Clone, Debug, Default)]
@@ -431,6 +657,13 @@ struct CoordinateInput {
 #[derive(Component, Clone, Copy, Debug, Default)]
 struct HandleInputRow;
 
+/// The row of [`CoordinateInput`]s for the selected point, shown while exactly one is selected;
+/// or with `placeholder`, the row standing in for it otherwise, of the same height.
+#[derive(Component, Clone, Copy, Debug, Default)]
+struct PointRow {
+    placeholder: bool,
+}
+
 /// The rectangle being dragged out on the plot it is a child of, hidden while there is none.
 #[derive(Component, Clone, Copy, Debug, Default)]
 struct SelectionRectOutline;
@@ -465,9 +698,14 @@ impl MarkerLook {
 #[derive(Component, Clone, Copy, Debug, Default)]
 struct HandleStems;
 
-/// A stem from point `index` through its shown handles, a child of [`HandleStems`].
+/// The node holding the selected points' outgoing segments, drawn bright over the curve of the
+/// plot it is a child of.
+#[derive(Component, Clone, Copy, Debug, Default)]
+struct SpanHighlights;
+
+/// A path for point `index` in a [`PathLayer`]: a stem, or a segment drawn bright.
 #[derive(Component, Clone, Copy, Debug)]
-struct HandleStem {
+struct LayerPath {
     index: usize,
 }
 
@@ -506,15 +744,23 @@ fn marker_node(centre: Vec2, radius: f32, border: f32) -> Node {
 }
 
 pub(super) fn plugin(app: &mut App) {
+    embedded_asset!(app, "icons/step.png");
+    embedded_asset!(app, "icons/line.png");
+    embedded_asset!(app, "icons/bezier.png");
+    embedded_asset!(app, "icons/smooth.png");
+    embedded_asset!(app, "icons/straight.png");
+    embedded_asset!(app, "icons/sharp.png");
     app.init_resource::<CurveClipboard>()
         .add_observer(edit_from_input)
         .add_observer(pick_menu_item)
-        .add_systems(Update, enable_paste)
+        .add_observer(pick_choice)
+        .add_systems(Update, (enable_paste, show_choices))
         .add_systems(
             PostUpdate,
             (
                 place_markers,
                 place_handles,
+                place_spans,
                 place_selection_rect,
                 label_axes,
                 show_selected_point.after(super::edit::follow_point_count),
@@ -563,6 +809,120 @@ fn pick_menu_item(
         editor,
         curve: editor,
         op: CurveEditOp::Replace(curve),
+        phase: CurveEditPhase::Finish,
+    });
+}
+
+/// Shows each dropdown while its editor's constraints offer a choice, and of its items only those
+/// they allow. Its button shows the selected points' choice, or "—" while they differ or none is
+/// selected, and is disabled while no selected point has the setting.
+fn show_choices(
+    menus: Query<(Entity, &ChoiceMenu)>,
+    parents: Query<&ChildOf>,
+    targets: Query<&CurveMenuTarget>,
+    editors: Query<(&CurveValue, &CurveConstraints, &CurveSelection)>,
+    children: Query<&Children>,
+    mut nodes: Query<&mut Node>,
+    captions: Query<&ChoiceCaption>,
+    items: Query<&ChoiceItem>,
+    buttons: Query<Has<InteractionDisabled>, With<FeathersMenuButton>>,
+    mut commands: Commands,
+) {
+    for (menu, choice) in &menus {
+        let Some(editor) = (parents.iter_ancestors(menu))
+            .find_map(|ancestor| targets.get(ancestor).ok())
+            .map(|target| target.0)
+        else {
+            continue;
+        };
+        let Ok((curve, constraints, selection)) = editors.get(editor) else {
+            continue;
+        };
+        let group = choice.0;
+        let allowed = group.allowed(constraints);
+        let offered = allowed.iter().filter(|&&allowed| allowed).count() > 1;
+        show(&mut nodes, menu, offered);
+        if !offered {
+            continue;
+        }
+        let points = group.points(selection, editor, curve.0.points.len());
+        let mut current = points.iter().map(|&index| group.current(&curve.0, index));
+        let shown = match current.next() {
+            Some(first) if current.all(|other| other == first) => first,
+            _ => None,
+        };
+        for descendant in children.iter_descendants(menu) {
+            if let Ok(caption) = captions.get(descendant) {
+                show(&mut nodes, descendant, caption.0 == shown);
+            }
+            if let Ok(item) = items.get(descendant) {
+                show(&mut nodes, descendant, allowed[item.0]);
+            }
+            if let Ok(disabled) = buttons.get(descendant)
+                && points.is_empty() != disabled
+            {
+                if disabled {
+                    commands.entity(descendant).remove::<InteractionDisabled>();
+                } else {
+                    commands.entity(descendant).insert(InteractionDisabled);
+                }
+            }
+        }
+    }
+}
+
+/// Displays `entity`'s node if `shown`, else leaves it out of the layout.
+fn show(nodes: &mut Query<&mut Node>, entity: Entity, shown: bool) {
+    if let Ok(mut node) = nodes.get_mut(entity) {
+        set_shown(&mut node, shown);
+    }
+}
+
+/// Displays `node` if `shown`, else leaves it out of the layout.
+fn set_shown(node: &mut Mut<Node>, shown: bool) {
+    let display = if shown { Display::Flex } else { Display::None };
+    if node.display != display {
+        node.display = display;
+    }
+}
+
+/// A dropdown's item, picked, sets its choice on the selected points, as one edit.
+fn pick_choice(
+    activate: On<Activate>,
+    items: Query<&ChoiceItem>,
+    menus: Query<&ChoiceMenu>,
+    parents: Query<&ChildOf>,
+    targets: Query<&CurveMenuTarget>,
+    editors: Query<(&CurveValue, &CurveSelection)>,
+    mut commands: Commands,
+) {
+    let Ok(item) = items.get(activate.entity) else {
+        return;
+    };
+    let mut ancestors = parents.iter_ancestors(activate.entity);
+    let Some(group) = (ancestors.by_ref())
+        .find_map(|ancestor| menus.get(ancestor).ok())
+        .map(|menu| menu.0)
+    else {
+        return;
+    };
+    let Some(editor) = ancestors
+        .find_map(|ancestor| targets.get(ancestor).ok())
+        .map(|target| target.0)
+    else {
+        return;
+    };
+    let Ok((curve, selection)) = editors.get(editor) else {
+        return;
+    };
+    let points = group.points(selection, editor, curve.0.points.len());
+    if points.is_empty() {
+        return;
+    }
+    commands.trigger(CurveEdit {
+        editor,
+        curve: editor,
+        op: group.op(points, item.0),
         phase: CurveEditPhase::Finish,
     });
 }
@@ -675,7 +1035,7 @@ fn place_handles(
     curves: Query<(&CurveValue, &CurveConstraints, &CurveSelection)>,
     layers: Query<Option<&Children>, With<HandleStems>>,
     mut markers: Query<(&mut HandleMarker, &mut Node)>,
-    mut stems: Query<(&HandleStem, &mut CurvePath)>,
+    mut stems: Query<(&LayerPath, &mut CurvePath)>,
     mut commands: Commands,
 ) {
     for (plot, settings, node, hover, children) in &plots {
@@ -748,17 +1108,108 @@ fn place_handles(
                 _ => paths.push((index, vec![centre, handle])),
             }
         }
+        if let Some((layer, layer_children)) =
+            (children.iter()).find_map(|child| Some((child, layers.get(child).ok()?)))
+        {
+            let stroke = CurveStroke {
+                color: SELECTION,
+                width: 1.0,
+            };
+            let layer = PathLayer {
+                entity: layer,
+                children: layer_children,
+                prefix: "stem",
+                stroke,
+            };
+            layer.sync(paths, &mut stems, &mut commands);
+        }
+    }
+}
+
+/// While the plot offers a choice of segment kind, draws each selected point's outgoing segment
+/// again over the curve, bright and wider, named `span<index>`, so it is plain which segments a
+/// kind would change.
+fn place_spans(
+    plots: Query<(Entity, &CurvePlot, &ComputedNode, &Children), With<CurveGestures>>,
+    parents: Query<&ChildOf>,
+    curves: Query<(&CurveValue, &CurveConstraints, &CurveSelection)>,
+    layers: Query<Option<&Children>, With<SpanHighlights>>,
+    mut spans: Query<(&LayerPath, &mut CurvePath)>,
+    mut commands: Commands,
+) {
+    for (plot, settings, node, children) in &plots {
+        let owner = super::view::curve_owner(plot, &parents, |owner| curves.contains(owner));
+        let Some((curve_entity, (curve, constraints, selection))) =
+            owner.and_then(|owner| Some((owner, curves.get(owner).ok()?)))
+        else {
+            continue;
+        };
         let Some((layer, layer_children)) =
             (children.iter()).find_map(|child| Some((child, layers.get(child).ok()?)))
         else {
             continue;
         };
+        let mut paths = Vec::new();
+        if constraints.segments.len() > 1 {
+            let size = node.size() * node.inverse_scale_factor();
+            let view = CurveView::new(constraints, size, settings.inset);
+            let prepared = curve.0.prepare();
+            let points = &curve.0.points;
+            for index in outgoing(selection, curve_entity, points.len()) {
+                let path = match prepared.segment_from(index) {
+                    Some(segment) => flatten_segment(segment, &view),
+                    // A step: its two points at one x.
+                    None => [index, index + 1]
+                        .map(|at| view.to_pixels(Vec2::new(points[at].x, points[at].y)))
+                        .to_vec(),
+                };
+                paths.push((index, path));
+            }
+        }
+        let stroke = CurveStroke {
+            color: tokens::BUTTON_TEXT,
+            width: 2.5,
+        };
+        let layer = PathLayer {
+            entity: layer,
+            children: layer_children,
+            prefix: "span",
+            stroke,
+        };
+        layer.sync(paths, &mut spans, &mut commands);
+    }
+}
+
+/// The selected points of `curve` with a segment after them, of `count` points.
+fn outgoing(selection: &CurveSelection, curve: Entity, count: usize) -> Vec<usize> {
+    (selection.indices(curve).into_iter())
+        .filter(|&index| index + 1 < count)
+        .collect()
+}
+
+/// A node of stroked paths, one per point, over a plot.
+struct PathLayer<'a> {
+    entity: Entity,
+    children: Option<&'a Children>,
+    /// Each path is named this and its point's index.
+    prefix: &'static str,
+    stroke: CurveStroke,
+}
+
+impl PathLayer<'_> {
+    /// Keeps a child per entry of `paths`, by point, each filling the layer.
+    fn sync(
+        &self,
+        paths: Vec<(usize, Vec<Vec2>)>,
+        nodes: &mut Query<(&LayerPath, &mut CurvePath)>,
+        commands: &mut Commands,
+    ) {
         let mut drawn = vec![false; paths.len()];
-        for child in layer_children.into_iter().flatten() {
-            let Ok((stem, mut path)) = stems.get_mut(*child) else {
+        for child in self.children.into_iter().flatten() {
+            let Ok((node, mut path)) = nodes.get_mut(*child) else {
                 continue;
             };
-            match paths.iter().position(|(index, _)| *index == stem.index) {
+            match paths.iter().position(|(index, _)| *index == node.index) {
                 Some(at) => {
                     drawn[at] = true;
                     path.set_if_neq(CurvePath(paths[at].1.clone()));
@@ -768,8 +1219,8 @@ fn place_handles(
         }
         for ((index, path), _) in paths.into_iter().zip(drawn).filter(|(_, drawn)| !drawn) {
             commands.spawn((
-                HandleStem { index },
-                Name::new(format!("stem{index}")),
+                LayerPath { index },
+                Name::new(format!("{}{index}", self.prefix)),
                 Node {
                     position_type: PositionType::Absolute,
                     left: px(0),
@@ -779,12 +1230,9 @@ fn place_handles(
                     ..default()
                 },
                 CurvePath(path),
-                CurveStroke {
-                    color: SELECTION,
-                    width: 1.0,
-                },
+                self.stroke.clone(),
                 Pickable::IGNORE,
-                ChildOf(layer),
+                ChildOf(self.entity),
             ));
         }
     }
@@ -872,10 +1320,10 @@ fn label_axes(
     }
 }
 
-/// Shows the selected point's x and y in the inputs, which are enabled only while exactly one
-/// point is selected, and only for a coordinate the constraints let it move in; with none or
-/// several, they show 0. A handle's inputs show its offset, their row only while the point shows
-/// that handle. Each input rounds to its axis's precision, written in the input's units.
+/// Shows the selected point's x and y in the inputs, enabled only for a coordinate the constraints
+/// let it move in; with none or several selected, a placeholder row stands in for them. A handle's
+/// inputs show its offset, their row only while the point shows that handle. Each input rounds to
+/// its axis's precision, written in the input's units.
 fn show_selected_point(
     editors: Query<
         (
@@ -900,6 +1348,7 @@ fn show_selected_point(
         &ChildOf,
     )>,
     mut rows: Query<&mut Node, With<HandleInputRow>>,
+    mut point_rows: Query<(&mut Node, &PointRow), Without<HandleInputRow>>,
     registry: Res<UnitsRegistry>,
     mut commands: Commands,
 ) {
@@ -911,6 +1360,10 @@ fn show_selected_point(
         });
         let last = curve.0.points.len().saturating_sub(1);
         for descendant in children.iter_descendants(editor) {
+            if let Ok((mut node, row)) = point_rows.get_mut(descendant) {
+                set_shown(&mut node, point.is_some() != row.placeholder);
+                continue;
+            }
             let Ok((input, shown, disabled, row)) = inputs.get(descendant) else {
                 continue;
             };
@@ -939,20 +1392,13 @@ fn show_selected_point(
                     entity.insert(HardLimit(NumericRange::F32(axis.min..=axis.max)));
                 }
             }
-            // What the input shows, and whether it may be edited. With no single point, 0 stands in
-            // for showing no value (C160).
+            // What the input shows, and whether it may be edited; with no single point, its row is
+            // hidden.
             let (movable, at) = match input.handle {
                 Some(side) => {
                     let offset = point.and_then(|(index, _)| curve.0.manual_handle(index, side));
                     if let Ok(mut row) = rows.get_mut(row.parent()) {
-                        let display = if offset.is_some() {
-                            Display::Flex
-                        } else {
-                            Display::None
-                        };
-                        if row.display != display {
-                            row.display = display;
-                        }
+                        set_shown(&mut row, offset.is_some());
                     }
                     (offset.is_some(), offset.unwrap_or_default())
                 }

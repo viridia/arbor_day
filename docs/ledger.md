@@ -136,6 +136,9 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C158  | `src/lib.rs` holding `curve`, and `examples/curve_editor.rs`, each editor beside its curve as its app stores it ([curve-editor-design.md](curve-editor-design.md), 7). |
 | C159a | Handles on the curve editor's plot, dragged; the editor a scene component; a `cubic-bezier` row in the example ([curve-editor-design.md](curve-editor-design.md), 4, 5, 7). |
 | C159b | In and Out inputs for the selected point's handles, as offsets ([curve-editor-design.md](curve-editor-design.md), 5). |
+| C161a | A handle mode per point; kinds and modes set on several points at once; an aligned point's other handle keeps its length ([curve-editor-design.md](curve-editor-design.md), 1, 1.5, 2). |
+| C161b | Segment kind and handle mode dropdowns in the curve editor's header, the selected spans drawn bright, and a mixed row in the example, C159c folded in ([curve-editor-design.md](curve-editor-design.md), 5, 7); icons drawn in `artwork/distributions.svg`. |
+| C160  | A placeholder row for the curve editor's point inputs while no single point is selected ([curve-editor-design.md](curve-editor-design.md), 5). |
 
 ## Next
 
@@ -213,12 +216,13 @@ a migration or a new look land while the trees are few, the golden trees showing
 
 ### Quick wins
 
-- **C160 A placeholder for no point**: while no single point is selected, the curve editor's
-  point inputs are disabled and show 0, which reads as a value (CE25). Swap the input row for a
-  placeholder row of the same height, its captions over "—" as the mock has it, by toggling
-  `Display::None`, so the inputs keep their entities and configuration. Several points selected
-  could show their count. A pinned end's x stays a disabled input, so `restyle_number_input`
-  (X67) stays. E[1]
+- **C162 Noise in a derived handle**: moving one handle of an Aligned point sets the other to
+  `-direction * length` in `apply`, unrounded, so its input shows `f32` noise (`-0.07999999`);
+  feathers' input shows the stored value exactly, as X67 intends. Either round only what the
+  inputs show, in `show_selected_point`, the handles staying exactly opposite (an untouched input
+  committed may write back the rounded value, within a precision step); or round the derived
+  handle in `apply`, the stored curve clean but the handles no longer exactly opposite. The
+  author to choose. E[1]
 - **C131 Reference trees**: the species in `reference/`, converted from seedling (C137), tuned
   by the author and saved from arbor_day, which fills in their meshes; the first three are tuned, the
   other 44 are as converted. `plans/gallery/reference.py` shoots each from the default view; add a
@@ -254,16 +258,6 @@ a migration or a new look land while the trees are few, the golden trees showing
 
 ### Later
 
-- **C159c A curve of mixed segments and handle modes** in `examples/curve_editor.rs`, stored as
-  the whole `ScalarCurve` written with `{:#?}`, which shows its structure with no new
-  dependency. With it, an aligned handle's opposite: `apply` turns it from its current offset,
-  so a drag that clamps it loses its length for the rest of the drag, and Cancel leaves it so.
-  The crown profile as a curve could use aligned and free handles (an hourglass crown), though
-  whether authors should shape a crown that way is open. The leaf outline is not a customer: its
-  handles may point back past the base (ivy), so it is no function of length. E[2]
-- **C161 Choosing segment kinds and handle modes**: the editor offers only the kinds and modes
-  the consumer allows (CE3), but nothing yet lets an author change either (`SetSegment`,
-  `SetHandleMode`). Starts by updating the mocks. E[2]
 - **C132 Repeated forks**: a maple forks and forks again (sympodial), where the levels grow a
   leader with laterals (monopodial). A fork's copies may fork again, up to a number of
   generations, 1 being today's (TD3.7, "copies do not fork again"). A copy already reaches what
@@ -533,18 +527,24 @@ a migration or a new look land while the trees are few, the golden trees showing
   of its surfaces. Only the plot layer changes; model and editor stay. *Gate:* C155 landed on
   the path material.
 
-- **X66** Several curves in one editor (CE35): each a child entity with its own value and
-  constraints, the view's y range per curve. Every reference already names its curve
-  ([curve-editor-design.md](curve-editor-design.md), 2, 8); what assumes the curve is on the
-  editor's own entity is the selection (`select_curve`, `follow_point_count`), the markers and
-  the menu. A row of its own in `examples/curve_editor.rs`. *Gate:* a host showing two curves
-  together, such as Bias's Size and Leaves, or Panoply's editor.
+- **X66** Several curves in one editor (CE35), one active at a time, as Blender's curve-mapping
+  widget has it: each an entity with its own value, constraints and stroke, related to the editor
+  (`CurveOf`) rather than its child, found through one `EditorCurves` param
+  ([curve-editor-design.md](curve-editor-design.md), 8), the view's y range per curve, a control
+  in the header to choose the active one. A single curve stays on the editor. Every reference already
+  names its curve ([curve-editor-design.md](curve-editor-design.md), 2, 8); what reads the curve
+  from the editor's own entity is the plot's lookup, the markers, the inputs, the selection
+  (`select_curve`, `follow_point_count`) and the menu, each of which would read the active
+  curve instead. A selection spanning curves waits for a host that needs it. A row of its own in
+  `examples/curve_editor.rs`. *Gate:* a host showing two curves together, such as Bias's Size and
+  Leaves, or Panoply's editor.
 
 - **X59** Zoom and pan in the curve editor, for handles that reach past the curve. A slope tangent
   drawn at a fixed length on screen, so only handles whose length means something (Bézier
   points, weighted tangents) leave the view; the view fits points and handles with padding when
   a drag ends, never during it, a handle clamped to the edge till then; wheel to zoom (an axis
-  with a modifier), middle-drag to pan, a key and one header button to fit again. No scrollbars in
+  with a modifier), middle-drag to pan, a key and one header button to fit again, the button in
+  `curve_menu` before the ⋯, its icon `artwork/fit.png`. No scrollbars in
   the inline editor; a larger host may draw them from the view (CE36), the wheel over one zooming
   its axis.
   The model bounds the view (x in 0 to 1), the editor owns it within them. *Gate:* C159a landed.

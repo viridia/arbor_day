@@ -39,10 +39,10 @@ Requirements are numbered `CE<n>`; a number is never reused.
 - **CE3 M** The consumer declares which segment kinds and handle modes a curve may use, and the
   editor offers only those. The segment kinds are constant, linear and cubic. A cubic segment has
   a handle at each end, with a length as well as a direction, so it can leave a point vertically
-  and covers CSS's `cubic-bezier`. Each handle has a mode:
+  and covers CSS's `cubic-bezier`. Each point's handles have one mode, both sides together:
   - **auto-clamped**: computed so the curve never overshoots its points, and hidden;
-  - **aligned**: set by hand, kept opposite the point's other handle so the curve stays smooth;
-  - **free**: set by hand, independent of the other handle.
+  - **aligned**: set by hand, each kept opposite the other so the curve stays smooth;
+  - **free**: set by hand, each independent of the other.
 
   Handles are kept from making the curve double back on itself, so it stays a function of x.
 - **CE4 M** The consumer sets the minimum and maximum number of points, and may pin the end
@@ -64,8 +64,8 @@ Requirements are numbered `CE<n>`; a number is never reused.
 
 - **CE10 M** The editor sends each edit to the consumer, which applies, clamps or refuses it. The
   editor then draws the curve as the consumer holds it, never a preview of its own.
-- **CE11 M** The edits are: move points, insert a point, delete points, move a handle, and set a
-  segment's kind.
+- **CE11 M** The edits are: move points, insert a point, delete points, move a handle, set a
+  segment's kind, and set a point's handle mode.
 - **CE12 M** Each edit in a drag carries the drag's phase: start, in progress, finish or cancel. A
   move carries its offset from where the drag started, not from the previous edit, so a point
   clamped at a bound follows the pointer back when the pointer returns.
@@ -127,12 +127,17 @@ Requirements are numbered `CE<n>`; a number is never reused.
 
 ### Kept possible
 
-- **CE35** Several curves in one editor, as an animation editor shows a transform's channels:
-  - a selection or a drag may span curves, each selected point naming its curve;
-  - each edit names the curve of every point it touches, and each curve's consumer judges its own
-    points;
-  - the curves share the x axis but may each have their own y axis, the view showing one y axis
-    at a time or scaling each curve to the view's height.
+- **CE35** Several curves in one editor, as Blender's curve-mapping widget shows a color's
+  channels:
+  - one curve is active at a time, chosen in the editor; the others are drawn but take no
+    selection or gesture, so a selection, a drag and the inputs stay within one curve;
+  - each edit names its curve, and each curve's consumer judges its own points;
+  - the curves share the x axis but may each have their own y axis, the view showing the active
+    curve's y axis or scaling each curve to the view's height.
+
+  A selection or a drag spanning curves, as Blender's graph editor allows, is not kept possible
+  until a host needs it; selected points already name their curve, so it would add to the API
+  rather than change it.
 - **CE36** Zoom and pan: the view is a transform of its own, within the axes' bounds, and
   gestures and edits are expressed in the curve's units, never the view's. The host may set the
   view. Scrollbars, if any, are the host's, drawn from the view; the inline editor has none.

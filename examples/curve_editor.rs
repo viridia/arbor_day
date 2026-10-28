@@ -3,8 +3,9 @@
 //! what its constraints allow.
 
 use arbor_day::curve::{
-    CurveConstraints, CurveExtrapolation, CurvePlugin, CurvePoint, CurveSegment, CurveValue,
-    DirectionHandle, FeathersCurveEditor, HandleMode, PinEnds, ScalarCurve, curve_self_update,
+    CurveConstraints, CurveExtrapolation, CurveMenuTarget, CurvePlugin, CurvePoint, CurveSegment,
+    CurveValue, FeathersCurveEditor, HandleMode, PinEnds, ScalarCurve, curve_menu,
+    curve_self_update,
 };
 use bevy::{
     feathers::{
@@ -53,6 +54,9 @@ enum Stored {
     /// CSS's `cubic-bezier(x1, y1, x2, y2)`: its constraints allow one cubic segment between
     /// pinned ends, so its two inner control points are the whole curve.
     CubicBezier,
+    /// The whole `ScalarCurve`, each point as Rust's `Debug` writes it: its constraints allow every
+    /// kind and mode, so every field counts.
+    Whole,
 }
 
 impl Stored {
@@ -60,7 +64,7 @@ impl Stored {
     /// has none.
     fn point_inputs(self) -> Option<(&'static str, &'static str)> {
         match self {
-            Self::Pairs => Some(("x", "y")),
+            Self::Pairs | Self::Whole => Some(("x", "y")),
             Self::CubicBezier => None,
         }
     }
@@ -89,6 +93,12 @@ impl Stored {
                     short(b.y)
                 )
             }
+            Self::Whole => {
+                let points: Vec<String> = (curve.points.iter())
+                    .map(|point| format!("{point:?}"))
+                    .collect();
+                format!("{}\n{:?}", points.join("\n"), curve.extrapolation)
+            }
         }
     }
 }
@@ -104,9 +114,10 @@ fn ui() -> impl SceneList {
         Node {
             width: percent(100),
             height: percent(100),
-            flex_direction: FlexDirection::Column,
+            flex_direction: FlexDirection::Row,
+            align_items: AlignItems::FlexStart,
             padding: UiRect::all(px(16)),
-            row_gap: px(24),
+            column_gap: px(32),
         }
         ThemeBackgroundColor(tokens::WINDOW_BG)
         Children [
@@ -119,12 +130,20 @@ fn ui() -> impl SceneList {
                 bezier_constraints(),
                 Stored::CubicBezier
             )
+            --
+            @row(
+                "mixed",
+                "Mixed segments and handle modes",
+                mixed_curve(),
+                CurveConstraints::default(),
+                Stored::Whole
+            )
         ]
     }
 }
 
-/// A row named `name`: an editor captioned `caption` showing `curve`, which it edits within
-/// `constraints`, beside the curve as `stored`.
+/// A row named `name`: an editor captioned `caption`, its header tools beside the caption,
+/// showing `curve`, which it edits within `constraints`, over the curve as `stored`.
 fn row(
     name: &'static str,
     caption: &'static str,
@@ -135,32 +154,33 @@ fn row(
     bsn! {
         Name({name})
         Node {
-            flex_direction: FlexDirection::Row,
-            column_gap: px(24),
+            width: px(EDITOR_WIDTH),
+            flex_shrink: 0.0,
+            flex_direction: FlexDirection::Column,
+            row_gap: px(4),
         }
         Children [
-            Node {
-                width: px(EDITOR_WIDTH),
-                flex_shrink: 0.0,
-                flex_direction: FlexDirection::Column,
-                row_gap: px(4),
-            }
+            Node { align_items: AlignItems::Center, min_height: px(24) }
             Children [
                 @label(caption)
                 --
-                @FeathersCurveEditor { @point_inputs: {stored.point_inputs()} }
-                #editor
-                ~{CurveValue(curve.clone())}
-                ~{constraints.clone()}
-                ~{stored}
-                on(curve_self_update)
+                @curve_menu(None)
+                CurveMenuTarget(#editor)
             ]
+            --
+            @FeathersCurveEditor { @point_inputs: {stored.point_inputs()} }
+            #editor
+            ~{CurveValue(curve.clone())}
+            ~{constraints.clone()}
+            ~{stored}
+            on(curve_self_update)
             --
             Text("")
             TextFont {
                 font: FontSourceTemplate::Handle(fonts::MONO),
                 font_size: size::COMPACT_FONT,
             }
+            Node { margin: UiRect::top(px(12)) }
             ThemedText
             StoredText
             #stored
@@ -194,13 +214,15 @@ fn ease_curve() -> ScalarCurve {
     ScalarCurve {
         points: vec![
             CurvePoint {
-                right: DirectionHandle::Aligned(Vec2::new(0.25, 0.1)),
+                handles: HandleMode::Aligned,
+                right: Vec2::new(0.25, 0.1),
                 ..default()
             },
             CurvePoint {
                 x: 1.0,
                 y: 1.0,
-                left: DirectionHandle::Aligned(Vec2::new(-0.75, 0.0)),
+                handles: HandleMode::Aligned,
+                left: Vec2::new(-0.75, 0.0),
                 ..default()
             },
         ],
@@ -220,17 +242,48 @@ fn bezier_constraints() -> CurveConstraints {
     }
 }
 
+/// A curve of every segment kind and handle mode: cubic from an auto point, cubic from an aligned
+/// one, then a constant step.
+fn mixed_curve() -> ScalarCurve {
+    ScalarCurve {
+        points: vec![
+            CurvePoint {
+                y: 0.15,
+                ..default()
+            },
+            CurvePoint {
+                x: 0.3,
+                y: 0.55,
+                handles: HandleMode::Aligned,
+                left: Vec2::new(-0.08, -0.08),
+                right: Vec2::new(0.12, 0.12),
+                ..default()
+            },
+            CurvePoint {
+                x: 0.65,
+                y: 0.8,
+                segment: CurveSegment::Constant,
+                handles: HandleMode::Free,
+                left: Vec2::new(-0.1, 0.0),
+                ..default()
+            },
+            CurvePoint {
+                x: 1.0,
+                y: 0.35,
+                ..default()
+            },
+        ],
+        extrapolation: CurveExtrapolation::Hold,
+    }
+}
+
 /// Writes each row's curve as its app stores it.
 fn show_stored(
     editors: Query<(&CurveValue, &Stored, &ChildOf), Changed<CurveValue>>,
-    parents: Query<&ChildOf>,
     children: Query<&Children>,
     mut texts: Query<&mut Text, With<StoredText>>,
 ) {
-    for (curve, stored, column) in &editors {
-        let Ok(row) = parents.get(column.parent()) else {
-            continue;
-        };
+    for (curve, stored, row) in &editors {
         for child in children.iter_descendants(row.parent()) {
             if let Ok(mut text) = texts.get_mut(child) {
                 text.0 = stored.write(&curve.0);

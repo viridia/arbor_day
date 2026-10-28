@@ -3,7 +3,7 @@
 
 use bevy::prelude::*;
 
-use super::model::{CurveConstraints, CurveValue, HandleSide, PreparedCurve, ScalarCurve};
+use super::model::{Bezier, CurveConstraints, CurveValue, HandleSide, PreparedCurve, ScalarCurve};
 
 /// The farthest a polyline strays from the curve it stands for, in pixels.
 const FLATNESS: f32 = 0.25;
@@ -135,14 +135,26 @@ pub fn flatten(curve: &PreparedCurve, view: &CurveView) -> Vec<Vec2> {
 fn flatten_within(curve: &PreparedCurve, view: &CurveView, flatness: f32) -> Vec<Vec2> {
     let mut path: Vec<Vec2> = Vec::new();
     for segment in curve.segments() {
-        let pixel = |t: f32| view.to_pixels(segment.point(t));
-        let start = pixel(0.0);
-        if path.last() != Some(&start) {
-            path.push(start);
-        }
-        subdivide(&pixel, flatness, 0.0, 1.0, start, pixel(1.0), 0, &mut path);
+        push_segment(segment, view, flatness, &mut path);
     }
     path
+}
+
+/// One segment of a curve in `view`'s pixels, as [`flatten`] draws it.
+pub(super) fn flatten_segment(segment: &Bezier, view: &CurveView) -> Vec<Vec2> {
+    let mut path = Vec::new();
+    push_segment(segment, view, FLATNESS, &mut path);
+    path
+}
+
+/// Pushes `segment` onto `path`, its start unless `path` already ends there.
+fn push_segment(segment: &Bezier, view: &CurveView, flatness: f32, path: &mut Vec<Vec2>) {
+    let pixel = |t: f32| view.to_pixels(segment.point(t));
+    let start = pixel(0.0);
+    if path.last() != Some(&start) {
+        path.push(start);
+    }
+    subdivide(&pixel, flatness, 0.0, 1.0, start, pixel(1.0), 0, path);
 }
 
 /// Pushes the piece of a segment from `t0` at `a` to `t1` at `b`, halved while it strays from the
@@ -201,7 +213,7 @@ pub(super) fn update_curve_paths(
 mod tests {
     use super::*;
     use crate::curve::model::{
-        CurveExtrapolation, CurvePoint, CurveSegment, DirectionHandle, ScalarCurve,
+        CurveExtrapolation, CurvePoint, CurveSegment, HandleMode, ScalarCurve,
     };
 
     fn view() -> CurveView {
@@ -232,7 +244,8 @@ mod tests {
     fn every_piece_lies_within_a_quarter_pixel() {
         use CurveSegment::Cubic;
         let mut steep = curve(&[(0.0, 0.0, Cubic), (0.4, 1.0, Cubic), (1.0, 0.1, Cubic)]);
-        steep.points[0].right = DirectionHandle::Free(Vec2::new(0.05, 2.0));
+        steep.points[0].handles = HandleMode::Free;
+        steep.points[0].right = Vec2::new(0.05, 2.0);
         let prepared = steep.prepare();
         let path = flatten(&prepared, &view());
         for segment in prepared.segments() {

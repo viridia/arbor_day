@@ -7,13 +7,13 @@ How the curve editor in [curve-editor.md](curve-editor.md) is built. The survey 
 The code is one module of arbor_day, `src/curve/`, in five files, each a layer that depends only on
 those above it:
 
-| File | Holds | Depends on |
-| --- | --- | --- |
-| `model.rs` | The curve, its constraints, sampling, applying an edit; `CurveValue` | `bevy_math`, `bevy_curve`, `bevy_reflect`, `bevy_ecs` |
-| `edit.rs` | The events between editor, consumer and host | `model.rs`, `bevy_ecs` |
-| `view.rs` | The mapping, the curve's path in pixels, grid lines | `model.rs`, `bevy_ui` |
-| `gesture.rs` | Pointer and key handling, hover, selection | `edit.rs`, `view.rs`, `bevy_picking` |
-| `feathers.rs`, `plot.rs` | The feathers editor and the path material | all of the above, `bevy_feathers` |
+| File                     | Holds                                                                | Depends on                                            |
+| ------------------------ | -------------------------------------------------------------------- | ----------------------------------------------------- |
+| `model.rs`               | The curve, its constraints, sampling, applying an edit; `CurveValue` | `bevy_math`, `bevy_curve`, `bevy_reflect`, `bevy_ecs` |
+| `edit.rs`                | The events between editor, consumer and host                         | `model.rs`, `bevy_ecs`                                |
+| `view.rs`                | The mapping, the curve's path in pixels, grid lines                  | `model.rs`, `bevy_ui`                                 |
+| `gesture.rs`             | Pointer and key handling, hover, selection                           | `edit.rs`, `view.rs`, `bevy_picking`                  |
+| `feathers.rs`, `plot.rs` | The feathers editor and the path material                            | all of the above, `bevy_feathers`                     |
 
 The first four are the headless parts (CE21); none depends on arbor_day or `bevy_immediate`
 (CE20).
@@ -31,19 +31,24 @@ pub struct CurvePoint {
     pub y: f32,
     /// The segment from this point to the next; ignored on the last point.
     pub segment: CurveSegment,
-    pub left: DirectionHandle,
-    pub right: DirectionHandle,
+    /// Both handles' mode.
+    pub handles: HandleMode,
+    /// The handles' offsets from the point, ignored while auto.
+    pub left: Vec2,
+    pub right: Vec2,
 }
 
 pub enum CurveSegment { Constant, Linear, Cubic }
-pub enum DirectionHandle { Auto, Aligned(Vec2), Free(Vec2) }
+pub enum HandleMode { Auto, Aligned, Free }
 pub enum CurveExtrapolation { Hold, Continue, Repeat }
 ```
 
 Each cubic segment leaves and enters its points along a **direction handle**, Adobe's name for
 the line from a point to the control point that sets the curve's direction and pull there. A
-handle's `Vec2` is its offset from its point, in the curve's units. `Aligned` and `Free` store
-their offset; `Auto` computes it (1.3). Points are ordered by x; two may share an x, making a step
+handle's offset is from its point, in the curve's units. The mode is the point's, not a side's,
+since aligned is a relation between the two sides: an aligned or free point stores its offsets,
+an auto point computes them (1.3). Setting a point aligned or free starts from the offsets it
+had. An end point has one handle, which the mode governs alone. Points are ordered by x; two may share an x, making a step
 (CE1). The consumer stores the curve in a form of its own and translates (CE8): this is the
 editor's form, not a file format.
 
@@ -89,7 +94,7 @@ A `ScalarCurve` is not sampled directly. `ScalarCurve::prepare` resolves it into
 `PreparedCurve` implements `bevy_curve`'s `Curve<f32>` over the x span, with its extrapolation applied
 past the ends, and gives value and slope (CE6). A segment whose control points' x lie at thirds
 of its span is marked unweighted: its y is a cubic polynomial in x, evaluated directly. A weighted
-segment, with an aligned or free handle, finds t for x by Newton's method, bracketed by bisection, a fixed
+segment, an end of it aligned or free, finds t for x by Newton's method, bracketed by bisection, a fixed
 number of iterations. Both use only addition, multiplication, division and `sqrt`, so a curve and
 an x give the same result on every platform. A cubic is evaluated in powers of t from differences
 of its controls, so equal controls give exactly their value: a flat Size scales by exactly 1.
@@ -120,7 +125,10 @@ from a file cannot break it.
 `ScalarCurve::apply(&mut self, op: &CurveEditOp, constraints: &CurveConstraints) -> Applied` is the standard
 consumer's judgement (CE10): clamp each point to the clamped axes, between its neighbours' x
 (CE24), within the pins, and an aligned or free handle's control point within a clamped y axis,
-which keeps the curve within it, since a segment lies within its control points' hull; refuse an insert past `points.end()` or a delete below `points.start()`,
+which keeps the curve within it, since a segment lies within its control points' hull; turn an
+aligned point's other handle onto the line of the one moved, keeping its length, the moved one's
+direction limited so that the other still fits its segment, as a moved point is kept within its
+bounds, so a drag needs no snapshot of the other; refuse an insert past `points.end()` or a delete below `points.start()`,
 and a kind or mode the constraints leave out; place an insert on the curve at the pointer's x (CE15,
 survey finding 4), each coordinate rounded to its axis's precision, as a drag rounds. It returns whether the curve changed, and for an insert, the new point's index.
 A consumer with other rules writes its own; arbor_day uses this one.
@@ -149,8 +157,8 @@ pub enum CurveEditOp {
     SetPoint(usize, Vec2),                          // typed into an input
     Insert(Vec2),                                   // the pointer's position
     Delete(Vec<usize>),
-    SetSegment(usize, CurveSegment),
-    SetHandleMode(usize, HandleSide, HandleMode),
+    SetSegment(Vec<usize>, CurveSegment),           // each point's outgoing segment
+    SetHandleMode(Vec<usize>, HandleMode),          // each point's handles
     Replace(ScalarCurve),                           // preset, reset, paste
 }
 
@@ -164,10 +172,11 @@ bound follows the pointer back (CE12), and the consumer keeps no drag state. `Ca
 or from the editor being despawned mid-drag, proposes the snapshot itself (CE13). The consumer
 receives every `Update` (CE14) and regrows the tree from each.
 
-**The curve is named in every reference**, as the entity holding the curve's `CurveValue`. With one curve it is the editor itself; several curves (CE35) are child entities,
-each with its own value and constraints. A selection spans them by naming each point's curve
-(`PointRef`), and a move across curves is one event per curve, so `apply` and the op stay
-within one curve. Nothing in the single-curve design changes when the second curve arrives.
+**The curve is named in every reference**, as the entity holding the curve's `CurveValue`. With one curve it is the editor itself; several curves (CE35) are entities related to it (8),
+each with its own value and constraints, one of them active, the only one that takes a
+selection or a gesture. A selected point still names its curve (`PointRef`), and `apply` and
+the op stay within one curve, so nothing in the single-curve design changes when the second
+curve arrives, and a selection spanning curves would add to it rather than change it.
 
 ### 2.1 Selection
 
@@ -193,8 +202,8 @@ units.
 From the prepared curve and the view, `view.rs` keeps **`CurvePath`** up to date on the plot node
 (`CurvePlot`), a descendant of the entity holding the curve's `CurveValue` and constraints: the
 curve as a polyline in layout pixels. Each segment is halved, over its own
-  parameter, until each piece lies within a quarter pixel of the curve, so a kink stays a point and
-  a step two points at one x (CE40). A path holds at most `MAX_PATH_POINTS` (257), the path
+parameter, until each piece lies within a quarter pixel of the curve, so a kink stays a point and
+a step two points at one x (CE40). A path holds at most `MAX_PATH_POINTS` (257), the path
 material's uniform array; a curve needing more is flattened again at twice the tolerance until
 it fits.
 
@@ -261,17 +270,30 @@ curve whose points are never typed; and `@handle_inputs`. It assembles, top to b
   submenus, so each preset is an item of its own. An item holding `CurveMenuReplace(ScalarCurve)`
   sends a `Replace` when picked, so the host needs no handler; it observes its other items
   itself. Then the editor's own Copy curve and Paste curve, through an app-wide clipboard
-  rather than the system's, so Paste is disabled while nothing is copied.
+  rather than the system's, so Paste is disabled while nothing is copied. Before the ⋯, in the
+  same scene: a dropdown for the segment kind and one for the handle mode (CE3), each a menu
+  tool button whose caption is the current choice's icon, as the color input's is its swatch,
+  or "—" while the selected points differ, its items an icon and a name each. Each is
+  there only while the constraints allow more than one choice, so Bias shows neither, and acts
+  on every selected point in one edit, disabled while none is selected (the kind also while
+  only the last point is). Fit view would follow (X59). The icons are embedded, as `plot.wesl` is, so
+  the library needs no asset folder.
 - **The plot**: a node with `CurvePath` drawn by the path material, over the grid's lines as
   one-pixel nodes, the y labels in a gutter to its left and the x labels under it, and a node per
   point and per visible handle, placed from the view and styled from `CurveHover` and
   `CurveSelection` (CE41). Nodes keep the points to feathers' own styling. The path material
   draws the curve, and each selected point's stem, from its In handle through the point to its
-  Out handle, as a node of its own with a `CurvePath`, under the markers.
-- **An input row**: feathers number inputs for the selected point's x and y, disabled unless
-  exactly one point is selected (CE25); and below them, a row each for that point's handles, In
+  Out handle, as a node of its own with a `CurvePath`, under the markers. While the kind
+  dropdown is there, the selected points' outgoing segments are drawn again over the curve in a
+  bright, wider stroke, a node of their own, so it is plain which segments a kind would change;
+  a band behind them would vanish on a vertical span.
+- **An input row**: feathers number inputs for the selected point's x and y, shown while exactly
+  one point is selected, a coordinate the constraints pin disabled; otherwise a placeholder row
+  of the same height stands in, its fields drawn as disabled inputs with their captions over
+  "—", since a disabled input showing 0 reads as a value (CE25). The two rows swap by
+  `Display::None`, so the inputs keep their entities and configuration. Below them, a row each for that point's handles, In
   and Out, shown while the plot shows the handle: their offsets from the point as stored,
-  captioned `In Δx` and so on (CE34), so they hold still while the point moves, bounded by
+  captioned `Δx In` and so on (CE34), so they hold still while the point moves, bounded by
   `apply` rather than the axes. An input sends `SetPoint` or `MoveHandle`,
   `Update` while scrubbing, `Finish` on commit. Each rounds to its axis's precision, its decimal
   places worked out through its units (0.01 shown as a percentage is 1%: no decimals).
@@ -329,15 +351,25 @@ plot of 300 × 170 pixels is cheap.
 - **`examples/curve_editor.rs`**, one row per configuration the editor supports: an editor
   beside its curve as its app stores it, rewritten on each edit, since what an app stores is
   its own choice (CE8). Rows: implicit slopes stored as `[x, y]` pairs; one cubic with aligned
-  handles and its ends pinned, stored as CSS's `cubic-bezier(x1, y1, x2, y2)`; mixed segments
-  come with C159c, several curves with X66. `curve` is arbor_day's library, for
-  the example's sake. `plans/curve_editor.py` types into each row and reads its stored form.
+  handles and its ends pinned, stored as CSS's `cubic-bezier(x1, y1, x2, y2)`; every kind and
+  mode, stored whole, each point as Rust's `Debug` writes it. Several curves come with X66. Each
+  row's header holds its `curve_menu`. `curve` is arbor_day's library, for the example's sake.
+  `plans/curve_editor.py` types or picks in each row and reads its stored form.
 
 ## 8. Checked against what is kept possible
 
-- **Several curves (CE35)**: every reference names its curve (2), the view maps x for all and y
-  per curve, and normalizing is a per-curve y range in the view.
+- **Several curves (CE35)**: every reference names its curve (2), and with one curve active the
+  gestures, inputs and dropdowns keep to it: they read the active curve where they read the
+  editor's today. A single curve stays on the editor's own entity, so a host with one never
+  changes; several are entities of their own, linked by a relationship of their own
+  (`CurveOf(editor)`, read through the editor's `Curves`) rather than `Children`, since they are
+  data, not layout, and go when the editor does. An editor holds one or the other, never both.
+  One system param, `EditorCurves`, finds an editor's curves and its active one wherever they
+  are, and nothing else looks for itself. The view maps x for all and y per curve, normalizing is a per-curve y range in
+  the view, and each curve's stroke is a node of its own, as the stems are.
 - **Zoom and pan (CE36)**: the view is already the only place pixels meet curve units (3).
 - **The crown (opportunistic)**: a width over height with rounded ends is cubic segments whose end
   handles are free and vertical (1.4 permits an x offset of zero), and the five profiles become
-  presets. Nothing in the design was added for it.
+  presets; aligned and free handles would allow an hourglass crown too, though whether authors
+  should shape a crown that way is open. Nothing in the design was added for it. The leaf outline
+  is no customer: its handles may point back past the base (ivy), so it is no function of length.

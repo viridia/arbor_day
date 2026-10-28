@@ -131,6 +131,9 @@ from a cache of `bake_resolution` samples, 100 by default.
 10. **Small editors zoom.** Blender's widget, the closest to a popup, has zoom and pan, stopping at
     its clipping rectangle.
 11. **Copying a whole curve** between widgets is a cheap convenience Blender has.
+12. **Embedded, one curve is edited at a time.** Blender's graph editor lets a selection and a
+    drag span curves; its curve-mapping widget, the embedded one, shows several curves (C, R, G,
+    B) and edits only the one chosen above the plot.
 
 ## What to cut from Blender
 
