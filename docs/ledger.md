@@ -468,8 +468,8 @@ a migration or a new look land while the trees are few, the golden trees showing
   level 0 only (`bevy_render/src/texture/gpu_image.rs`, `prepare_asset`), so the other levels
   keep their first contents. The leaf texture works around it with a new image each build
   (TD3.10). Filed as bevy#26225; the fix (branch `mips-fix`) was tested here on 2026-10-22, with
-  the leaf image replaced in place, and a color edit showed at full zoom-out. *Gate:* the fix in
-  the Bevy we build against, and the workaround dropped.
+  the leaf image replaced in place, and a color edit showed at full zoom-out. It merged as
+  bevy#26320 (`4e2eb9911`). *Gate:* a bump past `4e2eb9911`, which drops the workaround.
 
 - **X52** Teeth independent of the leaf's shape (was C115). Serration is hard to steer because
   the tapers and widths reach the teeth in `leaf::half_outline`: the edge is cut at equal steps of
