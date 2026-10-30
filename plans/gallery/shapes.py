@@ -51,7 +51,7 @@ def pick_facing(driver, variant):
 
 
 def run(driver):
-    driver.present("Shell", ready=True)  # wait for the UI scene to finish spawning
+    driver.present("Shell")  # wait for the UI scene to finish spawning
     driver.present("Shell/Panel/levels[0]/add")  # the immediate-mode panel has built its rows
     driver.frames(2)
     driver.screenshot("default")

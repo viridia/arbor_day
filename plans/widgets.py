@@ -43,7 +43,7 @@ def retype(driver, path, text):
 
 
 def run(driver):
-    driver.present("Shell", ready=True)  # wait for the UI scene to finish spawning
+    driver.present("Shell")  # wait for the UI scene to finish spawning
     driver.present(f"{LIMBS}/reach/shape")  # the immediate-mode panel has built its rows
 
     # Fuzzy numbers: the first limb level's fork angle and reach, both bells. The fork's, since

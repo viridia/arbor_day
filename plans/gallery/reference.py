@@ -17,7 +17,7 @@ ABOVE = 1.45
 
 
 def run(driver):
-    driver.present("Shell", ready=True)  # wait for the UI scene to finish spawning
+    driver.present("Shell")  # wait for the UI scene to finish spawning
     driver.present("Shell/Panel/levels[0]/add")  # the immediate-mode panel has built its rows
     # The scale stands beside the plant, so framing with it shown leaves a small plant small.
     driver.click("Shell/View/scale")

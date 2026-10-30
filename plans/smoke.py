@@ -27,7 +27,7 @@ def set_number(driver, path, text):
 
 
 def run(driver):
-    driver.present("Shell", ready=True)  # wait for the UI scene to finish spawning
+    driver.present("Shell")  # wait for the UI scene to finish spawning
     driver.present("Shell/Panel/trunk/sides/input")  # the immediate-mode panel has built its rows
     driver.present("Shell/Panel/Scrollbar")
     # The default plant: one level of nine or ten limbs, in the low hundreds of triangles.

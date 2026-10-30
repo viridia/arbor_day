@@ -120,7 +120,7 @@ def shoot(driver, name):
 
 
 def run(driver):
-    driver.present("Shell", ready=True)
+    driver.present("Shell")
     driver.present("Shell/Panel/levels[0]/add")
     driver.click("Shell/View/scale")
     driver.message(REQUEST, {"Open": PATH})
