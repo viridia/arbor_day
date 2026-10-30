@@ -24,15 +24,15 @@
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="mm"
      showgrid="true"
-     inkscape:zoom="22.627417"
-     inkscape:cx="94.332464"
-     inkscape:cy="61.36361"
+     inkscape:zoom="4"
+     inkscape:cx="82.625"
+     inkscape:cy="65.125"
      inkscape:window-width="1512"
      inkscape:window-height="867"
      inkscape:window-x="0"
      inkscape:window-y="38"
      inkscape:window-maximized="1"
-     inkscape:current-layer="layer1">
+     inkscape:current-layer="layer3">
     <inkscape:grid
        type="xygrid"
        id="grid228"
@@ -87,7 +87,7 @@
      inkscape:groupmode="layer"
      id="layer3"
      inkscape:label="Guides"
-     style="display:inline;fill:#575757;fill-opacity:1;stroke:none">
+     style="display:none;fill:#575757;fill-opacity:1;stroke:none">
     <rect
        style="display:inline;fill:#575757;fill-opacity:1;stroke:none;stroke-width:0.238125;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:0.818478"
        id="rect1501-49-91-3"
@@ -151,8 +151,8 @@
        x="19.049999"
        y="9.5250006"
        inkscape:export-filename="step.png"
-       inkscape:export-xdpi="288"
-       inkscape:export-ydpi="288"
+       inkscape:export-xdpi="96"
+       inkscape:export-ydpi="96"
        inkscape:label="guide-0" />
     <rect
        style="fill:#575757;fill-opacity:1;stroke:none;stroke-width:0.079375;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:0.818478"
@@ -162,8 +162,8 @@
        x="2.1166666"
        y="14.816667"
        inkscape:export-filename="sharp.png"
-       inkscape:export-xdpi="282.6994"
-       inkscape:export-ydpi="282.6994"
+       inkscape:export-xdpi="288"
+       inkscape:export-ydpi="288"
        inkscape:label="guide-0" />
     <rect
        style="fill:#575757;fill-opacity:1;stroke:none;stroke-width:0.079375;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:0.818478"
@@ -173,8 +173,8 @@
        x="7.4083333"
        y="14.816667"
        inkscape:export-filename="smooth.png"
-       inkscape:export-xdpi="282.69937"
-       inkscape:export-ydpi="282.69937"
+       inkscape:export-xdpi="288"
+       inkscape:export-ydpi="288"
        inkscape:label="guide-0" />
     <rect
        style="fill:#575757;fill-opacity:1;stroke:none;stroke-width:0.079375;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:0.818478"
@@ -184,8 +184,8 @@
        x="12.7"
        y="14.816667"
        inkscape:export-filename="straight.png"
-       inkscape:export-xdpi="282.69934"
-       inkscape:export-ydpi="282.69934"
+       inkscape:export-xdpi="288"
+       inkscape:export-ydpi="288"
        inkscape:label="guide-0" />
   </g>
   <g

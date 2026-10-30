@@ -139,6 +139,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C161a | A handle mode per point; kinds and modes set on several points at once; an aligned point's other handle keeps its length ([curve-editor-design.md](curve-editor-design.md), 1, 1.5, 2). |
 | C161b | Segment kind and handle mode dropdowns in the curve editor's header, the selected spans drawn bright, and a mixed row in the example, C159c folded in ([curve-editor-design.md](curve-editor-design.md), 5, 7); icons drawn in `artwork/distributions.svg`. |
 | C160  | A placeholder row for the curve editor's point inputs while no single point is selected ([curve-editor-design.md](curve-editor-design.md), 5). |
+| C163  | Bevy main at `784b85d` (D1), the commit before a feathers regression (X67), passing X48's gate and one of X67's (C164). |
 
 ## Next
 
@@ -216,6 +217,11 @@ a migration or a new look land while the trees are few, the golden trees showing
 
 ### Quick wins
 
+- **C164 Workarounds Bevy has fixed** (X48's gate and one of X67's passed at C163): the leaf
+  texture replaced in place rather than a new image each build (TD3.10), checked as X48's test
+  was, a color edit showing at full zoom-out; and the curve editor's `Hovered` re-insert in
+  `restyle_number_input` dropped, a re-enabled input drawn enabled. Then strike X48 and that X67
+  item. E[1]
 - **C162 Noise in a derived handle**: moving one handle of an Aligned point sets the other to
   `-direction * length` in `apply`, unrounded, so its input shows `f32` noise (`-0.07999999`);
   feathers' input shows the stored value exactly, as X67 intends. Either round only what the
@@ -554,19 +560,26 @@ a migration or a new look land while the trees are few, the golden trees showing
   proposed: it drew objections on Discord, and the curve editor swaps in a placeholder instead
   (C160). The display showing a value in full, past its precision, is intended: it never lies
   to the user. *Gate:* each item fixed in the Bevy we build against, and its workaround dropped.
-  - **Text left in its editing form** (was X35), PR open: an input left without a change
-    (Enter, or focus lost) keeps its editing text, so an angle shows `20d` rather than `20°`,
-    beside its interior caption (C77). Its text is rewritten only when `NumericValue` changes;
-    leaving edit mode should rewrite it in the display form. Lived with.
+  - **Text left in its editing form** (was X35), merged as bevy#26284 (`54f38f332`), past our
+    pin until its regression (next) is fixed: an input left without a change (Enter, or focus
+    lost) keeps its editing text, so an angle shows `20d` rather than `20°`, beside its interior
+    caption (C77). Its text is rewritten only when `NumericValue` changes; leaving edit mode
+    should rewrite it in the display form. Lived with.
+  - **A typed value shown reverted**, bevy#26284's regression, PR open (bevy#26369): leaving
+    edit mode queues the field's rewrite from the value before the change, which lands after the
+    new value, so the old one shows until the field is edited again; a later focus loss can
+    send it as a change. `plans/curve_editor.py` and `plans/smoke.py` failed on it, so Bevy is
+    pinned at `784b85d`, the commit before bevy#26284; the next bump waits for the fix.
   - **Chevrons skip the precision**, to report: scrubbing and typing round to
     `NumberInputPrecision`, but `chevron_on_press` adds the step in `f64` and converts back
     unrounded, so a fractional step drifts by an `f32` step (0.35 becoming `0.35000002`). The
     curve editor rounds each value from its inputs to the axis's precision (`edit_from_input`).
-  - **Re-enabled, drawn disabled** (was X64), PR open: an input re-enabled by removing
-    `InteractionDisabled` stays drawn disabled. `number_input_on_remove_disabled` observes
-    `Remove`, which runs while the component is still there, so `Has<InteractionDisabled>` reads
-    true and it restyles as disabled. The curve editor re-inserts the text field's `Hovered`,
-    which restyles from the input's state (`restyle_number_input`).
+  - **Re-enabled, drawn disabled** (was X64), merged as bevy#26331 (`7882b96ff`): an input
+    re-enabled by removing `InteractionDisabled` stays drawn disabled.
+    `number_input_on_remove_disabled` observes `Remove`, which runs while the component is still
+    there, so `Has<InteractionDisabled>` reads true and it restyles as disabled. The curve editor
+    re-inserts the text field's `Hovered`, which restyles from the input's state
+    (`restyle_number_input`).
   - **Scrub speed tied to the step**, to report: without a `SoftLimit`, a scrub moves `NumberInputStep` ×
     0.01 per pixel, so an input with a fine step creeps (the curve editor's Bias y, 1% per
     100 px), and a `SoftLimit` to speed it up draws the slider bar, wrong for an open-ended
@@ -602,8 +615,8 @@ a migration or a new look land while the trees are few, the golden trees showing
   bevy#19104), which gltf-transform's KTX2 conversion writes, so the pipeline points the image
   straight at the `.ktx2`, which Bevy accepts though the standard does not.
 - Bevy source at the locked commit is in Cargo's git checkout,
-  `~/.cargo/git/checkouts/bevy-*/2614884`; the local `../bevy` has `upstream/main` fetched
-  at the same commit, but its checked-out branch differs.
+  `~/.cargo/git/checkouts/bevy-*/784b85d`; the local `../bevy` has `upstream/main` fetched
+  past it, and its checked-out branch differs.
 - `plans/smoke.py` once failed at its first orbit hold (`orbit_left`, azimuth still 0) and
   passed on the next run; if it fails there again, look at the driver's press and hold.
 - The driver cannot drag or scroll, so the turntable's gestures (spin, tilt, zoom, the axis
