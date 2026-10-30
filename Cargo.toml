@@ -12,13 +12,12 @@ publish = false
 bevy = { git = "https://github.com/bevyengine/bevy.git", branch = "main", features = [
   "bevy_feathers",
   "bevy_settings",
-  # Registers `Image`'s serialization, which the remote driver's screenshots need.
+  # BRP, for the remote driver (`src/remote_driver.rs`), and `Image`'s serialization, which its
+  # screenshots need.
   "bevy_remote",
   "dynamic_linking",
 ] }
 bevy_immediate = { git = "https://github.com/viridia/bevy_immediate", branch = "bevy-main" }
-# Inert unless BEVY_REMOTE_DRIVER_PORT is set.
-bevy_remote_driver = { git = "https://github.com/viridia/bevy_remote_driver" }
 # The traits only: the species is written by reflection, with no serde derives (C10).
 serde = "1.0.229"
 serde_json = "1.0.154"

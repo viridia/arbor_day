@@ -140,6 +140,7 @@ order they are meant to land, which their ids need not follow. Panoply's ledger
 | C161b | Segment kind and handle mode dropdowns in the curve editor's header, the selected spans drawn bright, and a mixed row in the example, C159c folded in ([curve-editor-design.md](curve-editor-design.md), 5, 7); icons drawn in `artwork/distributions.svg`. |
 | C160  | A placeholder row for the curve editor's point inputs while no single point is selected ([curve-editor-design.md](curve-editor-design.md), 5). |
 | C163  | Bevy main at `784b85d` (D1), the commit before a feathers regression (X67), passing X48's gate and one of X67's (C164). |
+| C165  | Plans on the `bevy-remote-driver` package (the driver's chunk 30): the git dependency goes, `src/remote_driver.rs` enables BRP itself (D2), and plans import `from bevy_remote_driver import Between`. |
 
 ## Next
 

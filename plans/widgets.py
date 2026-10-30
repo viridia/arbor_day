@@ -13,7 +13,7 @@
   driver cannot drag, so dragging a point, selecting by rectangle and Escape are checked by
   hand."""
 
-from driver import Between
+from bevy_remote_driver import Between
 
 BIN = "arbor_day"
 STATS = "arbor_day::plant::PlantStats"

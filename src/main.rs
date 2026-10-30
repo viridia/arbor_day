@@ -1,6 +1,6 @@
 //! An authoring app for low-poly plants. For now, a shell: a parameter panel beside a 3D view.
 
-use arbor_day::curve;
+use arbor_day::{curve, remote_driver::RemoteDriverPlugin};
 use bevy::{
     camera::Viewport,
     ecs::system::SystemParam,
@@ -25,7 +25,6 @@ use bevy_immediate::{
     Imm,
     attach::{BevyImmediateAttachPlugin, ImmediateAttach},
 };
-use bevy_remote_driver::RemoteDriverPlugin;
 use document::{Document, DocumentPlugin};
 use hud::{Ground, HudPlugin, hud};
 use keys::KeysPlugin;

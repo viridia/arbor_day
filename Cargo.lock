@@ -291,7 +291,6 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "bevy_immediate",
- "bevy_remote_driver",
  "gltf",
  "gltf-json",
  "percent-encoding",
@@ -1618,26 +1617,6 @@ dependencies = [
  "serde",
  "serde_json",
  "smol-hyper",
-]
-
-[[package]]
-name = "bevy_remote_driver"
-version = "0.1.0"
-source = "git+https://github.com/viridia/bevy_remote_driver#e9f5d4c0c34e221b5559c6a99a1896667171b2dc"
-dependencies = [
- "bevy_app",
- "bevy_camera",
- "bevy_diagnostic",
- "bevy_ecs",
- "bevy_input",
- "bevy_math",
- "bevy_reflect",
- "bevy_remote",
- "bevy_scene",
- "bevy_ui",
- "bevy_window",
- "serde",
- "serde_json",
 ]
 
 [[package]]

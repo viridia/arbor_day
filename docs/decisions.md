@@ -20,16 +20,17 @@ struck and kept, saying where its content went.
 ### D1 — Bevy main, named by branch
 
 Bevy is `git = "https://github.com/bevyengine/bevy.git", branch = "main"`, the commit held in
-`Cargo.lock`, bumped with the family (Panoply, the `bevy_immediate` fork, `bevy_action_map`,
-`bevy_remote_driver`), one chunk per bump. Cargo treats a branch and a rev as different sources, so
+`Cargo.lock`, bumped with the family (Panoply, the `bevy_immediate` fork, `bevy_action_map`),
+one chunk per bump. Cargo treats a branch and a rev as different sources, so
 any other form builds a second Bevy beside the dependencies'. **Reversing it**, to a release, waits
 for one with what the app uses (0.21), and moves the whole family at once.
 
 ### D2 — `bevy_immediate` and feathers for the UI
 
 The panel is immediate-mode, `bevy_immediate` from the fork `viridia/bevy_immediate` (branch
-`bevy-main`), drawing `bevy_feathers` widgets. `bevy_remote_driver` drives plans, by git from
-`viridia/bevy_remote_driver`. **Reversing it** rewrites the panel, and with it the patterns Panoply
+`bevy-main`), drawing `bevy_feathers` widgets. Plans run with `bevy-remote-driver`, a Python
+command from `viridia/bevy_remote_driver`, over BRP, which `src/remote_driver.rs` enables.
+**Reversing it** rewrites the panel, and with it the patterns Panoply
 takes (D3).
 
 ### D3 — The shell is the spike for Panoply's editor

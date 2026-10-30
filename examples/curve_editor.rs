@@ -2,10 +2,13 @@
 //! store it. The editor edits a `ScalarCurve`; what the app stores is its own choice, holding only
 //! what its constraints allow.
 
-use arbor_day::curve::{
-    CurveConstraints, CurveExtrapolation, CurveMenuTarget, CurvePlugin, CurvePoint, CurveSegment,
-    CurveValue, FeathersCurveEditor, HandleMode, PinEnds, ScalarCurve, curve_menu,
-    curve_self_update,
+use arbor_day::{
+    curve::{
+        CurveConstraints, CurveExtrapolation, CurveMenuTarget, CurvePlugin, CurvePoint,
+        CurveSegment, CurveValue, FeathersCurveEditor, HandleMode, PinEnds, ScalarCurve,
+        curve_menu, curve_self_update,
+    },
+    remote_driver::RemoteDriverPlugin,
 };
 use bevy::{
     feathers::{
@@ -19,7 +22,6 @@ use bevy::{
     prelude::*,
     text::FontSourceTemplate,
 };
-use bevy_remote_driver::RemoteDriverPlugin;
 
 /// The editor column's width, the panel's in arbor_day.
 const EDITOR_WIDTH: f32 = 360.0;

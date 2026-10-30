@@ -3,7 +3,7 @@ its default width, the turntable camera frames the plant, the zoom and frame key
 toggles hide the ground, envelope and scale and show the wireframe, the property editor edits numbers within their limits, an
 edit rebuilds the plant, and the seed reaches the plant, typed or picked by Random."""
 
-from driver import Between
+from bevy_remote_driver import Between
 
 BIN = "arbor_day"
 STATS = "arbor_day::plant::PlantStats"
